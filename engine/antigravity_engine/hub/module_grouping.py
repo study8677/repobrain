@@ -1,10 +1,10 @@
 """Smart module grouping for RefreshModuleAgents.
 
 Groups source files into functional units using multiple signals:
-1. Knowledge graph import relationships (connected components)
+1. Shared semantic package/import relationships (connected components)
 2. Directory co-location
-3. Defines-edge overlap (shared symbol consumers)
-4. Filename prefix matching
+3. Filename prefix matching
+4. Token budget and file-count constraints
 
 Each group targets ~30K tokens of pre-loaded source code.
 Large groups are split via min-cut on the import graph (hub removal).
@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Sequence
 
 from antigravity_engine.hub._constants import SOURCE_CODE_EXTS
+from antigravity_engine.hub.language_adapters import FileSemantics
+from antigravity_engine.hub.semantic_index import analyze_source_file
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -98,11 +100,15 @@ class SourceFile:
     rel_path: str            # Relative to workspace
     abs_path: Path
     content: str
+    language: str
     raw_tokens: int          # len(content) // 4
     category: str            # interface/implementation/glue/test/config
     effective_tokens: int    # raw_tokens * category weight
     prefix: str              # Filename prefix for grouping (e.g. "community")
+    package_identity: str | None = None
     imports_modules: list[str] = field(default_factory=list)  # modules this file imports
+    signature_summary: str = ""
+    semantics: FileSemantics | None = None
 
 
 @dataclass
@@ -124,7 +130,7 @@ class FileGroup:
 # ---------------------------------------------------------------------------
 
 def load_module_files(module_path: Path, workspace: Path) -> list[SourceFile]:
-    """Read all source files in a module and classify them via AST.
+    """Read all source files in a module and classify them via shared semantics.
 
     Args:
         module_path: Absolute path to the module directory.
@@ -163,21 +169,25 @@ def load_module_files(module_path: Path, workspace: Path) -> list[SourceFile]:
         # Skip oversized files (likely bundled/generated, not source)
         if raw_tokens > _MAX_FILE_TOKENS:
             continue
-        category = _classify_file(fpath, content)
+        semantics = analyze_source_file(workspace, fpath, rel_path=rel, content=content)
+        category = _classify_file(fpath, content, semantics)
         weight = CATEGORY_WEIGHTS.get(category, 1.0)
         effective_tokens = int(raw_tokens * weight)
         prefix = _extract_prefix(fpath.stem)
-        imports = _extract_imports(fpath, content) if fpath.suffix == ".py" else []
 
         files.append(SourceFile(
             rel_path=rel,
             abs_path=fpath,
             content=content,
+            language=semantics.language,
             raw_tokens=raw_tokens,
             category=category,
             effective_tokens=effective_tokens,
             prefix=prefix,
-            imports_modules=imports,
+            package_identity=semantics.package_identity,
+            imports_modules=list(semantics.imports),
+            signature_summary=semantics.signature_summary,
+            semantics=semantics,
         ))
 
     return files
@@ -218,7 +228,11 @@ def _is_artifact(fpath: Path) -> bool:
     return False
 
 
-def _classify_file(fpath: Path, content: str) -> str:
+def _classify_file(
+    fpath: Path,
+    content: str,
+    semantics: FileSemantics | None = None,
+) -> str:
     """Classify a file by AST analysis into a category.
 
     Categories: interface, implementation, glue, test, config.
@@ -227,6 +241,8 @@ def _classify_file(fpath: Path, content: str) -> str:
     fname = fpath.name.lower()
 
     # Test files
+    if semantics and semantics.is_test_file:
+        return "test"
     if (name.startswith("test_") or name.endswith("_test")
             or "tests/" in str(fpath) or "test/" in str(fpath)
             or fname.endswith(".test.ts") or fname.endswith(".test.tsx")
@@ -240,6 +256,11 @@ def _classify_file(fpath: Path, content: str) -> str:
     # Config files
     if name in ("config", "settings", "constants", "types", "enums", "env"):
         return "config"
+
+    if semantics and semantics.language == "Go":
+        symbol_kinds = {symbol.kind for symbol in semantics.symbols}
+        if symbol_kinds and symbol_kinds <= {"interface"}:
+            return "interface"
 
     # For Python: check if mostly abstract/protocol definitions
     if fpath.suffix == ".py":
@@ -310,24 +331,6 @@ def _extract_prefix(stem: str) -> str:
     parts = stem.lower().split("_")
     return parts[0] if parts else stem.lower()
 
-
-def _extract_imports(fpath: Path, content: str) -> list[str]:
-    """Extract imported module names from a Python file."""
-    try:
-        tree = _ast.parse(content, filename=str(fpath))
-    except SyntaxError:
-        return []
-
-    modules: list[str] = []
-    for node in _ast.iter_child_nodes(tree):
-        if isinstance(node, _ast.ImportFrom) and node.module:
-            modules.append(node.module)
-        elif isinstance(node, _ast.Import):
-            for alias in node.names:
-                modules.append(alias.name)
-    return modules
-
-
 # ---------------------------------------------------------------------------
 # Step 2: Build file dependency graph from knowledge graph
 # ---------------------------------------------------------------------------
@@ -336,10 +339,11 @@ def build_file_dependency_graph(
     files: list[SourceFile],
     workspace: Path,
 ) -> dict[str, set[str]]:
-    """Build an undirected file→file dependency graph.
+    """Build an undirected file→file dependency graph from shared semantics.
 
-    Uses import edges: if file A imports module X, and file B defines
-    module X (i.e., B's path matches X), then A depends on B.
+    Semantic package identities connect files that are compiled or analyzed as
+    a unit (for example, Go package peers). Import keys connect files to the
+    local package or module identities they depend on.
 
     Args:
         files: List of source files in the module.
@@ -348,25 +352,14 @@ def build_file_dependency_graph(
     Returns:
         Adjacency dict: {rel_path: {rel_paths it's connected to}}.
     """
-    # Build a map: module_name → file rel_path
-    # e.g. "opencmo.tools.community_providers" → "src/opencmo/tools/community_providers.py"
-    module_to_file: dict[str, str] = {}
+    del workspace
+    provided_to_files: dict[str, set[str]] = defaultdict(set)
+    package_to_files: dict[str, set[str]] = defaultdict(set)
     for f in files:
-        if f.abs_path.suffix == ".py":
-            # Convert file path to possible module names
-            # src/opencmo/tools/community_providers.py → opencmo.tools.community_providers
-            rel = f.rel_path
-            for ext in (".py",):
-                if rel.endswith(ext):
-                    rel_no_ext = rel[:-len(ext)]
-                    # Try various module path formats
-                    mod_name = rel_no_ext.replace("/", ".").replace("\\", ".")
-                    module_to_file[mod_name] = f.rel_path
-                    # Also try without "src/" prefix
-                    if mod_name.startswith("src."):
-                        module_to_file[mod_name[4:]] = f.rel_path
-                    # Also try just the filename stem
-                    module_to_file[f.abs_path.stem] = f.rel_path
+        if f.package_identity:
+            package_to_files[f.package_identity].add(f.rel_path)
+        for provided in (f.semantics.provided_modules if f.semantics else []):
+            provided_to_files[provided].add(f.rel_path)
 
     # Build adjacency graph
     # Exclude glue files (__init__.py, index.ts) from creating edges —
@@ -378,12 +371,18 @@ def build_file_dependency_graph(
         graph.setdefault(f.rel_path, set())
         if f.rel_path in glue_paths:
             continue  # Don't let glue files create edges
+
+        if f.package_identity:
+            for peer in package_to_files.get(f.package_identity, set()):
+                if peer != f.rel_path and peer not in glue_paths:
+                    graph[f.rel_path].add(peer)
+                    graph[peer].add(f.rel_path)
+
         for imp_mod in f.imports_modules:
-            # Check if any file in our module provides this import
-            target = module_to_file.get(imp_mod)
-            if target and target != f.rel_path and target not in glue_paths:
-                graph[f.rel_path].add(target)
-                graph[target].add(f.rel_path)
+            for target in provided_to_files.get(imp_mod, set()):
+                if target != f.rel_path and target not in glue_paths:
+                    graph[f.rel_path].add(target)
+                    graph[target].add(f.rel_path)
 
     return dict(graph)
 
@@ -713,14 +712,29 @@ def _split_large_group(
             sub_groups.append(_make_group(name, [hub_file] + comp))
         else:
             # Others get a synthetic summary file for hub context
+            summary_semantics = (
+                hub_file.semantics.model_copy(
+                    update={
+                        "rel_path": f"[summary] {hub_file.rel_path}",
+                        "signature_summary": hub_summary,
+                    }
+                )
+                if hub_file.semantics is not None
+                else None
+            )
             summary_file = SourceFile(
                 rel_path=f"[summary] {hub_file.rel_path}",
                 abs_path=hub_file.abs_path,
                 content=hub_summary,
+                language=hub_file.language,
                 raw_tokens=len(hub_summary) // 4,
                 category="interface",
                 effective_tokens=len(hub_summary) // 4,
                 prefix=hub_file.prefix,
+                package_identity=hub_file.package_identity,
+                imports_modules=list(hub_file.imports_modules),
+                signature_summary=hub_summary,
+                semantics=summary_semantics,
             )
             sub_groups.append(_make_group(name, [summary_file] + comp))
 
@@ -736,52 +750,12 @@ def _split_large_group(
 
 
 def _extract_signatures(source_file: SourceFile) -> str:
-    """Extract function/class signatures with docstrings from a file.
-
-    Returns a compact summary suitable for providing interface context
-    to sibling sub-agents.
-    """
-    if source_file.abs_path.suffix != ".py":
-        # For non-Python, return first 100 lines
-        lines = source_file.content.splitlines()[:100]
-        return "\n".join(lines)
-
-    try:
-        tree = _ast.parse(source_file.content, filename=source_file.rel_path)
-    except SyntaxError:
-        return source_file.content[:2000]
-
-    lines: list[str] = [f"# Signatures from {source_file.rel_path}\n"]
-    source_lines = source_file.content.splitlines()
-
-    for node in _ast.iter_child_nodes(tree):
-        if isinstance(node, _ast.ClassDef):
-            # Class definition line + docstring
-            start = node.lineno - 1
-            lines.append(source_lines[start] if start < len(source_lines) else f"class {node.name}:")
-            doc = _ast.get_docstring(node)
-            if doc:
-                first_line = doc.split("\n")[0].strip()
-                lines.append(f'    """{first_line}"""')
-            # Method signatures
-            for item in _ast.iter_child_nodes(node):
-                if isinstance(item, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
-                    m_start = item.lineno - 1
-                    if m_start < len(source_lines):
-                        sig = source_lines[m_start].strip()
-                        lines.append(f"    {sig}")
-            lines.append("")
-
-        elif isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
-            start = node.lineno - 1
-            if start < len(source_lines):
-                lines.append(source_lines[start])
-            doc = _ast.get_docstring(node)
-            if doc:
-                first_line = doc.split("\n")[0].strip()
-                lines.append(f'    """{first_line}"""')
-            lines.append("")
-
+    """Return the adapter-provided signature summary for a source file."""
+    if source_file.signature_summary:
+        return source_file.signature_summary
+    if source_file.semantics and source_file.semantics.signature_summary:
+        return source_file.semantics.signature_summary
+    lines = source_file.content.splitlines()[:100]
     return "\n".join(lines)
 
 

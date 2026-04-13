@@ -42,12 +42,6 @@ async def refresh_pipeline(workspace: Path, quick: bool = False) -> RefreshStatu
     Returns:
         Structured refresh status, including stage and module health.
     """
-    from agents import set_tracing_disabled
-
-    set_tracing_disabled(True)
-
-    from antigravity_engine.config import get_settings
-    from antigravity_engine.hub.agents import build_refresh_agent, create_model
     from antigravity_engine.hub.scanner import (
         build_knowledge_graph,
         extract_structure,
@@ -56,9 +50,17 @@ async def refresh_pipeline(workspace: Path, quick: bool = False) -> RefreshStatu
         render_knowledge_graph_markdown,
         render_knowledge_graph_mermaid,
     )
+    refresh_scan_only = os.environ.get("AG_REFRESH_SCAN_ONLY", "0").strip() in {"1", "true", "yes"}
+    model: str | None = None
 
-    settings = get_settings()
-    model = create_model(settings)
+    if not refresh_scan_only:
+        from agents import set_tracing_disabled
+        from antigravity_engine.config import get_settings
+        from antigravity_engine.hub.agents import create_model
+
+        set_tracing_disabled(True)
+        settings = get_settings()
+        model = create_model(settings)
 
     ag_dir = workspace / ".antigravity"
     ag_dir.mkdir(parents=True, exist_ok=True)
@@ -121,13 +123,14 @@ async def refresh_pipeline(workspace: Path, quick: bool = False) -> RefreshStatu
             print(f"  - {rel}", file=sys.stderr)
     print(f"[1/3] Scan report: {scan_report_path}", file=sys.stderr)
 
-    refresh_scan_only = os.environ.get("AG_REFRESH_SCAN_ONLY", "0").strip() in {"1", "true", "yes"}
     conventions_content = ""
 
     if not refresh_scan_only:
+        from antigravity_engine.hub.agents import build_refresh_agent
+
         prompt = _format_scan_report(report)
 
-        agent = build_refresh_agent(model)
+        agent = build_refresh_agent(model or "")
         try:
             from agents import Runner
         except ImportError:
@@ -422,23 +425,54 @@ async def refresh_pipeline(workspace: Path, quick: bool = False) -> RefreshStatu
     )
     _write_refresh_status(ag_dir, refresh_status)
 
-    print(f"Updated {ag_dir / 'conventions.md'}")
-    print(f"Updated {ag_dir / 'structure.md'}")
-    print(f"Updated {ag_dir / 'knowledge_graph.json'}")
-    print(f"Updated {ag_dir / 'knowledge_graph.md'}")
-    print(f"Updated {ag_dir / 'knowledge_graph.mmd'}")
-    print(f"Updated {ag_dir / 'document_index.md'}")
-    print(f"Updated {ag_dir / 'data_overview.md'}")
-    print(f"Updated {ag_dir / 'media_manifest.md'}")
-    if (ag_dir / "module_registry.json").exists():
-        print(f"Updated {ag_dir / 'module_registry.json'}")
-    if (ag_dir / "module_registry.md").exists():
-        print(f"Updated {ag_dir / 'module_registry.md'}")
+    _print_artifact_status(
+        ag_dir / "conventions.md",
+        refresh_status.stages.get("conventions", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "structure.md",
+        refresh_status.stages.get("structure", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "knowledge_graph.json",
+        refresh_status.stages.get("knowledge_graph", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "knowledge_graph.md",
+        refresh_status.stages.get("knowledge_graph", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "knowledge_graph.mmd",
+        refresh_status.stages.get("knowledge_graph", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "document_index.md",
+        refresh_status.stages.get("indexes", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "data_overview.md",
+        refresh_status.stages.get("indexes", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "media_manifest.md",
+        refresh_status.stages.get("indexes", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "module_registry.json",
+        refresh_status.stages.get("module_registry", "success"),
+    )
+    _print_artifact_status(
+        ag_dir / "module_registry.md",
+        refresh_status.stages.get("module_registry", "success"),
+    )
     modules_dir = ag_dir / "modules"
     if modules_dir.exists():
         mod_count = len(list(modules_dir.glob("*.md")))
         facts_count = len(list(modules_dir.glob("*.facts.json")))
-        print(f"Updated {modules_dir} ({mod_count} module docs, {facts_count} facts files)")
+        if refresh_status.stages.get("module_registry") == "skipped":
+            print(f"Preserved {modules_dir} ({mod_count} module docs, {facts_count} facts files)")
+        else:
+            print(f"Updated {modules_dir} ({mod_count} module docs, {facts_count} facts files)")
     print(
         f"Refresh status: {refresh_status.overall_status} "
         f"(exit code {refresh_status.exit_code})",
@@ -473,6 +507,21 @@ def _mark_stage_failure(
             reason=reason,
         )
     )
+
+
+def _print_artifact_status(path: Path, stage_state: str) -> None:
+    """Print whether a refresh artifact was updated or preserved.
+
+    Args:
+        path: Artifact path to report.
+        stage_state: Stage state associated with the artifact.
+    """
+    if not path.exists():
+        return
+    if stage_state == "skipped":
+        print(f"Preserved {path}")
+        return
+    print(f"Updated {path}")
 
 
 def _mark_module_failure(
