@@ -380,7 +380,51 @@
         <div id="cfWorkflowNext" class="cf-stage-next">—</div>
       </div>
 
+      <div
+        id="cfRealityPanel"
+        class="hidden mt-5 rounded-2xl border border-cyan-500/35 bg-slate-950/90 p-5 text-sm text-slate-200 shadow-lg shadow-cyan-950/20"
+      >
+        <div class="text-[10px] font-semibold tracking-[0.35em] text-cyan-300/95 mb-1">REALITY CHECK</div>
+        <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">
+          Derived from server truth — not workflow labels alone. Refreshes when you load or sync the ticket.
+        </p>
+        <div id="cfRealityPanelBody" class="space-y-5"></div>
+      </div>
+
       <div id="modeBar" class="hidden mt-4 rounded-xl border border-slate-800 bg-slate-900/30 px-4 py-3 text-xs text-slate-200"></div>
+
+      <div
+        id="cfOperatorAssistBanner"
+        class="hidden mt-4 rounded-xl border border-amber-500/45 bg-amber-950/35 px-4 py-3 text-sm text-amber-50"
+      >
+        <div class="font-semibold text-amber-100">Operator review required — complex request</div>
+        <p id="cfOperatorAssistDetail" class="text-[11px] text-amber-200/90 mt-1 leading-relaxed"></p>
+      </div>
+
+      <div
+        id="cfDraftReviewPanel"
+        class="hidden mt-4 rounded-xl border border-sky-600/35 bg-slate-900/85 p-4"
+      >
+        <div class="text-xs font-semibold text-sky-200 mb-1">Draft AI response (not posted to the thread yet)</div>
+        <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
+          Review or edit below, then post. Automated sends are disabled for this ticket until you post.
+        </p>
+        <textarea
+          id="cfDraftReviewText"
+          class="w-full min-h-[140px] rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100"
+        ></textarea>
+        <div class="mt-3 flex flex-wrap gap-2 items-center">
+          <button
+            type="button"
+            id="btnCommitDraft"
+            class="rounded-lg bg-sky-500 text-slate-950 px-4 py-2 text-sm font-semibold"
+          >
+            Post to thread
+          </button>
+          <span id="cfDraftReviewHint" class="text-[11px] text-slate-500">You can edit the draft before posting.</span>
+        </div>
+      </div>
+
       <div
         id="activityStrip"
         class="hidden mt-3 rounded-xl border border-sky-500/25 bg-sky-500/5 px-4 py-2.5 text-xs text-slate-200 flex items-center gap-2"
@@ -504,6 +548,10 @@
                   Upload
                 </button>
               </div>
+              <p class="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                Choosing a file only selects it in your browser — it is <strong class="text-slate-400">not</strong> saved until you click
+                <strong class="text-slate-400">Upload</strong> and see &quot;Uploaded and available&quot; below.
+              </p>
               <p id="uploadAttachmentStatus" class="text-[10px] text-slate-500 mt-2"></p>
               <ul id="attachmentList" class="mt-2 space-y-1 text-[10px] text-sky-300/90"></ul>
             </div>
@@ -540,6 +588,10 @@
               After you have a <strong class="text-slate-400">Ticket ID</strong>, use this thread to tighten scope, add constraints, or answer follow-ups. Each send updates the structured
               <strong class="text-slate-400">brief</strong> stored on the ticket (no source code is shown here).
             </p>
+            <div
+              id="refineClarificationStrip"
+              class="hidden mb-3 rounded-xl border border-amber-500/35 bg-amber-950/25 px-3 py-2.5 text-[11px] text-amber-50/95 leading-relaxed space-y-2"
+            ></div>
 
             <div id="tenantBackgroundPanel" class="hidden">
               <div class="text-xs font-semibold text-slate-200 mb-1">Work in progress</div>
@@ -583,6 +635,10 @@
                 <strong class="text-slate-400">Refresh from server</strong> is on the right under Ticket ID — use it after
                 you change text elsewhere or if the page feels out of date.
               </p>
+              <div
+                id="tenantClarificationStrip"
+                class="hidden mt-3 rounded-lg border border-amber-500/35 bg-amber-950/25 px-3 py-2.5 text-[11px] text-amber-50/95 leading-relaxed space-y-2"
+              ></div>
               <div id="tenantThread" class="mt-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3 min-h-[140px] space-y-3 overflow-auto text-sm"></div>
               <div class="mt-3">
                 <textarea
@@ -1653,6 +1709,73 @@
           el.innerHTML = html;
         }
 
+        function updateOperatorAssistUi() {
+          const b = lastBrief || {};
+          const mode = String(b.mode || '').trim();
+          const pending = b.pending_operator_draft;
+          const hasPending =
+            pending && typeof pending === 'object' && String(pending.content != null ? pending.content : '').trim();
+          const ban = $('cfOperatorAssistBanner');
+          const det = $('cfOperatorAssistDetail');
+          if (!ban) return;
+          if (mode === 'operator_assisted' || hasPending) {
+            ban.classList.remove('hidden');
+            if (det) {
+              const rs = Array.isArray(b.operator_escalation_reasons) ? b.operator_escalation_reasons : [];
+              det.textContent = rs.length
+                ? 'Escalation signals: ' + rs.map(function (x) { return String(x || ''); }).join(' · ')
+                : 'Automated assistant replies are held until you post the draft below.';
+            }
+          } else {
+            ban.classList.add('hidden');
+            if (det) det.textContent = '';
+          }
+        }
+
+        function updateDraftReviewPanel() {
+          const b = lastBrief || {};
+          const pan = $('cfDraftReviewPanel');
+          const ta = $('cfDraftReviewText');
+          if (!pan || !ta) return;
+          const pending = b.pending_operator_draft;
+          const has = pending && typeof pending === 'object' && String(pending.content || '').trim();
+          if (has) {
+            pan.classList.remove('hidden');
+            ta.value = String(pending.content || '');
+          } else {
+            pan.classList.add('hidden');
+            ta.value = '';
+          }
+        }
+
+        async function commitAssistantDraftFromUi() {
+          const tid = String(ticketEl.value || '').trim();
+          const ta = $('cfDraftReviewText');
+          const content = ta ? String(ta.value || '').trim() : '';
+          if (!tid) return setBanner('Select a ticket first.');
+          if (!content) return setBanner('Draft is empty — add text or sync the ticket.');
+          setBanner('');
+          try {
+            await withActivity('Posting approved response…', async () => {
+              const j = await post('change-chat-commit-draft', { ticket_id: tid, content });
+              const tEl = $('tenantThread');
+              if (tEl && isTenantClient()) appendToThread(tEl, 'assistant', content);
+              else append('assistant', content);
+              setBrief({
+                ...(lastBrief || {}),
+                ticket_id: tid,
+                ticket_progress: j.ticket_progress || null,
+                mode: undefined,
+                pending_operator_draft: undefined,
+                operator_escalation_reasons: undefined,
+              });
+              await syncCurrentTicket();
+            });
+          } catch (e) {
+            setBanner(String(e && e.message ? e.message : e));
+          }
+        }
+
         function headers() {
           return { 'Content-Type': 'application/json' };
         }
@@ -1921,7 +2044,38 @@
             });
           }
 
-          return mergeDeliveryPlanFromClientView(cv, steps);
+          let out = mergeDeliveryPlanFromClientView(cv, steps);
+          const wfState = String(cv.workflow_state || '').trim();
+          if (wfState === 'not_delivered') {
+            const rg = cj.reality_gate && typeof cj.reality_gate === 'object' ? cj.reality_gate : {};
+            const lr = rg.last_run && typeof rg.last_run === 'object' ? rg.last_run : {};
+            const chk = Array.isArray(lr.checks) ? lr.checks : [];
+            const bad = chk.filter(function (c) {
+              return c && c.ok === false;
+            });
+            let detail = 'Production URL check failed — merge or close is blocked until this passes.';
+            if (bad.length) {
+              detail = bad
+                .map(function (c) {
+                  const u = c.url != null ? String(c.url) : '';
+                  const st = c.status != null ? String(c.status) : '—';
+                  const ex = c.detail != null ? String(c.detail) : '';
+                  return u + ' → HTTP ' + st + (ex ? ' (' + ex + ')' : '');
+                })
+                .slice(0, 4)
+                .join(' · ');
+            }
+            if (lr.checked_at != null && String(lr.checked_at).trim()) {
+              detail += ' Last run: ' + String(lr.checked_at).trim() + '.';
+            }
+            out = out.slice();
+            out.push({
+              state: 'err',
+              title: tenantUx ? 'Live site check failed' : 'Production reality gate — FAILED',
+              detail: detail,
+            });
+          }
+          return out;
         }
 
         function renderDeliveryPlanHtml(steps) {
@@ -2042,10 +2196,13 @@
         function humanTicketPhase(merged, tp) {
           const st = String((tp && tp.status) || (merged && merged.status) || '').trim();
           const sg = String((tp && tp.stage) || (merged && merged.stage) || '').trim();
+          const cv = tp && tp.client_view && typeof tp.client_view === 'object' ? tp.client_view : {};
+          if (String(cv.workflow_state || '').trim() === 'not_delivered') {
+            return { label: 'NOT DELIVERED', live: false };
+          }
           const cj = getMergedConsoleJson(merged);
           const prom = cj.promotion && typeof cj.promotion === 'object' ? cj.promotion : {};
           if (prom.merged === true) return { label: 'Shipped', live: true };
-          const cv = tp && tp.client_view && typeof tp.client_view === 'object' ? tp.client_view : {};
           const auto = cv.automation && typeof cv.automation === 'object' ? cv.automation : {};
           const s = (st + ' ' + sg).toLowerCase();
           if (s.includes('approved') && s.includes('build')) {
@@ -2297,14 +2454,17 @@
           return j;
         }
 
+        /**
+         * @returns {Promise<{ ok: boolean, attachments: Array<{ id?: string, file_name?: string, download_url?: string, byte_size?: number }> }>}
+         */
         async function loadAttachmentList(ticketId) {
           const ul = $('attachmentList');
           const st = $('uploadAttachmentStatus');
-          if (!ul) return;
+          if (!ul) return { ok: false, attachments: [] };
           const tid = String(ticketId != null ? ticketId : ticketEl.value || '').trim();
           if (!tid || !sessionInfo || !sessionInfo.logged_in) {
             ul.innerHTML = '';
-            return;
+            return { ok: false, attachments: [] };
           }
           try {
             const r = await fetch('/api/change-attachment/list?ticket_id=' + encodeURIComponent(tid), {
@@ -2322,13 +2482,13 @@
                   ? 'File uploads need the cmp_ticket_attachments table — run factory ensure-schema, deploy Prisma.'
                   : '';
               }
-              return;
+              return { ok: false, attachments: [] };
             }
             const base = window.location.origin || '';
             const items = j.attachments && Array.isArray(j.attachments) ? j.attachments : [];
             ul.innerHTML = items
               .map(function (a) {
-                const u = String(a.download_url || '');
+                const u = String(a.download_url || a.file_url || '');
                 const href = u.indexOf('http') === 0 ? u : base + u;
                 const name = escapeHtml(String(a.file_name || 'file'));
                 return (
@@ -2342,8 +2502,10 @@
                 );
               })
               .join('');
+            return { ok: true, attachments: items };
           } catch (_) {
             ul.innerHTML = '';
+            return { ok: false, attachments: [] };
           }
         }
 
@@ -2390,19 +2552,54 @@
             const j = await r.json().catch(function () {
               return {};
             });
-            if (!r.ok) throw new Error(j.error || j.detail || 'upload_failed');
+            if (!r.ok) {
+              const detail = [j.error, j.detail, j.hint].filter(function (x) {
+                return x != null && String(x).trim() !== '';
+              });
+              throw new Error(detail.length ? detail.join(' — ') : 'upload_failed (HTTP ' + r.status + ')');
+            }
+            if (j.ok !== true || !j.attachment_id || j.persisted !== true) {
+              throw new Error(
+                'Upload not saved — please retry. The server did not confirm storage in cmp_ticket_attachments.',
+              );
+            }
+            var listRes = await loadAttachmentList(tid);
+            var found = listRes.attachments.some(function (a) {
+              return String(a.id || '') === String(j.attachment_id || '');
+            });
+            if (!listRes.ok || !found) {
+              await new Promise(function (resolve) {
+                window.setTimeout(resolve, 450);
+              });
+              listRes = await loadAttachmentList(tid);
+              found = listRes.attachments.some(function (a) {
+                return String(a.id || '') === String(j.attachment_id || '');
+              });
+            }
+            if (!listRes.ok || !found) {
+              throw new Error(
+                'Upload not saved — file is not listed for this ticket. Please retry or check your session.',
+              );
+            }
             const ml = $('mediaLinks');
-            if (ml && j.download_url) {
+            var linkToAdd = j.file_url || j.download_url;
+            if (ml && linkToAdd) {
               const origin = window.location.origin || '';
-              const u = String(j.download_url);
+              const u = String(linkToAdd);
               const full = u.indexOf('http') === 0 ? u : origin + u;
               ml.value = (ml.value ? ml.value.trim() + '\n' : '') + full;
             }
-            if (st) st.textContent = 'Uploaded — link added to External links.';
+            if (st) {
+              st.textContent =
+                'Uploaded and available — saved on this ticket (opens with your login). Link also added to External links.';
+            }
             input.value = '';
-            loadAttachmentList(tid);
           } catch (e) {
-            if (st) st.textContent = String(e.message || e);
+            if (st) {
+              var em = String(e && e.message ? e.message : e);
+              if (/upload not saved/i.test(em)) st.textContent = em;
+              else st.textContent = 'Upload not saved — please retry. (' + em + ')';
+            }
           }
         }
 
@@ -2470,6 +2667,179 @@
           }
         }
 
+        function renderRealityPanel(briefObj) {
+          const wrap = $('cfRealityPanel');
+          const body = $('cfRealityPanelBody');
+          if (!wrap || !body) return;
+          const tid = String((briefObj && briefObj.ticket_id) || (ticketEl && ticketEl.value) || '').trim();
+          const rp = briefObj && briefObj.reality_panel;
+          if (!tid || !sessionInfo || !sessionInfo.logged_in) {
+            wrap.classList.add('hidden');
+            body.innerHTML = '';
+            return;
+          }
+          if (!rp || typeof rp !== 'object') {
+            wrap.classList.remove('hidden');
+            body.innerHTML =
+              '<div class="text-[12px] text-slate-500">Reality data not loaded yet — use <strong class="text-slate-300">Refresh from server</strong> on your ticket.</div>';
+            return;
+          }
+          if (rp.error) {
+            wrap.classList.remove('hidden');
+            body.innerHTML =
+              '<div class="rounded-lg border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-[12px] text-rose-100">Reality check failed to compute. ' +
+              escapeHtml(String(rp.detail || rp.error || 'unknown')) +
+              '</div>';
+            return;
+          }
+
+          const ex = rp.exists && typeof rp.exists === 'object' ? rp.exists : {};
+          const di = rp.delivery_integrity && typeof rp.delivery_integrity === 'object' ? rp.delivery_integrity : {};
+          const pt = String(rp.preview_truth || 'MISSING');
+          const ptClass =
+            pt === 'VALID' ? 'text-emerald-300' : pt === 'MISLEADING' ? 'text-amber-300' : 'text-rose-300';
+          const diStatus = String(di.status || 'UNKNOWN');
+          const diClass =
+            diStatus === 'PASS' || diStatus === 'N/A'
+              ? 'text-emerald-300'
+              : diStatus === 'FAIL'
+                ? 'text-rose-300'
+                : 'text-slate-400';
+
+          const outcomes = Array.isArray(rp.intended_outcomes) ? rp.intended_outcomes : [];
+          const missing = Array.isArray(rp.missing) ? rp.missing : [];
+          const contradictions = Array.isArray(rp.contradictions) ? rp.contradictions : [];
+
+          const existsLines = [];
+          if (ex.hero_image_url)
+            existsLines.push(
+              '<li><span class="text-slate-500">Hero (recorded / site)</span> — <span class="text-slate-200 break-all">' +
+                escapeHtml(String(ex.hero_image_url)) +
+                '</span></li>',
+            );
+          if (ex.preview_url)
+            existsLines.push(
+              '<li><span class="text-slate-500">Preview URL</span> — <a class="text-sky-300 underline break-all" target="_blank" rel="noreferrer" href="' +
+                escapeHtml(String(ex.preview_url)) +
+                '">open</a></li>',
+            );
+          if (ex.pr_url)
+            existsLines.push(
+              '<li><span class="text-slate-500">PR</span> — <a class="text-sky-300 underline break-all" target="_blank" rel="noreferrer" href="' +
+                escapeHtml(String(ex.pr_url)) +
+                '">open</a></li>',
+            );
+          if (ex.branch) existsLines.push('<li><span class="text-slate-500">Branch</span> — ' + escapeHtml(String(ex.branch)) + '</li>');
+          existsLines.push(
+            '<li><span class="text-slate-500">Attachments</span> — ' +
+              escapeHtml(String(ex.attachment_count != null ? ex.attachment_count : 0)) +
+              ' file(s)</li>',
+          );
+
+          const missLines = missing.length
+            ? missing.map(function (m) {
+                const o = m && typeof m === 'object' ? m : {};
+                return (
+                  '<li class="text-slate-200"><span class="text-slate-500">' +
+                  escapeHtml(String(o.kind || 'gap')) +
+                  ':</span> ' +
+                  escapeHtml(String(o.text || '')) +
+                  '</li>'
+                );
+              })
+            : ['<li class="text-slate-500">None flagged from brief + automation gaps.</li>'];
+
+          const contraLines = contradictions.length
+            ? contradictions.map(function (c) {
+                return '<li class="text-amber-200/95 border-l-2 border-amber-500/50 pl-2">' + escapeHtml(String(c)) + '</li>';
+              })
+            : ['<li class="text-slate-500">None detected from current data.</li>'];
+
+          const blocker = rp.blocker && typeof rp.blocker === 'object' ? rp.blocker : {};
+          const blockerCode = String(blocker.code || '');
+          const nextAct = String(rp.next_action || 'FIX');
+          const blockWrapClass =
+            blockerCode === 'operator_review_required'
+              ? 'rounded-xl border border-amber-500/60 bg-amber-950/30 p-4 space-y-3'
+              : 'rounded-xl border border-cyan-600/40 bg-cyan-950/25 p-4 space-y-3';
+          const nextActClass =
+            blockerCode === 'operator_review_required'
+              ? 'text-2xl font-extrabold text-amber-100 mt-1 tracking-tight'
+              : 'text-lg font-bold text-cyan-100 mt-1 tracking-tight';
+
+          body.innerHTML =
+            '<div class="space-y-2">' +
+            '<div class="text-[10px] uppercase tracking-wide text-slate-500">1. Requested change</div>' +
+            '<p class="text-[13px] text-slate-100 leading-relaxed">' +
+            escapeHtml(String(rp.requested_change || '—')) +
+            '</p></div>' +
+            '<div class="space-y-2">' +
+            '<div class="text-[10px] uppercase tracking-wide text-slate-500">2. Intended outcomes</div>' +
+            (outcomes.length
+              ? '<ul class="list-disc pl-5 space-y-1 text-[12px] text-slate-300">' +
+                outcomes.map(function (o) {
+                  return '<li>' + escapeHtml(String(o)) + '</li>';
+                }).join('') +
+                '</ul>'
+              : '<p class="text-[12px] text-slate-500">No structured outcomes list on the brief yet.</p>') +
+            '</div>' +
+            '<div class="space-y-2">' +
+            '<div class="text-[10px] uppercase tracking-wide text-slate-500">3. What EXISTS</div>' +
+            '<ul class="list-none space-y-1 text-[12px]">' +
+            existsLines.join('') +
+            '</ul></div>' +
+            '<div class="space-y-2">' +
+            '<div class="text-[10px] uppercase tracking-wide text-slate-500">4. What is MISSING</div>' +
+            '<ul class="list-none space-y-1 text-[12px]">' +
+            missLines.join('') +
+            '</ul></div>' +
+            '<div class="space-y-2 rounded-xl border border-slate-800 bg-slate-900/50 p-3">' +
+            '<div class="text-[10px] uppercase tracking-wide text-slate-500">5. Preview truth</div>' +
+            '<div class="text-[13px] font-semibold ' +
+            ptClass +
+            '">' +
+            escapeHtml(pt) +
+            '</div>' +
+            '<p class="text-[11px] text-slate-400 mt-1 leading-relaxed">' +
+            escapeHtml(String(rp.preview_truth_detail || '')) +
+            '</p></div>' +
+            '<div class="space-y-2 rounded-xl border border-slate-800 bg-slate-900/50 p-3">' +
+            '<div class="text-[10px] uppercase tracking-wide text-slate-500">6. Delivery integrity</div>' +
+            '<div class="text-[13px] font-semibold ' +
+            diClass +
+            '">' +
+            escapeHtml(diStatus) +
+            '</div>' +
+            '<p class="text-[11px] text-slate-400 mt-1 leading-relaxed">' +
+            escapeHtml(String(di.detail || '')) +
+            '</p></div>' +
+            '<div class="space-y-2">' +
+            '<div class="text-[10px] uppercase tracking-wide text-rose-400/90">7. Contradictions</div>' +
+            '<ul class="list-none space-y-2 text-[12px]">' +
+            contraLines.join('') +
+            '</ul></div>' +
+            '<div class="' +
+            blockWrapClass +
+            '">' +
+            '<div><span class="text-[10px] uppercase tracking-wide text-slate-500">Blocker</span>' +
+            '<p class="text-[13px] text-slate-100 mt-1 leading-relaxed">' +
+            escapeHtml(String(blocker.label || '—')) +
+            '</p></div>' +
+            '<div class="pt-2 border-t ' +
+            (blockerCode === 'operator_review_required' ? 'border-amber-800/40' : 'border-cyan-800/40') +
+            '">' +
+            '<span class="text-[10px] uppercase tracking-wide ' +
+            (blockerCode === 'operator_review_required' ? 'text-amber-200/95' : 'text-cyan-200/90') +
+            '">Next action (only one)</span>' +
+            '<p class="' +
+            nextActClass +
+            '">' +
+            escapeHtml(nextAct) +
+            '</p></div></div>';
+
+          wrap.classList.remove('hidden');
+        }
+
         function setBrief(obj) {
           lastBrief = obj && typeof obj === 'object' ? obj : null;
           if (briefEl) {
@@ -2478,6 +2848,15 @@
           applyConsoleLayout();
           applyWorkspaceMode();
           const eff = hydrateBriefFromTicketProgress(lastBrief || {});
+          try {
+            renderRealityPanel(lastBrief || {});
+          } catch (_) {}
+          try {
+            updateOperatorAssistUi();
+          } catch (_) {}
+          try {
+            updateDraftReviewPanel();
+          } catch (_) {}
           try {
             updatePipelineCardFromBrief(eff);
           } catch (_) {}
@@ -2492,6 +2871,9 @@
           } catch (_) {}
           try {
             renderCompletionScorecard(eff);
+          } catch (_) {}
+          try {
+            updateRefineClarificationStrips(lastBrief || {});
           } catch (_) {}
           try {
             renderWorkflowBannerFromBrief(eff);
@@ -2561,6 +2943,20 @@
 
           if (isTenantClient()) {
             const human = [];
+            const blkMsg =
+              tpCv.client_preview_blocked_message != null ? String(tpCv.client_preview_blocked_message).trim() : '';
+            const blkCode = tpAuto.client_site_preview_block_code != null ? String(tpAuto.client_site_preview_block_code).trim() : '';
+            if (blkCode || blkMsg) {
+              human.push(
+                '<div class="rounded-lg border border-rose-500/30 bg-rose-950/40 px-3 py-2 text-[11px] text-rose-100 leading-relaxed">' +
+                  '<strong class="text-rose-200">⚠ No verified visual change:</strong> ' +
+                  escapeHtml(
+                    blkMsg ||
+                      'Requested visual change not applied — preview blocked. Update the site draft hero image so it differs from the recorded baseline, then refresh promotion.',
+                  ) +
+                  '</div>',
+              );
+            }
             const storedPromotionT =
               b && b.console_json && b.console_json.promotion && typeof b.console_json.promotion === 'object'
                 ? b.console_json.promotion
@@ -2728,6 +3124,21 @@
           if (storedPromotion && storedPromotion.last_error) {
             human.push(
               '<div class="text-[11px] text-rose-300">Promotion sync: ' + escapeHtml(String(storedPromotion.last_error)) + '</div>',
+            );
+          }
+
+          const blkMsgAd =
+            tpCv.client_preview_blocked_message != null ? String(tpCv.client_preview_blocked_message).trim() : '';
+          const blkCodeAd = tpAuto.client_site_preview_block_code != null ? String(tpAuto.client_site_preview_block_code).trim() : '';
+          if (blkCodeAd || blkMsgAd) {
+            human.push(
+              '<div class="rounded-lg border border-rose-500/30 bg-rose-950/40 px-3 py-2 text-[11px] text-rose-100 leading-relaxed">' +
+                '<strong class="text-rose-200">⚠ Delivery integrity:</strong> ' +
+                escapeHtml(
+                  blkMsgAd ||
+                    'Client preview URL withheld: visible hero/background change not detected in merged site JSON.',
+                ) +
+                '</div>',
             );
           }
 
@@ -2931,6 +3342,65 @@
           return null;
         }
 
+        /** Up to two GROQ/deterministic clarification questions stored on `brief.missing_information`. */
+        function resolveMissingInformation(merged) {
+          const br = resolveStructuredBrief(merged);
+          if (!br || typeof br !== 'object') return [];
+          const m = br.missing_information;
+          if (!Array.isArray(m)) return [];
+          return m
+            .map(function (x) {
+              return String(x || '').trim();
+            })
+            .filter(Boolean)
+            .slice(0, 2);
+        }
+
+        function updateRefineClarificationStrips(merged) {
+          const miss = resolveMissingInformation(merged);
+          const wrapShared = $('refineClarificationStrip');
+          const wrapTenant = $('tenantClarificationStrip');
+          const fill = function (el) {
+            if (!el) return;
+            if (!miss.length) {
+              el.classList.add('hidden');
+              el.innerHTML = '';
+              return;
+            }
+            el.classList.remove('hidden');
+            el.innerHTML =
+              '<div class="font-semibold text-amber-100/95">Guided follow-ups</div>' +
+              '<p class="text-[10px] text-slate-400">Answer in the chat below (at most two questions per round).</p>' +
+              '<ol class="list-decimal pl-4 space-y-1.5 mt-1">' +
+              miss
+                .map(function (q) {
+                  return (
+                    '<li><span class="text-slate-100/95">' +
+                    escapeHtml(q) +
+                    '</span> <button type="button" class="text-sky-400 hover:text-sky-300 underline text-[11px] cf-insert-q" data-q="' +
+                    encodeURIComponent(q) +
+                    '">Insert into reply</button></li>'
+                  );
+                })
+                .join('') +
+              '</ol>';
+          };
+          const tenantUx = isTenantClient();
+          if (tenantUx) {
+            if (wrapShared) {
+              wrapShared.classList.add('hidden');
+              wrapShared.innerHTML = '';
+            }
+            fill(wrapTenant);
+          } else {
+            if (wrapTenant) {
+              wrapTenant.classList.add('hidden');
+              wrapTenant.innerHTML = '';
+            }
+            fill(wrapShared);
+          }
+        }
+
         function extractTaskLikeStrings(br) {
           if (!br || typeof br !== 'object') return [];
           const seen = new Set();
@@ -3078,6 +3548,7 @@
           ).trim();
           const outcomesFromDesc = extractOutcomesFromDescriptionClient(descText);
           const outcomes = mergeOutcomeLists(outcomesFromBrief, outcomesFromDesc);
+          const missFromBrief = resolveMissingInformation(merged);
 
           const hasEstimate = Boolean(merged.costing_preview || cv.last_estimate_at);
           const approved = /approved/i.test(st) || sg.toLowerCase() === 'build';
@@ -3092,9 +3563,15 @@
 
           const blockers = [];
           if (!outcomes.length) {
-            blockers.push(
-              'Outcomes not explicit yet — add an “Intended outcomes” bullet list in the request text, or use Refine the request.',
-            );
+            if (missFromBrief.length) {
+              for (const q of missFromBrief) {
+                blockers.push('Clarify: ' + q);
+              }
+            } else {
+              blockers.push(
+                'Outcomes not explicit yet — add an “Intended outcomes” bullet list in the request text, or answer the guided questions in Refine the request.',
+              );
+            }
           }
           if (!hasEstimate) blockers.push('No estimate saved yet.');
           if (approved && dispatched && lastActivityPayload && lastActivityPayload.activity && lastActivityPayload.activity.branch_exists === false) {
@@ -3106,6 +3583,9 @@
           const next = (() => {
             if (mergedPr) return 'Done: merged to main.';
             if (!outcomes.length) {
+              if (missFromBrief.length) {
+                return 'Next: reply in Refine the request with answers to the questions above, or add an “Intended outcomes” bullet list to the description.';
+              }
               return 'Next: under the description, add a section “Intended outcomes” with dash bullets, or use Refine the request.';
             }
             if (!hasEstimate) return 'Next: run Estimate so cost + scope are recorded.';
@@ -3674,6 +4154,7 @@
             publishing: 'Publishing',
             published: 'Published',
             closed: 'Closed',
+            not_delivered: 'NOT DELIVERED',
           };
           return map[s] || (s ? s : '—');
         }
@@ -3688,6 +4169,21 @@
           const next = cv.workflow_next_action != null ? String(cv.workflow_next_action) : '';
           stEl.textContent = workflowLabel(wf);
           nxEl.textContent = next || '—';
+          const banner = stEl.closest ? stEl.closest('.cf-stage-banner') : null;
+          if (banner && banner.classList) {
+            if (wf === 'not_delivered') {
+              banner.classList.add('border-rose-500/45', 'bg-rose-950/35');
+            } else {
+              banner.classList.remove('border-rose-500/45', 'bg-rose-950/35');
+            }
+          }
+          if (stEl.classList) {
+            if (wf === 'not_delivered') {
+              stEl.classList.add('text-rose-100');
+            } else {
+              stEl.classList.remove('text-rose-100');
+            }
+          }
         }
 
         const modeBarHost = $('modeBar');
@@ -4113,13 +4609,56 @@
               try { localStorage.setItem(LS_TICKET, tid); } catch {}
               thread.innerHTML = '';
               append('user', d);
-              setBrief({ ticket_id: tid, status: 'created' });
+              if (created.pending_approval) {
+                /* assistant withheld — draft panel + banner via setBrief */
+              } else if (created.assistant) {
+                append('assistant', String(created.assistant));
+              }
+              const tThread = $('tenantThread');
+              if (tThread && isTenantClient()) {
+                tThread.innerHTML = '';
+                appendToThread(tThread, 'user', d);
+                if (created.pending_approval) {
+                  /* withheld */
+                } else if (created.assistant) appendToThread(tThread, 'assistant', String(created.assistant));
+              }
+              setBrief({
+                ticket_id: tid,
+                status: 'Open',
+                stage: 'Intake',
+                brief: created.brief || null,
+                brief_structured: created.brief_structured || created.brief || null,
+                ticket_progress: created.ticket_progress || null,
+                refinement_messages: created.refinement_messages || null,
+                mode: created.mode,
+                pending_operator_draft: created.pending_operator_draft,
+                operator_escalation_reasons: created.operator_escalation_reasons,
+              });
               loadTicketList();
               loadAttachmentList(tid);
             });
           } catch (e) {
             setBanner(String(e.message || e));
           }
+        });
+
+        document.addEventListener('click', function (ev) {
+          const t = ev.target;
+          if (!t || !t.classList || !t.classList.contains('cf-insert-q')) return;
+          const raw = t.getAttribute('data-q');
+          const q = raw ? decodeURIComponent(raw) : '';
+          if (!q) return;
+          ev.preventDefault();
+          const ta = $('tenantRefineText');
+          const chat = $('chat');
+          const active =
+            isTenantClient() && ta && ta.offsetParent !== null ? ta : chat && chat.offsetParent !== null ? chat : ta || chat;
+          if (!active) return;
+          const cur = String(active.value || '').trim();
+          active.value = (cur ? cur + '\n\n' : '') + q + ' — ';
+          try {
+            active.focus();
+          } catch (_) {}
         });
 
         $('btnCost').addEventListener('click', async () => {
@@ -4214,8 +4753,28 @@
           try {
             await withActivity('Refining brief…', async () => {
               const j = await post('change-chat', { ticket_id: tid, message: msg, locale: localeSel.value || 'en' });
-              append('assistant', String(j.assistant || 'OK'));
-              setBrief({ ...(lastBrief || {}), brief: j.brief || null });
+              if (j.pending_approval) {
+                setBrief({
+                  ...(lastBrief || {}),
+                  ticket_id: tid,
+                  brief: j.brief || null,
+                  ticket_progress: j.ticket_progress || null,
+                  mode: j.mode,
+                  pending_operator_draft: j.pending_operator_draft,
+                  operator_escalation_reasons: j.operator_escalation_reasons,
+                });
+              } else {
+                append('assistant', String(j.assistant || 'OK'));
+                setBrief({
+                  ...(lastBrief || {}),
+                  ticket_id: tid,
+                  brief: j.brief || null,
+                  ticket_progress: j.ticket_progress || null,
+                  mode: j.mode,
+                  pending_operator_draft: j.pending_operator_draft,
+                  operator_escalation_reasons: j.operator_escalation_reasons,
+                });
+              }
             });
           } catch (e) {
             setBanner(String(e.message || e));
@@ -4223,6 +4782,12 @@
         }
 
         $('btnSend').addEventListener('click', send);
+        const btnCommitDraft = $('btnCommitDraft');
+        if (btnCommitDraft) {
+          btnCommitDraft.addEventListener('click', function () {
+            void commitAssistantDraftFromUi();
+          });
+        }
         chatEl.addEventListener('keydown', (ev) => {
           if (ev.key === 'Enter') {
             ev.preventDefault();
@@ -4257,8 +4822,28 @@
           try {
             await withActivity('Refining request…', async () => {
               const j = await post('change-chat', { ticket_id: tid, message: msg, locale: localeSel.value || 'en' });
-              appendToThread(tEl, 'assistant', String(j.assistant || 'OK'));
-              setBrief({ ...(lastBrief || {}), brief: j.brief || null });
+              if (j.pending_approval) {
+                setBrief({
+                  ...(lastBrief || {}),
+                  ticket_id: tid,
+                  brief: j.brief || null,
+                  ticket_progress: j.ticket_progress || null,
+                  mode: j.mode,
+                  pending_operator_draft: j.pending_operator_draft,
+                  operator_escalation_reasons: j.operator_escalation_reasons,
+                });
+              } else {
+                appendToThread(tEl, 'assistant', String(j.assistant || 'OK'));
+                setBrief({
+                  ...(lastBrief || {}),
+                  ticket_id: tid,
+                  brief: j.brief || null,
+                  ticket_progress: j.ticket_progress || null,
+                  mode: j.mode,
+                  pending_operator_draft: j.pending_operator_draft,
+                  operator_escalation_reasons: j.operator_escalation_reasons,
+                });
+              }
             });
             if (st) st.textContent = 'Saved on ticket.';
             window.setTimeout(() => {
