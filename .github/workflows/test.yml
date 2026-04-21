@@ -79,8 +79,10 @@ jobs:
         npm ci
         npm test
 
-    # When POSTGRES_URL is configured as a repo secret, apply pending Prisma migrations (no-op if none).
+    # When POSTGRES_URL is set (e.g. from Infisical OIDC), try to apply pending migrations.
+    # P3005 on non-baselined DBs is migrate history hygiene, not secret-delivery failure — step uses continue-on-error.
     - name: Prisma migrate deploy (optional)
+      continue-on-error: true
       run: |
         if [ -z "$POSTGRES_URL" ]; then
           echo "Skip: POSTGRES_URL not available (Infisical not configured for this workflow/env)."

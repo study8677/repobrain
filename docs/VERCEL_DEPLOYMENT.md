@@ -58,13 +58,17 @@ For **CI** on Pro with sub-daily crons, adjust `.github/workflows/test.yml` or r
 
 ## GitHub Actions: `POSTGRES_URL` and Prisma migrate
 
-The **Agent CI** workflow (`.github/workflows/test.yml`) runs **`npx prisma migrate deploy`** when the repository secret **`POSTGRES_URL`** is set.
+The **Agent CI** workflow (`.github/workflows/test.yml`) may run **`npx prisma migrate deploy`** when **`POSTGRES_URL`** is present (including when injected by **Infisical OIDC** in the same job).
+
+**Important:** A failed optional migrate (for example Prisma **P3005** on a non-empty, non-baselined database) is **not** treated as an **Infisical or secret-delivery failure**. The migrate step is **`continue-on-error`** so CI still validates secret injection and the rest of the pipeline. Baseline / migration history is a separate operator concern.
+
+Legacy option: store **`POSTGRES_URL`** as a GitHub Actions **repository secret** if you are not using Infisical in CI.
 
 1. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
 2. Name: **`POSTGRES_URL`**. Value: the same pooled Postgres URL you use on Vercel for this project (Prisma).
 3. Optional CLI: `gh secret set POSTGRES_URL` and paste the URL when prompted.
 
-Forks and contributors without this secret still pass CI; the step prints a skip message. Nothing in the repo can create this secret for you automatically.
+Forks and contributors without `POSTGRES_URL` still pass CI; the step prints a skip message. Nothing in the repo can create this secret for you automatically.
 
 ## Vercel env: factory health + Technical Lead + preview matching
 
