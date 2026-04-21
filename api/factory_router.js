@@ -58,6 +58,7 @@ import { getTenantWalletSnapshot } from '../lib/factory/costing.js';
 import {
   handleChangeAttachmentDownload,
   handleChangeAttachmentList,
+  handleChangeAttachmentPublic,
   handleChangeAttachmentUpload,
 } from '../lib/server/change-attachments.js';
 import { getChangeConsoleReadinessForTenant } from '../lib/server/change-console-readiness.js';
@@ -688,29 +689,30 @@ async function handleUiContext(req, res) {
 }
 
 export default async function handler(req, res) {
-  augmentReqQueryFromUrl(req);
-  const pathSeg = normalizeRoutingPath(req);
-  await applyCorpflowHostTenantResolution(req);
+  try {
+    augmentReqQueryFromUrl(req);
+    const pathSeg = normalizeRoutingPath(req);
+    await applyCorpflowHostTenantResolution(req);
 
-  if (!pathSeg || pathSeg === 'factory_router') {
-    return res.status(200).json({ ok: true, service: 'factory_router' });
-  }
+    if (!pathSeg || pathSeg === 'factory_router') {
+      return res.status(200).json({ ok: true, service: 'factory_router' });
+    }
 
-  if (pathSeg === 'health') {
-    return handleHealth(req, res);
-  }
-  if (pathSeg === 'factory/health') {
-    return handleFactoryHealth(req, res);
-  }
-  if (pathSeg === 'chat') {
-    return handleChat(req, res);
-  }
-  if (pathSeg === 'stats') {
-    return handleStats(req, res);
-  }
-  if (pathSeg === 'ui/context') {
-    return handleUiContext(req, res);
-  }
+    if (pathSeg === 'health') {
+      return handleHealth(req, res);
+    }
+    if (pathSeg === 'factory/health') {
+      return handleFactoryHealth(req, res);
+    }
+    if (pathSeg === 'chat') {
+      return handleChat(req, res);
+    }
+    if (pathSeg === 'stats') {
+      return handleStats(req, res);
+    }
+    if (pathSeg === 'ui/context') {
+      return handleUiContext(req, res);
+    }
 
   if (pathSeg === 'change-attachment/upload') {
     return handleChangeAttachmentUpload(req, res);
@@ -720,6 +722,9 @@ export default async function handler(req, res) {
   }
   if (pathSeg === 'change-attachment/download') {
     return handleChangeAttachmentDownload(req, res);
+  }
+  if (pathSeg === 'change-attachment/public') {
+    return handleChangeAttachmentPublic(req, res);
   }
 
   if (pathSeg === 'growth' || pathSeg.startsWith('growth/')) {
@@ -796,46 +801,63 @@ export default async function handler(req, res) {
     return factoryCmpTicketSummariesHandler(req, res);
   }
 
-  switch (pathSeg) {
-    case 'auth/login':
-      return handleAuthLogin(req, res);
-    case 'auth/password-reset/request':
-      return handleAuthPasswordResetRequest(req, res);
-    case 'auth/password-reset/confirm':
-      return handleAuthPasswordResetConfirm(req, res);
-    case 'auth/me':
-      return handleAuthMe(req, res);
-    case 'auth/logout':
-      return handleAuthLogout(req, res);
-    case 'automation/ingest':
-      return handleAutomationIngest(req, res);
-    case 'automation/playbooks':
-      return handleAutomationPlaybooksList(req, res);
-    case 'automation/events':
-      return handleAutomationEventsList(req, res);
-    case 'main':
-      return mainHandler(req, res);
-    case 'intake':
-      return mainHandler(req, res);
-    case 'audit':
-      return auditHandler(req, res);
-    case 'feedback':
-      return feedbackHandler(req, res);
-    case 'admin-leads':
-      return adminLeadsHandler(req, res);
-    case 'legal-search':
-      return legalSearchHandler(req, res);
-    case 'provision':
-      return provisionHandler(req, res);
-    case 'webhook':
-      return webhookHandler(req, res);
-    case 'cron/billing-sentinel':
-      return billingSentinelHandler(req, res);
-    case 'cron/technical-lead':
-      return technicalLeadCronHandler(req, res);
-    case 'cron/cmp-monitor':
-      return cmpMonitorCronHandler(req, res);
-    default:
-      return res.status(404).json({ error: 'Unknown route', path: pathSeg });
+    switch (pathSeg) {
+      case 'auth/login':
+        return handleAuthLogin(req, res);
+      case 'auth/password-reset/request':
+        return handleAuthPasswordResetRequest(req, res);
+      case 'auth/password-reset/confirm':
+        return handleAuthPasswordResetConfirm(req, res);
+      case 'auth/me':
+        return handleAuthMe(req, res);
+      case 'auth/logout':
+        return handleAuthLogout(req, res);
+      case 'automation/ingest':
+        return handleAutomationIngest(req, res);
+      case 'automation/playbooks':
+        return handleAutomationPlaybooksList(req, res);
+      case 'automation/events':
+        return handleAutomationEventsList(req, res);
+      case 'main':
+        return mainHandler(req, res);
+      case 'intake':
+        return mainHandler(req, res);
+      case 'audit':
+        return auditHandler(req, res);
+      case 'feedback':
+        return feedbackHandler(req, res);
+      case 'admin-leads':
+        return adminLeadsHandler(req, res);
+      case 'legal-search':
+        return legalSearchHandler(req, res);
+      case 'provision':
+        return provisionHandler(req, res);
+      case 'webhook':
+        return webhookHandler(req, res);
+      case 'cron/billing-sentinel':
+        return billingSentinelHandler(req, res);
+      case 'cron/technical-lead':
+        return technicalLeadCronHandler(req, res);
+      case 'cron/cmp-monitor':
+        return cmpMonitorCronHandler(req, res);
+      default:
+        return res.status(404).json({ error: 'Unknown route', path: pathSeg });
+    }
+  } catch (e) {
+    try {
+      console.error('factory_router fatal', e);
+    } catch (_) {}
+    const detail = e instanceof Error ? e.message : String(e);
+    let rc = null;
+    try {
+      rc = runtimeConfigDiagnostics();
+    } catch (_) {
+      rc = null;
+    }
+    return res.status(500).json({
+      error: 'FACTORY_ROUTER_FATAL',
+      detail,
+      runtime_config: rc,
+    });
   }
 }
