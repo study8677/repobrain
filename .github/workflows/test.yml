@@ -17,6 +17,10 @@ on:
     branches: [ main ]
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  id-token: write # Infisical OIDC (short-lived, no GitHub secrets)
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -27,6 +31,23 @@ jobs:
     steps:
     # Pinned SHAs (supply chain): tag v6 — bump via `gh api repos/actions/checkout/commits/refs/tags/v6 --jq .sha`
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+    # Infisical is the authority for the small initial slice:
+    # - POSTGRES_URL
+    # - SOVEREIGN_SESSION_SECRET
+    # - CORPFLOW_TENANT_PREVIEW_SECRET
+    # - CORPFLOW_CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET
+    #
+    # This uses OIDC (no long-lived credentials stored in GitHub Secrets).
+    # Identity ID is NOT a secret; it's safe to commit.
+    - name: Fetch secrets from Infisical (OIDC)
+      uses: Infisical/secrets-action@8802effbe453d0576cd923567dcc2c97a1f54058
+      with:
+        method: "oidc"
+        identity-id: "${{ vars.INFISICAL_IDENTITY_ID }}"
+        project-slug: "${{ vars.INFISICAL_PROJECT_SLUG }}"
+        env-slug: "${{ vars.INFISICAL_ENV_SLUG }}"
+        domain: "${{ vars.INFISICAL_DOMAIN }}"
 
     # Vercel Hobby rejects crons that run more than once per day; bad config blocks ALL production deploys.
     - name: Vercel Hobby cron guard (vercel.json)
@@ -60,11 +81,9 @@ jobs:
 
     # When POSTGRES_URL is configured as a repo secret, apply pending Prisma migrations (no-op if none).
     - name: Prisma migrate deploy (optional)
-      env:
-        POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
       run: |
         if [ -z "$POSTGRES_URL" ]; then
-          echo "Skip: POSTGRES_URL secret not set (configure in repo settings to run migrations in CI)."
+          echo "Skip: POSTGRES_URL not available (Infisical not configured for this workflow/env)."
         else
           npx prisma migrate deploy
         fi
