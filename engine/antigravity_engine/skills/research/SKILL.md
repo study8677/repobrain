@@ -1,3 +1,8 @@
+---
+name: research
+description: Performs deep research on a topic via `deep_research`. Simulates a multi-step research process and returns a comprehensive research result as a string.
+---
+
 # Research Skill
 
 This skill provides capabilities to perform deep research on a topic.

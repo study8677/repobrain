@@ -1,3 +1,8 @@
+---
+name: graph-retrieval
+description: Exposes graph-based retrieval as a tool capability via `query_graph`. Reads normalized graph store files, builds a query-relevant subgraph, and returns LLM-friendly semantic triples with replayable evidence metadata.
+---
+
 # Graph Retrieval Skill
 
 ## Purpose

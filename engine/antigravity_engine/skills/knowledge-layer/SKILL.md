@@ -1,3 +1,8 @@
+---
+name: knowledge-layer
+description: High-level deployment wrapper over Antigravity core with graph-first knowledge injection and all-file support. Exposes `refresh_filesystem` and `ask_filesystem` for building and querying the knowledge graph.
+---
+
 # Knowledge Layer Skill
 
 ## Purpose

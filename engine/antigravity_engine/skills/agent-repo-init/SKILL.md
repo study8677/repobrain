@@ -1,3 +1,8 @@
+---
+name: agent-repo-init
+description: Bootstraps a new multi-agent repository from the Antigravity template via `init_agent_repo`. Supports quick scaffold and full runtime profile setup including LLM provider, MCP toggle, swarm preference, sandbox type, and optional git init.
+---
+
 # Agent Repo Init Skill
 
 This skill bootstraps a new multi-agent repository from the Antigravity template.
