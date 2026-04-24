@@ -2,8 +2,8 @@
   "scripts": {
     "postinstall": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
-    "vercel-build": "prisma generate && next build",
-    "build": "next build",
+    "vercel-build": "prisma generate && next build && node scripts/sync-change-v2-html.mjs",
+    "build": "next build && node scripts/sync-change-v2-html.mjs",
     "verify:ci": "npm run verify:vercel-hobby-crons && npm test && npm run build",
     "verify:vercel-hobby-crons": "node scripts/validate-vercel-hobby-crons.mjs",
     "ci:report": "node scripts/ci-friendly-report.mjs",

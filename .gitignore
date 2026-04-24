@@ -12,6 +12,9 @@ core/engine/client_secrets.json
 .vercel
 .env*.local
 
+# Generated from `pages/change-v2.js` after `next build` (served via vercel.json → /change-v2.html).
+public/change-v2.html
+
 # Vanguard: append-only local logs (telemetry, token debits) — written at runtime, not source.
 vanguard/audit-trail/*.jsonl
 vanguard/audit/

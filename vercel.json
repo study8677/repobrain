@@ -30,6 +30,7 @@
     { "source": "/api/(.*)", "destination": "/api/factory_router?__path=$1" },
     { "source": "/login", "destination": "/login.html" },
     { "source": "/change", "destination": "/change.html" },
+    { "source": "/change-v2", "destination": "/change-v2.html" },
     { "source": "/growth", "destination": "/growth.html" },
     { "source": "/sovereign-intake", "destination": "/sovereign-intake.html" },
     { "source": "/legal", "destination": "/public/legal-demo.html" },
