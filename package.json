@@ -2,7 +2,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
-    "vercel-build": "prisma generate && next build",
+    "vercel-build": "prisma generate && next build && node scripts/ensure-next-routes-manifest-deterministic.mjs",
     "build": "next build",
     "verify:ci": "npm run verify:vercel-hobby-crons && npm test && npm run build",
     "verify:vercel-hobby-crons": "node scripts/validate-vercel-hobby-crons.mjs",
