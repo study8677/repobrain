@@ -25,9 +25,7 @@ export default function ClientChangeDecisionsPage() {
   const [error, setError] = useState('');
 
   const [heading, setHeading] = useState('Decisions before we build');
-  const [explanation, setExplanation] = useState(
-    'This is a larger growth system, so we are defining the first live version first.',
-  );
+  const [explanation, setExplanation] = useState('We need your input on four topics before the first live slice.');
   const [items, setItems] = useState(/** @type {Array<Record<string, unknown>>} */ ([]));
   const [answersByKey, setAnswersByKey] = useState(/** @type {Record<string, { answer: string, waive: boolean }>} */ ({}));
   const [sufficientToProceed, setSufficientToProceed] = useState(false);
