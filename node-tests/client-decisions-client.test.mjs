@@ -129,7 +129,7 @@ test('payloadLeaksInternals: client-decisions-get/submit shapes are safe', () =>
   assert.equal(payloadLeaksInternals({ internal_decisions: [] }), true);
 });
 
-test('client change decisions page: no forbidden leaks; no removed question keys; single CTA', () => {
+test('client change decisions page: no forbidden leaks; no removed question keys; limited CTAs', () => {
   const p = path.join(repoRoot, 'pages', 'client', 'change-decisions.js');
   const src = fs.readFileSync(p, 'utf8');
   for (const needle of ['internal_decisions', 'console_json', 'reality_panel', 'change_stage_debug']) {
@@ -139,7 +139,8 @@ test('client change decisions page: no forbidden leaks; no removed question keys
     assert.equal(src.includes(needle), false, `unexpected ${needle} in client page`);
   }
   const matches = src.match(/<button\b/gi) || [];
-  assert.equal(matches.length, 1, 'client page should have exactly one button (single CTA)');
+  assert.ok(matches.length >= 1 && matches.length <= 2, `unexpected number of buttons: ${matches.length}`);
+  assert.equal(src.includes('Send answers'), true, 'client page must include Send answers CTA');
 });
 
 test('submit-client-decisions handler does not trigger sandbox dispatch', () => {

@@ -23,6 +23,7 @@ export default function ClientChangeDecisionsPage() {
   const [busy, setBusy] = useState(false);
   const [loadBusy, setLoadBusy] = useState(false);
   const [error, setError] = useState('');
+  const [authRequired, setAuthRequired] = useState(false);
 
   const [heading, setHeading] = useState('Decisions before we build');
   const [explanation, setExplanation] = useState('We need your input on four topics before the first live slice.');
@@ -90,6 +91,7 @@ export default function ClientChangeDecisionsPage() {
     const id = ticketId.trim();
     setError('');
     setSubmittedOk(false);
+    setAuthRequired(false);
     if (id.length < 18) {
       setItems([]);
       setSufficientToProceed(false);
@@ -111,7 +113,8 @@ export default function ClientChangeDecisionsPage() {
           msg.toLowerCase().includes('session token required') ||
           msg.toLowerCase().includes('verification failed');
         if (needsLogin) {
-          window.location.href = '/login';
+          setAuthRequired(true);
+          setError('');
           return;
         }
         throw new Error(msg || 'Unable to load decisions');
@@ -152,6 +155,7 @@ export default function ClientChangeDecisionsPage() {
     }
     setBusy(true);
     setError('');
+    setAuthRequired(false);
     try {
       /** @type {Record<string, { answer: string, waive?: boolean }>} */
       const answers = {};
@@ -182,7 +186,8 @@ export default function ClientChangeDecisionsPage() {
           msg.toLowerCase().includes('session token required') ||
           msg.toLowerCase().includes('verification failed');
         if (needsLogin) {
-          window.location.href = '/login';
+          setAuthRequired(true);
+          setError('');
           return;
         }
         throw new Error(msg || 'Submit failed');
@@ -213,6 +218,42 @@ export default function ClientChangeDecisionsPage() {
 
       {loadBusy && hasTicket ? (
         <p style={{ margin: '0 0 16px', fontSize: 14, color: '#64748b' }}>Loading questions…</p>
+      ) : null}
+
+      {authRequired ? (
+        <div
+          style={{
+            borderRadius: 14,
+            border: '1px solid #e2e8f0',
+            background: '#fff',
+            padding: 14,
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 650, color: '#0f172a', marginBottom: 8 }}>
+            Please log in to continue
+          </div>
+          <div style={{ fontSize: 13, color: '#475569', marginBottom: 12, lineHeight: 1.45 }}>
+            If your organization uses an access token, you can paste it below instead.
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = '/login';
+            }}
+            style={{
+              padding: '10px 12px',
+              borderRadius: 12,
+              border: 'none',
+              background: '#0f172a',
+              color: '#fff',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Login
+          </button>
+        </div>
       ) : null}
 
       {!idProvidedByLink ? (
