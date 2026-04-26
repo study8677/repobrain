@@ -247,6 +247,10 @@ export default function ChangeConsoleV2Page() {
   const [changeStageDebug, setChangeStageDebug] = useState(null);
   const [pendingOperatorDraft, setPendingOperatorDraft] = useState(null);
   const [recoveryLine, setRecoveryLine] = useState('');
+  const [operatorSignal, setOperatorSignal] = useState(null);
+  const [clientDecisionLink, setClientDecisionLink] = useState('');
+  const [clientDecisionLinkExp, setClientDecisionLinkExp] = useState('');
+  const [clientDecisionLinkBusy, setClientDecisionLinkBusy] = useState(false);
 
   useEffect(() => {
     try {
@@ -306,6 +310,7 @@ export default function ChangeConsoleV2Page() {
     setPendingOperatorDraft(
       j.pending_operator_draft && typeof j.pending_operator_draft === 'object' ? j.pending_operator_draft : null,
     );
+    setOperatorSignal(j.operator_signal && typeof j.operator_signal === 'object' ? j.operator_signal : null);
     const bs = j.brief_structured != null ? j.brief_structured : j.brief;
     if (bs != null) setBrief(bs);
     if (Array.isArray(j.refinement_messages) && j.refinement_messages.length) {
@@ -371,6 +376,30 @@ export default function ChangeConsoleV2Page() {
       setSyncBusy(false);
     }
   }, [ticketId, getHeadersForGet, applyTicketPayload]);
+
+  async function mintClientDecisionLink() {
+    const id = ticketId.trim();
+    if (id.length < 18) return;
+    setClientDecisionLinkBusy(true);
+    setError('');
+    try {
+      const r = await fetch('/api/cmp/router?action=client-decisions-link-mint', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ticket_id: id }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Could not mint link');
+      setClientDecisionLink(typeof j.magic_link_url === 'string' ? j.magic_link_url : '');
+      setClientDecisionLinkExp(typeof j.expires_at === 'string' ? j.expires_at : '');
+    } catch (e) {
+      setClientDecisionLink('');
+      setClientDecisionLinkExp('');
+      setError(String(e?.message || e));
+    } finally {
+      setClientDecisionLinkBusy(false);
+    }
+  }
 
   useEffect(() => {
     const id = ticketId.trim();
@@ -687,6 +716,95 @@ export default function ChangeConsoleV2Page() {
       >
         {changeStage ? (
           <>
+            {operatorSignal && operatorSignal.type === 'client_answers_received' ? (
+              <div
+                style={{
+                  borderRadius: 12,
+                  border: operatorSignal.status === 'ready_for_review' ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                  background: operatorSignal.status === 'ready_for_review' ? '#f0fdf4' : '#fef2f2',
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 850, color: '#0f172a', marginBottom: 2 }}>Client answers received</div>
+                <div style={{ fontSize: 13, color: operatorSignal.status === 'ready_for_review' ? '#14532d' : '#991b1b' }}>
+                  {operatorSignal.status === 'ready_for_review' ? 'Ready for operator review' : 'Answers incomplete'}
+                </div>
+              </div>
+            ) : null}
+            {ticketId.trim().length >= 18 ? (
+              <div
+                style={{
+                  borderRadius: 12,
+                  border: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 850, color: '#334155', marginBottom: 8 }}>CLIENT DECISIONS</div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    disabled={clientDecisionLinkBusy}
+                    onClick={mintClientDecisionLink}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: '1px solid #cbd5e1',
+                      background: clientDecisionLinkBusy ? '#e2e8f0' : '#fff',
+                      color: '#0f172a',
+                      fontWeight: 800,
+                      cursor: clientDecisionLinkBusy ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Generate client answer link
+                  </button>
+                  {clientDecisionLink ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(clientDecisionLink);
+                        } catch {
+                          /* ignore */
+                        }
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 12,
+                        border: '1px solid #cbd5e1',
+                        background: '#fff',
+                        color: '#334155',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Copy link
+                    </button>
+                  ) : null}
+                </div>
+                {clientDecisionLink ? (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>
+                      Link (expires {clientDecisionLinkExp ? clientDecisionLinkExp : '—'}):
+                    </div>
+                    <input
+                      value={clientDecisionLink}
+                      readOnly
+                      style={{
+                        width: '100%',
+                        padding: 10,
+                        borderRadius: 10,
+                        border: '1px solid #cbd5e1',
+                        fontSize: 12,
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <div style={{ fontSize: 18, fontWeight: 850, color: '#0f172a', marginBottom: 8 }}>{changeStage.stage_headline}</div>
             <div style={{ fontSize: 15, color: '#0f172a', marginBottom: 12, whiteSpace: 'pre-wrap' }}>
               {changeStage.stage_blocker}

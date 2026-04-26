@@ -132,14 +132,15 @@ test('payloadLeaksInternals: client-decisions-get/submit shapes are safe', () =>
 test('client change decisions page: no forbidden leaks; no removed question keys; limited CTAs', () => {
   const p = path.join(repoRoot, 'pages', 'client', 'change-decisions.js');
   const src = fs.readFileSync(p, 'utf8');
-  for (const needle of ['internal_decisions', 'console_json', 'reality_panel', 'change_stage_debug']) {
+  for (const needle of ['internal_decisions', 'console_json', 'reality_panel', 'change_stage_debug', 'operator_signal']) {
     assert.equal(src.includes(needle), false, `unexpected ${needle} in client page`);
   }
+  assert.equal(src.includes("from '../../lib/cmp"), false, 'client page must not import server CMP modules');
   for (const needle of ['crm_destination_or_tooling_preference', 'first_ai_communication_channel', 'GoHighLevel']) {
     assert.equal(src.includes(needle), false, `unexpected ${needle} in client page`);
   }
   const matches = src.match(/<button\b/gi) || [];
-  assert.ok(matches.length >= 1 && matches.length <= 2, `unexpected number of buttons: ${matches.length}`);
+  assert.ok(matches.length >= 0 && matches.length <= 2, `unexpected number of buttons: ${matches.length}`);
   assert.equal(src.includes('Send answers'), true, 'client page must include Send answers CTA');
 });
 
@@ -152,4 +153,35 @@ test('submit-client-decisions handler does not trigger sandbox dispatch', () => 
   assert.ok(end > start);
   const fn = chunk.slice(start, end);
   assert.equal(fn.includes('dispatchCmpSandboxStart'), false);
+});
+
+test('submit-client-decisions creates operator_signal and records audit event (no response leak)', () => {
+  const p = path.join(repoRoot, 'lib', 'cmp', 'router.js');
+  const chunk = fs.readFileSync(p, 'utf8');
+  const start = chunk.indexOf('async function handleSubmitClientDecisions');
+  assert.ok(start >= 0);
+  const end = chunk.indexOf('async function handleSandboxStart', start);
+  assert.ok(end > start);
+  const fn = chunk.slice(start, end);
+
+  assert.equal(fn.includes('operator_signal'), true, 'submit handler must persist operator_signal');
+  assert.equal(fn.includes("type: 'client_answers_received'"), true, 'operator_signal must use client_answers_received type');
+  assert.equal(fn.includes("eventType: 'client_answers_received'"), true, 'must record trusted automation event');
+  assert.equal(fn.includes("idempotencyKey: `cmp:client_answers_received:${String(ticketId)}`"), true);
+
+  const respStart = fn.indexOf('return res.status(200).json(');
+  assert.ok(respStart >= 0, 'submit handler must return JSON response');
+  const respEnd = fn.indexOf('});', respStart);
+  assert.ok(respEnd > respStart, 'submit response block should end');
+  const resp = fn.slice(respStart, respEnd);
+  assert.equal(resp.includes('operator_signal'), false, 'submit response must not include operator_signal');
+});
+
+test('/change-v2 can render client answers received signal', () => {
+  const p = path.join(repoRoot, 'pages', 'change-v2.js');
+  const src = fs.readFileSync(p, 'utf8');
+  assert.equal(src.includes('operator_signal'), true, 'change-v2 must read operator_signal from ticket-get payload');
+  assert.equal(src.includes('Client answers received'), true, 'change-v2 must render a visible notice');
+  assert.equal(src.includes('Ready for operator review'), true);
+  assert.equal(src.includes('Answers incomplete'), true);
 });

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 
+/** Must match `THANK_YOU_CLIENT_DECISIONS_MAGIC` in `lib/cmp/_lib/client-decisions-magic-link.js` (client bundle cannot import server modules). */
+const THANK_YOU_MAGIC_DISPLAY =
+  "Thank you — we've received your answers and will prepare the first-slice plan.";
+
 /** @param {unknown} v */
 function safeObj(v) {
   return v && typeof v === 'object' ? /** @type {Record<string, unknown>} */ (v) : null;
@@ -10,6 +14,14 @@ function safeObj(v) {
 function ticketIdFromQuery(q) {
   if (!q) return '';
   const raw = q.id != null ? q.id : q.ticket_id != null ? q.ticket_id : '';
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  return typeof s === 'string' ? s.trim() : '';
+}
+
+/** @param {import('next/router').NextRouter['query'] | undefined} q */
+function magicTokenFromQuery(q) {
+  if (!q || q.token == null) return '';
+  const raw = q.token;
   const s = Array.isArray(raw) ? raw[0] : raw;
   return typeof s === 'string' ? s.trim() : '';
 }
@@ -31,8 +43,12 @@ export default function ClientChangeDecisionsPage() {
   const [answersByKey, setAnswersByKey] = useState(/** @type {Record<string, { answer: string, waive: boolean }>} */ ({}));
   const [sufficientToProceed, setSufficientToProceed] = useState(false);
   const [submittedOk, setSubmittedOk] = useState(false);
+  /** One-time link: after submit or revisiting consumed link — form hidden, thank-you only. */
+  const [magicClosed, setMagicClosed] = useState(false);
 
   const idFromUrl = router.isReady ? ticketIdFromQuery(router.query) : '';
+  const magicToken = router.isReady ? magicTokenFromQuery(router.query) : '';
+  const hasMagicLink = magicToken.length >= 32;
 
   useEffect(() => {
     try {
@@ -60,12 +76,12 @@ export default function ClientChangeDecisionsPage() {
 
   const headers = useMemo(() => {
     const h = { 'Content-Type': 'application/json' };
-    if (accessToken) {
+    if (accessToken && !hasMagicLink) {
       h['x-session-token'] = accessToken;
       h.Authorization = `Bearer ${accessToken}`;
     }
     return h;
-  }, [accessToken]);
+  }, [accessToken, hasMagicLink]);
 
   const getHeadersForGet = useMemo(() => {
     const h = { ...headers };
@@ -90,8 +106,10 @@ export default function ClientChangeDecisionsPage() {
   const load = useCallback(async () => {
     const id = ticketId.trim();
     setError('');
-    setSubmittedOk(false);
     setAuthRequired(false);
+    if (!hasMagicLink) {
+      setSubmittedOk(false);
+    }
     if (id.length < 18) {
       setItems([]);
       setSufficientToProceed(false);
@@ -99,7 +117,8 @@ export default function ClientChangeDecisionsPage() {
     }
     setLoadBusy(true);
     try {
-      const r = await fetch(`/api/cmp/router?action=client-decisions-get&id=${encodeURIComponent(id)}`, {
+      const tokQ = hasMagicLink ? `&token=${encodeURIComponent(magicToken)}` : '';
+      const r = await fetch(`/api/cmp/router?action=client-decisions-get&id=${encodeURIComponent(id)}${tokQ}`, {
         method: 'GET',
         headers: getHeadersForGet,
       });
@@ -107,27 +126,42 @@ export default function ClientChangeDecisionsPage() {
       if (!r.ok) {
         const msg = String(j?.error || '').trim();
         const needsLogin =
-          r.status === 401 ||
-          r.status === 403 ||
-          msg.toLowerCase().includes('dormant gate') ||
-          msg.toLowerCase().includes('session token required') ||
-          msg.toLowerCase().includes('verification failed');
+          !hasMagicLink &&
+          (r.status === 401 ||
+            r.status === 403 ||
+            msg.toLowerCase().includes('dormant gate') ||
+            msg.toLowerCase().includes('session token required') ||
+            msg.toLowerCase().includes('verification failed'));
         if (needsLogin) {
           setAuthRequired(true);
           setError('');
           return;
+        }
+        if (hasMagicLink) {
+          setMagicClosed(false);
+          setAuthRequired(false);
+          throw new Error(msg || 'This decision link is invalid or has expired. Ask your team for a new link.');
         }
         throw new Error(msg || 'Unable to load decisions');
       }
       if (typeof j.heading === 'string' && j.heading.trim()) setHeading(j.heading.trim());
       if (typeof j.explanation === 'string' && j.explanation.trim()) setExplanation(j.explanation.trim());
 
+      if (j.already_submitted === true && hasMagicLink) {
+        setMagicClosed(true);
+        setItems([]);
+        setSufficientToProceed(j.client_decisions?.sufficient_to_proceed === true);
+        setSubmittedOk(false);
+        return;
+      }
+
       const cd = safeObj(j.client_decisions) || {};
       const list = Array.isArray(cd.items) ? cd.items.map((x) => (safeObj(x) ? { ...x } : {})) : [];
       setItems(list);
       setSufficientToProceed(cd.sufficient_to_proceed === true);
       seedAnswers(list);
-      if (cd.sufficient_to_proceed === true) setSubmittedOk(true);
+      if (!hasMagicLink && cd.sufficient_to_proceed === true) setSubmittedOk(true);
+      if (hasMagicLink) setMagicClosed(false);
     } catch (e) {
       setError(String(e?.message || e));
       setItems([]);
@@ -135,7 +169,7 @@ export default function ClientChangeDecisionsPage() {
     } finally {
       setLoadBusy(false);
     }
-  }, [ticketId, getHeadersForGet, seedAnswers]);
+  }, [ticketId, getHeadersForGet, seedAnswers, hasMagicLink, magicToken]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -150,7 +184,11 @@ export default function ClientChangeDecisionsPage() {
   async function submit() {
     const id = ticketId.trim();
     if (id.length < 18) {
-      setError(idProvidedByLink ? 'Something went wrong loading this page. Please refresh or contact your team.' : 'Use the link your team sent you, or enter your ticket reference below.');
+      setError(
+        idProvidedByLink
+          ? 'Something went wrong loading this page. Please refresh or contact your team.'
+          : 'Use the link your team sent you, or enter your ticket reference below.',
+      );
       return;
     }
     setBusy(true);
@@ -171,7 +209,8 @@ export default function ClientChangeDecisionsPage() {
         }
       }
 
-      const r = await fetch('/api/cmp/router?action=submit-client-decisions', {
+      const tokQ = hasMagicLink ? `&token=${encodeURIComponent(magicToken)}` : '';
+      const r = await fetch(`/api/cmp/router?action=submit-client-decisions${tokQ}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ ticket_id: id, answers }),
@@ -180,17 +219,29 @@ export default function ClientChangeDecisionsPage() {
       if (!r.ok) {
         const msg = String(j?.error || '').trim();
         const needsLogin =
-          r.status === 401 ||
-          r.status === 403 ||
-          msg.toLowerCase().includes('dormant gate') ||
-          msg.toLowerCase().includes('session token required') ||
-          msg.toLowerCase().includes('verification failed');
+          !hasMagicLink &&
+          (r.status === 401 ||
+            r.status === 403 ||
+            msg.toLowerCase().includes('dormant gate') ||
+            msg.toLowerCase().includes('session token required') ||
+            msg.toLowerCase().includes('verification failed'));
         if (needsLogin) {
           setAuthRequired(true);
           setError('');
           return;
         }
+        if (hasMagicLink) {
+          throw new Error(msg || 'This decision link is invalid or has expired. Ask your team for a new link.');
+        }
         throw new Error(msg || 'Submit failed');
+      }
+
+      if (hasMagicLink && (j.already_submitted === true || j.magic_link_completed === true)) {
+        setMagicClosed(true);
+        setItems([]);
+        setSubmittedOk(false);
+        setError('');
+        return;
       }
 
       const cd = safeObj(j.client_decisions) || {};
@@ -211,16 +262,21 @@ export default function ClientChangeDecisionsPage() {
     }
   }
 
+  const showMagicThankOnly = hasMagicLink && magicClosed;
+  const showLegacyThankOnly = !hasMagicLink && submittedOk && sufficientToProceed;
+  const showDecisionForm =
+    !showMagicThankOnly && !showLegacyThankOnly && hasTicket && (!hasMagicLink || !magicClosed);
+
   return (
     <div style={{ fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif', padding: 24, maxWidth: 720, margin: '0 auto' }}>
       <h1 style={{ margin: '0 0 12px', color: '#0f172a', fontSize: '1.35rem', fontWeight: 700, lineHeight: 1.3 }}>{heading}</h1>
       <p style={{ margin: '0 0 16px', color: '#475569', fontSize: 15, lineHeight: 1.55 }}>{explanation}</p>
 
-      {loadBusy && hasTicket ? (
+      {loadBusy && hasTicket && !showMagicThankOnly ? (
         <p style={{ margin: '0 0 16px', fontSize: 14, color: '#64748b' }}>Loading questions…</p>
       ) : null}
 
-      {authRequired ? (
+      {authRequired && !hasMagicLink ? (
         <div
           style={{
             borderRadius: 14,
@@ -268,20 +324,22 @@ export default function ClientChangeDecisionsPage() {
         </div>
       ) : null}
 
-      <details style={{ marginBottom: 20, fontSize: 13, color: '#64748b' }}>
-        <summary style={{ cursor: 'pointer', color: '#475569' }}>Having trouble? (session access)</summary>
-        <p style={{ margin: '10px 0 8px', lineHeight: 1.45 }}>
-          If your organization uses an extra sign-in step, paste the access token you were given, then reload this page.
-        </p>
-        <input
-          value={accessToken}
-          onChange={(e) => setAccessToken(e.target.value)}
-          placeholder="Access token (optional)"
-          style={{ width: '100%', maxWidth: 480, padding: 10, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 13 }}
-        />
-      </details>
+      {!hasMagicLink ? (
+        <details style={{ marginBottom: 20, fontSize: 13, color: '#64748b' }}>
+          <summary style={{ cursor: 'pointer', color: '#475569' }}>Having trouble? (session access)</summary>
+          <p style={{ margin: '10px 0 8px', lineHeight: 1.45 }}>
+            If your organization uses an extra sign-in step, paste the access token you were given, then reload this page.
+          </p>
+          <input
+            value={accessToken}
+            onChange={(e) => setAccessToken(e.target.value)}
+            placeholder="Access token (optional)"
+            style={{ width: '100%', maxWidth: 480, padding: 10, borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 13 }}
+          />
+        </details>
+      ) : null}
 
-      {submittedOk && sufficientToProceed ? (
+      {showMagicThankOnly || showLegacyThankOnly ? (
         <div
           style={{
             borderRadius: 14,
@@ -293,11 +351,11 @@ export default function ClientChangeDecisionsPage() {
             lineHeight: 1.55,
           }}
         >
-          Thanks — we’ll review these and prepare the first-slice plan.
+          {showMagicThankOnly ? THANK_YOU_MAGIC_DISPLAY : 'Thanks — we’ll review these and prepare the first-slice plan.'}
         </div>
       ) : null}
 
-      {!submittedOk || !sufficientToProceed ? (
+      {showDecisionForm ? (
         <div style={{ display: 'grid', gap: 14 }}>
           {items.length === 0 && hasTicket && !loadBusy ? (
             <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>
@@ -354,7 +412,7 @@ export default function ClientChangeDecisionsPage() {
         </div>
       ) : null}
 
-      {!submittedOk || !sufficientToProceed ? (
+      {showDecisionForm ? (
         <button
           type="button"
           onClick={() => submit()}
