@@ -13,9 +13,15 @@ model Lead {
   tenantId  String?  @map("tenant_id")
   name      String
   email     String
+  phone     String?  @map("phone")
   intent    String
+  market    String?  @map("market")
+  listing   String?  @map("listing")
   status    String   @default("NEW")
+  qualificationJson Json? @map("qualification_json")
+  score      String? @map("score")
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([tenantId])
   @@map("leads")

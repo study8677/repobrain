@@ -26,6 +26,7 @@ import tenantSiteHandler from '../lib/server/tenant-site.js';
 import tenantSiteReadHandler from '../lib/server/tenant-site-read.js';
 import tenantIntakeHandler from '../lib/server/tenant-intake.js';
 import tenantSitePublicHandler from '../lib/server/tenant-site-public.js';
+import { handleTenantLeadCreate, handleTenantLeadQualify } from '../lib/server/tenant-leads.js';
 import tenantLoginDebugHandler from '../lib/server/tenant-login-debug.js';
 import factoryGithubPrCreateHandler from '../lib/server/factory-github-pr-create.js';
 import factoryResearchFetchHandler from '../lib/server/factory-research-fetch.js';
@@ -771,6 +772,12 @@ export default async function handler(req, res) {
   }
   if (pathSeg === 'tenant/site') {
     return tenantSitePublicHandler(req, res);
+  }
+  if (pathSeg === 'tenant/leads') {
+    return handleTenantLeadCreate(req, res);
+  }
+  if (pathSeg === 'tenant/leads/qualify') {
+    return handleTenantLeadQualify(req, res);
   }
   if (pathSeg === 'factory/host-map/upsert') {
     return tenantHostMapUpsertHandler(req, res);
