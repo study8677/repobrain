@@ -1,0 +1,31 @@
+# Dockerfile.sandbox
+# Minimal sandbox runtime for code execution
+# Used as default for SANDBOX_TYPE=docker
+
+FROM python:3.12-slim
+
+# Install minimal packages for common code execution scenarios
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install common Python packages that sandboxed code might need
+RUN pip install --no-cache-dir \
+    numpy \
+    pandas \
+    requests \
+    matplotlib \
+    scipy
+
+# Create non-root user for execution (security best practice)
+RUN useradd -m -s /bin/bash sandbox
+
+# Set working directory
+WORKDIR /work
+
+# Switch to non-root user
+USER sandbox
+
+# Default to Python (can be overridden)
+CMD ["python"]

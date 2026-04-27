@@ -1,0 +1,17 @@
+services:
+  agent:
+    build: .
+    container_name: antigravity-agent
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - AGENT_NAME=ProductionAgent
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+    volumes:
+      - ./memory:/app/memory
+      - ./artifacts:/app/artifacts
+      - ./.antigravity:/app/.antigravity
+      - ./.context:/app/.context
+    restart: unless-stopped

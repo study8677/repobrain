@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "MCP Servers Configuration for Antigravity Agent",
+  "servers": [
+    {
+      "name": "filesystem",
+      "description": "Access to local filesystem operations",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "enabled": false,
+      "env": {}
+    },
+    {
+      "name": "github",
+      "description": "GitHub API integration for repository management",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "enabled": false,
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    {
+      "name": "postgres",
+      "description": "PostgreSQL database access",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "enabled": false,
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}"
+      }
+    },
+    {
+      "name": "brave-search",
+      "description": "Web search using Brave Search API",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "enabled": false,
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    },
+    {
+      "name": "memory",
+      "description": "Persistent memory storage for the agent",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "enabled": false,
+      "env": {}
+    },
+    {
+      "name": "puppeteer",
+      "description": "Browser automation and web scraping",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "enabled": false,
+      "env": {}
+    },
+    {
+      "name": "slack",
+      "description": "Slack workspace integration",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "enabled": false,
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+      }
+    },
+    {
+      "name": "gitnexus",
+      "description": "Code knowledge graph — symbol search, call graphs, impact analysis (requires: npm install -g gitnexus && gitnexus analyze .)",
+      "transport": "stdio",
+      "command": "gitnexus",
+      "args": ["mcp"],
+      "enabled": false,
+      "env": {}
+    },
+    {
+      "name": "custom-http",
+      "description": "Example HTTP/Streamable HTTP server",
+      "transport": "http",
+      "url": "http://localhost:8000/mcp",
+      "enabled": false,
+      "env": {}
+    }
+  ]
+}
