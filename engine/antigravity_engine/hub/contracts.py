@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 ClaimImportance = Literal["high", "medium", "low"]
@@ -195,6 +195,8 @@ class ModuleRegistryEntry(BaseModel):
 
 class SourceReference(BaseModel):
     """A workspace-relative source reference returned by host LLM analysis."""
+
+    model_config = ConfigDict(extra="forbid")
 
     file: str = Field(description="Workspace-relative source file path.")
     start_line: int = Field(ge=1, description="Inclusive 1-based start line.")

@@ -15,6 +15,9 @@ from __future__ import annotations
 # Re-export everything from the split modules.
 from antigravity_engine.hub.refresh_pipeline import (  # noqa: F401
     refresh_pipeline,
+    prepare_refresh_project,
+    submit_refresh_result,
+    finalize_refresh_project,
     _format_scan_report,
     _get_head_sha,
     _build_non_code_indexes,

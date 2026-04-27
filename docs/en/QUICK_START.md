@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide
+﻿# 🚀 Quick Start Guide
 
 Get up and running with the Antigravity Workspace Template in minutes.
 
@@ -52,12 +52,10 @@ Edit `docker-compose.yml` to:
 ## 🔧 Configuration
 
 ### Environment Variables
-Create a `.env` file:
+No LLM key or model `.env` setup is required. The host main agent supplies LLM capability.
 
 ```bash
 # LLM Configuration
-GOOGLE_API_KEY=your-api-key-here
-GEMINI_MODEL_NAME=gemini-2.0-flash-exp
 
 # MCP Configuration
 MCP_ENABLED=true
@@ -116,10 +114,7 @@ pytest --cov=antigravity_engine engine/tests/
 ### Agent doesn't start
 ```bash
 # Check if dependencies are installed
-pip list | grep -Ei "google-genai|google-generativeai"
 
-# Verify GOOGLE_API_KEY is set
-echo $GOOGLE_API_KEY
 ```
 
 ### Tools not loading
@@ -161,3 +156,4 @@ See [MCP Integration Guide](MCP_INTEGRATION.md) for detailed setup.
 ---
 
 **Questions?** Check the [Full Index](README.md) or open an issue on GitHub.
+

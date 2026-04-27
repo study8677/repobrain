@@ -33,6 +33,30 @@ class HostLlmRequest(BaseModel):
     prompt: str = Field(description="Instruction prompt for the host LLM.")
     module: str | None = Field(default=None, description="Module id for module tasks.")
     group: str | None = Field(default=None, description="Module group id for grouped tasks.")
+    execution_mode_preference: str = Field(
+        default="subagent_first",
+        description=(
+            "Preferred host execution mode. The host should delegate to a "
+            "sub-agent when available, otherwise use the main agent's LLM "
+            "capability on the supplied prompt."
+        ),
+    )
+    agent_instructions: str = Field(
+        default="",
+        description="Human-readable instructions the middleware exposes to the main agent.",
+    )
+    acceptance_criteria: list[str] = Field(
+        default_factory=list,
+        description="Concrete checks the host/sub-agent output must satisfy.",
+    )
+    source_files: list[str] = Field(
+        default_factory=list,
+        description="Workspace-relative source files included in the task context.",
+    )
+    required_outputs: list[str] = Field(
+        default_factory=list,
+        description="Artifacts that successful middleware validation will produce.",
+    )
     output_schema: dict[str, Any] = Field(
         default_factory=dict,
         alias="schema",

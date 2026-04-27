@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="docs/assets/logo.png" alt="Antigravity Workspace" width="200"/>
 
@@ -6,7 +6,7 @@
 
 ### 面向任意代码库的多智能体知识引擎。
 
-`ag-refresh` 构建知识库。`ag-ask` 回答问题。任意 LLM，任意 IDE。
+`ag-refresh` 构建知识库。`ag-ask` 回答问题。默认使用调用它的主 Agent 的 LLM 能力，无需额外配置 provider key。
 
 语言: [English](README.md) | **中文** | [Español](README_ES.md)
 
@@ -41,7 +41,7 @@
 
 > AI Agent 的能力上限 = **它能读到的上下文质量。**
 
-引擎是核心：`ag-refresh` 部署多智能体集群自主阅读代码——每个模块分配专属 Agent 生成知识文档。`ag-ask` 将问题路由到对应 Agent，答案有据可查，带文件路径和行号。
+引擎是核心：`ag-refresh` 扫描并分组代码，把结构化提示词、schema 和验收条件交给调用它的主 Agent。主 Agent 在可用时拉起子 Agent 生成模块知识文档；没有子 Agent 时，直接借用主 Agent 自己的 LLM 能力。`ag-ask` 将问题路由到对应 Agent，答案有据可查，带文件路径和行号。
 
 **与其给 Claude Code / Codex 一个仓库 `grep` 让它自己找，不如给它一个仓库版本的 ChatGPT。**
 
@@ -67,20 +67,15 @@
 
 ## 快速开始
 
-**方案 A —— 引擎：多智能体代码问答（推荐）**
+**方案 A —— Engine：代码库多智能体问答（推荐）**
 ```bash
 # 1. 安装引擎 + CLI
 pip install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=cli"
 pip install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
 
-# 2. 配置 .env（任意 OpenAI 兼容 API）
+# 2. 进入项目；无需配置 OpenAI/Gemini/Ollama key 或模型
+# 语义 refresh 会使用调用它的主 Agent 的 LLM 能力
 cd my-project
-cat > .env <<EOF
-OPENAI_BASE_URL=https://your-endpoint/v1
-OPENAI_API_KEY=your-key
-OPENAI_MODEL=your-model
-AG_ASK_TIMEOUT_SECONDS=120
-EOF
 
 # 3. 构建知识库（ModuleAgent 自主学习每个模块）
 ag-refresh --workspace .
@@ -90,7 +85,11 @@ ag-ask "这个项目的认证逻辑是怎么实现的？"
 
 # 5.（可选）注册为 Claude Code 的 MCP 服务器
 claude mcp add antigravity ag-mcp -- --workspace $(pwd)
+
+# MCP 宿主/主 Agent 会在可用时拉起子 Agent 完成 refresh 任务
 ```
+
+**LLM 委托模型：** Antigravity 不再读取 `.env` 里的本地 LLM provider key。中间件负责扫描项目、预加载源码上下文，并把任务包（`prompt`、`schema`、`result_contract`、验收条件）暴露给调用它的主 Agent。主 Agent 优先拉起子 Agent 完成任务；如果没有子 Agent，就直接使用主 Agent 自己的 LLM 能力。Antigravity 只负责校验结果并写入 `.antigravity/`。
 
 **方案 B —— 仅注入上下文文件（任意 IDE，无需 LLM）**
 ```bash
@@ -126,15 +125,15 @@ ag init my-project && cd my-project
 
 ## CLI 命令
 
-| 命令 | 功能 | 需要 LLM？ |
-|:-----|:-----|:----------:|
-| `ag init <dir>` | 注入认知架构模板 | 否 |
-| `ag init <dir> --force` | 重新注入，覆盖已有文件 | 否 |
-| `ag-refresh` | 多智能体自主学习代码库，生成模块知识文档 + `conventions.md` + `structure.md` | 是 |
-| `ag-ask "问题"` | Router → ModuleAgent/GitAgent 路由问答 | 是 |
-| `ag-mcp --workspace <dir>` | **启动 MCP 服务器** —— 向 Claude Code 暴露 `ask_project` + `refresh_project` 工具 | 是 |
-| `ag report "内容"` | 记录发现到 `.antigravity/memory/` | 否 |
-| `ag log-decision "决策" "原因"` | 记录架构决策 | 否 |
+| 命令 | 功能 | LLM 来源 |
+|:-----|:-----|:---------|
+| `ag init <dir>` | 注入认知架构模板 | 无 |
+| `ag init <dir> --force` | 重新注入，覆盖已有文件 | 无 |
+| `ag-refresh` | 多智能体自主学习代码库，生成模块知识文档 + `conventions.md` + `structure.md` | 嵌入宿主时使用调用它的主 Agent |
+| `ag-ask "问题"` | Router → ModuleAgent/GitAgent 路由问答 | 嵌入宿主时使用调用它的主 Agent |
+| `ag-mcp --workspace <dir>` | **启动 MCP 服务器** —— 向 Claude Code 暴露 `ask_project` + `refresh_project` 工具 | 宿主主 Agent |
+| `ag report "内容"` | 记录发现到 `.antigravity/memory/` | 无 |
+| `ag log-decision "决策" "原因"` | 记录架构决策 | 无 |
 
 所有命令支持 `--workspace <dir>` 参数指向任意目录。
 
@@ -168,7 +167,7 @@ antigravity-workspace-template/
 
 **CLI**（`pip install .../cli`）—— 零 LLM 依赖。注入模板，离线记录报告和决策。
 
-**Engine**（`pip install .../engine`）—— 多智能体运行时。驱动 `ag-ask`、`ag-refresh`、`ag-mcp`。支持 Gemini、OpenAI、Ollama 或任何 OpenAI 兼容 API。
+**Engine**（`pip install .../engine`）—— 多智能体运行时。驱动 `ag-ask`、`ag-refresh`、`ag-mcp`。它不需要本地 LLM provider 配置；语义工作会委托给调用它的主 Agent 的 LLM 能力。
 
 **新增 skill 封装更新：**
 - `engine/antigravity_engine/skills/graph-retrieval/` —— 面向结构与调用路径推理的图谱检索工具。
@@ -206,7 +205,7 @@ ag-refresh --workspace my-project
 3. 生成 `structure.md` —— 语言无关的文件树（含行数统计）
 4. 构建知识图谱（`knowledge_graph.json` + mermaid）
 5. 写入文档/数据/媒体索引
-6. **LLM 全量代码分析** —— 基于 import 图 + 目录 + 前缀分组，代码预加载进 context（每组约 30K tokens），自动过滤构建产物。每个 sub-agent 读取完整源码，输出**全面的 Markdown 知识文档**（`agents/*.md`）。大模块生成多个 agent 文档（每组一个，不合并）。全局 API 并发控制防止限流。**完全语言无关** —— 支持任何编程语言。
+6. **宿主主 Agent 语义分析** —— 基于 import 图 + 目录 + 前缀分组，预加载源码上下文，并把提示词、schema、result_contract 和验收条件暴露给调用它的主 Agent。主 Agent 优先拉起子 Agent；没有子 Agent 时使用自己的 LLM。Antigravity 校验返回的 JSON/Markdown 后再写入 `agents/*.md` 和结构化知识。
 7. **RefreshGitAgent** 分析 git 历史，生成 `_git_insights.md`
 8. **Map Agent** 读取所有 agent 文档 → 生成 `map.md`（模块路由索引，含描述和关键词）
 9. **GitNexus 索引**（可选）—— 运行 `gitnexus analyze` 构建 Tree-sitter 代码图谱（16 种语言，调用链、依赖关系）。未安装 GitNexus 时自动跳过。
@@ -256,11 +255,12 @@ Claude Code 不再需要读数百个文档文件——它可以直接调用 `ask
 # 安装引擎
 pip install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
 
-# 先刷新知识库（ModuleAgent 自主学习每个模块）
-ag-refresh --workspace /path/to/project
-
 # 注册为 Claude Code 的 MCP 服务器
 claude mcp add antigravity ag-mcp -- --workspace /path/to/project
+
+# 然后让宿主主 Agent 调用 refresh_project。
+# 它会收到任务包，优先拉起子 Agent，提交结果并 finalize 知识库，
+# 整个过程不需要 Antigravity 额外配置 LLM key。
 ```
 
 **向 Claude Code 暴露的工具：**
@@ -291,11 +291,11 @@ claude mcp add antigravity ag-mcp -- --workspace /path/to/project
 ```
 
 **核心创新：**
-- **LLM 即分析器**：不使用 AST 解析或正则 —— 源码直接喂给 LLM 分析。开箱即用支持任何编程语言。
+- **宿主主 Agent LLM 即分析器**：不需要本地 provider key。源码上下文被打包成任务交给调用它的主 Agent，主 Agent 可以拉起子 Agent 或使用自己的 LLM 完成。
 - **智能分组**：基于 import 关系、目录共位、文件名前缀分组。构建产物自动过滤。字符硬限（800K）防止上下文溢出。
 - **零信息损失**：大模块生成多个 `agent.md`（每组一个）—— 不合并、不压缩。`ag-ask` 时多个 agent 文档由并行 LLM 读取，然后 Synthesizer 合并答案。
 - **图谱增强回答**：Router LLM 自动判断问题是否需要结构数据（调用链、依赖、影响范围），查询 GitNexus。将精确的图谱关系与语义理解结合。
-- **全局 API 并发控制**：`AG_API_CONCURRENCY` 限制所有模块的同时 LLM 调用数，防止限流。
+- **宿主管理并发**：provider 限流由宿主 AI Agent 侧处理；Antigravity 只暴露任务包并校验结果。
 - **语言无关模块检测**：纯目录结构 —— 不需要 `__init__.py` 或任何语言特定标记。
 
 ```bash
@@ -313,7 +313,7 @@ ag report "认证模块需要重构"
 ag log-decision "使用 PostgreSQL" "团队有丰富经验"
 ```
 
-支持 Gemini、OpenAI、Ollama 或任何 OpenAI 兼容端点。基于 OpenAI Agent SDK + LiteLLM。
+Antigravity 自身不配置 provider endpoint。通过 MCP 接入 AI IDE 时，由宿主主 Agent 提供 LLM 能力，并可将 refresh 任务委托给子 Agent。
 </details>
 
 <details>
@@ -463,22 +463,18 @@ $ ag-refresh --workspace /path/to/openclaw
 
 > **关键优化：** 大模块（extensions/ 262 组、src/ 363 组）自动拆分为独立子模块，所有模块 8 并发执行。OpenClaw 的 refresh 从 **5 小时+未完成** 降至 **43 分钟完成**。
 
-### 最佳配置
+### 可选运行参数
 
 ```bash
-# .env — 评估后的推荐配置
-OPENAI_BASE_URL=https://your-openai-compatible-endpoint/v1
-OPENAI_API_KEY=your-key
-OPENAI_MODEL=your-model
-
+# 不需要配置 LLM provider key/model。
+# 以下参数只用于大仓库的本地扫描和上下文打包调优。
 AG_ASK_TIMEOUT_SECONDS=120
 AG_REFRESH_AGENT_TIMEOUT_SECONDS=180
 AG_MODULE_AGENT_TIMEOUT_SECONDS=300
-AG_API_CONCURRENCY=5           # 最大同时 LLM 调用数（防止限流）
 AG_MAX_GROUP_CHARS=800000      # 单组原始字符硬限（防止上下文溢出）
 ```
 
-> 支持任何 OpenAI 兼容供应商：**NVIDIA**、**OpenAI**、**Ollama**、**vLLM**、**LM Studio**、**Groq**、**MiniMax** 等。
+> Antigravity 自身不需要 OpenAI 兼容 provider 配置；使用你的宿主 AI Agent 已经配置好的 LLM 即可。
 
 ---
 
@@ -633,3 +629,4 @@ MIT License. 详见 [LICENSE](LICENSE)。
 友情链接：[LINUX DO](https://linux.do/)
 
 </div>
+

@@ -162,7 +162,7 @@ def load_module_files(module_path: Path, workspace: Path) -> list[SourceFile]:
         except OSError:
             continue
 
-        rel = str(fpath.relative_to(workspace))
+        rel = fpath.relative_to(workspace).as_posix()
         raw_tokens = len(content) // 4
 
         # Skip oversized files (likely bundled/generated, not source)

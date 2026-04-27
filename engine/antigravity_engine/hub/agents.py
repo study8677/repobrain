@@ -1,4 +1,4 @@
-"""OpenAI Agent SDK agents for the Knowledge Hub.
+﻿"""OpenAI Agent SDK agents for the Knowledge Hub.
 
 Two multi-agent swarms:
 
@@ -18,53 +18,12 @@ if TYPE_CHECKING:
 
 
 def create_model(settings: "Settings") -> str:
-    """Resolve an LLM model identifier from settings.
-
-    Priority:
-    1. GOOGLE_API_KEY              → litellm/gemini/<model_name>
-    2. OPENAI_BASE_URL (any key)   → litellm/openai/<model> (custom endpoint)
-    3. OPENAI_API_KEY (no base)    → <OPENAI_MODEL> (standard OpenAI)
-    4. None                        → raise ValueError
-
-    When a custom OPENAI_BASE_URL is provided (e.g. NVIDIA, Ollama), the
-    model is routed through litellm so that the Agent SDK can reach the
-    non-standard endpoint.  Environment variables required by litellm are
-    set via ``os.environ[…]`` (overwrite, not setdefault) so that the
-    *current* settings always take effect — avoiding first-caller-wins bugs
-    in long-lived processes.
-
-    Args:
-        settings: Application settings.
-
-    Returns:
-        A model string suitable for openai-agents[litellm].
-
-    Raises:
-        ValueError: When no LLM backend is configured.
-    """
-    import os
-
-    if settings.GOOGLE_API_KEY:
-        os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY
-        return f"litellm/gemini/{settings.GEMINI_MODEL_NAME}"
-
-    # Custom endpoint (NVIDIA, Ollama, etc.) — route through litellm.
-    # Use os.environ[…] = … (not setdefault) so settings always win.
-    if settings.OPENAI_BASE_URL:
-        os.environ["OPENAI_API_BASE"] = settings.OPENAI_BASE_URL
-        if settings.OPENAI_API_KEY:
-            os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
-        return f"litellm/openai/{settings.OPENAI_MODEL}"
-
-    # Standard OpenAI (no custom base URL)
-    if settings.OPENAI_API_KEY:
-        return settings.OPENAI_MODEL
-
+    """Reject local model resolution."""
+    del settings
     raise ValueError(
-        "No LLM configured. Set GOOGLE_API_KEY, OPENAI_API_KEY, "
-        "or OPENAI_BASE_URL in .env"
+        "Local LLM configuration has been removed. Register a host LLM "
+        "capability or use the MCP prepare/submit/finalize refresh flow."
     )
-
 
 def _import_agent():
     """Import Agent class with a helpful error message."""
@@ -958,3 +917,4 @@ def build_reviewer_agent(
         The entry-point Agent for the Ask Swarm.
     """
     return build_ask_swarm(model, workspace=workspace, mcp_tools=mcp_tools)
+

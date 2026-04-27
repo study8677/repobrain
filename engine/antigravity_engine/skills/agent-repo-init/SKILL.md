@@ -1,6 +1,6 @@
 ---
 name: agent-repo-init
-description: Bootstraps a new multi-agent repository from the Antigravity template via `init_agent_repo`. Supports quick scaffold and full runtime profile setup including LLM provider, MCP toggle, swarm preference, sandbox type, and optional git init.
+description: Bootstraps a new multi-agent repository from the Antigravity template via `init_agent_repo`. Supports quick scaffold and full runtime profile setup including host-agent LLM delegation, MCP toggle, swarm preference, sandbox type, and optional git init.
 ---
 
 # Agent Repo Init Skill
@@ -15,7 +15,7 @@ When asked to initialize a fresh repository from this template, call `init_agent
 - `full`: Quick scaffold plus runtime profile setup (`.env`, mission, context profile, and init report).
 
 ## Capabilities
-- `init_agent_repo(project_name, destination_root=".", mode="quick", llm_provider="gemini", enable_mcp=False, enable_swarm=True, sandbox_runtime="local", init_git=False) -> dict`
+- `init_agent_repo(project_name, destination_root=".", mode="quick", enable_mcp=False, enable_swarm=True, sandbox_runtime="local", init_git=False) -> dict`
 
 ## Notes
 - The destination is created as `<destination_root>/<project_name>`.

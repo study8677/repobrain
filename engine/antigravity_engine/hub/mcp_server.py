@@ -23,6 +23,7 @@ Then configure in Claude Code's MCP settings (~/.claude/mcp.json):
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 from pathlib import Path
@@ -36,6 +37,51 @@ def _resolve_workspace(workspace: str | None) -> Path:
     if env:
         return Path(env).resolve()
     return Path.cwd()
+
+
+def _host_refresh_required_payload(status, ag_dir: Path) -> dict[str, object]:
+    """Build a machine-readable payload for pending host-agent refresh work."""
+    refresh_plan_path = ag_dir / "agent_refresh_plan.json"
+    validation_path = ag_dir / "knowledge_validation.json"
+    return {
+        "status": "requires_host_agent_refresh",
+        "overall_status": status.overall_status,
+        "next_tool": "prepare_refresh_project",
+        "refresh_plan": str(refresh_plan_path),
+        "validation": str(validation_path) if validation_path.is_file() else "",
+        "workflow": [
+            "Call prepare_refresh_project.",
+            "Run each pending task with a sub-agent when available, otherwise use the main agent LLM.",
+            "Submit each result with submit_refresh_result.",
+            "Repair and resubmit any rejected task result.",
+            "Call finalize_refresh_project after all tasks are accepted.",
+        ],
+    }
+
+
+def _submit_rejected_payload(task_id: str, exc: Exception) -> dict[str, object]:
+    """Build a structured MCP rejection payload for invalid task results."""
+    return {
+        "status": "rejected",
+        "task_id": task_id,
+        "validation_errors": [str(exc)],
+        "repair_hint": (
+            "Return a HostLlmResponse JSON object matching the task result_contract. "
+            "For source references use file/start_line/end_line, not path/start_line/end_line."
+        ),
+    }
+
+
+def _finalize_response_payload(status) -> dict[str, object]:
+    """Build a machine-readable finalize response."""
+    payload = status.model_dump(mode="json")
+    payload["status"] = "finalized" if status.overall_status == "success" else "finalize_incomplete"
+    payload["missing_or_failed"] = [
+        failure.model_dump(mode="json")
+        for failure in status.failures
+        if "missing submitted" in failure.reason or "submitted result" in failure.reason
+    ]
+    return payload
 
 
 def serve(workspace: Path) -> None:
@@ -100,23 +146,69 @@ def serve(workspace: Path) -> None:
         try:
             status = await refresh_pipeline(workspace, quick=quick)
             ag_dir = workspace / ".antigravity"
+            refresh_plan_path = ag_dir / "agent_refresh_plan.json"
+            validation_path = ag_dir / "knowledge_validation.json"
+            if status.overall_status != "success" and refresh_plan_path.is_file():
+                payload = _host_refresh_required_payload(status, ag_dir)
+                return json.dumps(payload, ensure_ascii=False, indent=2)
+
             lines = [
                 f"Knowledge base updated with status `{status.overall_status}`:",
                 f"  {ag_dir / 'conventions.md'}",
                 f"  {ag_dir / 'structure.md'}",
                 f"  {ag_dir / 'status.json'}",
             ]
-            refresh_plan_path = ag_dir / "agent_refresh_plan.json"
             if refresh_plan_path.is_file():
                 lines.append(f"  {refresh_plan_path}")
-            validation_path = ag_dir / "knowledge_validation.json"
             if validation_path.is_file():
                 lines.append(f"  {validation_path}")
-            if status.overall_status != "success":
-                lines.append(
-                    "Host LLM capability is required to complete semantic knowledge artifacts."
-                )
             return "\n".join(lines)
+        except Exception as exc:  # noqa: BLE001
+            return f"Error: {exc}"
+
+    @mcp.tool()
+    async def prepare_refresh_project(quick: bool = False, failed_only: bool = False) -> str:
+        """Prepare refresh tasks for the embedding main agent.
+
+        The returned JSON contains prompts, schemas, source files, and
+        acceptance criteria. The main agent should delegate module tasks to
+        sub-agents when possible; if not, it should use its own LLM capability
+        on the supplied prompts.
+        """
+        from antigravity_engine.hub.pipeline import prepare_refresh_project as prepare
+
+        try:
+            payload = await prepare(workspace, quick=quick, failed_only=failed_only)
+            return json.dumps(payload, ensure_ascii=False, indent=2)
+        except Exception as exc:  # noqa: BLE001
+            return f"Error: {exc}"
+
+    @mcp.tool()
+    async def submit_refresh_result(task_id: str, result_json: str) -> str:
+        """Submit one refresh task result produced by the main agent or a sub-agent.
+
+        Args:
+            task_id: Task id from prepare_refresh_project.
+            result_json: JSON string containing either {"data": {...}} or
+                {"content": "..."} matching the task schema.
+        """
+        from antigravity_engine.hub.pipeline import submit_refresh_result as submit
+
+        try:
+            result = json.loads(result_json)
+            payload = submit(workspace, task_id, result)
+            return json.dumps(payload, ensure_ascii=False, indent=2)
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps(_submit_rejected_payload(task_id, exc), ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    async def finalize_refresh_project() -> str:
+        """Finalize a host-agent refresh after all task results are submitted."""
+        from antigravity_engine.hub.pipeline import finalize_refresh_project as finalize
+
+        try:
+            status = finalize(workspace)
+            return json.dumps(_finalize_response_payload(status), ensure_ascii=False, indent=2)
         except Exception as exc:  # noqa: BLE001
             return f"Error: {exc}"
 

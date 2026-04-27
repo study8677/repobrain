@@ -1,4 +1,4 @@
-# 🚀 Guía de Inicio Rápido
+﻿# 🚀 Guía de Inicio Rápido
 
 Comienza a usar la Plantilla Workspace de Antigravity en minutos.
 
@@ -52,12 +52,10 @@ Edita `docker-compose.yml` para:
 ## 🔧 Configuración
 
 ### Variables de Entorno
-Crea un archivo `.env`:
+No se requiere configurar claves o modelos LLM en `.env`; el agente principal anfitrión aporta la capacidad LLM.
 
 ```bash
 # Configuración de LLM
-GOOGLE_API_KEY=tu-clave-api-aqui
-GEMINI_MODEL_NAME=gemini-2.0-flash-exp
 
 # Configuración de MCP
 MCP_ENABLED=true
@@ -116,10 +114,7 @@ pytest --cov=antigravity_engine engine/tests/
 ### El agente no se inicia
 ```bash
 # Verifica si las dependencias están instaladas
-pip list | grep -Ei "google-genai|google-generativeai"
 
-# Verifica que GOOGLE_API_KEY esté configurada
-echo $GOOGLE_API_KEY
 ```
 
 ### Las herramientas no cargan
@@ -161,3 +156,4 @@ Consulta [Guía de Integración de MCP](MCP_INTEGRATION.md) para configuración 
 ---
 
 **¿Preguntas?** Consulta el [Índice Completo](README.md) o abre un issue en GitHub.
+

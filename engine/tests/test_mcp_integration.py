@@ -95,41 +95,34 @@ def test_build_ask_swarm_empty_mcp_tools(tmp_path: Path) -> None:
 
 
 def test_ask_pipeline_mcp_disabled(tmp_path: Path, monkeypatch) -> None:
-    """When MCP_ENABLED=false, no MCP connections are attempted."""
+    """ask_pipeline uses host capability and does not require MCP autoconnection."""
     from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.host_llm import set_host_llm_capability
 
     reset_settings()
     monkeypatch.setenv("MCP_ENABLED", "false")
     monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
 
-    mock_agent = MagicMock()
-    mock_result = MagicMock()
-    mock_result.final_output = "test answer"
+    (tmp_path / ".antigravity").mkdir()
+    (tmp_path / ".antigravity" / "status.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".antigravity" / "conventions.md").write_text("test context", encoding="utf-8")
+    (tmp_path / ".antigravity" / "map.md").write_text("# Module Map\n", encoding="utf-8")
+    (tmp_path / ".antigravity" / "agents").mkdir()
+    (tmp_path / ".antigravity" / "agents" / "src.md").write_text("test context", encoding="utf-8")
 
-    with patch(
-        "antigravity_engine.hub.agents.build_ask_swarm",
-        return_value=mock_agent,
-    ) as mock_build, patch(
-        "antigravity_engine.hub.pipeline._build_ask_context",
-        return_value="test context",
-    ), patch(
-        "antigravity_engine.hub.agents.create_model",
-        return_value="test-model",
-    ), patch(
-        "agents.Runner.run",
-        new_callable=AsyncMock,
-        return_value=mock_result,
-    ):
+    def fake_host_llm(request):
+        assert request.task == "answer_question"
+        return {"content": "test answer"}
+
+    set_host_llm_capability(fake_host_llm)
+    try:
         from antigravity_engine.hub.pipeline import ask_pipeline
 
         import asyncio
 
         result = asyncio.run(ask_pipeline(tmp_path, "test question"))
-
-        # build_ask_swarm should be called with mcp_tools=None
-        mock_build.assert_called_once()
-        _, kwargs = mock_build.call_args
-        assert kwargs.get("mcp_tools") is None
+    finally:
+        set_host_llm_capability(None)
 
     assert result == "test answer"
 
@@ -137,42 +130,38 @@ def test_ask_pipeline_mcp_disabled(tmp_path: Path, monkeypatch) -> None:
 def test_ask_pipeline_mcp_enabled_without_runtime_opt_in(tmp_path: Path, monkeypatch) -> None:
     """MCP must not autoconnect unless AG_ALLOW_MCP is set in process env."""
     from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.host_llm import set_host_llm_capability
 
     reset_settings()
     monkeypatch.setenv("MCP_ENABLED", "true")
     monkeypatch.delenv("AG_ALLOW_MCP", raising=False)
     monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
 
-    mock_agent = MagicMock()
-    mock_result = MagicMock()
-    mock_result.final_output = "test answer"
+    (tmp_path / ".antigravity").mkdir()
+    (tmp_path / ".antigravity" / "status.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".antigravity" / "conventions.md").write_text("test context", encoding="utf-8")
+    (tmp_path / ".antigravity" / "map.md").write_text("# Module Map\n", encoding="utf-8")
+    (tmp_path / ".antigravity" / "agents").mkdir()
+    (tmp_path / ".antigravity" / "agents" / "src.md").write_text("test context", encoding="utf-8")
 
-    with patch(
-        "antigravity_engine.hub.agents.build_ask_swarm",
-        return_value=mock_agent,
-    ) as mock_build, patch(
-        "antigravity_engine.hub.pipeline._build_ask_context",
-        return_value="test context",
-    ), patch(
-        "antigravity_engine.hub.agents.create_model",
-        return_value="test-model",
-    ), patch(
-        "agents.Runner.run",
-        new_callable=AsyncMock,
-        return_value=mock_result,
-    ), patch(
-        "antigravity_engine.mcp_client.MCPClientManager.initialize",
-        new_callable=AsyncMock,
-    ) as mock_mcp_init:
-        from antigravity_engine.hub.pipeline import ask_pipeline
+    def fake_host_llm(request):
+        assert request.task == "answer_question"
+        return {"content": "test answer"}
 
-        import asyncio
+    set_host_llm_capability(fake_host_llm)
+    try:
+        with patch(
+            "antigravity_engine.mcp_client.MCPClientManager.initialize",
+            new_callable=AsyncMock,
+        ) as mock_mcp_init:
+            from antigravity_engine.hub.pipeline import ask_pipeline
 
-        result = asyncio.run(ask_pipeline(tmp_path, "test question"))
+            import asyncio
 
-        mock_build.assert_called_once()
-        _, kwargs = mock_build.call_args
-        assert kwargs.get("mcp_tools") is None
-        mock_mcp_init.assert_not_called()
+            result = asyncio.run(ask_pipeline(tmp_path, "test question"))
+
+            mock_mcp_init.assert_not_called()
+    finally:
+        set_host_llm_capability(None)
 
     assert result == "test answer"

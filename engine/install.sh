@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 set -e
 
 # Antigravity Workspace Template Installer for Linux/macOS
@@ -58,17 +58,6 @@ echo "📦 Installing dependencies..."
 pip install -e . --quiet
 echo "✅ Dependencies installed"
 
-# Ensure correct Google GenAI package is installed (avoid deprecated package)
-if python -m pip show google-generativeai > /dev/null 2>&1; then
-    echo "⚠️  Detected deprecated google-generativeai package. Removing..."
-    python -m pip uninstall -y google-generativeai --quiet || true
-fi
-
-if ! python -m pip show google-genai > /dev/null 2>&1; then
-    echo "📦 Installing google-genai (required for from google import genai)..."
-    python -m pip install google-genai --quiet
-fi
-
 # Initialize configuration
 echo "🔧 Setting up configuration..."
 
@@ -76,18 +65,10 @@ echo "🔧 Setting up configuration..."
 if [ ! -f ".env" ]; then
     cat > .env << 'EOF'
 # Antigravity Workspace Configuration
-# Copy this file and configure your API keys
-
-# Google Gemini API Key (Required)
-GOOGLE_API_KEY=your_api_key_here
-
-# Optional: OpenAI API Key for alternative LLM
-# OPENAI_API_KEY=your_openai_key_here
-
-# Optional: Model Configuration
-# MODEL_NAME=gemini-2.0-flash-exp
+# LLM usage is delegated to the embedding main agent.
+# No provider key or model configuration is required here.
 EOF
-    echo "✅ Created .env file (please configure your API keys)"
+    echo "✅ Created .env file"
 else
     echo "⚠️  .env file already exists. Skipping creation."
 fi
@@ -103,10 +84,7 @@ echo "=============================================="
 echo "✅ Installation complete!"
 echo ""
 echo "Next steps:"
-echo "1. Configure your API keys in .env file:"
-echo "   nano .env"
-echo ""
-echo "2. Activate the virtual environment:"
+echo "1. Activate the virtual environment:"
 echo "   source venv/bin/activate"
 echo ""
 echo "3. Run the agent:"
@@ -114,3 +92,4 @@ echo "   python agent.py"
 echo ""
 echo "📚 Documentation: docs/en/QUICK_START.md"
 echo "=============================================="
+

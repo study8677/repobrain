@@ -122,29 +122,30 @@ async def test_refresh_pipeline_creates_conventions(tmp_path: Path, monkeypatch)
 async def test_ask_pipeline_returns_answer(tmp_path: Path, monkeypatch) -> None:
     """ask_pipeline returns an answer string."""
     monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
-    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
 
     from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.host_llm import set_host_llm_capability
     reset_settings()
 
     ag_dir = tmp_path / ".antigravity"
     ag_dir.mkdir()
     (ag_dir / "conventions.md").write_text("Python + FastAPI", encoding="utf-8")
+    (ag_dir / "status.json").write_text("{}", encoding="utf-8")
+    (ag_dir / "map.md").write_text("# Module Map\n", encoding="utf-8")
+    (ag_dir / "agents").mkdir()
+    (ag_dir / "agents" / "src.md").write_text("Uses FastAPI.", encoding="utf-8")
 
-    mock_result = MagicMock()
-    mock_result.final_output = "This project uses FastAPI."
+    def fake_host_llm(request):
+        assert request.task == "answer_question"
+        return {"content": "This project uses FastAPI."}
 
-    mock_agents_module = MagicMock()
-    mock_agents_module.Runner.run = AsyncMock(return_value=mock_result)
-    mock_agents_module.Agent = MagicMock()
-    mock_agents_module.set_tracing_disabled = MagicMock()
-
-    with patch.dict("sys.modules", {"agents": mock_agents_module}):
-        import importlib
+    set_host_llm_capability(fake_host_llm)
+    try:
         import antigravity_engine.hub.pipeline as pipeline_mod
-        importlib.reload(pipeline_mod)
 
         answer = await pipeline_mod.ask_pipeline(tmp_path, "What framework?")
+    finally:
+        set_host_llm_capability(None)
 
     assert "FastAPI" in answer
 

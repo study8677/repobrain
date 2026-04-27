@@ -34,6 +34,7 @@ from antigravity_engine.hub.contracts import (
 from antigravity_engine.hub.host_llm import (
     HOST_LLM_UNAVAILABLE_MESSAGE,
     HostLlmRequest,
+    HostLlmResponse,
     call_host_llm,
     has_host_llm_capability,
 )
@@ -512,6 +513,7 @@ async def refresh_pipeline(workspace: Path, quick: bool = False, failed_only: bo
         workspace=workspace,
         status=refresh_status,
         reason=host_llm_reason,
+        report=report,
     )
     _remove_stale_host_delegation(ag_dir)
     _write_refresh_status(ag_dir, refresh_status)
@@ -577,6 +579,194 @@ async def refresh_pipeline(workspace: Path, quick: bool = False, failed_only: bo
     return refresh_status
 
 
+async def prepare_refresh_project(
+    workspace: Path,
+    quick: bool = False,
+    failed_only: bool = False,
+) -> dict[str, object]:
+    """Prepare a main-agent refresh task bundle without requiring local LLM keys."""
+    status = await refresh_pipeline(workspace, quick=quick, failed_only=failed_only)
+    plan_path = workspace / ".antigravity" / "agent_refresh_plan.json"
+    if not plan_path.is_file():
+        raise FileNotFoundError(f"refresh plan was not written: {plan_path}")
+    payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    _refresh_plan_task_status(workspace, payload)
+    payload["prepare_status"] = status.model_dump(mode="json")
+    return payload
+
+
+def submit_refresh_result(
+    workspace: Path,
+    task_id: str,
+    result: dict[str, object] | str,
+) -> dict[str, object]:
+    """Store and validate one host/main-agent refresh task result."""
+    plan = _load_agent_refresh_plan(workspace)
+    task = _find_plan_task(plan, task_id)
+    task_type = str(task.get("task", ""))
+    plan_id = _plan_id(plan)
+    response = HostLlmResponse(content=result) if isinstance(result, str) else HostLlmResponse.model_validate(result)
+
+    stored: dict[str, object] = {
+        "plan_id": plan_id,
+        "task_id": task_id,
+        "task": task_type,
+        "module": task.get("module"),
+        "group": task.get("group"),
+        "status": "success",
+        "result": response.model_dump(mode="json"),
+    }
+    if task_type == "conventions":
+        content = str(response.data.get("markdown") or response.data.get("content") or response.content).strip()
+        if not content:
+            raise ValueError("conventions result is empty")
+        stored["content"] = content
+    elif task_type == "module_knowledge":
+        document = _parse_module_knowledge_response(response.data, response.content)
+        expected_module = str(task.get("module") or "")
+        if document.module != expected_module:
+            raise ValueError(f"host result module {document.module!r}, expected {expected_module!r}")
+        if not document.path:
+            document.path = str(task.get("context", {}).get("module_path") or task.get("module") or "")
+        issues = _validate_module_knowledge(workspace, document)
+        if issues:
+            raise ValueError("; ".join(issues))
+        stored["document"] = document.model_dump(mode="json")
+    else:
+        raise ValueError(f"unsupported refresh task: {task_type!r}")
+
+    result_path = _host_task_result_path(workspace, task_id, plan_id=plan_id)
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    result_path.write_text(json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")
+    _refresh_plan_task_status(workspace, plan)
+    (workspace / ".antigravity" / "agent_refresh_plan.json").write_text(
+        json.dumps(plan, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return {
+        "status": "accepted",
+        "plan_id": plan_id,
+        "task_id": task_id,
+        "path": str(result_path),
+        "pending_tasks": plan.get("pending_tasks", []),
+        "next_action": plan.get("next_action", "finalize_refresh_project"),
+    }
+
+
+def finalize_refresh_project(workspace: Path) -> RefreshStatus:
+    """Merge submitted host task results into validated knowledge artifacts."""
+    plan = _load_agent_refresh_plan(workspace)
+    plan_id = _plan_id(plan)
+    ag_dir = workspace / ".antigravity"
+    agents_dir = ag_dir / "agents"
+    knowledge_dir = ag_dir / "knowledge"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    knowledge_dir.mkdir(parents=True, exist_ok=True)
+
+    status_payload = plan.get("status", {})
+    refresh_status = (
+        RefreshStatus.model_validate(status_payload)
+        if isinstance(status_payload, dict) and status_payload.get("refresh_run_id")
+        else RefreshStatus(refresh_run_id=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"), overall_status="success")
+    )
+    refresh_status.llm_provider = "host_agent_capability"
+    refresh_status.failures = []
+    refresh_status.modules = {}
+    refresh_status.stages["git_insights"] = "skipped"
+
+    expected_modules = sorted(
+        {
+            str(task.get("module") or "")
+            for task in plan.get("tasks", [])
+            if isinstance(task, dict) and task.get("task") == "module_knowledge" and task.get("module")
+        }
+    )
+    for module in expected_modules:
+        for path in (agents_dir / f"{module}.md", knowledge_dir / f"{module}.json"):
+            _remove_or_tombstone_generated_artifact(path, module)
+
+    conventions_result = _load_submitted_task(workspace, "conventions", plan_id=plan_id)
+    if conventions_result and conventions_result.get("content"):
+        (ag_dir / "conventions.md").write_text(str(conventions_result["content"]), encoding="utf-8")
+        refresh_status.stages["conventions"] = "success"
+    else:
+        _mark_stage_failure(refresh_status, "conventions", "missing submitted conventions result", partial=False)
+
+    docs_by_module: dict[str, list[ModuleKnowledgeDocument]] = {}
+    for task in plan.get("tasks", []):
+        if not isinstance(task, dict) or task.get("task") != "module_knowledge":
+            continue
+        task_id = str(task.get("task_id", ""))
+        module = str(task.get("module", ""))
+        submitted = _load_submitted_task(workspace, task_id, plan_id=plan_id)
+        if not submitted:
+            _mark_module_failure(refresh_status, module, str(task.get("group") or ""), "missing submitted result", state="failed")
+            continue
+        raw_doc = submitted.get("document")
+        if not isinstance(raw_doc, dict):
+            _mark_module_failure(refresh_status, module, str(task.get("group") or ""), "submitted result has no parsed document", state="failed")
+            continue
+        try:
+            docs_by_module.setdefault(module, []).append(ModuleKnowledgeDocument.model_validate(raw_doc))
+        except Exception as exc:  # noqa: BLE001
+            _mark_module_failure(refresh_status, module, str(task.get("group") or ""), str(exc), state="failed")
+
+    merged_docs: list[ModuleKnowledgeDocument] = []
+    for module, docs in sorted(docs_by_module.items()):
+        document = _merge_module_knowledge_documents(
+            module=module,
+            module_path=docs[0].path if docs else module,
+            documents=docs,
+        )
+        issues = _validate_module_knowledge(workspace, document)
+        if issues:
+            for issue in issues:
+                _mark_module_failure(refresh_status, module, None, issue, state="failed")
+            continue
+        (agents_dir / f"{module}.md").write_text(_render_agent_md_from_knowledge(document), encoding="utf-8")
+        (knowledge_dir / f"{module}.json").write_text(
+            json.dumps(document.model_dump(mode="json"), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        refresh_status.modules[module] = "success"
+        merged_docs.append(document)
+
+    refresh_status.stages["module_docs"] = _aggregate_states(list(refresh_status.modules.values()), skipped_state="skipped")
+    if merged_docs:
+        map_content = _render_map_from_module_knowledge(merged_docs)
+        (ag_dir / "map.md").write_text(map_content, encoding="utf-8")
+        registry_entries = _build_module_registry_entries_from_knowledge(merged_docs, refresh_status)
+        (ag_dir / "module_registry.json").write_text(
+            json.dumps([entry.model_dump(mode="json") for entry in registry_entries], ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (ag_dir / "module_registry.md").write_text(_render_module_registry_markdown(registry_entries), encoding="utf-8")
+        refresh_status.stages["module_registry"] = "success"
+    else:
+        _mark_stage_failure(refresh_status, "module_registry", "no submitted module knowledge", partial=False)
+
+    refresh_status.knowledge_status = _aggregate_states(
+        [
+            refresh_status.stages.get("conventions", "skipped"),
+            refresh_status.stages.get("module_docs", "skipped"),
+            refresh_status.stages.get("module_registry", "skipped"),
+        ],
+        skipped_state="success",
+    )
+    refresh_status.failed_modules = sorted(
+        module for module, state in refresh_status.modules.items() if state in {"failed", "partial"}
+    )
+    refresh_status.validation_status = _write_knowledge_validation(ag_dir, workspace, refresh_status)
+    refresh_status.overall_status = _aggregate_states(
+        [state for key, state in refresh_status.stages.items() if key != "gitnexus"] + list(refresh_status.modules.values()),
+        skipped_state="success",
+    )
+    if refresh_status.validation_status == "failed" and refresh_status.overall_status == "success":
+        refresh_status.overall_status = "failed"
+    _write_refresh_status(ag_dir, refresh_status)
+    return refresh_status
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -586,8 +776,199 @@ def _is_no_llm_config_error(exc: Exception) -> bool:
     return "no llm configured" in str(exc).lower()
 
 
-async def _generate_conventions_with_host_llm(workspace: Path, report) -> str:
-    """Generate project conventions through the host LLM capability."""
+def _host_task_id(task: str, module: str | None = None, group: str | None = None) -> str:
+    """Return a stable task id safe for JSON filenames and MCP callers."""
+    parts = [task]
+    if module:
+        parts.append(module)
+    if group:
+        parts.append(group)
+    raw = "::".join(parts)
+    return re.sub(r"[^A-Za-z0-9_.:-]+", "_", raw)
+
+
+def _safe_host_filename(value: str) -> str:
+    """Return a value safe for host result file or directory names."""
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", value)
+
+
+def _plan_id(plan: dict[str, object]) -> str:
+    """Return the active host-agent plan id."""
+    value = str(plan.get("plan_id") or plan.get("refresh_run_id") or "").strip()
+    if value:
+        return value
+    status = plan.get("status", {})
+    if isinstance(status, dict):
+        value = str(status.get("refresh_run_id") or "").strip()
+        if value:
+            return value
+    return "legacy"
+
+
+def _host_task_result_path(workspace: Path, task_id: str, plan_id: str | None = None) -> Path:
+    """Return where a submitted host task result is stored."""
+    safe_id = _safe_host_filename(task_id)
+    if plan_id:
+        return workspace / ".antigravity" / "host_results" / _safe_host_filename(plan_id) / f"{safe_id}.json"
+    return workspace / ".antigravity" / "host_results" / f"{safe_id}.json"
+
+
+def _load_agent_refresh_plan(workspace: Path) -> dict[str, object]:
+    """Load the generated main-agent refresh plan."""
+    path = workspace / ".antigravity" / "agent_refresh_plan.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"agent refresh plan not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("agent refresh plan must be a JSON object")
+    return payload
+
+
+def _find_plan_task(plan: dict[str, object], task_id: str) -> dict[str, object]:
+    """Find a task in an agent refresh plan by id."""
+    for task in plan.get("tasks", []):
+        if isinstance(task, dict) and task.get("task_id") == task_id:
+            return task
+    raise KeyError(f"refresh task not found in plan: {task_id}")
+
+
+def _load_submitted_task(workspace: Path, task_id: str, plan_id: str | None = None) -> dict[str, object] | None:
+    """Load one submitted host result if present."""
+    path = _host_task_result_path(workspace, task_id, plan_id=plan_id)
+    if not path.is_file():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return None
+    if plan_id and str(payload.get("plan_id") or "") != plan_id:
+        return None
+    return payload
+
+
+def _refresh_plan_task_status(workspace: Path, plan: dict[str, object]) -> None:
+    """Annotate a refresh plan with accepted and pending task ids."""
+    plan_id = _plan_id(plan)
+    accepted: list[str] = []
+    pending: list[str] = []
+    for task in plan.get("tasks", []):
+        if not isinstance(task, dict):
+            continue
+        task_id = str(task.get("task_id") or "")
+        if not task_id:
+            continue
+        if _load_submitted_task(workspace, task_id, plan_id=plan_id):
+            accepted.append(task_id)
+            task["submission_status"] = "accepted"
+        else:
+            pending.append(task_id)
+            task["submission_status"] = "pending"
+    plan["accepted_tasks"] = accepted
+    plan["pending_tasks"] = pending
+    plan["next_action"] = (
+        "run_pending_tasks_and_submit_results"
+        if pending
+        else "finalize_refresh_project"
+    )
+
+
+def _remove_or_tombstone_generated_artifact(path: Path, module: str) -> None:
+    """Remove a generated module artifact, or overwrite it when deletion is blocked."""
+    if not path.is_file():
+        return
+    try:
+        path.unlink()
+        return
+    except OSError:
+        pass
+    try:
+        if path.suffix == ".json":
+            path.write_text(
+                json.dumps(
+                    {
+                        "status": "stale_removed",
+                        "module": module,
+                        "reason": "current refresh plan has no accepted result for this artifact",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        else:
+            path.write_text(
+                (
+                    "# Stale Knowledge Removed\n\n"
+                    "The current refresh plan has no accepted result for this module artifact.\n"
+                ),
+                encoding="utf-8",
+            )
+    except OSError:
+        pass
+
+
+def _conventions_result_contract() -> dict[str, object]:
+    """Return the host response contract for conventions tasks."""
+    return {
+        "type": "HostLlmResponse",
+        "submit_shape": {
+            "content": "",
+            "data": {"markdown": "# Project Conventions\n\n..."},
+            "metadata": {"execution_mode": "subagent|main_agent_llm"},
+        },
+        "required_result": "Markdown in data.markdown or content",
+    }
+
+
+def _module_result_contract() -> dict[str, object]:
+    """Return the host response contract for module knowledge tasks."""
+    return {
+        "type": "HostLlmResponse",
+        "submit_shape": {
+            "content": "",
+            "data": {
+                "module": "<exact module id>",
+                "path": "<module path>",
+                "summary": "<concrete summary>",
+                "responsibilities": ["<responsibility>"],
+                "key_files": [
+                    {
+                        "path": "<workspace-relative file>",
+                        "purpose": "<purpose>",
+                        "references": [
+                            {"file": "<workspace-relative file>", "start_line": 1, "end_line": 1}
+                        ],
+                    }
+                ],
+                "public_apis": [
+                    {
+                        "name": "<api>",
+                        "kind": "<kind>",
+                        "purpose": "<purpose>",
+                        "signature": "<signature>",
+                        "references": [
+                            {"file": "<workspace-relative file>", "start_line": 1, "end_line": 1}
+                        ],
+                    }
+                ],
+                "data_flow": ["<observation>"],
+                "dependencies": ["<dependency>"],
+                "configuration": ["<configuration or none observed>"],
+                "risks": ["<risk>"],
+                "source_references": [
+                    {"file": "<workspace-relative file>", "start_line": 1, "end_line": 1}
+                ],
+            },
+            "metadata": {"execution_mode": "subagent|main_agent_llm"},
+        },
+        "source_reference_rule": (
+            "Every SourceReference object must use keys file, start_line, end_line. "
+            "Do not use path for source references; path is only for key_files[].path."
+        ),
+    }
+
+
+def _build_conventions_task(workspace: Path, report) -> dict[str, object]:
+    """Build the host-agent task package for project conventions."""
     prompt = (
         "Analyze this project scan and write a concise Markdown conventions "
         "document. Cover languages, frameworks, structure, tests, packaging, "
@@ -595,13 +976,160 @@ async def _generate_conventions_with_host_llm(workspace: Path, report) -> str:
         "Markdown.\n\n"
         f"{_format_scan_report(report)}"
     )
+    return {
+        "task_id": "conventions",
+        "task": "conventions",
+        "workspace": str(workspace.resolve()),
+        "execution_mode_preference": "subagent_first",
+        "agent_instructions": (
+            "Use a sub-agent for this refresh task when available. If the host "
+            "does not support sub-agents, use the main agent LLM on the supplied "
+            "prompt. Do not ask the main agent to inspect files beyond the "
+            "provided scan context."
+        ),
+        "prompt": prompt,
+        "schema": {"type": "markdown", "required_heading": "#"},
+        "result_contract": _conventions_result_contract(),
+        "context": {"scan_report": _build_scan_payload(report)},
+        "acceptance_criteria": [
+            "output is Markdown only",
+            "output starts with a heading",
+            "content is based only on the provided scan report",
+        ],
+        "source_files": [],
+        "required_outputs": [".antigravity/conventions.md"],
+    }
+
+
+def _build_module_knowledge_task(
+    workspace: Path,
+    module: str,
+    module_path: str,
+    group,
+) -> dict[str, object]:
+    """Build the host-agent task package for one module source group."""
+    from antigravity_engine.hub.module_grouping import format_group_context
+
+    source_files = [source_file.rel_path for source_file in group.files]
+    task_id = _host_task_id("module_knowledge", module, str(group.name))
+    prompt = f"""\
+You are producing structured code-understanding for Antigravity refresh.
+
+Execution requirement for the embedding main agent:
+- Prefer launching a sub-agent to complete this task.
+- If no sub-agent capability exists, use the main agent LLM directly on this exact prompt.
+- Do not perform open-ended code exploration; analyze only the preloaded source below.
+- Return one JSON object matching the requested schema. Do not return Markdown.
+
+Analyze the preloaded source for module `{module}`, group `{group.name}`.
+Every substantive claim must be grounded with source references using
+workspace-relative file paths and 1-based line ranges.
+
+Required JSON fields:
+- module: string, exactly `{module}`
+- path: string, module path `{module_path}`
+- summary: concrete 1-2 sentence module/group summary
+- responsibilities: list of concrete responsibilities
+- key_files: list of objects: path, purpose, references
+- public_apis: list of objects: name, kind, purpose, signature, references
+- data_flow: list of concrete data/control-flow observations
+- dependencies: list of internal/external dependencies and why they matter
+- configuration: list of env vars, constants, config files, or "none observed"
+- risks: list of limitations, legacy areas, mocks, or operational caveats
+- source_references: list of important references for the overall summary
+
+Source reference contract:
+- key_files[].path names a file.
+- Every reference object inside key_files[].references,
+  public_apis[].references, and source_references must use exactly:
+  {{"file": "relative/path.ext", "start_line": 1, "end_line": 2}}.
+- Do not use "path" inside a source reference object.
+
+Minimal JSON shape:
+{{
+  "module": "{module}",
+  "path": "{module_path}",
+  "summary": "...",
+  "responsibilities": ["..."],
+  "key_files": [
+    {{
+      "path": "{source_files[0] if source_files else module_path}",
+      "purpose": "...",
+      "references": [{{"file": "{source_files[0] if source_files else module_path}", "start_line": 1, "end_line": 1}}]
+    }}
+  ],
+  "public_apis": [
+    {{
+      "name": "...",
+      "kind": "...",
+      "purpose": "...",
+      "signature": "...",
+      "references": [{{"file": "{source_files[0] if source_files else module_path}", "start_line": 1, "end_line": 1}}]
+    }}
+  ],
+  "data_flow": ["..."],
+  "dependencies": ["..."],
+  "configuration": ["..."],
+  "risks": ["..."],
+  "source_references": [{{"file": "{source_files[0] if source_files else module_path}", "start_line": 1, "end_line": 1}}]
+}}
+
+Preloaded source:
+
+{format_group_context(group)}
+"""
+    return {
+        "task_id": task_id,
+        "task": "module_knowledge",
+        "workspace": str(workspace.resolve()),
+        "module": module,
+        "group": str(group.name),
+        "execution_mode_preference": "subagent_first",
+        "agent_instructions": (
+            "The middleware has already selected and preloaded the source files. "
+            "The host should delegate this package to a sub-agent when possible; "
+            "otherwise the main agent LLM should complete the same package."
+        ),
+        "prompt": prompt,
+        "schema": _module_knowledge_schema(),
+        "result_contract": _module_result_contract(),
+        "context": {
+            "module": module,
+            "module_path": module_path,
+            "group": str(group.name),
+            "source_files": source_files,
+        },
+        "acceptance_criteria": [
+            "return one JSON object only",
+            "module matches the requested module exactly",
+            "all source references use provided workspace-relative paths",
+            "source reference objects use file/start_line/end_line, not path",
+            "line ranges are 1-based and within the referenced files",
+            "no placeholder or template-like content",
+        ],
+        "source_files": source_files,
+        "required_outputs": [
+            f".antigravity/knowledge/{module}.json",
+            f".antigravity/agents/{module}.md",
+            ".antigravity/map.md",
+            ".antigravity/knowledge_validation.json",
+        ],
+    }
+
+
+async def _generate_conventions_with_host_llm(workspace: Path, report) -> str:
+    """Generate project conventions through the host LLM capability."""
+    task = _build_conventions_task(workspace, report)
     response = await call_host_llm(
         HostLlmRequest(
             task="conventions",
             workspace=str(workspace.resolve()),
-            prompt=prompt,
-            schema={"type": "markdown", "required_heading": "#"},
-            context={"scan_report": _build_scan_payload(report)},
+            prompt=str(task["prompt"]),
+            schema=task["schema"],
+            context=task["context"],
+            agent_instructions=str(task["agent_instructions"]),
+            acceptance_criteria=list(task["acceptance_criteria"]),
+            required_outputs=list(task["required_outputs"]),
         )
     )
     content = str(response.data.get("markdown") or response.data.get("content") or response.content).strip()
@@ -715,48 +1243,20 @@ async def _request_module_knowledge(
     group,
 ) -> ModuleKnowledgeDocument:
     """Request structured module understanding for one file group."""
-    from antigravity_engine.hub.module_grouping import format_group_context
-
-    source_files = [source_file.rel_path for source_file in group.files]
-    prompt = f"""\
-You are producing structured code-understanding for Antigravity refresh.
-
-Analyze the preloaded source for module `{module}`, group `{group.name}`.
-Return one JSON object matching the requested schema. Do not return Markdown.
-Every substantive claim must be grounded with source references using
-workspace-relative file paths and 1-based line ranges.
-
-Required JSON fields:
-- module: string, exactly `{module}`
-- path: string, module path `{module_path}`
-- summary: concrete 1-2 sentence module/group summary
-- responsibilities: list of concrete responsibilities
-- key_files: list of objects: path, purpose, references
-- public_apis: list of objects: name, kind, purpose, signature, references
-- data_flow: list of concrete data/control-flow observations
-- dependencies: list of internal/external dependencies and why they matter
-- configuration: list of env vars, constants, config files, or "none observed"
-- risks: list of limitations, legacy areas, mocks, or operational caveats
-- source_references: list of important references for the overall summary
-
-Preloaded source:
-
-{format_group_context(group)}
-"""
+    task = _build_module_knowledge_task(workspace, module, module_path, group)
     response = await call_host_llm(
         HostLlmRequest(
             task="module_knowledge",
             workspace=str(workspace.resolve()),
             module=module,
             group=str(group.name),
-            prompt=prompt,
-            schema=_module_knowledge_schema(),
-            context={
-                "module": module,
-                "module_path": module_path,
-                "group": str(group.name),
-                "source_files": source_files,
-            },
+            prompt=str(task["prompt"]),
+            schema=task["schema"],
+            context=task["context"],
+            agent_instructions=str(task["agent_instructions"]),
+            acceptance_criteria=list(task["acceptance_criteria"]),
+            source_files=list(task["source_files"]),
+            required_outputs=list(task["required_outputs"]),
         )
     )
     document = _parse_module_knowledge_response(response.data, response.content)
@@ -769,8 +1269,22 @@ Preloaded source:
 
 def _module_knowledge_schema() -> dict[str, object]:
     """Return the expected structured host LLM module-knowledge schema."""
+    source_reference_schema: dict[str, object] = {
+        "type": "object",
+        "required": ["file", "start_line", "end_line"],
+        "additionalProperties": False,
+        "properties": {
+            "file": {
+                "type": "string",
+                "description": "Workspace-relative source file path. Do not use key name 'path' here.",
+            },
+            "start_line": {"type": "integer", "minimum": 1},
+            "end_line": {"type": "integer", "minimum": 1},
+        },
+    }
     return {
         "type": "object",
+        "additionalProperties": False,
         "required": [
             "module",
             "summary",
@@ -787,13 +1301,39 @@ def _module_knowledge_schema() -> dict[str, object]:
             "path": {"type": "string"},
             "summary": {"type": "string"},
             "responsibilities": {"type": "array", "items": {"type": "string"}},
-            "key_files": {"type": "array"},
-            "public_apis": {"type": "array"},
+            "key_files": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["path", "purpose", "references"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "path": {"type": "string"},
+                        "purpose": {"type": "string"},
+                        "references": {"type": "array", "items": source_reference_schema},
+                    },
+                },
+            },
+            "public_apis": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["name", "kind", "purpose", "signature", "references"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "name": {"type": "string"},
+                        "kind": {"type": "string"},
+                        "purpose": {"type": "string"},
+                        "signature": {"type": "string"},
+                        "references": {"type": "array", "items": source_reference_schema},
+                    },
+                },
+            },
             "data_flow": {"type": "array", "items": {"type": "string"}},
             "dependencies": {"type": "array", "items": {"type": "string"}},
             "configuration": {"type": "array", "items": {"type": "string"}},
             "risks": {"type": "array", "items": {"type": "string"}},
-            "source_references": {"type": "array"},
+            "source_references": {"type": "array", "items": source_reference_schema},
         },
     }
 
@@ -1190,14 +1730,33 @@ def _write_agent_refresh_plan(
     workspace: Path,
     status: RefreshStatus,
     reason: str | None,
+    report,
 ) -> None:
     """Write the host LLM refresh plan consumed by embedding hosts."""
     from antigravity_engine.hub.scanner import detect_modules, resolve_module_path
 
+    plan_id = status.refresh_run_id
     modules: list[dict[str, object]] = []
+    tasks: list[dict[str, object]] = [_build_conventions_task(workspace, report)]
     for module in detect_modules(workspace):
         module_path = resolve_module_path(workspace, module)
         files = _list_source_files(workspace, module_path)
+        module_task_ids: list[str] = []
+        try:
+            from antigravity_engine.hub.module_grouping import group_files, load_module_files
+
+            groups = group_files(load_module_files(module_path, workspace), workspace)
+            for group in groups:
+                task = _build_module_knowledge_task(
+                    workspace=workspace,
+                    module=module,
+                    module_path=_relative_path(workspace, module_path),
+                    group=group,
+                )
+                tasks.append(task)
+                module_task_ids.append(str(task["task_id"]))
+        except Exception as exc:  # noqa: BLE001
+            module_task_ids.append(f"task-build-error: {exc}")
         modules.append(
             {
                 "module": module,
@@ -1205,11 +1764,14 @@ def _write_agent_refresh_plan(
                 "source_files": files[:100],
                 "source_file_count": len(files),
                 "status": status.modules.get(module, "skipped"),
+                "task_ids": module_task_ids,
             }
         )
 
     payload = {
         "schema": "antigravity-agent-refresh-plan-v1",
+        "plan_id": plan_id,
+        "refresh_run_id": status.refresh_run_id,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "workspace": str(workspace.resolve()),
         "host_llm_capability": "available" if has_host_llm_capability() else "unavailable",
@@ -1227,9 +1789,27 @@ def _write_agent_refresh_plan(
         "semantic_contract": {
             "provider": "host_agent_capability",
             "engine_role": "scan, orchestrate, persist, validate",
-            "llm_role": "produce structured code-understanding from supplied source context",
+            "llm_role": (
+                "main agent should expose these prompts to sub-agents when "
+                "available; otherwise use the main agent LLM on the supplied "
+                "prompt. The engine never reads local LLM keys."
+            ),
             "output_schema": _module_knowledge_schema(),
         },
+        "execution": {
+            "preference": "subagent_first",
+            "fallback": "main_agent_llm",
+            "main_agent_role": "dispatch supplied task packages and return structured outputs",
+            "middleware_role": "scan, group source, expose prompts/schema, validate, persist",
+        },
+        "main_agent_workflow": [
+            "Call prepare_refresh_project to get this plan and all pending task packages.",
+            "For each pending task, launch a sub-agent when available; otherwise use the main agent LLM on the exact prompt.",
+            "Submit each HostLlmResponse-shaped JSON result with submit_refresh_result(task_id, result_json).",
+            "If submit_refresh_result returns status=rejected, repair the same task output using validation_errors and repair_hint, then resubmit.",
+            "When pending_tasks is empty, call finalize_refresh_project to write the knowledge artifacts.",
+        ],
+        "tasks": tasks,
         "required_outputs": [
             ".antigravity/knowledge/{module}.json",
             ".antigravity/agents/{module}.md",
@@ -1243,6 +1823,7 @@ def _write_agent_refresh_plan(
             "template-like or placeholder semantic content fails validation",
         ],
     }
+    _refresh_plan_task_status(workspace, payload)
     (ag_dir / "agent_refresh_plan.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",

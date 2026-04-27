@@ -30,10 +30,6 @@ class MCPServerConfig(BaseSettings):
 class Settings(BaseSettings):
     """Application settings managed by Pydantic."""
 
-    # Google GenAI Configuration
-    GOOGLE_API_KEY: str = ""
-    GEMINI_MODEL_NAME: str = "gemini-2.0-flash-exp"  # Default to latest
-
     # Agent Configuration
     AGENT_NAME: str = "AntigravityAgent"
     # Stream Configuration
@@ -50,20 +46,6 @@ class Settings(BaseSettings):
         description="Absolute path to the user workspace. "
         "Set via --workspace CLI arg or WORKSPACE_PATH env var. "
         "Defaults to current working directory.",
-    )
-
-    # External LLM (OpenAI-compatible) Configuration
-    OPENAI_BASE_URL: str = Field(
-        default="",
-        description="Base URL for OpenAI-compatible API (e.g., https://api.openai.com/v1 or http://localhost:11434/v1)",
-    )
-    OPENAI_API_KEY: str = Field(
-        default="",
-        description="API key for OpenAI-compatible endpoint. Leave blank if not required.",
-    )
-    OPENAI_MODEL: str = Field(
-        default="gpt-4o-mini",
-        description="Default model name for OpenAI-compatible chat completions.",
     )
 
     # Memory Configuration

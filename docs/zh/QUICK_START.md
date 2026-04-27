@@ -1,4 +1,4 @@
-# 🚀 快速开始指南
+﻿# 🚀 快速开始指南
 
 几分钟内运行 Antigravity Workspace Template。
 
@@ -45,12 +45,10 @@ docker-compose up --build
 ## 🔧 配置
 
 ### 环境变量
-创建 `.env`：
+无需在 `.env` 中配置 LLM key 或模型；由宿主主 Agent 提供 LLM 能力。
 
 ```bash
 # LLM 配置
-GOOGLE_API_KEY=your-api-key-here
-GEMINI_MODEL_NAME=gemini-2.0-flash-exp
 
 # MCP 配置
 MCP_ENABLED=true
@@ -109,10 +107,7 @@ pytest --cov=antigravity_engine engine/tests/
 ### Agent 无法启动
 ```bash
 # 检查依赖
-pip list | grep -Ei "google-genai|google-generativeai"
 
-# 检查 GOOGLE_API_KEY
-echo $GOOGLE_API_KEY
 ```
 
 ### 工具未加载
@@ -153,3 +148,4 @@ rm -f memory/agent_memory.md memory/agent_summary.md
 ---
 
 更多信息参见 [文档索引](README.md) 或在 GitHub 提 Issue。👍
+

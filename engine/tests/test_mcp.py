@@ -97,7 +97,7 @@ class TestMCPConfigFile:
     )
     def test_config_file_valid_json(self):
         """Test that mcp_servers.json is valid JSON."""
-        with open(self._CONFIG_PATH, "r") as f:
+        with open(self._CONFIG_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         assert "servers" in data
@@ -109,7 +109,7 @@ class TestMCPConfigFile:
     )
     def test_config_servers_have_required_fields(self):
         """Test that all servers in config have required fields."""
-        with open(self._CONFIG_PATH, "r") as f:
+        with open(self._CONFIG_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         for server in data["servers"]:
@@ -215,6 +215,58 @@ class TestMCPTools:
 
         result = mcp_health_check()
         assert "not initialized" in result.lower()
+
+
+class TestAntigravityMCPRefreshPayloads:
+    """Tests for machine-readable host-agent refresh orchestration payloads."""
+
+    def test_host_refresh_required_payload_points_to_prepare_tool(self, tmp_path: Path):
+        from antigravity_engine.hub.contracts import RefreshStatus
+        from antigravity_engine.hub.mcp_server import _host_refresh_required_payload
+
+        ag_dir = tmp_path / ".antigravity"
+        ag_dir.mkdir()
+        (ag_dir / "agent_refresh_plan.json").write_text("{}", encoding="utf-8")
+        status = RefreshStatus(refresh_run_id="run", overall_status="failed")
+
+        payload = _host_refresh_required_payload(status, ag_dir)
+
+        assert payload["status"] == "requires_host_agent_refresh"
+        assert payload["next_tool"] == "prepare_refresh_project"
+        assert payload["refresh_plan"].endswith("agent_refresh_plan.json")
+        assert "submit_refresh_result" in " ".join(payload["workflow"])
+
+    def test_submit_rejected_payload_guides_source_reference_repair(self):
+        from antigravity_engine.hub.mcp_server import _submit_rejected_payload
+
+        payload = _submit_rejected_payload("module_knowledge::src::main", ValueError("file required"))
+
+        assert payload["status"] == "rejected"
+        assert payload["task_id"] == "module_knowledge::src::main"
+        assert payload["validation_errors"] == ["file required"]
+        assert "file/start_line/end_line" in payload["repair_hint"]
+
+    def test_finalize_response_payload_lists_missing_submissions(self):
+        from antigravity_engine.hub.contracts import FailureRecord, RefreshStatus
+        from antigravity_engine.hub.mcp_server import _finalize_response_payload
+
+        status = RefreshStatus(
+            refresh_run_id="run",
+            overall_status="failed",
+            failures=[
+                FailureRecord(
+                    stage="module_docs",
+                    module="src",
+                    group="main",
+                    reason="missing submitted result",
+                )
+            ],
+        )
+
+        payload = _finalize_response_payload(status)
+
+        assert payload["status"] == "finalize_incomplete"
+        assert payload["missing_or_failed"][0]["module"] == "src"
 
 
 class TestMCPToolsMocked:

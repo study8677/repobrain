@@ -1,4 +1,4 @@
-# 📚 Documentación de Antigravity Workspace
+﻿# 📚 Documentación de Antigravity Workspace
 
 Bienvenido a la documentación integral de la **Plantilla Antigravity Workspace** — un starter kit de nivel producción para construir agentes autónomos de IA en Google Antigravity.
 
@@ -110,7 +110,7 @@ Llama cualquier API compatible con OpenAI mediante la herramienta integrada `cal
 ## ❓ Preguntas Frecuentes
 
 **P: ¿Puedo usar esto con OpenAI en lugar de Gemini?**  
-R: ¡Sí! Configura `OPENAI_BASE_URL` y `OPENAI_API_KEY` en `.env`. Ver detalles en [Inicio Rápido](QUICK_START.md).
+R: No. Antigravity delega el trabajo LLM al agente principal anfitrión y no requiere claves de proveedor en `.env`.
 
 **P: ¿Cómo agrego una herramienta personalizada?**  
 R: ¡Coloca un archivo Python en `antigravity_engine/tools/` con tus funciones. Sin registro necesario! Ver [Características Zero-Config](ZERO_CONFIG.md).
@@ -180,3 +180,4 @@ Este proyecto está bajo la licencia **MIT**. Ver [LICENSE](../../LICENSE) para 
 **¡Feliz construcción con Antigravity!** 🚀
 
 Enlace amigo: [LINUX DO](https://linux.do/)
+

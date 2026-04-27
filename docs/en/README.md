@@ -1,4 +1,4 @@
-# 📚 Antigravity Workspace Documentation
+﻿# 📚 Antigravity Workspace Documentation
 
 Welcome to the comprehensive documentation for the **Antigravity Workspace Template** — a production-grade starter kit for building autonomous AI agents on Google Antigravity.
 
@@ -110,7 +110,7 @@ Call any OpenAI-compatible API via the built-in `call_openai_chat` tool (support
 ## ❓ FAQ
 
 **Q: Can I use this with OpenAI instead of Gemini?**  
-A: Yes! Set `OPENAI_BASE_URL` and `OPENAI_API_KEY` in `.env`. See [Quick Start](QUICK_START.md) for details.
+A: No. Antigravity delegates LLM work to the embedding main agent and does not require provider keys in `.env`.
 
 **Q: How do I add a custom tool?**  
 A: Drop a Python file in `antigravity_engine/tools/` with your functions. No registration needed! See [Zero-Config Features](ZERO_CONFIG.md).
@@ -180,3 +180,4 @@ This project is licensed under the **MIT License**. See [LICENSE](../../LICENSE)
 **Happy building with Antigravity!** 🚀
 
 Friendly Link: [LINUX DO](https://linux.do/)
+

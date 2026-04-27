@@ -74,7 +74,6 @@ def test_init_agent_repo_full_mode_writes_profile(tmp_path: Path) -> None:
         "full-agent",
         str(tmp_path),
         mode="full",
-        llm_provider="openai",
         enable_mcp=True,
         enable_swarm=False,
         sandbox_runtime="microsandbox",
@@ -88,7 +87,8 @@ def test_init_agent_repo_full_mode_writes_profile(tmp_path: Path) -> None:
     env_text = (target_path / ".env").read_text(encoding="utf-8")
     assert "MCP_ENABLED=true" in env_text
     assert "SANDBOX_TYPE=microsandbox" in env_text
-    assert "OPENAI_BASE_URL=https://api.openai.com/v1" in env_text
+    assert "OPENAI_BASE_URL" not in env_text
+    assert "GEMINI_MODEL_NAME" not in env_text
 
     runtime_profile = (target_path / ".context" / "agent_runtime_profile.md")
     report_file = (target_path / "artifacts" / "logs" / "agent_repo_init_report.md")
@@ -158,8 +158,6 @@ def test_portable_script_runs_with_template_override(tmp_path: Path) -> None:
             "full",
             "--template-root",
             str(template_root),
-            "--llm-provider",
-            "openai",
             "--enable-mcp",
             "--disable-swarm",
         ],

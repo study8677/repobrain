@@ -182,6 +182,250 @@ async def test_refresh_pipeline_uses_host_llm_capability_for_semantic_artifacts(
 
 
 @pytest.mark.asyncio
+async def test_prepare_submit_finalize_refresh_flow(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MCP-style host task bundles should finalize without local LLM config."""
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+
+    from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.refresh_pipeline import (
+        finalize_refresh_project,
+        prepare_refresh_project,
+        submit_refresh_result,
+    )
+
+    reset_settings()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "main.py").write_text("def run() -> str:\n    return 'ok'\n", encoding="utf-8")
+
+    plan = await prepare_refresh_project(tmp_path)
+
+    assert plan["schema"] == "antigravity-agent-refresh-plan-v1"
+    assert plan["plan_id"]
+    assert plan["execution"]["preference"] == "subagent_first"
+    assert plan["execution"]["fallback"] == "main_agent_llm"
+    assert plan["main_agent_workflow"]
+    assert plan["tasks"]
+    assert plan["tasks"][0]["task"] == "conventions"
+    assert "agent_instructions" in plan["tasks"][0]
+    assert "result_contract" in plan["tasks"][0]
+    assert plan["pending_tasks"]
+    assert plan["next_action"] == "run_pending_tasks_and_submit_results"
+
+    conventions_submit = submit_refresh_result(
+        tmp_path,
+        "conventions",
+        {"content": "# Project Conventions\n\nHost-agent supplied conventions."},
+    )
+    assert conventions_submit["status"] == "accepted"
+    assert conventions_submit["plan_id"] == plan["plan_id"]
+
+    module_tasks = [task for task in plan["tasks"] if task["task"] == "module_knowledge"]
+    assert module_tasks
+    for task in module_tasks:
+        rel_file = task["source_files"][0]
+        assert task["result_contract"]["source_reference_rule"]
+        assert "file/start_line/end_line" in " ".join(task["acceptance_criteria"])
+        module_submit = submit_refresh_result(
+            tmp_path,
+            task["task_id"],
+            {
+                "data": {
+                    "module": task["module"],
+                    "path": task["context"]["module_path"],
+                    "summary": f"{task['module']} provides host-agent analyzed behavior.",
+                    "responsibilities": [f"Owns behavior implemented in {rel_file}."],
+                    "key_files": [
+                        {
+                            "path": rel_file,
+                            "purpose": "Contains the runtime function.",
+                            "references": [{"file": rel_file, "start_line": 1, "end_line": 2}],
+                        }
+                    ],
+                    "public_apis": [
+                        {
+                            "name": "run",
+                            "kind": "function",
+                            "purpose": "Returns the runtime value.",
+                            "signature": "run() -> str",
+                            "references": [{"file": rel_file, "start_line": 1, "end_line": 2}],
+                        }
+                    ],
+                    "data_flow": [f"run() in {rel_file} returns a string directly."],
+                    "dependencies": ["No non-stdlib dependencies observed."],
+                    "configuration": ["No runtime configuration observed."],
+                    "risks": ["Small test module."],
+                    "source_references": [{"file": rel_file, "start_line": 1, "end_line": 2}],
+                }
+            },
+        )
+        assert module_submit["status"] == "accepted"
+
+    status = finalize_refresh_project(tmp_path)
+
+    assert status.overall_status == "success"
+    assert status.llm_provider == "host_agent_capability"
+    assert (tmp_path / ".antigravity" / "agents" / "src.md").is_file()
+    assert (tmp_path / ".antigravity" / "knowledge" / "src.json").is_file()
+
+
+def test_module_knowledge_schema_requires_file_source_references() -> None:
+    """Task schema should make SourceReference objects unambiguous for sub-agents."""
+    from antigravity_engine.hub.refresh_pipeline import _module_knowledge_schema
+
+    schema = _module_knowledge_schema()
+    refs = schema["properties"]["source_references"]["items"]
+    assert refs["required"] == ["file", "start_line", "end_line"]
+    assert refs["additionalProperties"] is False
+    assert "file" in refs["properties"]
+    assert "path" not in refs["properties"]
+
+    key_file_refs = schema["properties"]["key_files"]["items"]["properties"]["references"]["items"]
+    public_api_refs = schema["properties"]["public_apis"]["items"]["properties"]["references"]["items"]
+    assert key_file_refs["required"] == ["file", "start_line", "end_line"]
+    assert public_api_refs["required"] == ["file", "start_line", "end_line"]
+
+
+@pytest.mark.asyncio
+async def test_submit_refresh_result_rejects_path_based_source_references(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Middleware should reject the path/start_line/end_line mistake seen in real sub-agent output."""
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+
+    from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.refresh_pipeline import prepare_refresh_project, submit_refresh_result
+
+    reset_settings()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "main.py").write_text("def run() -> str:\n    return 'ok'\n", encoding="utf-8")
+
+    plan = await prepare_refresh_project(tmp_path)
+    task = next(task for task in plan["tasks"] if task["task"] == "module_knowledge")
+    rel_file = task["source_files"][0]
+
+    with pytest.raises(Exception) as exc_info:
+        submit_refresh_result(
+            tmp_path,
+            task["task_id"],
+            {
+                "data": {
+                    "module": task["module"],
+                    "path": task["context"]["module_path"],
+                    "summary": "src provides host-agent analyzed behavior.",
+                    "responsibilities": ["Owns behavior."],
+                    "key_files": [
+                        {
+                            "path": rel_file,
+                            "purpose": "Contains the runtime function.",
+                            "references": [{"path": rel_file, "start_line": 1, "end_line": 2}],
+                        }
+                    ],
+                    "public_apis": [
+                        {
+                            "name": "run",
+                            "kind": "function",
+                            "purpose": "Returns the runtime value.",
+                            "signature": "run() -> str",
+                            "references": [{"path": rel_file, "start_line": 1, "end_line": 2}],
+                        }
+                    ],
+                    "data_flow": ["run() returns a string directly."],
+                    "dependencies": ["No non-stdlib dependencies observed."],
+                    "configuration": ["No runtime configuration observed."],
+                    "risks": ["Small test module."],
+                    "source_references": [{"path": rel_file, "start_line": 1, "end_line": 2}],
+                }
+            },
+        )
+
+    message = str(exc_info.value)
+    assert "file" in message
+    assert "path" in message
+
+
+@pytest.mark.asyncio
+async def test_prepare_submit_finalize_ignores_stale_results_from_old_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A new refresh plan must not finalize with host results from an older plan id."""
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+
+    from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.refresh_pipeline import (
+        finalize_refresh_project,
+        prepare_refresh_project,
+        submit_refresh_result,
+    )
+
+    reset_settings()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "main.py").write_text("def run() -> str:\n    return 'ok'\n", encoding="utf-8")
+
+    first_plan = await prepare_refresh_project(tmp_path)
+    first_task = next(task for task in first_plan["tasks"] if task["task"] == "module_knowledge")
+    rel_file = first_task["source_files"][0]
+    submit_refresh_result(tmp_path, "conventions", {"content": "# Old\n\nOld conventions."})
+    submit_refresh_result(
+        tmp_path,
+        first_task["task_id"],
+        {
+            "data": {
+                "module": first_task["module"],
+                "path": first_task["context"]["module_path"],
+                "summary": "Old plan knowledge.",
+                "responsibilities": ["Old responsibility."],
+                "key_files": [
+                    {
+                        "path": rel_file,
+                        "purpose": "Old file knowledge.",
+                        "references": [{"file": rel_file, "start_line": 1, "end_line": 2}],
+                    }
+                ],
+                "public_apis": [
+                    {
+                        "name": "run",
+                        "kind": "function",
+                        "purpose": "Old API knowledge.",
+                        "signature": "run() -> str",
+                        "references": [{"file": rel_file, "start_line": 1, "end_line": 2}],
+                    }
+                ],
+                "data_flow": ["Old flow."],
+                "dependencies": ["No non-stdlib dependencies observed."],
+                "configuration": ["No runtime configuration observed."],
+                "risks": ["Small test module."],
+                "source_references": [{"file": rel_file, "start_line": 1, "end_line": 2}],
+            }
+        },
+    )
+    first_status = finalize_refresh_project(tmp_path)
+    assert first_status.overall_status == "success"
+    assert (tmp_path / ".antigravity" / "knowledge" / "src.json").is_file()
+
+    second_plan = await prepare_refresh_project(tmp_path)
+    assert second_plan["plan_id"] != first_plan["plan_id"]
+    assert second_plan["accepted_tasks"] == []
+
+    status = finalize_refresh_project(tmp_path)
+
+    assert status.overall_status == "failed"
+    assert any("missing submitted" in failure.reason for failure in status.failures)
+    stale_path = tmp_path / ".antigravity" / "knowledge" / "src.json"
+    if stale_path.exists():
+        stale_text = stale_path.read_text(encoding="utf-8")
+        assert "Old plan knowledge" not in stale_text
+        assert "stale_removed" in stale_text
+
+
+@pytest.mark.asyncio
 async def test_refresh_pipeline_rejects_host_llm_output_with_invalid_references(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

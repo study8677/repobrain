@@ -107,16 +107,7 @@ def _project_knowledge_refresh_plan(workspace: Path) -> tuple[bool, bool, str]:
 
 def _local_llm_configured() -> bool:
     """Return whether the local engine can resolve an LLM backend."""
-    from antigravity_engine.config import get_settings
-    from antigravity_engine.hub.agents import create_model
-
-    try:
-        create_model(get_settings())
-    except ValueError as exc:
-        if "no llm configured" in str(exc).lower():
-            return False
-        raise
-    return True
+    return False
 
 
 def _host_llm_capability_available() -> bool:
@@ -326,16 +317,12 @@ async def ask_pipeline(workspace: Path, question: str) -> str:
     """
     auto_refresh_notice = await ensure_fresh_project_knowledge(workspace)
 
-    if not _local_llm_configured():
+    if not _host_llm_capability_available():
         return _build_capability_unavailable_answer(
             workspace=workspace,
             question=question,
             notice=auto_refresh_notice,
         )
-
-    from agents import set_tracing_disabled
-
-    set_tracing_disabled(True)
 
     structured_enabled = os.environ.get("AG_ASK_FORCE_LEGACY", "").strip().lower() not in {
         "1",
@@ -351,10 +338,49 @@ async def ask_pipeline(workspace: Path, question: str) -> str:
             return structured_answer
         print("[1/4] Structured facts were insufficient; falling back to legacy swarm.", file=sys.stderr)
 
-    answer = await _ask_with_legacy_swarm(workspace, question)
+    answer = await _ask_with_host_llm(workspace, question)
     if auto_refresh_notice:
         return f"{answer}\n\n{auto_refresh_notice}"
     return answer
+
+
+async def _ask_with_host_llm(workspace: Path, question: str) -> str:
+    """Ask through the embedding host LLM capability using middleware context."""
+    from antigravity_engine.hub.host_llm import HostLlmRequest, call_host_llm
+
+    context = _build_ask_context(workspace, question)
+    prompt = f"""\
+Answer the user's question about this project using only the supplied
+Antigravity knowledge context. If the context is insufficient, say what
+knowledge is missing and recommend running refresh through the host-agent
+task flow. Cite file paths and line numbers when present.
+
+Question: {question}
+
+Knowledge context:
+{context}
+"""
+    response = await call_host_llm(
+        HostLlmRequest(
+            task="answer_question",
+            workspace=str(workspace.resolve()),
+            prompt=prompt,
+            schema={"type": "markdown"},
+            context={"question": question, "knowledge_context": context},
+            agent_instructions=(
+                "Use a sub-agent for answer synthesis when available. If not, "
+                "use the main agent LLM on the supplied prompt. Do not inspect "
+                "project files outside the supplied knowledge context."
+            ),
+            acceptance_criteria=[
+                "answer is grounded in supplied Antigravity context",
+                "file paths and line references are preserved when available",
+                "insufficient context is stated explicitly",
+            ],
+        )
+    )
+    answer = str(response.data.get("markdown") or response.data.get("content") or response.content).strip()
+    return answer or "Host LLM capability returned an empty answer."
 
 
 async def _ask_with_legacy_swarm(workspace: Path, question: str) -> str:
@@ -668,17 +694,6 @@ async def _ask_with_agent_md(workspace: Path, question: str) -> str | None:
     Returns:
         Answer string, or ``None`` if insufficient.
     """
-    from antigravity_engine.config import get_settings
-    from antigravity_engine.hub.agents import create_model
-
-    settings = get_settings()
-    model = create_model(settings)
-
-    try:
-        from agents import Agent, Runner
-    except ImportError:
-        return None
-
     ag_dir = workspace / ".antigravity"
 
     # Step 1: Read map.md and select modules
@@ -686,6 +701,8 @@ async def _ask_with_agent_md(workspace: Path, question: str) -> str | None:
         map_content = (ag_dir / "map.md").read_text(encoding="utf-8")
     except OSError:
         return None
+
+    return await _ask_with_agent_md_via_host(workspace, question, map_content)
 
     print("[2/4] Routing question via map.md...", file=sys.stderr)
 
@@ -925,6 +942,69 @@ Partial answers:
         except Exception:
             # Return the first valid answer as fallback
             return valid_answers[0][1]
+
+
+async def _ask_with_agent_md_via_host(workspace: Path, question: str, map_content: str) -> str | None:
+    """Answer from generated agent.md docs through host LLM capability."""
+    from antigravity_engine.hub.host_llm import HostLlmRequest, call_host_llm
+
+    agents_dir = workspace / ".antigravity" / "agents"
+    if not agents_dir.is_dir():
+        return None
+    module_docs: list[str] = []
+    for item in sorted(agents_dir.iterdir()):
+        if item.is_file() and item.suffix == ".md":
+            try:
+                module_docs.append(f"## {item.stem}\n{item.read_text(encoding='utf-8')[:50_000]}")
+            except OSError:
+                continue
+        elif item.is_dir() and not item.name.startswith("."):
+            for md_file in sorted(item.glob("*.md")):
+                try:
+                    module_docs.append(
+                        f"## {item.name}/{md_file.stem}\n{md_file.read_text(encoding='utf-8')[:40_000]}"
+                    )
+                except OSError:
+                    continue
+        if len(module_docs) >= 6:
+            break
+    if not module_docs:
+        return None
+
+    module_docs_text = "\n\n---\n\n".join(module_docs)
+    prompt = f"""\
+Answer the user's question using the Antigravity module map and module
+knowledge documents below. Route mentally from the map, then answer from the
+relevant module docs. Cite file paths, line numbers, and function/class names
+when present. If the docs do not contain enough information, say so.
+
+Question: {question}
+
+Module map:
+{map_content[:30_000]}
+
+Module knowledge:
+{module_docs_text}
+"""
+    response = await call_host_llm(
+        HostLlmRequest(
+            task="answer_question",
+            workspace=str(workspace.resolve()),
+            prompt=prompt,
+            schema={"type": "markdown"},
+            context={"question": question, "module_doc_count": len(module_docs)},
+            agent_instructions=(
+                "Use a sub-agent for answer synthesis when available; otherwise "
+                "use the main agent LLM. Do not inspect project files directly."
+            ),
+            acceptance_criteria=[
+                "answer relies on supplied map and module docs",
+                "specific references are preserved",
+                "missing knowledge is stated explicitly",
+            ],
+        )
+    )
+    return str(response.data.get("markdown") or response.data.get("content") or response.content).strip() or None
 
 
 async def _ask_with_legacy_facts(workspace: Path, question: str) -> str | None:

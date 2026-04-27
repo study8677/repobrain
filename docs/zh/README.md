@@ -1,4 +1,4 @@
-# 📚 Antigravity 工作区文档（中文）
+﻿# 📚 Antigravity 工作区文档（中文）
 
 欢迎来到 **Antigravity Workspace Template** 的中文文档——一个在 Google Antigravity 上构建自主 AI 代理的生产级起步模板。
 
@@ -102,7 +102,7 @@
 ## ❓ 常见问题
 
 **Q: 可以用 OpenAI 代替 Gemini 吗？**  
-A: 可以，设置 `.env` 中的 `OPENAI_BASE_URL` 与 `OPENAI_API_KEY`，详见 [快速开始](QUICK_START.md)。
+A: 不需要。Antigravity 将 LLM 工作委托给宿主主 Agent，不再要求在 `.env` 中配置 provider key。
 
 **Q: 如何添加自定义工具？**  
 A: 将 Python 文件放进 `antigravity_engine/tools/`，无需额外注册，见 [零配置特性](ZERO_CONFIG.md)。
@@ -161,3 +161,4 @@ MIT License，详见仓库根目录 `LICENSE`。
 祝构建愉快！🚀
 
 友情链接：[LINUX DO](https://linux.do/)
+

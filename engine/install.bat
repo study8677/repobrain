@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 REM Antigravity Workspace Template Installer for Windows
 REM This script sets up the development environment automatically
 
@@ -76,19 +76,6 @@ if errorlevel 1 (
 )
 echo ✅ Dependencies installed
 
-REM Ensure correct Google GenAI package is installed (avoid deprecated package)
-python -m pip show google-generativeai >nul 2>&1
-if not errorlevel 1 (
-    echo ⚠️  Detected deprecated google-generativeai package. Removing...
-    python -m pip uninstall -y google-generativeai --quiet
-)
-
-python -m pip show google-genai >nul 2>&1
-if errorlevel 1 (
-    echo 📦 Installing google-genai (required for from google import genai)...
-    python -m pip install google-genai --quiet
-)
-
 REM Initialize configuration
 echo 🔧 Setting up configuration...
 
@@ -96,18 +83,10 @@ REM Create .env if it doesn't exist
 if not exist ".env" (
     (
         echo # Antigravity Workspace Configuration
-        echo # Copy this file and configure your API keys
-        echo.
-        echo # Google Gemini API Key (Required)
-        echo GOOGLE_API_KEY=your_api_key_here
-        echo.
-        echo # Optional: OpenAI API Key for alternative LLM
-        echo # OPENAI_API_KEY=your_openai_key_here
-        echo.
-        echo # Optional: Model Configuration
-        echo # MODEL_NAME=gemini-2.0-flash-exp
+        echo # LLM usage is delegated to the embedding main agent.
+        echo # No provider key or model configuration is required here.
     ) > .env
-    echo ✅ Created .env file (please configure your API keys)
+    echo ✅ Created .env file
 ) else (
     echo ⚠️  .env file already exists. Skipping creation.
 )
@@ -123,10 +102,7 @@ echo =============================================
 echo ✅ Installation complete!
 echo.
 echo Next steps:
-echo 1. Configure your API keys in .env file:
-echo    notepad .env
-echo.
-echo 2. The virtual environment is already activated.
+echo 1. The virtual environment is already activated.
 echo.
 echo 3. Run the agent:
 echo    python agent.py
@@ -135,3 +111,4 @@ echo 📚 Documentation: docs/en/QUICK_START.md
 echo =============================================
 echo.
 pause
+
