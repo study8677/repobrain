@@ -10,327 +10,474 @@ function normalizeLocale(raw) {
   return 'en';
 }
 
-function jsonOrNull(v) {
-  try {
-    return JSON.parse(v);
-  } catch {
-    return null;
-  }
+function stageForWorkflowState(wf) {
+  const s = String(wf || '').trim();
+  if (s === 'in_review' || s === 'preview_ready' || s === 'changes_requested' || s === 'client_approved')
+    return 'Review';
+  if (s === 'approved_for_build' || s === 'building' || s === 'publishing' || s === 'published') return 'Build';
+  if (s === 'awaiting_client_programme_decisions') return 'Draft';
+  if (s === 'ready_for_estimate' || s === 'estimated') return 'Draft';
+  if (s === 'refining') return 'Clarify';
+  return 'Intake';
+}
+
+function pillStyle(active) {
+  return {
+    padding: '8px 10px',
+    borderRadius: 999,
+    border: `1px solid ${active ? '#38bdf8' : '#334155'}`,
+    background: active ? 'rgba(56,189,248,0.12)' : 'rgba(2,6,23,0.35)',
+    color: active ? '#e0f2fe' : '#cbd5e1',
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: 'pointer',
+  };
 }
 
 export default function ChangeConsolePage() {
-  const [accessToken, setAccessToken] = useState('');
-  const [ticketId, setTicketId] = useState('');
   const [locale, setLocale] = useState('en');
-  const [draft, setDraft] = useState('');
-  const [chatInput, setChatInput] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [brief, setBrief] = useState(null);
+  const [uiContext, setUiContext] = useState(null);
+  const [session, setSession] = useState({ logged_in: false, level: 'anonymous', tenant_id: null });
+  const [tickets, setTickets] = useState([]);
+  const [selectedTicketId, setSelectedTicketId] = useState('');
+  const [ticket, setTicket] = useState(null);
+  const [stage, setStage] = useState('Intake');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [lastAssistant, setLastAssistant] = useState('');
+
+  const [clientDecisionBusy, setClientDecisionBusy] = useState(false);
+  const [clientDecisionLink, setClientDecisionLink] = useState('');
+  const [clientDecisionExpiresAt, setClientDecisionExpiresAt] = useState('');
+  const [clientDecisionStatus, setClientDecisionStatus] = useState('');
 
   useEffect(() => {
     try {
-      const l = normalizeLocale(navigator.language);
-      setLocale(l);
+      setLocale(normalizeLocale(navigator.language));
     } catch {
       setLocale('en');
     }
-    try {
-      const t = localStorage.getItem('corpflow_change_access_token') || '';
-      if (t) setAccessToken(t);
-    } catch {}
-    try {
-      const tid = localStorage.getItem('corpflow_change_ticket_id') || '';
-      if (tid) setTicketId(tid);
-    } catch {}
   }, []);
 
+  const stageTabs = useMemo(() => ['Intake', 'Clarify', 'Draft', 'Review', 'Build'], []);
+
+  async function refreshUiContext() {
+    const r = await fetch('/api/ui/context', { credentials: 'include' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j || j.ok !== true) throw new Error(j?.error || 'ui/context failed');
+    setUiContext(j);
+    setSession(j.session || { logged_in: false, level: 'anonymous', tenant_id: null });
+    return j;
+  }
+
+  async function loadQueue() {
+    const r = await fetch('/api/cmp/router?action=ticket-operator-queue&limit=50', {
+      credentials: 'include',
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+    const rows = Array.isArray(j.tickets) ? j.tickets : [];
+    setTickets(rows);
+    return rows;
+  }
+
+  async function loadTicketById(id) {
+    const tid = String(id || '').trim();
+    if (!tid) return null;
+    const r = await fetch('/api/cmp/router?action=ticket-get&id=' + encodeURIComponent(tid), {
+      credentials: 'include',
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+    setTicket(j);
+    const wf = j?.ticket_progress?.client_view?.workflow_state || '';
+    setStage(stageForWorkflowState(wf));
+    return j;
+  }
+
   useEffect(() => {
-    try {
-      localStorage.setItem('corpflow_change_access_token', accessToken || '');
-    } catch {}
-  }, [accessToken]);
+    let cancelled = false;
+    (async () => {
+      setError('');
+      try {
+        const ctx = await refreshUiContext();
+        if (cancelled) return;
+        const isTenant =
+          ctx?.session?.logged_in === true &&
+          String(ctx?.session?.level || '').toLowerCase() === 'tenant' &&
+          String(ctx?.tenant_id || '').trim();
+        if (!isTenant) return;
 
-  useEffect(() => {
-    try {
-      if (ticketId) localStorage.setItem('corpflow_change_ticket_id', ticketId);
-      else localStorage.removeItem('corpflow_change_ticket_id');
-    } catch {}
-  }, [ticketId]);
+        const rows = await loadQueue();
+        if (cancelled) return;
+        const first = rows[0]?.ticket_id ? String(rows[0].ticket_id) : '';
+        if (first) {
+          setSelectedTicketId(first);
+          await loadTicketById(first);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setError(String(e?.message || e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const headers = useMemo(() => {
-    const h = { 'Content-Type': 'application/json' };
-    if (accessToken) {
-      // Same token is acceptable for either lane:
-      // - factory master uses x-session-token
-      // - tenant sovereign uses Authorization: Bearer
-      h['x-session-token'] = accessToken;
-      h['Authorization'] = `Bearer ${accessToken}`;
-    }
-    return h;
-  }, [accessToken]);
-
-  async function createTicket() {
+  async function onSelectTicket(id) {
     setError('');
-    setLastAssistant('');
-    if (!draft.trim()) {
-      setError('Please describe the change you want.');
-      return;
-    }
-    setBusy(true);
+    setClientDecisionLink('');
+    setClientDecisionExpiresAt('');
+    setClientDecisionStatus('');
+    const tid = String(id || '').trim();
+    if (!tid) return;
+    setSelectedTicketId(tid);
     try {
-      const r = await fetch('/api/cmp/router?action=ticket-create', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ description: draft.trim() }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || 'ticket-create failed');
-      const tid = String(j.ticket_id || '').trim();
-      if (!tid) throw new Error('Missing ticket_id from server');
-      setTicketId(tid);
-      setMessages([{ role: 'user', content: draft.trim() }]);
-      setChatInput('');
+      await loadTicketById(tid);
     } catch (e) {
       setError(String(e?.message || e));
-    } finally {
-      setBusy(false);
     }
   }
 
-  async function sendChat() {
-    setError('');
-    setLastAssistant('');
-    if (!ticketId) {
-      setError('Create or paste a Ticket ID first.');
-      return;
-    }
-    const msg = chatInput.trim();
-    if (!msg) return;
-    setBusy(true);
+  async function mintClientDecisionLink() {
+    const tid = String(selectedTicketId || '').trim();
+    if (!tid) return;
+    setClientDecisionBusy(true);
+    setClientDecisionLink('');
+    setClientDecisionExpiresAt('');
+    setClientDecisionStatus('Generating link…');
     try {
-      const r = await fetch('/api/cmp/router?action=change-chat', {
+      const r = await fetch('/api/cmp/router?action=client-decisions-link-mint', {
         method: 'POST',
-        headers,
-        body: JSON.stringify({
-          ticket_id: ticketId,
-          message: msg,
-          locale,
-        }),
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: tid }),
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || 'change-chat failed');
-      const assistant = String(j.assistant || '').trim();
-      setLastAssistant(assistant);
-      setBrief(j.brief || null);
-      setMessages((prev) => [...prev, { role: 'user', content: msg }, { role: 'assistant', content: assistant }]);
-      setChatInput('');
+      if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+      const url = String(j.magic_link_url || '').trim();
+      const exp = String(j.expires_at || '').trim();
+      if (!url) throw new Error('magic_link_url missing');
+      setClientDecisionLink(url);
+      setClientDecisionExpiresAt(exp);
+      setClientDecisionStatus('Link ready.');
     } catch (e) {
-      setError(String(e?.message || e));
+      setClientDecisionStatus(String(e?.message || e));
     } finally {
-      setBusy(false);
+      setClientDecisionBusy(false);
     }
   }
 
-  async function costingPreview() {
-    setError('');
-    if (!ticketId) {
-      setError('Create or paste a Ticket ID first.');
-      return;
-    }
-    setBusy(true);
+  async function copyToClipboard(text) {
+    const v = String(text || '');
+    if (!v) return false;
     try {
-      const r = await fetch('/api/cmp/router?action=costing-preview', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          description: draft.trim() || (messages[0]?.content || ''),
-          ticketId,
-          is_demo: false,
-          tier: 'standard',
-        }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || 'costing-preview failed');
-      setBrief((prev) => ({ ...(prev || {}), costing_preview: j }));
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setBusy(false);
+      await navigator.clipboard.writeText(v);
+      return true;
+    } catch {
+      return false;
     }
   }
 
-  async function approveBuild() {
-    setError('');
-    if (!ticketId) {
-      setError('Create or paste a Ticket ID first.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const description = draft.trim() || (messages[0]?.content || '');
-      const r = await fetch('/api/cmp/router?action=approve-build', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          ticket_id: ticketId,
-          tier: 'standard',
-          is_demo: false,
-          description,
-        }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || 'approve-build failed');
-      setBrief((prev) => ({ ...(prev || {}), approve_build: j }));
-    } catch (e) {
-      setError(String(e?.message || e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const wf = ticket?.ticket_progress?.client_view?.workflow_state || '';
+  const needClientDecision = String(wf || '').trim() === 'awaiting_client_programme_decisions';
 
-  function clearSession() {
-    setTicketId('');
-    setDraft('');
-    setChatInput('');
-    setMessages([]);
-    setBrief(null);
-    setError('');
-    setLastAssistant('');
-    try {
-      localStorage.removeItem('corpflow_change_ticket_id');
-    } catch {}
-  }
+  const page = {
+    fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif',
+    padding: 24,
+    maxWidth: 1200,
+    margin: '0 auto',
+    color: '#e2e8f0',
+  };
+
+  const card = {
+    border: '1px solid rgba(148,163,184,0.25)',
+    borderRadius: 16,
+    background: 'rgba(2,6,23,0.55)',
+    padding: 16,
+  };
 
   return (
-    <div style={{ fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif', padding: 24, maxWidth: 980, margin: '0 auto' }}>
-      <h1 style={{ margin: '0 0 6px' }}>CorpFlow Change Console</h1>
-      <p style={{ marginTop: 0, color: '#475569' }}>
-        Start a change request, refine it via chat, then approve build automation. Clients never see n8n; the Factory orchestrates it.
-      </p>
+    <div style={{ ...page, background: '#020617', minHeight: '100vh' }}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 24, fontWeight: 950, color: '#f8fafc' }}>Change Console</div>
+        <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 13, lineHeight: 1.45 }}>
+          Operator workspace: open, select a ticket, take one governed action.
+        </div>
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 12, color: '#334155' }}>
-              Locale
-              <select value={locale} onChange={(e) => setLocale(e.target.value)} style={{ marginLeft: 8 }}>
-                <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-                <option value="pt">Português</option>
-              </select>
-            </label>
-            <label style={{ fontSize: 12, color: '#334155', flex: 1, minWidth: 260 }}>
-              Access token (admin or sovereign session)
-              <input
-                value={accessToken}
-                onChange={(e) => setAccessToken(e.target.value)}
-                placeholder="Optional now; required if Dormant Gate is enabled"
-                style={{ width: '100%', marginTop: 6, padding: 10, borderRadius: 10, border: '1px solid #cbd5e1' }}
-              />
-            </label>
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 14 }}>
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+              OPERATOR QUEUE
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                setBusy(true);
+                setError('');
+                try {
+                  await refreshUiContext();
+                  const rows = await loadQueue();
+                  const first = rows[0]?.ticket_id ? String(rows[0].ticket_id) : '';
+                  if (!selectedTicketId && first) await onSelectTicket(first);
+                } catch (e) {
+                  setError(String(e?.message || e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+              disabled={busy}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 10,
+                border: '1px solid rgba(148,163,184,0.25)',
+                background: 'rgba(15,23,42,0.35)',
+                color: '#e2e8f0',
+                fontWeight: 800,
+                fontSize: 12,
+                cursor: busy ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Refresh
+            </button>
           </div>
 
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>Describe the change</div>
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Describe what you want changed in plain language…"
-              style={{ width: '100%', minHeight: 120, padding: 12, borderRadius: 12, border: '1px solid #cbd5e1' }}
-            />
-            <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-              <button disabled={busy} onClick={createTicket} style={{ padding: '10px 14px', borderRadius: 10 }}>
-                {busy ? 'Working…' : 'Create ticket'}
-              </button>
-              <button disabled={busy || !ticketId} onClick={costingPreview} style={{ padding: '10px 14px', borderRadius: 10 }}>
-                Estimate (costing-preview)
-              </button>
-              <button disabled={busy || !ticketId} onClick={approveBuild} style={{ padding: '10px 14px', borderRadius: 10 }}>
-                Approve build
-              </button>
-              <button disabled={busy} onClick={clearSession} style={{ padding: '10px 14px', borderRadius: 10 }}>
-                Reset
-              </button>
-            </div>
+          <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>
+            {session.logged_in ? (
+              <span>
+                Session: <strong style={{ color: '#e2e8f0' }}>{String(session.level || '')}</strong>
+                {session.tenant_id ? (
+                  <span>
+                    {' '}
+                    ({String(session.tenant_id)})
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              <span>
+                Not logged in. <a href="/login" style={{ color: '#7dd3fc' }}>Login</a>
+              </span>
+            )}
           </div>
 
-          <hr style={{ margin: '18px 0', border: 'none', borderTop: '1px solid #e2e8f0' }} />
-
-          <div>
-            <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>Chat refine</div>
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, minHeight: 180, background: '#fafafa' }}>
-              {messages.length === 0 ? (
-                <div style={{ color: '#64748b', fontSize: 13 }}>No messages yet.</div>
-              ) : (
-                messages.map((m, idx) => (
-                  <div key={idx} style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{m.role}</div>
-                    <div style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{m.content}</div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-              <input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type a message…"
-                style={{ flex: 1, padding: 10, borderRadius: 10, border: '1px solid #cbd5e1' }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendChat();
-                  }
-                }}
-              />
-              <button disabled={busy} onClick={sendChat} style={{ padding: '10px 14px', borderRadius: 10 }}>
-                Send
-              </button>
-            </div>
-            {lastAssistant ? (
-              <div style={{ marginTop: 10, padding: 12, borderRadius: 12, border: '1px solid #dcfce7', background: '#f0fdf4' }}>
-                <div style={{ fontSize: 12, color: '#166534', marginBottom: 6 }}>Assistant</div>
-                <div style={{ whiteSpace: 'pre-wrap' }}>{lastAssistant}</div>
+          <div style={{ marginTop: 12 }}>
+            {tickets.length ? (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {tickets.map((t) => {
+                  const id = String(t.ticket_id || '');
+                  const active = id && id === selectedTicketId;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => onSelectTicket(id)}
+                      style={{
+                        textAlign: 'left',
+                        padding: 12,
+                        borderRadius: 14,
+                        border: `1px solid ${active ? 'rgba(56,189,248,0.6)' : 'rgba(148,163,184,0.25)'}`,
+                        background: active ? 'rgba(56,189,248,0.10)' : 'rgba(15,23,42,0.35)',
+                        color: '#e2e8f0',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                          fontSize: 10,
+                          color: '#94a3b8',
+                        }}
+                      >
+                        {id}
+                      </div>
+                      <div style={{ marginTop: 6, fontSize: 12, color: '#e2e8f0', lineHeight: 1.35 }}>
+                        {String(t.requested_change || '—')}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            ) : null}
+            ) : (
+              <div style={{ marginTop: 10, color: '#94a3b8', fontSize: 12, lineHeight: 1.4 }}>
+                {session.logged_in
+                  ? 'No open tickets found (or queue is unavailable for this session).'
+                  : 'Log in to view your queue.'}
+              </div>
+            )}
           </div>
-
-          {error ? (
-            <div style={{ marginTop: 14, padding: 12, borderRadius: 12, border: '1px solid #fecaca', background: '#fef2f2', color: '#991b1b' }}>
-              {error}
-            </div>
-          ) : null}
         </div>
 
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>Ticket</div>
-          <input
-            value={ticketId}
-            onChange={(e) => setTicketId(e.target.value)}
-            placeholder="Paste ticket_id"
-            style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid #cbd5e1' }}
-          />
-          <div style={{ marginTop: 10, fontSize: 12, color: '#64748b' }}>
-            Stored in your browser for convenience.
+        <div style={{ display: 'grid', gap: 14 }}>
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                  STAGE
+                </div>
+                <div style={{ marginTop: 6, fontSize: 13, color: '#e2e8f0' }}>
+                  {selectedTicketId ? (
+                    <span>
+                      Ticket{' '}
+                      <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                        {selectedTicketId}
+                      </span>
+                    </span>
+                  ) : (
+                    'Select a ticket'
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {stageTabs.map((s) => (
+                  <button key={s} type="button" onClick={() => setStage(s)} style={pillStyle(stage === s)}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14, borderTop: '1px solid rgba(148,163,184,0.18)', paddingTop: 14 }}>
+              {needClientDecision ? (
+                <div
+                  style={{
+                    border: '1px solid rgba(56,189,248,0.35)',
+                    borderRadius: 14,
+                    padding: 14,
+                    background: 'rgba(56,189,248,0.08)',
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 950, color: '#e0f2fe' }}>Client input required</div>
+                  <div style={{ marginTop: 6, fontSize: 12, color: '#cbd5e1', lineHeight: 1.45 }}>
+                    Send a one-time link so the client can answer the 4 decisions. No login required for the client.
+                  </div>
+                  <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={mintClientDecisionLink}
+                      disabled={clientDecisionBusy || !selectedTicketId}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 12,
+                        border: 'none',
+                        background: clientDecisionBusy ? '#94a3b8' : '#38bdf8',
+                        color: '#020617',
+                        fontWeight: 950,
+                        cursor: clientDecisionBusy ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {clientDecisionBusy ? 'Generating…' : 'Send client decision request'}
+                    </button>
+                    {clientDecisionLink ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const ok = await copyToClipboard(clientDecisionLink);
+                          setClientDecisionStatus(ok ? 'Copied.' : 'Copy failed — select and copy manually.');
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: 12,
+                          border: '1px solid rgba(148,163,184,0.25)',
+                          background: 'rgba(15,23,42,0.35)',
+                          color: '#e2e8f0',
+                          fontWeight: 900,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Copy link
+                      </button>
+                    ) : null}
+                  </div>
+                  {clientDecisionLink ? (
+                    <div style={{ marginTop: 10 }}>
+                      <input
+                        readOnly
+                        value={clientDecisionLink}
+                        style={{
+                          width: '100%',
+                          padding: 10,
+                          borderRadius: 12,
+                          border: '1px solid rgba(148,163,184,0.25)',
+                          background: 'rgba(2,6,23,0.45)',
+                          color: '#e2e8f0',
+                          fontSize: 12,
+                        }}
+                      />
+                      {clientDecisionExpiresAt ? (
+                        <div style={{ marginTop: 6, fontSize: 11, color: '#94a3b8' }}>
+                          Expires: {clientDecisionExpiresAt}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {clientDecisionStatus ? (
+                    <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8' }}>{clientDecisionStatus}</div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div style={{ marginTop: 14, color: '#cbd5e1', fontSize: 13, lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 900, color: '#e2e8f0' }}>{stage}</div>
+                <div style={{ marginTop: 6, color: '#94a3b8' }}>
+                  Next: {String(ticket?.ticket_progress?.client_view?.workflow_next_action || '—')}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <hr style={{ margin: '18px 0', border: 'none', borderTop: '1px solid #e2e8f0' }} />
-
-          <div style={{ fontSize: 12, color: '#334155', marginBottom: 6 }}>Brief (live)</div>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, background: '#0b1220', color: '#e2e8f0', padding: 12, borderRadius: 12, overflow: 'auto', maxHeight: 420 }}>
-            {brief ? JSON.stringify(brief, null, 2) : '{\n  \"summary\": \"(waiting)\"\n}'}
-          </pre>
-
-          <div style={{ marginTop: 10, fontSize: 12, color: '#64748b' }}>
-            Tip: Chat and automation output persist on the ticket record (Postgres).
+          <div style={card}>
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+              TICKET SNAPSHOT
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: 12,
+                  borderRadius: 14,
+                  border: '1px solid rgba(148,163,184,0.18)',
+                  background: 'rgba(2,6,23,0.45)',
+                  overflowX: 'auto',
+                  fontSize: 12,
+                  color: '#e2e8f0',
+                }}
+              >
+                {JSON.stringify(
+                  ticket
+                    ? {
+                        ticket_id: selectedTicketId,
+                        status: ticket.status,
+                        stage: ticket.stage,
+                        workflow_state: ticket?.ticket_progress?.client_view?.workflow_state,
+                        operator_signal: ticket.operator_signal || null,
+                      }
+                    : { hint: session.logged_in ? 'Select a ticket to load.' : 'Log in to load tickets.' },
+                  null,
+                  2,
+                )}
+              </pre>
+            </div>
           </div>
         </div>
       </div>
+
+      {error ? (
+        <div
+          style={{
+            marginTop: 14,
+            border: '1px solid rgba(244,63,94,0.35)',
+            background: 'rgba(244,63,94,0.10)',
+            color: '#fecdd3',
+            borderRadius: 14,
+            padding: 12,
+            fontSize: 12,
+          }}
+        >
+          {error}
+        </div>
+      ) : null}
     </div>
   );
 }
