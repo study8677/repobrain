@@ -29,11 +29,19 @@ from pathlib import Path
 
 
 def _resolve_workspace(workspace: str | None) -> Path:
-    """Resolve workspace path from argument or environment."""
-    if workspace:
+    """Resolve workspace path from argument or environment.
+
+    Treats values containing un-expanded `${...}` placeholders (which happen
+    when an MCP host's variable substitution doesn't cover a particular field)
+    as if they were not provided, falling through to the next source.
+    """
+    def _usable(v: str | None) -> bool:
+        return bool(v) and "${" not in v
+
+    if _usable(workspace):
         return Path(workspace).resolve()
     env = os.environ.get("WORKSPACE_PATH", "")
-    if env:
+    if _usable(env):
         return Path(env).resolve()
     return Path.cwd()
 
