@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/install_engine.sh",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/install_engine.py\" || python \"${CLAUDE_PLUGIN_ROOT}/hooks/install_engine.py\"",
             "timeout": 300
           }
         ]
