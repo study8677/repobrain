@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/install_engine.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}

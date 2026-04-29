@@ -1,0 +1,22 @@
+{
+  "name": "antigravity",
+  "version": "0.2.0",
+  "description": "Multi-agent knowledge hub plugin. Bundles ag-mcp (ask_project/refresh_project), the ag CLI, and the agent-repo-init skill.",
+  "author": {
+    "name": "Antigravity Team",
+    "email": "fanjingwen50@gmail.com"
+  },
+  "homepage": "https://github.com/study8677/antigravity-workspace-template",
+  "license": "MIT",
+  "keywords": ["mcp", "knowledge-graph", "scaffolding", "multi-agent"],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": {
+    "antigravity": {
+      "command": "ag-mcp",
+      "args": ["--workspace", "${CLAUDE_PROJECT_DIR}"],
+      "env": {}
+    }
+  }
+}

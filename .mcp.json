@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "antigravity": {
+      "command": "ag-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}
