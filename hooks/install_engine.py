@@ -109,6 +109,17 @@ def main() -> int:
     engine_dir = str(Path(plugin_root) / "engine")
     cli_dir = str(Path(plugin_root) / "cli")
 
+    # Claude Code starts hooks with a minimal PATH that often excludes user bin
+    # dirs, so an already-installed ag-mcp can look "missing". Prepend the
+    # common user-level shim locations BEFORE the fast-path check so a previous
+    # successful install short-circuits cleanly.
+    prepend_path(Path.home() / ".local" / "bin")
+    ub = user_scripts_bin()
+    if ub:
+        prepend_path(ub)
+    if os.name == "nt":
+        prepend_path(Path.home() / "AppData" / "Roaming" / "Python" / "Scripts")
+
     if has("ag-mcp"):
         return 0
 
