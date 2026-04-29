@@ -49,6 +49,7 @@ export default function ChangeConsolePage() {
   const [clientDecisionLink, setClientDecisionLink] = useState('');
   const [clientDecisionExpiresAt, setClientDecisionExpiresAt] = useState('');
   const [clientDecisionStatus, setClientDecisionStatus] = useState('');
+  const [leads, setLeads] = useState([]);
 
   useEffect(() => {
     try {
@@ -94,6 +95,17 @@ export default function ChangeConsolePage() {
     return j;
   }
 
+  async function loadLeads() {
+    const r = await fetch('/api/cmp/router?action=concierge-leads-list&limit=50', {
+      credentials: 'include',
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+    const rows = Array.isArray(j.leads) ? j.leads : [];
+    setLeads(rows);
+    return rows;
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -108,6 +120,7 @@ export default function ChangeConsolePage() {
         if (!isTenant) return;
 
         const rows = await loadQueue();
+        await loadLeads();
         if (cancelled) return;
         const first = rows[0]?.ticket_id ? String(rows[0].ticket_id) : '';
         if (first) {
@@ -220,6 +233,7 @@ export default function ChangeConsolePage() {
                 try {
                   await refreshUiContext();
                   const rows = await loadQueue();
+                  await loadLeads();
                   const first = rows[0]?.ticket_id ? String(rows[0].ticket_id) : '';
                   if (!selectedTicketId && first) await onSelectTicket(first);
                 } catch (e) {
@@ -458,6 +472,31 @@ export default function ChangeConsolePage() {
                   2,
                 )}
               </pre>
+            </div>
+          </div>
+
+          <div style={card}>
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>LEADS</div>
+            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+              {leads.length ? (
+                leads.map((lead) => (
+                  <div
+                    key={String(lead.id || '')}
+                    style={{
+                      border: '1px solid rgba(148,163,184,0.18)',
+                      borderRadius: 12,
+                      background: 'rgba(2,6,23,0.45)',
+                      padding: 10,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#e2e8f0' }}>{String(lead.name || 'Lead')}</div>
+                    <div style={{ marginTop: 4, fontSize: 12, color: '#94a3b8' }}>{String(lead.contact || '—')}</div>
+                    <div style={{ marginTop: 6, fontSize: 12, color: '#cbd5e1', lineHeight: 1.4 }}>{String(lead.message || '—')}</div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: 12, color: '#94a3b8' }}>No leads yet.</div>
+              )}
             </div>
           </div>
         </div>

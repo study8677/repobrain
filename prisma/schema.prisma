@@ -13,6 +13,8 @@ model Lead {
   tenantId  String?  @map("tenant_id")
   name      String
   email     String
+  contact   String?  @map("contact")
+  message   String?  @map("message")
   phone     String?  @map("phone")
   intent    String
   market    String?  @map("market")
