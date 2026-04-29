@@ -73,6 +73,8 @@
 /plugin marketplace add study8677/antigravity-workspace-template
 /plugin install antigravity@antigravity
 /antigravity:setup            # 交互式：选 LLM 提供商、贴 API key，自动写 .env
+/antigravity:ag-refresh       # 首次 refresh 会自动创建 .antigravity/
+/antigravity:ag-ask "这个项目是怎么工作的？"
 
 # Codex CLI（需手动先装引擎；Codex 暂不支持自动 hook）
 pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
@@ -80,7 +82,9 @@ codex plugin marketplace add study8677/antigravity-workspace-template
 codex plugin install antigravity
 ```
 
-安装并 setup 后即可使用 `/antigravity:ag-ask <问题>`、`/antigravity:ag-refresh`、`/antigravity:ag-init <名字>` 斜杠命令，以及 `antigravity` MCP 服务（`ask_project` + `refresh_project`）。详见 [INSTALL.md](INSTALL.md)。
+如果当前 Claude Code 会话提示 Antigravity MCP 工具未连接，请完全重启 Claude Code 一次，然后重新运行 `/antigravity:ag-refresh`。这是会话加载问题，不是 API key 问题。参见 [故障排查](docs/en/TROUBLESHOOTING.md)。
+
+安装并 setup 后即可使用 `/antigravity:ag-ask <问题>`、`/antigravity:ag-refresh`、`/antigravity:ag-init <名字>` 斜杠命令，以及 `antigravity` MCP 服务（`ask_project` + `refresh_project`）。详见 [INSTALL.md](INSTALL.md) 的安装说明和故障排查。
 
 **方案 B —— 手动安装：通过 pip 安装引擎 + CLI**
 ```bash
@@ -145,13 +149,15 @@ ag init my-project && cd my-project
 |:-----|:-----|:----------:|
 | `ag init <dir>` | 注入认知架构模板 | 否 |
 | `ag init <dir> --force` | 重新注入，覆盖已有文件 | 否 |
+| `ag refresh --workspace <dir>` | CLI 便捷包装，调用知识库 refresh 流程 | 是 |
+| `ag ask "问题" --workspace <dir>` | CLI 便捷包装，调用路由式项目问答流程 | 是 |
 | `ag-refresh` | 多智能体自主学习代码库，生成模块知识文档 + `conventions.md` + `structure.md` | 是 |
 | `ag-ask "问题"` | Router → ModuleAgent/GitAgent 路由问答 | 是 |
 | `ag-mcp --workspace <dir>` | **启动 MCP 服务器** —— 向 Claude Code 暴露 `ask_project` + `refresh_project` 工具 | 是 |
 | `ag report "内容"` | 记录发现到 `.antigravity/memory/` | 否 |
 | `ag log-decision "决策" "原因"` | 记录架构决策 | 否 |
 
-所有命令支持 `--workspace <dir>` 参数指向任意目录。
+`ag ask` / `ag refresh` 需要同时安装 `cli/` 和 `engine/`。`ag-ask` / `ag-refresh` 是只安装 engine 也可用的入口。
 
 ---
 

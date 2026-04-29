@@ -73,6 +73,8 @@ La arquitectura son **archivos + un motor Q&A en vivo**, no plugins. Portable en
 /plugin marketplace add study8677/antigravity-workspace-template
 /plugin install antigravity@antigravity
 /antigravity:setup            # interactivo: elige proveedor LLM, pega API key, escribe .env
+/antigravity:ag-refresh       # el primer refresh crea .antigravity/ automáticamente
+/antigravity:ag-ask "¿Cómo funciona este proyecto?"
 
 # Codex CLI (instala el motor manualmente primero; los hooks de Codex aún no son soportados)
 pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
@@ -80,7 +82,9 @@ codex plugin marketplace add study8677/antigravity-workspace-template
 codex plugin install antigravity
 ```
 
-Después de instalar y configurar dispondrás de los comandos slash `/antigravity:ag-ask <pregunta>`, `/antigravity:ag-refresh`, `/antigravity:ag-init <nombre>`, y del servidor MCP `antigravity` (`ask_project` + `refresh_project`). Ver [INSTALL.md](INSTALL.md) para detalles y solución de problemas.
+Si la sesión actual de Claude Code dice que la herramienta MCP de Antigravity no está conectada, reinicia Claude Code una vez y vuelve a ejecutar `/antigravity:ag-refresh`. Es un problema de carga de sesión, no de API key. Consulta [troubleshooting](docs/en/TROUBLESHOOTING.md).
+
+Después de instalar y configurar dispondrás de los comandos slash `/antigravity:ag-ask <pregunta>`, `/antigravity:ag-refresh`, `/antigravity:ag-init <nombre>`, y del servidor MCP `antigravity` (`ask_project` + `refresh_project`). Ver [INSTALL.md](INSTALL.md) para detalles de instalación y troubleshooting.
 
 **Opción B — Instalación manual: motor + CLI vía pip**
 ```bash
@@ -145,13 +149,15 @@ ag init mi-proyecto && cd mi-proyecto
 |:--------|:---------|:---------------:|
 | `ag init <dir>` | Inyectar plantillas de arquitectura cognitiva | No |
 | `ag init <dir> --force` | Re-inyectar, sobrescribiendo archivos existentes | No |
+| `ag refresh --workspace <dir>` | Wrapper CLI conveniente para el pipeline de refresh del knowledge hub | Sí |
+| `ag ask "pregunta" --workspace <dir>` | Wrapper CLI conveniente para el flujo Q&A enrutado del proyecto | Sí |
 | `ag-refresh` | Aprendizaje multi-agente del codebase, genera docs de conocimiento + `conventions.md` + `structure.md` | Sí |
 | `ag-ask "pregunta"` | Router → ModuleAgent/GitAgent Q&A enrutado | Sí |
 | `ag-mcp --workspace <dir>` | **Iniciar servidor MCP** — expone `ask_project` + `refresh_project` a Claude Code | Sí |
 | `ag report "mensaje"` | Registrar un hallazgo en `.antigravity/memory/` | No |
 | `ag log-decision "qué" "por qué"` | Registrar una decisión arquitectónica | No |
 
-Todos los comandos aceptan `--workspace <dir>` para apuntar a cualquier directorio.
+`ag ask` / `ag refresh` están disponibles cuando `cli/` y `engine/` están instalados. `ag-ask` / `ag-refresh` son los entrypoints disponibles con solo el engine.
 
 ---
 
