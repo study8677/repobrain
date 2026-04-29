@@ -528,6 +528,20 @@ export default function ChangeConsoleV2Page() {
   if (authRequired) {
     return (
       <div style={{ fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif', padding: 24, maxWidth: 740, margin: '0 auto' }}>
+        <div
+          style={{
+            marginBottom: 10,
+            padding: '8px 10px',
+            borderRadius: 10,
+            border: '1px solid #f59e0b',
+            background: '#fffbeb',
+            color: '#92400e',
+            fontSize: 12,
+            fontWeight: 700,
+          }}
+        >
+          Experimental UI - not production control surface
+        </div>
         <h1 style={{ margin: '0 0 10px' }}>Change Console v2</h1>
         <div
           style={{
@@ -594,6 +608,20 @@ export default function ChangeConsoleV2Page() {
 
   return (
     <div style={{ fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif', padding: 24, maxWidth: 980, margin: '0 auto' }}>
+      <div
+        style={{
+          marginBottom: 10,
+          padding: '8px 10px',
+          borderRadius: 10,
+          border: '1px solid #f59e0b',
+          background: '#fffbeb',
+          color: '#92400e',
+          fontSize: 12,
+          fontWeight: 700,
+        }}
+      >
+        Experimental UI - not production control surface
+      </div>
       <style>{`
         @keyframes changeV2StageGlow {
           0%, 100% { box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.35); }

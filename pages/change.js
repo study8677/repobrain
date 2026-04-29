@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+// Non-canonical route – /change is served via public/change.html
 function normalizeLocale(raw) {
   const s = String(raw || '').trim().toLowerCase().replace(/_/g, '-');
   if (!s) return 'en';
