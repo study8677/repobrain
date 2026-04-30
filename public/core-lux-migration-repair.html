@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Core Lux ticket migration (temporary)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    code { background: #f2f4f7; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow: auto; font-size: 0.85rem; }
+    button { padding: 0.6rem 1.2rem; font-size: 1rem; cursor: pointer; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #f8fafc; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .warn { color: #b45309; }
+  </style>
+</head>
+<body>
+  <h1>Temporary: Lux → Core CMP repair</h1>
+  <p><strong>Use only on Core.</strong> Open this page on <code>https://core.corpflowai.com</code> while logged in at <code>/login</code> (admin session cookie). No API keys are entered here.</p>
+  <p class="warn">After a successful run, disable the endpoint in Vercel: set <code>CORPFLOW_LUX_CORE_MIGRATION_REPAIR_ENABLED=false</code>, then remove this page and the server module (see code comments REMOVEME).</p>
+  <p>
+    <button type="button" id="run">Run repair (POST)</button>
+  </p>
+  <pre id="out">(not run yet)</pre>
+  <script>
+    (function () {
+      var btn = document.getElementById('run');
+      var out = document.getElementById('out');
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        out.textContent = 'Running…';
+        fetch('/api/factory/core-lux-ticket-migration-repair', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        })
+          .then(function (r) {
+            return r.text().then(function (t) {
+              var parsed;
+              try {
+                parsed = JSON.parse(t);
+              } catch (_) {
+                parsed = { raw: t, status: r.status };
+              }
+              out.textContent = JSON.stringify(parsed, null, 2);
+            });
+          })
+          .catch(function (e) {
+            out.textContent = String(e);
+          })
+          .then(function () {
+            btn.disabled = false;
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

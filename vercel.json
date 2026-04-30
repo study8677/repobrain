@@ -38,6 +38,7 @@
     { "source": "/lux-editor", "destination": "/lux-site-editor.html" },
     { "source": "/lux-guide", "destination": "/lux-client-guide.html" },
     { "source": "/master", "destination": "/public/master-control.html" },
+    { "source": "/core-lux-migration-repair", "destination": "/public/core-lux-migration-repair.html" },
     { "source": "/factory/approvals", "destination": "/factory-approvals.html" },
     { "source": "/factory/auth-users", "destination": "/factory-auth-users.html" }
   ],

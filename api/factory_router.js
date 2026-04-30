@@ -28,6 +28,7 @@ import tenantIntakeHandler from '../lib/server/tenant-intake.js';
 import tenantSitePublicHandler from '../lib/server/tenant-site-public.js';
 import { handleTenantLeadCreate, handleTenantLeadQualify } from '../lib/server/tenant-leads.js';
 import tenantLoginDebugHandler from '../lib/server/tenant-login-debug.js';
+import { handleCoreLuxTicketMigrationRepair } from '../lib/server/core-lux-ticket-migration-repair.js';
 import factoryGithubPrCreateHandler from '../lib/server/factory-github-pr-create.js';
 import factoryResearchFetchHandler from '../lib/server/factory-research-fetch.js';
 import factoryCmpPushHandler from '../lib/server/factory-cmp-push.js';
@@ -836,6 +837,9 @@ export default async function handler(req, res) {
   }
   if (pathSeg === 'factory/tenant-login-debug') {
     return tenantLoginDebugHandler(req, res);
+  }
+  if (pathSeg === 'factory/core-lux-ticket-migration-repair') {
+    return handleCoreLuxTicketMigrationRepair(req, res, prisma);
   }
   if (pathSeg === 'factory/auth-users/list') {
     return handleFactoryAuthUsersList(req, res);
