@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Core — canonical provider ticket (one-shot)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    code { background: #f2f4f7; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow: auto; font-size: 0.85rem; }
+    button { padding: 0.6rem 1.2rem; font-size: 1rem; cursor: pointer; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #f8fafc; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .warn { color: #b45309; }
+  </style>
+</head>
+<body>
+  <h1>Create Core/provider canonical ticket</h1>
+  <p><strong>Use only on Core.</strong> Open on <code>https://core.corpflowai.com</code> while logged in at <code>/login</code> (admin session). Uses <code>POST /api/cmp/router?action=ticket-create</code> — no API keys.</p>
+  <p class="warn">Do not send <code>tenant_id</code> in the body; Core admin session creates <code>tenant_id = null</code> tickets per server logic.</p>
+  <p>
+    <button type="button" id="run">Create ticket (POST)</button>
+  </p>
+  <pre id="out">(not run yet)</pre>
+  <script>
+    (function () {
+      var DESCRIPTION =
+        'TITLE: CorpFlowAI Core — end-to-end provider operating process from intake to verified delivery\n\n' +
+        'We need to restart the CorpFlowAI Core/provider operating process cleanly from the beginning. This ticket is the canonical Core ticket for proving the full operating workflow: a request enters Core, is scoped safely, clarified, drafted, reviewed, approved, built/delivered where appropriate, verified against production reality, and closed only with evidence. The previous Lux ticket cmny6np61000hjs04sovhe3n9 and migrated Core copy cmol5ik770001jo04cbwxidnr are historical context only, not the canonical execution ticket.\n\n' +
+        'Context (non-canonical):\n' +
+        '- Old Lux ticket: cmny6np61000hjs04sovhe3n9 (historical).\n' +
+        '- Migrated Core copy: cmol5ik770001jo04cbwxidnr (historical / superseded for operating path — do not treat duplicate/migrated state as truth).\n\n' +
+        'Boundaries:\n' +
+        '- Core/provider work is scoped on core.corpflowai.com; tenant client work stays on tenant hostnames.\n' +
+        '- /change on Core is the canonical operator plane for the provider queue.\n\n' +
+        'Intended end-to-end process (explicit stage plan):\n' +
+        '1) Intake — capture scope, risks, and constraints.\n' +
+        '2) Clarify — resolve ambiguities; define the first production slice.\n' +
+        '3) Draft response — operator/client-visible draft where applicable.\n' +
+        '4) Review — internal review of draft and safety.\n' +
+        '5) Approve/send — governed approval before execution.\n' +
+        '6) Build/deliver — only after slice + approval; production changes with traceability.\n' +
+        '7) Verify/close — close only with live production URL(s) or other observable evidence; no “done” without proof.\n\n' +
+        'First production slice (must be explicit before build):\n' +
+        'Define the smallest verifiable Core/provider deliverable for this ticket (e.g. operator path + evidence). No build work until this slice is written and agreed in Clarify.\n\n' +
+        'Acceptance criteria:\n' +
+        '1) This ticket remains Core/provider scope only (not LuxeMaurice tenant).\n' +
+        '2) Historical tickets are referenced only as context.\n' +
+        '3) Workflow starts at Intake or Clarify, not Build.\n' +
+        '4) Stage plan above is tracked through the workflow.\n' +
+        '5) First production slice is defined before build.\n' +
+        '6) No mixing of tenant data.\n' +
+        '7) No production claim without live URL or observable evidence.';
+
+      var btn = document.getElementById('run');
+      var out = document.getElementById('out');
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        out.textContent = 'Creating…';
+        fetch('/api/cmp/router?action=ticket-create', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: DESCRIPTION, locale: 'en' }),
+        })
+          .then(function (r) {
+            return r.text().then(function (t) {
+              var parsed;
+              try {
+                parsed = JSON.parse(t);
+              } catch (_) {
+                parsed = { raw: t, status: r.status };
+              }
+              out.textContent = JSON.stringify(parsed, null, 2);
+            });
+          })
+          .catch(function (e) {
+            out.textContent = String(e);
+          })
+          .then(function () {
+            btn.disabled = false;
+          });
+      });
+    })();
+  </script>
+</body>
+</html>
