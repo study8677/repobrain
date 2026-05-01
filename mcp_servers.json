@@ -90,6 +90,18 @@
       "url": "http://localhost:8000/mcp",
       "enabled": false,
       "env": {}
+    },
+    {
+      "name": "lore-context",
+      "description": "Lore Context — semantic memory control plane for cross-session agent memory, retrieval eval, and governance (https://github.com/Lore-Context/lore-context)",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@lore/context-mcp"],
+      "enabled": false,
+      "env": {
+        "LORE_API_URL": "${LORE_API_URL:-http://localhost:3000}",
+        "LORE_API_KEY": "${LORE_API_KEY}"
+      }
     }
   ]
 }
