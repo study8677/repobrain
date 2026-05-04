@@ -74,3 +74,35 @@ See `console_json.lux_programme.operator_next_action` on the ticket after initia
 **Tenant boundaries:** property slug path server-gated to `luxe-maurice`; no `tenant_id` mutation from client; other tenants not in scope of this slice.
 
 **CMP description note:** if the ticket body should mirror this block, paste this section from the repo or append via operator DB/script using `POSTGRES_URL` (not run from the merge agent environment).
+
+---
+
+## Production verification — Phase 2B hybrid (recorded 2026-05-04) — ticket `cmo8mjijk0000jl04l1jz0v6d`
+
+**Ticket status:** **open** (programme continues; real IDX provider remains a future decision and integration — **not** claimed here).
+
+**Merged to main:** PR https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/137 — squash commit `6a3bab0208ea19b1aa9e74cdb1c2e7c6682025e9`.
+
+**GitHub Production deployment:** id `4568708270` → SHA `6a3bab0208ea19b1aa9e74cdb1c2e7c6682025e9` (match Vercel Production “Ready” for that commit).
+
+**Live checks**
+
+| Check | Result |
+|-------|--------|
+| `GET https://lux.corpflowai.com/` | **200** — HTML includes curated markers (`lm-nc-ridge`, …), **Featured** band, **explore-more-properties** anchor, feed ids (`lxf-grand-baie-apt`, …) |
+| Curated + feed CTAs | Same pattern: `/concierge?intent=property&property=<lm-*>` and `/concierge?intent=property&property=<lxf-*>` (concierge property banner is client-hydrated) |
+| `GET https://core.corpflowai.com/api/factory/health` | **200** |
+
+**Curated lead (production API)**
+
+- `POST concierge-lead-create` with `property_slug: "lm-pipeline-q4"` → **200**, `lead.id` = `cmor1tcui0000jv04b4ae76r1`; stored `property_interest.discovery_source` = **curated**, `listing_provider` = **curated_staged**.
+
+**Feed-preview lead (production API)**
+
+- `POST concierge-lead-create` with `property_slug: "lxf-poste-lafayette"` → **200**, `lead.id` = `cmor1tee30002jv04v2tr8gew`; stored `property_interest.discovery_source` = **feed**, `listing_provider` = **mock_feed_v1**, `price_range` present.
+
+**Operator visibility:** `concierge-leads-list` JSON for those leads includes title, ref (`slug`), source, and range where applicable — same fields `/change` renders for authenticated Lux operators.
+
+**Tenant boundaries:** unchanged — property context path gated to `luxe-maurice` host tenant; no real IDX vendor wired.
+
+**CMP ticket body:** paste this subsection or mirror via `POSTGRES_URL` script if ticket description should match repo (optional).
