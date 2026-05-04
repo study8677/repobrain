@@ -772,6 +772,7 @@ export default async function handler(req, res) {
               const name = b?.name != null ? String(b.name).trim() : null;
               const contact = b?.contact != null ? String(b.contact).trim() : null;
               const message = b?.message != null ? String(b.message).trim() : null;
+              const property_slug = b?.property_slug != null ? String(b.property_slug).trim() : null;
 
               // Console log: immediate visibility in Vercel logs.
               console.warn(
@@ -782,6 +783,7 @@ export default async function handler(req, res) {
                   name,
                   contact,
                   message,
+                  property_slug,
                   occurred_at: new Date().toISOString(),
                 }),
               );
@@ -793,7 +795,7 @@ export default async function handler(req, res) {
                 correlationId: leadId,
                 idempotencyKey: leadId ? `concierge.lead.created:${leadId}` : null,
                 source: 'api/cmp/router:concierge-lead-create',
-                payload: { lead_id: leadId, name, contact, message },
+                payload: { lead_id: leadId, name, contact, message, property_slug },
               });
             }
           } catch (_) {

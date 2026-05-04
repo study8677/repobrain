@@ -617,6 +617,17 @@ export default function ChangeConsolePage() {
                   >
                     <div style={{ fontSize: 12, fontWeight: 800, color: '#e2e8f0' }}>{String(lead.name || 'Lead')}</div>
                     <div style={{ marginTop: 4, fontSize: 12, color: '#94a3b8' }}>{String(lead.contact || '—')}</div>
+                    {lead.property_interest && lead.property_interest.title ? (
+                      <div style={{ marginTop: 6, fontSize: 11, color: '#bef264', lineHeight: 1.35 }}>
+                        Property interest: {String(lead.property_interest.title)}
+                        {lead.property_interest.slug ? ` · ref ${String(lead.property_interest.slug)}` : ''}
+                      </div>
+                    ) : lead.listing ? (
+                      <div style={{ marginTop: 6, fontSize: 11, color: '#bef264' }}>Listing ref: {String(lead.listing)}</div>
+                    ) : null}
+                    {lead.intent === 'lux_property_enquiry' ? (
+                      <div style={{ marginTop: 2, fontSize: 10, color: '#64748b' }}>Intent: property enquiry</div>
+                    ) : null}
                     <div style={{ marginTop: 6, fontSize: 12, color: '#cbd5e1', lineHeight: 1.4 }}>{String(lead.message || '—')}</div>
                   </div>
                 ))

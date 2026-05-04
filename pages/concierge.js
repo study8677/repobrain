@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 import { LUXE_MAURICE_BRAND_TOKENS as T } from '../lib/client/luxe-maurice-brand-theme.js';
+import { findLuxStagedPropertyBySlug } from '../lib/client/luxe-maurice-staged-properties.js';
 
 function str(v) {
   return v != null ? String(v) : '';
@@ -20,6 +21,29 @@ export default function ConciergePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [payload, setPayload] = useState(null);
+  const [propertyInterest, setPropertyInterest] = useState(null);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const rawProp = router.query?.property != null ? String(router.query.property).trim() : '';
+    if (!rawProp) {
+      setPropertyInterest(null);
+      return;
+    }
+    const hit = findLuxStagedPropertyBySlug(rawProp);
+    setPropertyInterest(hit);
+  }, [router.isReady, router.query?.property]);
+
+  useEffect(() => {
+    if (!propertyInterest) return;
+    setMessage((prev) => {
+      const p = prev.trim();
+      if (p.length > 0 && p.includes(propertyInterest.slug)) return prev;
+      const seed = `I am writing about "${propertyInterest.title}" (${propertyInterest.slug}).\n\n`;
+      if (p.length > 0) return prev;
+      return seed;
+    });
+  }, [propertyInterest?.slug]);
 
   const canSubmit = useMemo(
     () => name.trim().length > 1 && contact.trim().length > 2 && message.trim().length > 2,
@@ -34,14 +58,19 @@ export default function ConciergePage() {
     setSuccess('');
     setPayload(null);
     try {
+      const body = {
+        name: name.trim(),
+        contact: contact.trim(),
+        message: message.trim(),
+      };
+      if (propertyInterest) {
+        body.property_slug = propertyInterest.slug;
+        body.property_title = propertyInterest.title;
+      }
       const r = await fetch('/api/cmp/router?action=concierge-lead-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          contact: contact.trim(),
-          message: message.trim(),
-        }),
+        body: JSON.stringify(body),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || j.detail || `http_${r.status}`);
@@ -119,6 +148,46 @@ export default function ConciergePage() {
           We respond within one business day. Developer-backed opportunities only; nothing here is an offer until
           agreed in writing.
         </p>
+
+        {propertyInterest ? (
+          <div
+            style={{
+              marginBottom: 22,
+              padding: 16,
+              borderRadius: T.radiusMd,
+              border: `1px solid ${T.goldDeep}`,
+              background: T.sand,
+              color: T.ink,
+              fontSize: 15,
+              lineHeight: 1.55,
+            }}
+          >
+            <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: T.goldDeep, fontWeight: 800 }}>
+              Property interest
+            </div>
+            <div style={{ marginTop: 8, fontWeight: 750 }}>
+              {propertyInterest.title}
+              <span style={{ color: T.inkMuted, fontWeight: 600 }}> · {propertyInterest.status}</span>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 14, color: T.inkMuted }}>
+              {propertyInterest.region} · {propertyInterest.property_type}
+            </div>
+          </div>
+        ) : router.isReady && String(router.query?.property || '').trim() ? (
+          <div
+            style={{
+              marginBottom: 22,
+              padding: 14,
+              borderRadius: T.radiusMd,
+              border: `1px solid ${T.border}`,
+              background: T.white,
+              color: T.inkMuted,
+              fontSize: 14,
+            }}
+          >
+            We could not match that property reference. You can still send a general enquiry below.
+          </div>
+        ) : null}
 
         <form
           onSubmit={onSubmit}

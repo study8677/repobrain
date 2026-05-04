@@ -22,6 +22,13 @@
 8. **Tenant isolation** — Only `luxe-maurice` tenant data and routes; no cross-tenant reads or writes.
 9. **Production verification** — Delivery reality audit recorded (deployment id + commit + live URLs tested); ticket **not** closed until programme gate allows.
 
+## Implementation notes (repo)
+
+- **Staged listings** live in `lib/client/luxe-maurice-staged-properties.js` and are injected for `luxe-maurice` in `pages/index.js` as `site.staged_properties`.
+- **Homepage cards** render in `components/LuxeMauriceTenantPresentation.js` with filters; each CTA uses `/concierge?intent=property&property=<slug>`.
+- **Lead API** (`concierge-lead-create`): optional `property_slug` is validated against the same allowlist when `tenant_id` from host is `luxe-maurice`; `leads.listing` and `qualification_json.property_interest` store operator-visible context.
+- **Operator UI**: `/change` lead list shows property interest when present.
+
 ## Explicit exclusions (this slice)
 
 - Full IDX vendor integration (unless `listing_approach` is `real_idx_feed` and a minimal read-only slice is explicitly in scope for the same ticket).

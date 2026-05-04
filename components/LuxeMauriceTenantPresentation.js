@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import Head from 'next/head';
 
 import { LUXE_MAURICE_BRAND_TOKENS as T } from '../lib/client/luxe-maurice-brand-theme.js';
@@ -41,6 +41,13 @@ export default function LuxeMauriceTenantPresentation({ site }) {
   const servicesIntro = safeStr(services.intro) || '';
 
   const items = Array.isArray(services.items) ? services.items : [];
+  const staged = Array.isArray(s.staged_properties) ? s.staged_properties : [];
+  const [listFilter, setListFilter] = useState('all');
+  const visibleStaged = useMemo(() => {
+    if (!staged.length) return [];
+    if (listFilter === 'all') return staged;
+    return staged.filter((p) => p && String(p.group || '').toLowerCase() === listFilter);
+  }, [staged, listFilter]);
 
   return (
     <div
@@ -260,6 +267,43 @@ export default function LuxeMauriceTenantPresentation({ site }) {
           {servicesIntro ? (
             <p style={{ marginTop: 14, fontSize: 16, lineHeight: 1.65, color: T.inkMuted, maxWidth: 720 }}>{servicesIntro}</p>
           ) : null}
+          {staged.length ? (
+            <div
+              role="tablist"
+              aria-label="Filter listings"
+              style={{ marginTop: 22, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}
+            >
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'north', label: 'North & plateau' },
+                { id: 'villa', label: 'Villas' },
+                { id: 'pipeline', label: 'Pipeline' },
+              ].map((chip) => {
+                const active = listFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setListFilter(chip.id)}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: 999,
+                      border: `1px solid ${active ? T.goldDeep : T.border}`,
+                      background: active ? T.sand : T.white,
+                      color: active ? T.ink : T.inkMuted,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           <div
             style={{
               marginTop: 36,
@@ -268,7 +312,61 @@ export default function LuxeMauriceTenantPresentation({ site }) {
               gap: 22,
             }}
           >
-            {items.length ? (
+            {staged.length ? (
+              visibleStaged.length ? (
+                visibleStaged.map((p) => {
+                  const href = `/concierge?intent=property&property=${encodeURIComponent(p.slug)}`;
+                  return (
+                    <article
+                      key={p.slug}
+                      style={{
+                        borderRadius: T.radiusLg,
+                        overflow: 'hidden',
+                        border: `1px solid ${T.border}`,
+                        background: T.pageBg,
+                        boxShadow: '0 12px 40px rgba(28,25,23,0.06)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: 168,
+                          background: T.placeholder,
+                          borderBottom: `1px solid ${T.border}`,
+                        }}
+                      />
+                      <div style={{ padding: '18px 18px 22px' }}>
+                        <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.inkMuted }}>
+                          {safeStr(p.region)} · {safeStr(p.property_type)}
+                        </div>
+                        <div style={{ marginTop: 8, fontSize: 17, fontWeight: 750, color: T.ink }}>{safeStr(p.title)}</div>
+                        <div style={{ marginTop: 8, fontSize: 12, fontWeight: 650, color: T.goldDeep }}>{safeStr(p.status)}</div>
+                        {p.teaser ? (
+                          <p style={{ marginTop: 10, fontSize: 14, lineHeight: 1.55, color: T.inkMuted }}>{safeStr(p.teaser)}</p>
+                        ) : null}
+                        <a
+                          href={href}
+                          style={{
+                            display: 'inline-block',
+                            marginTop: 14,
+                            padding: '10px 16px',
+                            borderRadius: 999,
+                            background: T.ink,
+                            color: T.white,
+                            fontSize: 13,
+                            fontWeight: 750,
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Private enquiry
+                        </a>
+                      </div>
+                    </article>
+                  );
+                })
+              ) : (
+                <p style={{ color: T.inkMuted, fontSize: 15 }}>No listings in this group. Try another filter.</p>
+              )
+            ) : items.length ? (
               items.map((it, idx) => (
                 <article
                   key={idx}
