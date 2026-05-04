@@ -144,6 +144,9 @@ function CorpFlowMarketing() {
 
 function TenantSite({ site }) {
   const s = site || {};
+  const ui = s.client_ui && typeof s.client_ui === 'object' ? s.client_ui : {};
+  const luxAcquisition = ui.lux_acquisition === true;
+  const operatorDebug = ui.operator_debug === true;
   const t = s.theme || {};
   const hero = s.hero || {};
   const about = s.sections?.about || {};
@@ -191,8 +194,10 @@ function TenantSite({ site }) {
               <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--cf-surface)', border: '1px solid rgba(255,255,255,0.10)' }} />
             )}
             <div>
-              <div style={{ fontSize: 12, letterSpacing: 0.6, color: 'var(--cf-muted)' }}>Preview</div>
-              <div style={{ fontSize: 20, fontWeight: 650 }}>
+              <div style={{ fontSize: 12, letterSpacing: 0.6, color: 'var(--cf-muted)' }}>
+                {operatorDebug ? 'Preview' : luxAcquisition ? 'Lux Mauritius' : 'Preview'}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 650, letterSpacing: luxAcquisition ? 0.02 : undefined }}>
                 {safeStr(tHero?.title) || safeStr(hero.title) || 'Tenant site'}
               </div>
             </div>
@@ -227,7 +232,7 @@ function TenantSite({ site }) {
           </div>
 
           <a
-            href={safeStr(hero.cta_href) || '/change'}
+            href={safeStr(hero.cta_href) || (luxAcquisition ? '/concierge' : '/change')}
             style={{
               display: 'inline-block',
               padding: '10px 14px',
@@ -243,9 +248,39 @@ function TenantSite({ site }) {
           </a>
         </header>
 
+        {luxAcquisition ? (
+          <>
+            <p
+              style={{
+                marginTop: 14,
+                maxWidth: 560,
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: 'rgba(245,245,245,0.88)',
+                fontWeight: 600,
+              }}
+            >
+              We work with a limited number of clients at any given time.
+            </p>
+            <p
+              style={{
+                marginTop: 8,
+                maxWidth: 560,
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: 'rgba(245,245,245,0.78)',
+              }}
+            >
+              A private advisor responds within one business day. All enquiries are handled with complete discretion.
+            </p>
+          </>
+        ) : null}
+
         <section style={{ marginTop: 28, display: 'grid', gridTemplateColumns: '1fr', gap: 18 }}>
           <div style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.10)', background: 'var(--cf-surface)', padding: 18 }}>
-            <div style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--cf-muted)' }}>Welcome</div>
+            <div style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--cf-muted)' }}>
+              {luxAcquisition ? 'Your path' : 'Welcome'}
+            </div>
             <h1 style={{ marginTop: 8, fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}>
               {safeStr(tHero?.headline) ||
                 safeStr(tHero?.subtitle) ||
@@ -258,9 +293,14 @@ function TenantSite({ site }) {
                 {safeStr(tHero?.tagline) || safeStr(hero.tagline)}
               </p>
             ) : null}
-            <div style={{ marginTop: 14, fontSize: 12, color: 'var(--cf-muted)' }}>
-              Tenant: <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>{safeStr(s.tenant_id) || 'n/a'}</span>
-            </div>
+            {operatorDebug ? (
+              <div style={{ marginTop: 14, fontSize: 12, color: 'var(--cf-muted)' }}>
+                Tenant:{' '}
+                <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
+                  {safeStr(s.tenant_id) || 'n/a'}
+                </span>
+              </div>
+            ) : null}
           </div>
 
           <div style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.10)', background: 'var(--cf-surface)', padding: 18 }}>
@@ -278,7 +318,13 @@ function TenantSite({ site }) {
             <div style={{ fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--cf-muted)' }}>
               {safeStr(tServices?.title) || safeStr(services.title) || 'Services'}
             </div>
-            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--cf-muted)' }}>Draft list — we’ll refine based on client feedback.</div>
+            {safeStr(services.intro) ? (
+              <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.55, color: 'var(--cf-muted)' }}>{safeStr(services.intro)}</div>
+            ) : luxAcquisition ? null : (
+              <div style={{ marginTop: 6, fontSize: 13, color: 'var(--cf-muted)' }}>
+                Draft list — we’ll refine based on client feedback.
+              </div>
+            )}
           </div>
           <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
             {(Array.isArray(services.items) ? services.items : []).length ? (
@@ -291,7 +337,7 @@ function TenantSite({ site }) {
                   {it?.detail ? <div style={{ marginTop: 6, fontSize: 13, color: 'var(--cf-muted)' }}>{safeStr(it.detail)}</div> : null}
                 </div>
               ))
-            ) : (
+            ) : luxAcquisition ? null : (
               <div style={{ fontSize: 13, color: 'var(--cf-muted)' }}>No services listed yet.</div>
             )}
           </div>
@@ -303,19 +349,37 @@ function TenantSite({ site }) {
             <div style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.18)', padding: 14 }}>
               <div style={{ fontSize: 11, color: 'var(--cf-muted)' }}>Email</div>
               <div style={{ marginTop: 6, fontSize: 13 }}>
-                {contact.email ? <a style={{ color: 'var(--cf-accent)' }} href={`mailto:${contact.email}`}>{contact.email}</a> : '—'}
+                {contact.email ? (
+                  <a style={{ color: 'var(--cf-accent)' }} href={`mailto:${contact.email}`}>
+                    {contact.email}
+                  </a>
+                ) : (
+                  luxAcquisition ? 'By appointment' : '—'
+                )}
               </div>
             </div>
             <div style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.18)', padding: 14 }}>
               <div style={{ fontSize: 11, color: 'var(--cf-muted)' }}>Phone</div>
               <div style={{ marginTop: 6, fontSize: 13 }}>
-                {contact.phone ? <a style={{ color: 'var(--cf-accent)' }} href={`tel:${contact.phone}`}>{contact.phone}</a> : '—'}
+                {contact.phone ? (
+                  <a style={{ color: 'var(--cf-accent)' }} href={`tel:${contact.phone}`}>
+                    {contact.phone}
+                  </a>
+                ) : (
+                  luxAcquisition ? 'By appointment' : '—'
+                )}
               </div>
             </div>
             <div style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.18)', padding: 14 }}>
               <div style={{ fontSize: 11, color: 'var(--cf-muted)' }}>Website</div>
               <div style={{ marginTop: 6, fontSize: 13 }}>
-                {contact.website ? <a style={{ color: 'var(--cf-accent)' }} href={contact.website}>{contact.website}</a> : '—'}
+                {contact.website ? (
+                  <a style={{ color: 'var(--cf-accent)' }} href={contact.website}>
+                    {contact.website}
+                  </a>
+                ) : (
+                  luxAcquisition ? 'By appointment' : '—'
+                )}
               </div>
             </div>
           </div>
@@ -377,13 +441,20 @@ function TenantSite({ site }) {
               Submit enquiry
             </button>
           </form>
-          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--cf-muted)' }}>
-            High-net-worth enquiries only. We respond within 1 business day.
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--cf-muted)', lineHeight: 1.5 }}>
+            {luxAcquisition
+              ? 'Qualified principals only. A private advisor will respond within one business day. All enquiries are handled with complete discretion.'
+              : 'High-net-worth enquiries only. We respond within 1 business day.'}
           </div>
         </section>
 
-        <footer style={{ marginTop: 18, textAlign: 'center', fontSize: 12, color: 'var(--cf-muted)' }}>
-          Powered by CorpFlow · Draft preview for rapid iteration in the Change Console.
+        <footer style={{ marginTop: 18, textAlign: 'center', fontSize: 12, color: 'var(--cf-muted)', lineHeight: 1.45 }}>
+          {operatorDebug
+            ? 'Powered by CorpFlow · Draft preview for rapid iteration in the Change Console.'
+            : luxAcquisition
+              ? 'Private client access · Information on this site is indicative and subject to verification.'
+              : safeStr(i18nBlock?.footer?.powered) ||
+                'Powered by CorpFlow · Draft preview for rapid iteration in the Change Console.'}
         </footer>
         </main>
       </div>
@@ -471,15 +542,59 @@ export async function getServerSideProps({ req }) {
       site.sections.contact.website = host ? `https://${host}` : null;
     }
 
-    // Luxe Mauritius: marketing/hero copy refresh (copy-only).
-    // Force these strings regardless of any saved draft so production always matches the acceptance criteria.
+    // Luxe Mauritius: acquisition funnel copy + UI flags (SSR only; does not change tenant_id or APIs).
     if (tenantId === 'luxe-maurice') {
+      const operatorDebug = parseSearchParam(req, 'debug') === '1';
+      site.client_ui = { lux_acquisition: true, operator_debug: operatorDebug };
+
       site.meta = site.meta && typeof site.meta === 'object' ? site.meta : {};
-      site.meta.page_title = 'Lux Mauritius · Private previews';
+      site.meta.page_title = 'Lux Mauritius · Private client access';
+
       site.hero = site.hero && typeof site.hero === 'object' ? site.hero : {};
-      site.hero.headline = 'Exclusive Mauritius residences — curated for you.';
-      site.hero.tagline = 'Private previews and priority access for qualified buyers.';
-      site.hero.cta_label = 'Request a private preview';
+      site.hero.title = 'Lux Mauritius';
+      site.hero.headline = 'Off-market Mauritius residences — by private introduction only.';
+      site.hero.tagline =
+        'Invitation-only access to homes that are never openly listed. We match a small circle of qualified principals with discreet opportunities—quietly, personally, and off-market.';
+      site.hero.cta_label = 'Request Private Access';
+      site.hero.cta_href = '/concierge';
+
+      site.sections = site.sections && typeof site.sections === 'object' ? site.sections : {};
+      site.sections.about =
+        site.sections.about && typeof site.sections.about === 'object' ? site.sections.about : {};
+      site.sections.about.title = 'A discreet introduction';
+      site.sections.about.body =
+        'We work with a small number of aligned buyers each season. Engagements begin with a private brief, careful qualification, and—when there is a fit—invitation-only previews. Your timeline and confidentiality are paramount.';
+
+      site.sections.services =
+        site.sections.services && typeof site.sections.services === 'object' ? site.sections.services : {};
+      site.sections.services.title = 'Curated opportunities';
+      site.sections.services.intro =
+        'Private, off-market introductions only. Nothing is broadcast; full particulars and imagery are details on request once there is alignment. Nothing here constitutes an offer or solicitation.';
+
+      const existingSvc = Array.isArray(site.sections.services.items) ? site.sections.services.items : [];
+      if (!existingSvc.length) {
+        site.sections.services.items = [
+          {
+            name: 'Private coastal estates',
+            detail: 'Off-market beachfront and elevated residences. Details on request after qualification.',
+          },
+          {
+            name: 'Private hillside retreats',
+            detail: 'Invitation-only panoramic homes. Off-market access; details on request.',
+          },
+          {
+            name: 'Off-market developments',
+            detail: 'Private sponsor mandates. Off-market pipeline — details on request, NDA when required.',
+          },
+        ];
+      }
+
+      site.i18n = site.i18n && typeof site.i18n === 'object' ? site.i18n : {};
+      site.i18n.en = site.i18n.en && typeof site.i18n.en === 'object' ? site.i18n.en : {};
+      site.i18n.en.about = {
+        title: site.sections.about.title,
+        body: site.sections.about.body,
+      };
     }
 
     return { props: { mode: 'tenant_site', site } };
