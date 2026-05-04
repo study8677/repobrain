@@ -25,9 +25,16 @@
 ## Implementation notes (repo)
 
 - **Staged listings** live in `lib/client/luxe-maurice-staged-properties.js` and are injected for `luxe-maurice` in `pages/index.js` as `site.staged_properties`.
-- **Homepage cards** render in `components/LuxeMauriceTenantPresentation.js` with filters; each CTA uses `/concierge?intent=property&property=<slug>`.
-- **Lead API** (`concierge-lead-create`): optional `property_slug` is validated against the same allowlist when `tenant_id` from host is `luxe-maurice`; `leads.listing` and `qualification_json.property_interest` store operator-visible context.
-- **Operator UI**: `/change` lead list shows property interest when present.
+- **Phase 2B hybrid — feed-shaped layer (mock / adapter-ready):** `lib/client/luxe-maurice-feed-properties.js` → `site.feed_properties`; **unified ref resolution** in `lib/client/luxe-maurice-property-resolve.js` (curated slug **or** feed `id`). Homepage: **Featured · developer introductions** (curated) then **Explore more properties** (feed section, dashed cards). Both CTAs use `/concierge?intent=property&property=<stable-ref>`.
+- **Homepage cards** render in `components/LuxeMauriceTenantPresentation.js` with filters on curated only; feed list is separate UX band.
+- **Lead API** (`concierge-lead-create`): optional `property_slug` (body field name unchanged) is validated via `resolveLuxPropertyRef` when host tenant is `luxe-maurice`. `qualification_json.property_interest` includes `discovery_source` (`curated` | `feed`), `listing_provider` (`curated_staged` | `mock_feed_v1`), `slug` (stable ref), `region`, `property_type`, `status`, optional `price_range`.
+- **Operator UI**: `/change` lead list shows property interest, **source** (Featured vs Explore feed preview), and price range when present.
+
+### Remaining for real IDX (not in this slice)
+
+- Replace or hydrate `LUXE_MAURICE_FEED_PROPERTIES` from a provider adapter (server-side fetch + cache recommended); keep **stable external ids** mapped into `qualification_json` for audit.
+- Add licensing / attribution / “information deemed reliable but not guaranteed” copy per vendor + jurisdiction.
+- Session-gate or tighten `concierge-leads-list` if public host-scoped listing of leads is not desired (product decision).
 
 ## Explicit exclusions (this slice)
 

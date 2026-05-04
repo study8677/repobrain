@@ -42,6 +42,7 @@ export default function LuxeMauriceTenantPresentation({ site }) {
 
   const items = Array.isArray(services.items) ? services.items : [];
   const staged = Array.isArray(s.staged_properties) ? s.staged_properties : [];
+  const feedList = Array.isArray(s.feed_properties) ? s.feed_properties : [];
   const [listFilter, setListFilter] = useState('all');
   const visibleStaged = useMemo(() => {
     if (!staged.length) return [];
@@ -227,7 +228,7 @@ export default function LuxeMauriceTenantPresentation({ site }) {
               Upcoming properties
             </a>
             <a
-              href="#enquire"
+              href="#explore-more-properties"
               style={{
                 display: 'inline-block',
                 padding: '14px 22px',
@@ -263,6 +264,20 @@ export default function LuxeMauriceTenantPresentation({ site }) {
 
       <section id="upcoming" style={{ padding: '56px 28px', background: T.white }}>
         <div style={{ maxWidth: 1040, margin: '0 auto' }}>
+          {staged.length ? (
+            <div
+              style={{
+                marginBottom: 10,
+                fontSize: 11,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: T.goldDeep,
+                fontWeight: 800,
+              }}
+            >
+              Featured · developer introductions
+            </div>
+          ) : null}
           <h2 style={{ margin: 0, fontSize: 26, fontFamily: T.fontDisplay, color: T.ink }}>{servicesTitle}</h2>
           {servicesIntro ? (
             <p style={{ marginTop: 14, fontSize: 16, lineHeight: 1.65, color: T.inkMuted, maxWidth: 720 }}>{servicesIntro}</p>
@@ -413,6 +428,94 @@ export default function LuxeMauriceTenantPresentation({ site }) {
         </div>
       </section>
 
+      {feedList.length ? (
+        <section id="explore-more-properties" style={{ padding: '56px 28px', background: T.pageBg, borderTop: `1px solid ${T.border}` }}>
+          <div style={{ maxWidth: 1040, margin: '0 auto' }}>
+            <div
+              style={{
+                marginBottom: 10,
+                fontSize: 11,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: T.inkMuted,
+                fontWeight: 800,
+              }}
+            >
+              Explore · broader market
+            </div>
+            <h2 style={{ margin: 0, fontSize: 26, fontFamily: T.fontDisplay, color: T.ink }}>Explore more properties</h2>
+            <p style={{ marginTop: 14, fontSize: 15, lineHeight: 1.65, color: T.inkMuted, maxWidth: 820 }}>
+              Indicative market-style listings for orientation. Availability and pricing are confirmed privately — this
+              layer will connect to your IDX or data feed when configured; today it uses a non-production preview set.
+            </p>
+            <div
+              style={{
+                marginTop: 32,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: 22,
+              }}
+            >
+              {feedList.map((p) => {
+                const id = safeStr(p?.id);
+                if (!id) return null;
+                const href = `/concierge?intent=property&property=${encodeURIComponent(id)}`;
+                return (
+                  <article
+                    key={id}
+                    style={{
+                      borderRadius: T.radiusLg,
+                      overflow: 'hidden',
+                      border: `1px dashed ${T.border}`,
+                      background: T.white,
+                      boxShadow: '0 8px 28px rgba(28,25,23,0.04)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: 120,
+                        background: `linear-gradient(135deg, ${T.sand}, ${T.placeholder})`,
+                        borderBottom: `1px solid ${T.border}`,
+                      }}
+                    />
+                    <div style={{ padding: '16px 16px 20px' }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.inkMuted }}>
+                        Feed preview · {safeStr(p.location)}
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 16, fontWeight: 750, color: T.ink }}>{safeStr(p.title)}</div>
+                      <div style={{ marginTop: 6, fontSize: 13, color: T.inkMuted }}>{safeStr(p.property_type)}</div>
+                      {p.price_range ? (
+                        <div style={{ marginTop: 8, fontSize: 13, fontWeight: 650, color: T.ink }}>{safeStr(p.price_range)}</div>
+                      ) : null}
+                      {p.status ? (
+                        <div style={{ marginTop: 6, fontSize: 11, fontWeight: 650, color: T.inkMuted }}>{safeStr(p.status)}</div>
+                      ) : null}
+                      <a
+                        href={href}
+                        style={{
+                          display: 'inline-block',
+                          marginTop: 12,
+                          padding: '9px 14px',
+                          borderRadius: 999,
+                          border: `1px solid ${T.goldDeep}`,
+                          color: T.goldDeep,
+                          fontSize: 13,
+                          fontWeight: 750,
+                          textDecoration: 'none',
+                          background: T.white,
+                        }}
+                      >
+                        Request details
+                      </a>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section style={{ padding: '56px 28px', background: T.pageBg }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <h2 style={{ margin: 0, fontSize: 26, fontFamily: T.fontDisplay, color: T.ink }}>{aboutTitle}</h2>
@@ -422,10 +525,10 @@ export default function LuxeMauriceTenantPresentation({ site }) {
 
       <section style={{ padding: '48px 28px', background: T.sand }}>
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: 24, fontFamily: T.fontDisplay, color: T.ink }}>Explore properties</h2>
+          <h2 style={{ margin: 0, fontSize: 24, fontFamily: T.fontDisplay, color: T.ink }}>Advisory conversation</h2>
           <p style={{ marginTop: 14, fontSize: 16, lineHeight: 1.65, color: T.inkMuted }}>
-            From north-coast apartments to low-density villas, our team shares developer-backed opportunities matched
-            to your brief. Start with a short conversation — we respond within one business day.
+            Already have a brief or timing in mind? Our concierge matches you to developer-backed inventory and
+            market context — we respond within one business day.
           </p>
           <a
             href="/concierge"

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 import { LUXE_MAURICE_BRAND_TOKENS as T } from '../lib/client/luxe-maurice-brand-theme.js';
-import { findLuxStagedPropertyBySlug } from '../lib/client/luxe-maurice-staged-properties.js';
+import { resolveLuxPropertyRef } from '../lib/client/luxe-maurice-property-resolve.js';
 
 function str(v) {
   return v != null ? String(v) : '';
@@ -30,20 +30,19 @@ export default function ConciergePage() {
       setPropertyInterest(null);
       return;
     }
-    const hit = findLuxStagedPropertyBySlug(rawProp);
-    setPropertyInterest(hit);
+    setPropertyInterest(resolveLuxPropertyRef(rawProp));
   }, [router.isReady, router.query?.property]);
 
   useEffect(() => {
     if (!propertyInterest) return;
     setMessage((prev) => {
       const p = prev.trim();
-      if (p.length > 0 && p.includes(propertyInterest.slug)) return prev;
-      const seed = `I am writing about "${propertyInterest.title}" (${propertyInterest.slug}).\n\n`;
+      if (p.length > 0 && p.includes(propertyInterest.ref)) return prev;
+      const seed = `I am writing about "${propertyInterest.title}" (${propertyInterest.ref}).\n\n`;
       if (p.length > 0) return prev;
       return seed;
     });
-  }, [propertyInterest?.slug]);
+  }, [propertyInterest?.ref]);
 
   const canSubmit = useMemo(
     () => name.trim().length > 1 && contact.trim().length > 2 && message.trim().length > 2,
@@ -64,7 +63,7 @@ export default function ConciergePage() {
         message: message.trim(),
       };
       if (propertyInterest) {
-        body.property_slug = propertyInterest.slug;
+        body.property_slug = propertyInterest.ref;
         body.property_title = propertyInterest.title;
       }
       const r = await fetch('/api/cmp/router?action=concierge-lead-create', {
@@ -155,7 +154,7 @@ export default function ConciergePage() {
               marginBottom: 22,
               padding: 16,
               borderRadius: T.radiusMd,
-              border: `1px solid ${T.goldDeep}`,
+              border: `1px solid ${propertyInterest.discovery_source === 'feed' ? T.border : T.goldDeep}`,
               background: T.sand,
               color: T.ink,
               fontSize: 15,
@@ -164,14 +163,24 @@ export default function ConciergePage() {
           >
             <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: T.goldDeep, fontWeight: 800 }}>
               Property interest
+              {propertyInterest.discovery_source === 'feed' ? (
+                <span style={{ color: T.inkMuted, fontWeight: 700 }}> · Explore listing (feed preview)</span>
+              ) : (
+                <span style={{ color: T.inkMuted, fontWeight: 700 }}> · Featured (developer-led)</span>
+              )}
             </div>
             <div style={{ marginTop: 8, fontWeight: 750 }}>
               {propertyInterest.title}
-              <span style={{ color: T.inkMuted, fontWeight: 600 }}> · {propertyInterest.status}</span>
+              {propertyInterest.status ? (
+                <span style={{ color: T.inkMuted, fontWeight: 600 }}> · {propertyInterest.status}</span>
+              ) : null}
             </div>
             <div style={{ marginTop: 6, fontSize: 14, color: T.inkMuted }}>
-              {propertyInterest.region} · {propertyInterest.property_type}
+              {propertyInterest.location} · {propertyInterest.property_type}
             </div>
+            {propertyInterest.price_range ? (
+              <div style={{ marginTop: 8, fontSize: 14, fontWeight: 650, color: T.ink }}>{propertyInterest.price_range}</div>
+            ) : null}
           </div>
         ) : router.isReady && String(router.query?.property || '').trim() ? (
           <div

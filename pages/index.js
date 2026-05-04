@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { PrismaClient } from '@prisma/client';
 
 import LuxeMauriceTenantPresentation from '../components/LuxeMauriceTenantPresentation.js';
+import { LUXE_MAURICE_FEED_PROPERTIES } from '../lib/client/luxe-maurice-feed-properties.js';
 import { LUXE_MAURICE_STAGED_PROPERTIES } from '../lib/client/luxe-maurice-staged-properties.js';
 import { defaultPublicSite, mergeSiteDraft } from '../lib/server/tenant-site-public.js';
 import { verifyTenantPreviewToken } from '../lib/server/tenant-preview-token.js';
@@ -597,6 +598,11 @@ export async function getServerSideProps({ req }) {
         Array.isArray(site.staged_properties) && site.staged_properties.length
           ? site.staged_properties
           : LUXE_MAURICE_STAGED_PROPERTIES;
+
+      site.feed_properties =
+        Array.isArray(site.feed_properties) && site.feed_properties.length
+          ? site.feed_properties
+          : LUXE_MAURICE_FEED_PROPERTIES;
 
       site.i18n = site.i18n && typeof site.i18n === 'object' ? site.i18n : {};
       site.i18n.en = site.i18n.en && typeof site.i18n.en === 'object' ? site.i18n.en : {};

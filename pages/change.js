@@ -621,6 +621,17 @@ export default function ChangeConsolePage() {
                       <div style={{ marginTop: 6, fontSize: 11, color: '#bef264', lineHeight: 1.35 }}>
                         Property interest: {String(lead.property_interest.title)}
                         {lead.property_interest.slug ? ` · ref ${String(lead.property_interest.slug)}` : ''}
+                        <span style={{ display: 'block', marginTop: 4, color: '#86efac', fontSize: 10 }}>
+                          Source:{' '}
+                          {String(lead.property_interest.discovery_source || '') === 'feed'
+                            ? 'Explore (feed preview)'
+                            : 'Featured (curated)'}
+                        </span>
+                        {lead.property_interest.price_range ? (
+                          <span style={{ display: 'block', marginTop: 2, color: '#a3e635', fontSize: 10 }}>
+                            Range: {String(lead.property_interest.price_range)}
+                          </span>
+                        ) : null}
                       </div>
                     ) : lead.listing ? (
                       <div style={{ marginTop: 6, fontSize: 11, color: '#bef264' }}>Listing ref: {String(lead.listing)}</div>
