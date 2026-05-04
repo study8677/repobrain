@@ -3,6 +3,7 @@ import Head from 'next/head';
 
 import { PrismaClient } from '@prisma/client';
 
+import LuxeMauriceTenantPresentation from '../components/LuxeMauriceTenantPresentation.js';
 import { defaultPublicSite, mergeSiteDraft } from '../lib/server/tenant-site-public.js';
 import { verifyTenantPreviewToken } from '../lib/server/tenant-preview-token.js';
 import { isGhostHost } from '../lib/server/ghost-host.js';
@@ -463,6 +464,9 @@ function TenantSite({ site }) {
 }
 
 export default function Home({ mode, site }) {
+  if (mode === 'tenant_site' && site?.client_ui?.lux_acquisition === true) {
+    return <LuxeMauriceTenantPresentation site={site} />;
+  }
   if (mode === 'tenant_site') {
     return <TenantSite site={site} />;
   }
@@ -542,49 +546,48 @@ export async function getServerSideProps({ req }) {
       site.sections.contact.website = host ? `https://${host}` : null;
     }
 
-    // Luxe Mauritius: acquisition funnel copy + UI flags (SSR only; does not change tenant_id or APIs).
+    // Luxe Mauritius: brand-aligned island presentation + UI flags (SSR only; tenant_id unchanged; no API changes).
     if (tenantId === 'luxe-maurice') {
       const operatorDebug = parseSearchParam(req, 'debug') === '1';
       site.client_ui = { lux_acquisition: true, operator_debug: operatorDebug };
 
       site.meta = site.meta && typeof site.meta === 'object' ? site.meta : {};
-      site.meta.page_title = 'Lux Mauritius · Private client access';
+      site.meta.page_title = 'Luxurious Mauritius · LuxeMaurice';
 
       site.hero = site.hero && typeof site.hero === 'object' ? site.hero : {};
-      site.hero.title = 'Lux Mauritius';
-      site.hero.headline = 'Off-market Mauritius residences — by private introduction only.';
-      site.hero.tagline =
-        'Invitation-only access to homes that are never openly listed. We match a small circle of qualified principals with discreet opportunities—quietly, personally, and off-market.';
-      site.hero.cta_label = 'Request Private Access';
+      site.hero.title = 'LuxeMaurice';
+      site.hero.headline = 'Luxurious Mauritius';
+      site.hero.tagline = 'Discover exclusive luxury properties in Mauritius';
+      site.hero.cta_label = 'Private concierge';
       site.hero.cta_href = '/concierge';
 
       site.sections = site.sections && typeof site.sections === 'object' ? site.sections : {};
       site.sections.about =
         site.sections.about && typeof site.sections.about === 'object' ? site.sections.about : {};
-      site.sections.about.title = 'A discreet introduction';
+      site.sections.about.title = 'Why Mauritius?';
       site.sections.about.body =
-        'We work with a small number of aligned buyers each season. Engagements begin with a private brief, careful qualification, and—when there is a fit—invitation-only previews. Your timeline and confidentiality are paramount.';
+        'Mauritius pairs natural beauty with political stability, a favourable climate, and a credible lifestyle for global buyers. Clear tax and residency frameworks, Indian Ocean positioning, and a maturing luxury market make it a strong choice for residences that double as long-term holdings.';
 
       site.sections.services =
         site.sections.services && typeof site.sections.services === 'object' ? site.sections.services : {};
-      site.sections.services.title = 'Curated opportunities';
+      site.sections.services.title = 'Upcoming properties';
       site.sections.services.intro =
-        'Private, off-market introductions only. Nothing is broadcast; full particulars and imagery are details on request once there is alignment. Nothing here constitutes an offer or solicitation.';
+        'Developer-led opportunities across the island — from north-coast apartments to low-density villas. Availability and private previews are confirmed through our concierge; nothing here is an offer until terms are agreed in writing.';
 
       const existingSvc = Array.isArray(site.sections.services.items) ? site.sections.services.items : [];
       if (!existingSvc.length) {
         site.sections.services.items = [
           {
-            name: 'Private coastal estates',
-            detail: 'Off-market beachfront and elevated residences. Details on request after qualification.',
+            name: 'North coast residences',
+            detail: 'Beach-close apartments with services nearby. Ask the concierge for current developer inventory.',
           },
           {
-            name: 'Private hillside retreats',
-            detail: 'Invitation-only panoramic homes. Off-market access; details on request.',
+            name: 'Villa enclave collection',
+            detail: 'Spacious plots and ocean outlooks. Private previews and brochures on request.',
           },
           {
-            name: 'Off-market developments',
-            detail: 'Private sponsor mandates. Off-market pipeline — details on request, NDA when required.',
+            name: 'Pipeline releases',
+            detail: 'Buy direct from the developer — join the early preview list for upcoming launches.',
           },
         ];
       }
