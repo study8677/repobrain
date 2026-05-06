@@ -107,3 +107,33 @@ See `console_json.lux_programme.operator_next_action` on the ticket after initia
 **Tenant boundaries:** unchanged — property context path gated to `luxe-maurice` host tenant; no real IDX vendor wired.
 
 **CMP ticket body:** paste this subsection or mirror via `POSTGRES_URL` script if ticket description should match repo (optional).
+
+---
+
+## Production verification — Phase 2D manual curated (recorded 2026-05-07)
+
+**Ticket status:** **open** — programme umbrella `cmo8mjijk0000jl04l1jz0v6d` is **not** closed on this slice alone.
+
+**Merged to main:** PR https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/141 — squash commit `a5c48e8a5282a20ef4312593d2af28242f411368`.
+
+**GitHub Production deployment:** id `4602364222` → SHA `a5c48e8a5282a20ef4312593d2af28242f411368` (correlate with Vercel Production “Ready” for the same commit).
+
+**Workflow reference:** `docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`.
+
+**Live GET checks**
+
+| URL | Result |
+|-----|--------|
+| `https://lux.corpflowai.com/` | **200** — HTML includes demo slug `lm-phase2d-manual-demo` with existing curated `lm-*` slugs |
+| `https://lux.corpflowai.com/property/lm-phase2d-manual-demo` | **200** — manual curated detail surface |
+| `https://lux.corpflowai.com/concierge?intent=property&property=lm-phase2d-manual-demo` | **200** — concierge loads (property-interest ribbon is client-hydrated from `router.query`; confirm **Manual curated listing** in browser) |
+
+**Lead API (manual curated)**
+
+- `POST https://lux.corpflowai.com/api/cmp/router?action=concierge-lead-create` with JSON including `property_slug: "lm-phase2d-manual-demo"` → **200**, `lead.id` = `cmouphsfm0000l5045z2g7pxm`; stored `property_interest.discovery_source` = **manual_curated**, `listing_provider` = **manual_curated**, non-empty **`summary`** and **`highlights`** aligned with the catalog row.
+
+**Operator visibility:** host-scoped `concierge-leads-list` returns the same `property_interest` shape `/change` renders (source label **Manual (curated)** when `discovery_source` is `manual_curated`). Confirm the newest row in `/change` while logged in as a Lux operator.
+
+**CMP ticket description:** optional — paste this subsection if the ticket body should mirror production verification (no automated append from CI).
+
+**Client property-loading ready:** **Yes** — replace demo copy via PR using the Phase 2D intake template; no IDX required for this path.
