@@ -1,0 +1,3 @@
+Answer: FastAPI computes `is_coroutine = dependant.is_coroutine_callable` in `get_request_handler`, then passes it into `run_endpoint_function`. That function branches: `"await dependant.call"` for async endpoints, `"run_in_threadpool"` for sync endpoints. The classification lives in `Dependant.is_coroutine_callable`, which checks `iscoroutinefunction` on the endpoint, its unwrapped form, and callable `__call__`; classes return false.
+Citations: fastapi/routing.py:370, fastapi/routing.py:674, fastapi/routing.py:677, fastapi/routing.py:327, fastapi/routing.py:330, fastapi/dependencies/models.py:158, fastapi/dependencies/models.py:161, fastapi/dependencies/models.py:174
+Confidence: High

@@ -1,0 +1,259 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/requests
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe5b-1f58-7e53-a4b8-df94f87ca0c8
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+In the `requests` library, where is the `Session` class defined and what HTTP adapter does it mount by default?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the local source to pin down the `Session` definition and its default adapter mounts with exact line references.
+exec
+/bin/zsh -lc "rg -n \"class Session|mount\\(\" ." in /tmp/ag-bench/requests
+ succeeded in 0ms:
+./src/requests/adapters.py:182:      >>> s.mount('http://', a)
+./src/requests/sessions.py:127:class SessionRedirectMixin:
+./src/requests/sessions.py:395:class Session(SessionRedirectMixin):
+./src/requests/sessions.py:502:        self.mount("https://", HTTPAdapter())
+./src/requests/sessions.py:503:        self.mount("http://", HTTPAdapter())
+./src/requests/sessions.py:881:    def mount(self, prefix: str, adapter: BaseAdapter) -> None:
+./tests/test_requests.py:1625:        s.mount("http://git", HTTPAdapter())
+./tests/test_requests.py:1626:        s.mount("http://github", HTTPAdapter())
+./tests/test_requests.py:1627:        s.mount("http://github.com", HTTPAdapter())
+./tests/test_requests.py:1628:        s.mount("http://github.com/about/", HTTPAdapter())
+./tests/test_requests.py:1638:        s.mount("http://gittip", HTTPAdapter())
+./tests/test_requests.py:1639:        s.mount("http://gittip.com", HTTPAdapter())
+./tests/test_requests.py:1640:        s.mount("http://gittip.com/about/", HTTPAdapter())
+./tests/test_requests.py:1655:        s2.mount("https://", HTTPAdapter())
+./tests/test_requests.py:1670:        s.mount(prefix, prefix_adapter)
+./tests/test_requests.py:1671:        s.mount(more_specific_prefix, more_specific_prefix_adapter)
+./tests/test_requests.py:1689:        s.mount(mixed_case_prefix, my_adapter)
+./tests/test_requests.py:1701:        s.mount(mixed_case_prefix, my_adapter)
+./tests/test_requests.py:1713:        s.mount(prefix, adapter)
+./tests/test_requests.py:1726:        s.mount(prefix, adapter)
+./tests/test_requests.py:2703:    s.mount("http://", HTTPAdapter(max_retries=Retry(total=2, status_forcelist=[500])))
+./tests/test_requests.py:2711:    s.mount("http://", HTTPAdapter(pool_connections=0, pool_maxsize=0))
+./docs/user/advanced.rst:989:    >>> s.mount('https://github.com/', MyAdapter())
+./docs/user/advanced.rst:1050:    s.mount('https://', HTTPAdapter(max_retries=retries))
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/requests
+ succeeded in 0ms:
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '1,60p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+     1	"""
+     2	requests.sessions
+     3	~~~~~~~~~~~~~~~~~
+     4	
+     5	This module provides a Session object to manage and persist settings across
+     6	requests (cookies, auth, proxies).
+     7	"""
+     8	
+     9	from __future__ import annotations
+    10	
+    11	import os
+    12	import sys
+    13	import time
+    14	from collections import OrderedDict
+    15	from collections.abc import Generator, Mapping, MutableMapping
+    16	from datetime import timedelta
+    17	from typing import TYPE_CHECKING, Any, cast
+    18	
+    19	from ._internal_utils import to_native_string
+    20	from ._types import is_prepared as _is_prepared
+    21	from .adapters import HTTPAdapter
+    22	from .auth import _basic_auth_str  # type: ignore[reportPrivateUsage]
+    23	from .compat import cookielib, urljoin, urlparse
+    24	from .cookies import (
+    25	    RequestsCookieJar,
+    26	    cookiejar_from_dict,
+    27	    extract_cookies_to_jar,
+    28	    merge_cookies,
+    29	)
+    30	from .exceptions import (
+    31	    ChunkedEncodingError,
+    32	    ContentDecodingError,
+    33	    InvalidSchema,
+    34	    TooManyRedirects,
+    35	)
+    36	from .hooks import default_hooks, dispatch_hook
+    37	
+    38	# formerly defined here, reexposed here for backward compatibility
+    39	from .models import (  # noqa: F401
+    40	    DEFAULT_REDIRECT_LIMIT,
+    41	    REDIRECT_STATI,  # type: ignore[reportUnusedImport]
+    42	    PreparedRequest,
+    43	    Request,
+    44	    Response,
+    45	)
+    46	from .status_codes import codes
+    47	from .structures import CaseInsensitiveDict
+    48	from .utils import (  # noqa: F401
+    49	    DEFAULT_PORTS,
+    50	    default_headers,
+    51	    get_auth_from_url,
+    52	    get_environ_proxies,
+    53	    get_netrc_auth,
+    54	    requote_uri,
+    55	    resolve_proxies,
+    56	    rewind_body,
+    57	    should_bypass_proxies,  # type: ignore[reportUnusedImport]  # re-export for external consumers
+    58	    to_key_val_list,
+    59	)
+    60	
+
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '388,508p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   388	        # This bizarre behaviour is explained in Issue 1704.
+   389	        if response.status_code == codes.moved and method == "POST":
+   390	            method = "GET"
+   391	
+   392	        prepared_request.method = method
+   393	
+   394	
+   395	class Session(SessionRedirectMixin):
+   396	    """A Requests session.
+   397	
+   398	    Provides cookie persistence, connection-pooling, and configuration.
+   399	
+   400	    Basic Usage::
+   401	
+   402	      >>> import requests
+   403	      >>> s = requests.Session()
+   404	      >>> s.get('https://httpbin.org/get')
+   405	      <Response [200]>
+   406	
+   407	    Or as a context manager::
+   408	
+   409	      >>> with requests.Session() as s:
+   410	      ...     s.get('https://httpbin.org/get')
+   411	      <Response [200]>
+   412	    """
+   413	
+   414	    headers: CaseInsensitiveDict[str]
+   415	    auth: _t.AuthType
+   416	    proxies: dict[str, str]
+   417	    hooks: dict[str, list[_t.HookType]]
+   418	    params: MutableMapping[str, Any]
+   419	    stream: bool
+   420	    verify: _t.VerifyType
+   421	    cert: _t.CertType
+   422	    max_redirects: int
+   423	    trust_env: bool
+   424	    cookies: RequestsCookieJar
+   425	    adapters: MutableMapping[str, BaseAdapter]
+   426	
+   427	    __attrs__: list[str] = [
+   428	        "headers",
+   429	        "cookies",
+   430	        "auth",
+   431	        "proxies",
+   432	        "hooks",
+   433	        "params",
+   434	        "verify",
+   435	        "cert",
+   436	        "adapters",
+   437	        "stream",
+   438	        "trust_env",
+   439	        "max_redirects",
+   440	    ]
+   441	
+   442	    def __init__(self) -> None:
+   443	        #: A case-insensitive dictionary of headers to be sent on each
+   444	        #: :class:`Request <Request>` sent from this
+   445	        #: :class:`Session <Session>`.
+   446	        self.headers = default_headers()
+   447	
+   448	        #: Default Authentication tuple or object to attach to
+   449	        #: :class:`Request <Request>`.
+   450	        self.auth = None
+   451	
+   452	        #: Dictionary mapping protocol or protocol and host to the URL of the proxy
+   453	        #: (e.g. {'http': 'foo.bar:3128', 'http://host.name': 'foo.bar:4012'}) to
+   454	        #: be used on each :class:`Request <Request>`.
+   455	        self.proxies = {}
+   456	
+   457	        #: Event-handling hooks.
+   458	        self.hooks = default_hooks()
+   459	
+   460	        #: Dictionary of querystring data to attach to each
+   461	        #: :class:`Request <Request>`. The dictionary values may be lists for
+   462	        #: representing multivalued query parameters.
+   463	        self.params = {}
+   464	
+   465	        #: Stream response content default.
+   466	        self.stream = False
+   467	
+   468	        #: SSL Verification default.
+   469	        #: Defaults to `True`, requiring requests to verify the TLS certificate at the
+   470	        #: remote end.
+   471	        #: If verify is set to `False`, requests will accept any TLS certificate
+   472	        #: presented by the server, and will ignore hostname mismatches and/or
+   473	        #: expired certificates, which will make your application vulnerable to
+   474	        #: man-in-the-middle (MitM) attacks.
+   475	        #: Only set this to `False` for testing.
+   476	        #: If verify is set to a string, it must be the path to a CA bundle file
+   477	        #: that will be used to verify the TLS certificate.
+   478	        self.verify = True
+   479	
+   480	        #: SSL client certificate default, if String, path to ssl client
+   481	        #: cert file (.pem). If Tuple, ('cert', 'key') pair.
+   482	        self.cert = None
+   483	
+   484	        #: Maximum number of redirects allowed. If the request exceeds this
+   485	        #: limit, a :class:`TooManyRedirects` exception is raised.
+   486	        #: This defaults to requests.models.DEFAULT_REDIRECT_LIMIT, which is
+   487	        #: 30.
+   488	        self.max_redirects = DEFAULT_REDIRECT_LIMIT
+   489	
+   490	        #: Trust environment settings for proxy configuration, default
+   491	        #: authentication and similar.
+   492	        self.trust_env = True
+   493	
+   494	        #: A CookieJar containing all currently outstanding cookies set on this
+   495	        #: session. By default it is a
+   496	        #: :class:`RequestsCookieJar <requests.cookies.RequestsCookieJar>`, but
+   497	        #: may be any other ``cookielib.CookieJar`` compatible object.
+   498	        self.cookies = cookiejar_from_dict({})
+   499	
+   500	        # Default connection adapters.
+   501	        self.adapters = OrderedDict()
+   502	        self.mount("https://", HTTPAdapter())
+   503	        self.mount("http://", HTTPAdapter())
+   504	
+   505	    def __enter__(self) -> Self:
+   506	        return self
+   507	
+   508	    def __exit__(self, *args: Any) -> None:
+
+codex
+Answer: `Session` is defined in `src/requests/sessions.py` as `class Session(SessionRedirectMixin):`.
+It imports `HTTPAdapter` from `.adapters`.
+In `Session.__init__`, it mounts `HTTPAdapter()` for both `"https://"` and `"http://"`.
+So the default HTTP adapter is `requests.adapters.HTTPAdapter`.
+Citations: src/requests/sessions.py:21, src/requests/sessions.py:395, src/requests/sessions.py:502, src/requests/sessions.py:503
+Confidence: High
+tokens used
+15,761
+Answer: `Session` is defined in `src/requests/sessions.py` as `class Session(SessionRedirectMixin):`.
+It imports `HTTPAdapter` from `.adapters`.
+In `Session.__init__`, it mounts `HTTPAdapter()` for both `"https://"` and `"http://"`.
+So the default HTTP adapter is `requests.adapters.HTTPAdapter`.
+Citations: src/requests/sessions.py:21, src/requests/sessions.py:395, src/requests/sessions.py:502, src/requests/sessions.py:503
+Confidence: High

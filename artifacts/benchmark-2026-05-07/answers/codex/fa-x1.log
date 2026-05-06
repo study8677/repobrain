@@ -1,0 +1,1166 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/fastapi
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe58-b643-71a1-808b-7f4eaf35cfad
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+How are background tasks defined by users actually executed after a response is sent? Trace the path from `BackgroundTasks` to execution.
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll trace the implementation from the public `BackgroundTasks` class through response attachment and the final execution hook, then cite the exact lines.
+exec
+/bin/zsh -lc "rg --files -g 'AGENTS.md' -g '"'!.*'"'" in /tmp/ag-bench/fastapi
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc "pwd && rg -n \"class BackgroundTasks|BackgroundTasks|background\" fastapi starlette tests -g '*.py'" in /tmp/ag-bench/fastapi
+ exited 2 in 0ms:
+/private/tmp/ag-bench/fastapi
+rg: starlette: No such file or directory (os error 2)
+fastapi/routing.py:337:        "background": solved_result.background_tasks,
+fastapi/routing.py:614:                    background=solved_result.background_tasks,
+fastapi/routing.py:650:                    background=solved_result.background_tasks,
+fastapi/routing.py:680:                    if raw_response.background is None:
+fastapi/routing.py:681:                        raw_response.background = solved_result.background_tasks
+tests/test_dependency_contextmanager.py:4:from fastapi import BackgroundTasks, Depends, FastAPI
+tests/test_dependency_contextmanager.py:136:async def get_context_b_bg(tasks: BackgroundTasks, state: dict = Depends(context_b)):
+tests/test_dependency_contextmanager.py:195:    tasks: BackgroundTasks, state: dict = Depends(context_b)
+tests/test_dependency_contextmanager.py:281:def test_background_tasks():
+tests/test_dependency_contextmanager.py:391:def test_sync_background_tasks():
+tests/test_response_dependency.py:1:"""Test using special types (Response, Request, BackgroundTasks) as dependency annotations.
+tests/test_response_dependency.py:9:from fastapi import BackgroundTasks, Depends, FastAPI, Request, Response
+tests/test_response_dependency.py:148:# Tests for BackgroundTasks type hint with Depends
+tests/test_response_dependency.py:149:def test_background_tasks_with_depends_annotated():
+tests/test_response_dependency.py:150:    """BackgroundTasks type hint should work with Annotated[BackgroundTasks, Depends(...)]."""
+tests/test_response_dependency.py:154:    def background_task(message: str):
+tests/test_response_dependency.py:157:    def add_background_task(background_tasks: BackgroundTasks) -> BackgroundTasks:
+tests/test_response_dependency.py:158:        background_tasks.add_task(background_task, "from dependency")
+tests/test_response_dependency.py:159:        return background_tasks
+tests/test_response_dependency.py:163:        background_tasks: Annotated[BackgroundTasks, Depends(add_background_task)],
+tests/test_response_dependency.py:165:        background_tasks.add_task(background_task, "from endpoint")
+fastapi/background.py:5:from starlette.background import BackgroundTasks as StarletteBackgroundTasks
+fastapi/background.py:11:class BackgroundTasks(StarletteBackgroundTasks):
+fastapi/background.py:13:    A collection of background tasks that will be called after a response has been
+fastapi/background.py:17:    [FastAPI docs for Background Tasks](https://fastapi.tiangolo.com/tutorial/background-tasks/).
+fastapi/background.py:22:    from fastapi import BackgroundTasks, FastAPI
+fastapi/background.py:34:    async def send_notification(email: str, background_tasks: BackgroundTasks):
+fastapi/background.py:35:        background_tasks.add_task(write_notification, email, message="some notification")
+fastapi/background.py:36:        return {"message": "Notification sent in the background"}
+fastapi/background.py:56:        Add a function to be called in the background after the response is sent.
+fastapi/background.py:59:        [FastAPI docs for Background Tasks](https://fastapi.tiangolo.com/tutorial/background-tasks/).
+fastapi/__init__.py:8:from .background import BackgroundTasks as BackgroundTasks
+fastapi/dependencies/utils.py:52:from fastapi.background import BackgroundTasks
+fastapi/dependencies/utils.py:65:from starlette.background import BackgroundTasks as StarletteBackgroundTasks
+fastapi/dependencies/utils.py:164:        background_tasks_param_name=dependant.background_tasks_param_name,
+fastapi/dependencies/utils.py:377:    elif lenient_issubclass(type_annotation, StarletteBackgroundTasks):
+fastapi/dependencies/utils.py:378:        dependant.background_tasks_param_name = param_name
+fastapi/dependencies/utils.py:495:            StarletteBackgroundTasks,
+fastapi/dependencies/utils.py:593:    background_tasks: StarletteBackgroundTasks | None
+fastapi/dependencies/utils.py:603:    background_tasks: StarletteBackgroundTasks | None = None,
+fastapi/dependencies/utils.py:653:            background_tasks=background_tasks,
+fastapi/dependencies/utils.py:660:        background_tasks = solved_result.background_tasks
+fastapi/dependencies/utils.py:719:    if dependant.background_tasks_param_name:
+fastapi/dependencies/utils.py:720:        if background_tasks is None:
+fastapi/dependencies/utils.py:721:            background_tasks = BackgroundTasks()
+fastapi/dependencies/utils.py:722:        values[dependant.background_tasks_param_name] = background_tasks
+fastapi/dependencies/utils.py:732:        background_tasks=background_tasks,
+fastapi/dependencies/models.py:45:    background_tasks_param_name: str | None = None
+tests/test_tutorial/test_background_tasks/test_tutorial001.py:6:from docs_src.background_tasks.tutorial001_py310 import app
+tests/test_tutorial/test_background_tasks/test_tutorial001.py:19:    assert response.json() == {"message": "Notification sent in the background"}
+tests/test_tutorial/test_background_tasks/test_tutorial002.py:19:    mod = importlib.import_module(f"docs_src.background_tasks.{request.param}")
+
+codex
+The repo defines FastAPI’s wrapper and wiring, while the actual post-send call appears to live in Starlette’s response code imported by FastAPI. I’m checking both the in-repo FastAPI code and the installed dependency source for the final execution point.
+exec
+/bin/zsh -lc "nl -ba fastapi/background.py | sed -n '1,110p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+     1	from collections.abc import Callable
+     2	from typing import Annotated, Any
+     3	
+     4	from annotated_doc import Doc
+     5	from starlette.background import BackgroundTasks as StarletteBackgroundTasks
+     6	from typing_extensions import ParamSpec
+     7	
+     8	P = ParamSpec("P")
+     9	
+    10	
+    11	class BackgroundTasks(StarletteBackgroundTasks):
+    12	    """
+    13	    A collection of background tasks that will be called after a response has been
+    14	    sent to the client.
+    15	
+    16	    Read more about it in the
+    17	    [FastAPI docs for Background Tasks](https://fastapi.tiangolo.com/tutorial/background-tasks/).
+    18	
+    19	    ## Example
+    20	
+    21	    ```python
+    22	    from fastapi import BackgroundTasks, FastAPI
+    23	
+    24	    app = FastAPI()
+    25	
+    26	
+    27	    def write_notification(email: str, message=""):
+    28	        with open("log.txt", mode="w") as email_file:
+    29	            content = f"notification for {email}: {message}"
+    30	            email_file.write(content)
+    31	
+    32	
+    33	    @app.post("/send-notification/{email}")
+    34	    async def send_notification(email: str, background_tasks: BackgroundTasks):
+    35	        background_tasks.add_task(write_notification, email, message="some notification")
+    36	        return {"message": "Notification sent in the background"}
+    37	    ```
+    38	    """
+    39	
+    40	    def add_task(
+    41	        self,
+    42	        func: Annotated[
+    43	            Callable[P, Any],
+    44	            Doc(
+    45	                """
+    46	                The function to call after the response is sent.
+    47	
+    48	                It can be a regular `def` function or an `async def` function.
+    49	                """
+    50	            ),
+    51	        ],
+    52	        *args: P.args,
+    53	        **kwargs: P.kwargs,
+    54	    ) -> None:
+    55	        """
+    56	        Add a function to be called in the background after the response is sent.
+    57	
+    58	        Read more about it in the
+    59	        [FastAPI docs for Background Tasks](https://fastapi.tiangolo.com/tutorial/background-tasks/).
+    60	        """
+    61	        return super().add_task(func, *args, **kwargs)
+
+exec
+/bin/zsh -lc "nl -ba fastapi/dependencies/utils.py | sed -n '360,390p;710,735p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   360	
+   361	
+   362	def add_non_field_param_to_dependency(
+   363	    *, param_name: str, type_annotation: Any, dependant: Dependant
+   364	) -> bool | None:
+   365	    if lenient_issubclass(type_annotation, Request):
+   366	        dependant.request_param_name = param_name
+   367	        return True
+   368	    elif lenient_issubclass(type_annotation, WebSocket):
+   369	        dependant.websocket_param_name = param_name
+   370	        return True
+   371	    elif lenient_issubclass(type_annotation, HTTPConnection):
+   372	        dependant.http_connection_param_name = param_name
+   373	        return True
+   374	    elif lenient_issubclass(type_annotation, Response):
+   375	        dependant.response_param_name = param_name
+   376	        return True
+   377	    elif lenient_issubclass(type_annotation, StarletteBackgroundTasks):
+   378	        dependant.background_tasks_param_name = param_name
+   379	        return True
+   380	    elif lenient_issubclass(type_annotation, SecurityScopes):
+   381	        dependant.security_scopes_param_name = param_name
+   382	        return True
+   383	    return None
+   384	
+   385	
+   386	@dataclass
+   387	class ParamDetails:
+   388	    type_annotation: Any
+   389	    depends: params.Depends | None
+   390	    field: ModelField | None
+   710	        )
+   711	        values.update(body_values)
+   712	        errors.extend(body_errors)
+   713	    if dependant.http_connection_param_name:
+   714	        values[dependant.http_connection_param_name] = request
+   715	    if dependant.request_param_name and isinstance(request, Request):
+   716	        values[dependant.request_param_name] = request
+   717	    elif dependant.websocket_param_name and isinstance(request, WebSocket):
+   718	        values[dependant.websocket_param_name] = request
+   719	    if dependant.background_tasks_param_name:
+   720	        if background_tasks is None:
+   721	            background_tasks = BackgroundTasks()
+   722	        values[dependant.background_tasks_param_name] = background_tasks
+   723	    if dependant.response_param_name:
+   724	        values[dependant.response_param_name] = response
+   725	    if dependant.security_scopes_param_name:
+   726	        values[dependant.security_scopes_param_name] = SecurityScopes(
+   727	            scopes=dependant.oauth_scopes
+   728	        )
+   729	    return SolvedDependency(
+   730	        values=values,
+   731	        errors=errors,
+   732	        background_tasks=background_tasks,
+   733	        response=response,
+   734	        dependency_cache=dependency_cache,
+   735	    )
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '600,690p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   600	                    async for data in stream:
+   601	                        yield data
+   602	                        # Guarantee a checkpoint so cancellation can be
+   603	                        # delivered even when the producer is faster than
+   604	                        # the consumer and receive() never suspends.
+   605	                        await anyio.sleep(0)
+   606	
+   607	                sse_stream_content: AsyncIterator[bytes] | Iterator[bytes] = (
+   608	                    _sse_with_checkpoints(sse_receive_stream)
+   609	                )
+   610	
+   611	                response = StreamingResponse(
+   612	                    sse_stream_content,
+   613	                    media_type="text/event-stream",
+   614	                    background=solved_result.background_tasks,
+   615	                )
+   616	                response.headers["Cache-Control"] = "no-cache"
+   617	                # For Nginx proxies to not buffer server sent events
+   618	                response.headers["X-Accel-Buffering"] = "no"
+   619	                response.headers.raw.extend(solved_result.response.headers.raw)
+   620	            elif is_json_stream:
+   621	                # Generator endpoint: stream as JSONL
+   622	                gen = dependant.call(**solved_result.values)
+   623	
+   624	                def _serialize_item(item: Any) -> bytes:
+   625	                    return _serialize_data(item) + b"\n"
+   626	
+   627	                if dependant.is_async_gen_callable:
+   628	
+   629	                    async def _async_stream_jsonl() -> AsyncIterator[bytes]:
+   630	                        async for item in gen:
+   631	                            yield _serialize_item(item)
+   632	                            # To allow for cancellation to trigger
+   633	                            # Ref: https://github.com/fastapi/fastapi/issues/14680
+   634	                            await anyio.sleep(0)
+   635	
+   636	                    jsonl_stream_content: AsyncIterator[bytes] | Iterator[bytes] = (
+   637	                        _async_stream_jsonl()
+   638	                    )
+   639	                else:
+   640	
+   641	                    def _sync_stream_jsonl() -> Iterator[bytes]:
+   642	                        for item in gen:  # ty: ignore[not-iterable]
+   643	                            yield _serialize_item(item)
+   644	
+   645	                    jsonl_stream_content = _sync_stream_jsonl()
+   646	
+   647	                response = StreamingResponse(
+   648	                    jsonl_stream_content,
+   649	                    media_type="application/jsonl",
+   650	                    background=solved_result.background_tasks,
+   651	                )
+   652	                response.headers.raw.extend(solved_result.response.headers.raw)
+   653	            elif dependant.is_async_gen_callable or dependant.is_gen_callable:
+   654	                # Raw streaming with explicit response_class (e.g. StreamingResponse)
+   655	                gen = dependant.call(**solved_result.values)
+   656	                if dependant.is_async_gen_callable:
+   657	
+   658	                    async def _async_stream_raw(
+   659	                        async_gen: AsyncIterator[Any],
+   660	                    ) -> AsyncIterator[Any]:
+   661	                        async for chunk in async_gen:
+   662	                            yield chunk
+   663	                            # To allow for cancellation to trigger
+   664	                            # Ref: https://github.com/fastapi/fastapi/issues/14680
+   665	                            await anyio.sleep(0)
+   666	
+   667	                    gen = _async_stream_raw(gen)
+   668	                response_args = _build_response_args(
+   669	                    status_code=status_code, solved_result=solved_result
+   670	                )
+   671	                response = actual_response_class(content=gen, **response_args)
+   672	                response.headers.raw.extend(solved_result.response.headers.raw)
+   673	            else:
+   674	                raw_response = await run_endpoint_function(
+   675	                    dependant=dependant,
+   676	                    values=solved_result.values,
+   677	                    is_coroutine=is_coroutine,
+   678	                )
+   679	                if isinstance(raw_response, Response):
+   680	                    if raw_response.background is None:
+   681	                        raw_response.background = solved_result.background_tasks
+   682	                    response = raw_response
+   683	                else:
+   684	                    response_args = _build_response_args(
+   685	                        status_code=status_code, solved_result=solved_result
+   686	                    )
+   687	                    # Use the fast path (dump_json) when no custom response
+   688	                    # class was set and a response field with a TypeAdapter
+   689	                    # exists. Serializes directly to JSON bytes via Pydantic's
+   690	                    # Rust core, skipping the intermediate Python dict +
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '320,345p;690,735p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   320	async def run_endpoint_function(
+   321	    *, dependant: Dependant, values: dict[str, Any], is_coroutine: bool
+   322	) -> Any:
+   323	    # Only called by get_request_handler. Has been split into its own function to
+   324	    # facilitate profiling endpoints, since inner functions are harder to profile.
+   325	    assert dependant.call is not None, "dependant.call must be a function"
+   326	
+   327	    if is_coroutine:
+   328	        return await dependant.call(**values)
+   329	    else:
+   330	        return await run_in_threadpool(dependant.call, **values)
+   331	
+   332	
+   333	def _build_response_args(
+   334	    *, status_code: int | None, solved_result: Any
+   335	) -> dict[str, Any]:
+   336	    response_args: dict[str, Any] = {
+   337	        "background": solved_result.background_tasks,
+   338	    }
+   339	    # If status_code was set, use it, otherwise use the default from the
+   340	    # response class, in the case of redirect it's 307
+   341	    current_status_code = (
+   342	        status_code if status_code else solved_result.response.status_code
+   343	    )
+   344	    if current_status_code is not None:
+   345	        response_args["status_code"] = current_status_code
+   690	                    # Rust core, skipping the intermediate Python dict +
+   691	                    # json.dumps() step.
+   692	                    use_dump_json = response_field is not None and isinstance(
+   693	                        response_class, DefaultPlaceholder
+   694	                    )
+   695	                    content = await serialize_response(
+   696	                        field=response_field,
+   697	                        response_content=raw_response,
+   698	                        include=response_model_include,
+   699	                        exclude=response_model_exclude,
+   700	                        by_alias=response_model_by_alias,
+   701	                        exclude_unset=response_model_exclude_unset,
+   702	                        exclude_defaults=response_model_exclude_defaults,
+   703	                        exclude_none=response_model_exclude_none,
+   704	                        is_coroutine=is_coroutine,
+   705	                        endpoint_ctx=endpoint_ctx,
+   706	                        dump_json=use_dump_json,
+   707	                    )
+   708	                    if use_dump_json:
+   709	                        response = Response(
+   710	                            content=content,
+   711	                            media_type="application/json",
+   712	                            **response_args,
+   713	                        )
+   714	                    else:
+   715	                        response = actual_response_class(content, **response_args)
+   716	                    if not is_body_allowed_for_status_code(response.status_code):
+   717	                        response.body = b""
+   718	                    response.headers.raw.extend(solved_result.response.headers.raw)
+   719	        if errors:
+   720	            validation_error = RequestValidationError(
+   721	                errors, body=body, endpoint_ctx=endpoint_ctx
+   722	            )
+   723	            raise validation_error
+   724	
+   725	        # Return response
+   726	        assert response
+   727	        return response
+   728	
+   729	    return app
+   730	
+   731	
+   732	def get_websocket_app(
+   733	    dependant: Dependant,
+   734	    dependency_overrides_provider: Any | None = None,
+   735	    embed_body_fields: bool = False,
+
+exec
+/bin/zsh -lc 'rg -n "class BackgroundTask|class BackgroundTasks|def add_task|async def __call__|if self.background" $(python - <<'"'PY'
+import starlette.background, starlette.responses
+print(starlette.background.__file__)
+print(starlette.responses.__file__)
+PY
+)" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+zsh:1: can't create temp file for here document: operation not permitted
+fastapi/background.py:11:class BackgroundTasks(StarletteBackgroundTasks):
+fastapi/background.py:40:    def add_task(
+fastapi/applications.py:1156:    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+fastapi/security/http.py:94:    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
+fastapi/security/http.py:202:    async def __call__(  # type: ignore
+fastapi/security/http.py:303:    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
+fastapi/security/http.py:404:    async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
+fastapi/middleware/asyncexitstack.py:15:    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+fastapi/security/api_key.py:142:    async def __call__(self, request: Request) -> str | None:
+fastapi/security/api_key.py:230:    async def __call__(self, request: Request) -> str | None:
+fastapi/security/api_key.py:318:    async def __call__(self, request: Request) -> str | None:
+fastapi/security/oauth2.py:423:    async def __call__(self, request: Request) -> str | None:
+fastapi/security/oauth2.py:536:    async def __call__(self, request: Request) -> str | None:
+fastapi/security/oauth2.py:642:    async def __call__(self, request: Request) -> str | None:
+fastapi/security/open_id_connect_url.py:87:    async def __call__(self, request: Request) -> str | None:
+tests/test_custom_middleware_exception.py:47:    async def __call__(self, scope, receive, send):
+tests/test_dependency_wrapped.py:123:    async def __call__(self):
+tests/test_dependency_wrapped.py:135:    async def __call__(self):
+tests/test_dependency_wrapped.py:145:    async def __call__(self):
+tests/test_dependency_wrapped.py:154:    async def __call__(self):
+tests/test_dependency_wrapped.py:163:    async def __call__(self):
+tests/test_dependency_wrapped.py:172:    async def __call__(self):
+tests/test_dependency_class.py:21:    async def __call__(self, value: str) -> str:
+tests/test_dependency_class.py:26:    async def __call__(self, value: str) -> AsyncGenerator[str, None]:
+tests/test_dependency_partial.py:39:    async def __call__(self, value: str) -> str:
+tests/test_dependency_partial.py:44:    async def __call__(self, value: str) -> AsyncGenerator[str, None]:
+
+exec
+/bin/zsh -lc "python -c 'import starlette.background, starlette.responses; print(starlette.background.__file__); print(starlette.responses.__file__)'" in /tmp/ag-bench/fastapi
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+exec
+/bin/zsh -lc "python -c 'import starlette.background, inspect; print(inspect.getsource(starlette.background))'" in /tmp/ag-bench/fastapi
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+exec
+/bin/zsh -lc "python -c 'import starlette.responses, inspect; s=inspect.getsource(starlette.responses.Response.__call__); print(s)'" in /tmp/ag-bench/fastapi
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+exec
+/bin/zsh -lc "python -c 'import starlette.responses, inspect; print(inspect.getsource(starlette.responses.StreamingResponse.__call__))'" in /tmp/ag-bench/fastapi
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+codex
+`python` is not on PATH here, so I’m switching to `python3` and using one-line commands to avoid shell temp-file writes in the read-only sandbox.
+exec
+/bin/zsh -lc "python3 -c 'import starlette.background, starlette.responses; print(starlette.background.__file__); print(starlette.responses.__file__)'" in /tmp/ag-bench/fastapi
+exec
+/bin/zsh -lc "python3 -c 'import starlette.background, inspect; print(inspect.getsource(starlette.background))'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+from __future__ import annotations
+
+from collections.abc import Callable, Sequence
+from typing import Any, ParamSpec
+
+from starlette._utils import is_async_callable
+from starlette.concurrency import run_in_threadpool
+
+P = ParamSpec("P")
+
+
+class BackgroundTask:
+    def __init__(self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs) -> None:
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.is_async = is_async_callable(func)
+
+    async def __call__(self) -> None:
+        if self.is_async:
+            await self.func(*self.args, **self.kwargs)
+        else:
+            await run_in_threadpool(self.func, *self.args, **self.kwargs)
+
+
+class BackgroundTasks(BackgroundTask):
+    def __init__(self, tasks: Sequence[BackgroundTask] | None = None):
+        self.tasks = list(tasks) if tasks else []
+
+    def add_task(self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs) -> None:
+        task = BackgroundTask(func, *args, **kwargs)
+        self.tasks.append(task)
+
+    async def __call__(self) -> None:
+        for task in self.tasks:
+            await task()
+
+
+exec
+/bin/zsh -lc "python3 -c 'import starlette.responses, inspect; print(inspect.getsource(starlette.responses.Response.__call__))'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        prefix = "websocket." if scope["type"] == "websocket" else ""
+        await send(
+            {
+                "type": prefix + "http.response.start",
+                "status": self.status_code,
+                "headers": self.raw_headers,
+            }
+        )
+        await send({"type": prefix + "http.response.body", "body": self.body})
+
+        if self.background is not None:
+            await self.background()
+
+
+exec
+/bin/zsh -lc "python3 -c 'import starlette.responses, inspect; print(inspect.getsource(starlette.responses.StreamingResponse.__call__))'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        spec_version = tuple(map(int, scope.get("asgi", {}).get("spec_version", "2.0").split(".")))
+
+        if spec_version >= (2, 4):
+            try:
+                await self.stream_response(send)
+            except OSError:
+                raise ClientDisconnect()
+        else:
+            with collapse_excgroups():
+                async with anyio.create_task_group() as task_group:
+
+                    async def wrap(func: Callable[[], Awaitable[None]]) -> None:
+                        await func()
+                        task_group.cancel_scope.cancel()
+
+                    task_group.start_soon(wrap, partial(self.stream_response, send))
+                    await wrap(partial(self.listen_for_disconnect, receive))
+
+        if self.background is not None:
+            await self.background()
+
+
+ succeeded in 120ms:
+/opt/homebrew/lib/python3.14/site-packages/starlette/background.py
+/opt/homebrew/lib/python3.14/site-packages/starlette/responses.py
+
+exec
+/bin/zsh -lc "nl -ba /opt/homebrew/lib/python3.14/site-packages/starlette/background.py | sed -n '1,40p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+     1	from __future__ import annotations
+     2	
+     3	from collections.abc import Callable, Sequence
+     4	from typing import Any, ParamSpec
+     5	
+     6	from starlette._utils import is_async_callable
+     7	from starlette.concurrency import run_in_threadpool
+     8	
+     9	P = ParamSpec("P")
+    10	
+    11	
+    12	class BackgroundTask:
+    13	    def __init__(self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs) -> None:
+    14	        self.func = func
+    15	        self.args = args
+    16	        self.kwargs = kwargs
+    17	        self.is_async = is_async_callable(func)
+    18	
+    19	    async def __call__(self) -> None:
+    20	        if self.is_async:
+    21	            await self.func(*self.args, **self.kwargs)
+    22	        else:
+    23	            await run_in_threadpool(self.func, *self.args, **self.kwargs)
+    24	
+    25	
+    26	class BackgroundTasks(BackgroundTask):
+    27	    def __init__(self, tasks: Sequence[BackgroundTask] | None = None):
+    28	        self.tasks = list(tasks) if tasks else []
+    29	
+    30	    def add_task(self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs) -> None:
+    31	        task = BackgroundTask(func, *args, **kwargs)
+    32	        self.tasks.append(task)
+    33	
+    34	    async def __call__(self) -> None:
+    35	        for task in self.tasks:
+    36	            await task()
+
+exec
+/bin/zsh -lc "nl -ba /opt/homebrew/lib/python3.14/site-packages/starlette/responses.py | sed -n '140,170p;250,285p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   140	        secure: bool = False,
+   141	        httponly: bool = False,
+   142	        samesite: Literal["lax", "strict", "none"] | None = "lax",
+   143	    ) -> None:
+   144	        self.set_cookie(
+   145	            key,
+   146	            max_age=0,
+   147	            expires=0,
+   148	            path=path,
+   149	            domain=domain,
+   150	            secure=secure,
+   151	            httponly=httponly,
+   152	            samesite=samesite,
+   153	        )
+   154	
+   155	    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+   156	        prefix = "websocket." if scope["type"] == "websocket" else ""
+   157	        await send(
+   158	            {
+   159	                "type": prefix + "http.response.start",
+   160	                "status": self.status_code,
+   161	                "headers": self.raw_headers,
+   162	            }
+   163	        )
+   164	        await send({"type": prefix + "http.response.body", "body": self.body})
+   165	
+   166	        if self.background is not None:
+   167	            await self.background()
+   168	
+   169	
+   170	class HTMLResponse(Response):
+   250	                "headers": self.raw_headers,
+   251	            }
+   252	        )
+   253	        async for chunk in self.body_iterator:
+   254	            if not isinstance(chunk, bytes | memoryview):
+   255	                chunk = chunk.encode(self.charset)
+   256	            await send({"type": "http.response.body", "body": chunk, "more_body": True})
+   257	
+   258	        await send({"type": "http.response.body", "body": b"", "more_body": False})
+   259	
+   260	    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+   261	        spec_version = tuple(map(int, scope.get("asgi", {}).get("spec_version", "2.0").split(".")))
+   262	
+   263	        if spec_version >= (2, 4):
+   264	            try:
+   265	                await self.stream_response(send)
+   266	            except OSError:
+   267	                raise ClientDisconnect()
+   268	        else:
+   269	            with collapse_excgroups():
+   270	                async with anyio.create_task_group() as task_group:
+   271	
+   272	                    async def wrap(func: Callable[[], Awaitable[None]]) -> None:
+   273	                        await func()
+   274	                        task_group.cancel_scope.cancel()
+   275	
+   276	                    task_group.start_soon(wrap, partial(self.stream_response, send))
+   277	                    await wrap(partial(self.listen_for_disconnect, receive))
+   278	
+   279	        if self.background is not None:
+   280	            await self.background()
+   281	
+   282	
+   283	class MalformedRangeHeader(Exception):
+   284	    def __init__(self, content: str = "Malformed range header.") -> None:
+   285	        self.content = content
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '1,80p;90,125p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+     1	import contextlib
+     2	import email.message
+     3	import functools
+     4	import inspect
+     5	import json
+     6	import types
+     7	from collections.abc import (
+     8	    AsyncIterator,
+     9	    Awaitable,
+    10	    Callable,
+    11	    Collection,
+    12	    Coroutine,
+    13	    Generator,
+    14	    Iterator,
+    15	    Mapping,
+    16	    Sequence,
+    17	)
+    18	from contextlib import (
+    19	    AbstractAsyncContextManager,
+    20	    AbstractContextManager,
+    21	    AsyncExitStack,
+    22	    asynccontextmanager,
+    23	)
+    24	from enum import Enum, IntEnum
+    25	from typing import (
+    26	    Annotated,
+    27	    Any,
+    28	    TypeVar,
+    29	    cast,
+    30	)
+    31	
+    32	import anyio
+    33	from annotated_doc import Doc
+    34	from anyio.abc import ObjectReceiveStream
+    35	from fastapi import params
+    36	from fastapi._compat import (
+    37	    ModelField,
+    38	    Undefined,
+    39	    lenient_issubclass,
+    40	)
+    41	from fastapi.datastructures import Default, DefaultPlaceholder
+    42	from fastapi.dependencies.models import Dependant
+    43	from fastapi.dependencies.utils import (
+    44	    _should_embed_body_fields,
+    45	    get_body_field,
+    46	    get_dependant,
+    47	    get_flat_dependant,
+    48	    get_parameterless_sub_dependant,
+    49	    get_stream_item_type,
+    50	    get_typed_return_annotation,
+    51	    solve_dependencies,
+    52	)
+    53	from fastapi.encoders import jsonable_encoder
+    54	from fastapi.exceptions import (
+    55	    EndpointContext,
+    56	    FastAPIError,
+    57	    RequestValidationError,
+    58	    ResponseValidationError,
+    59	    WebSocketRequestValidationError,
+    60	)
+    61	from fastapi.sse import (
+    62	    _PING_INTERVAL,
+    63	    KEEPALIVE_COMMENT,
+    64	    EventSourceResponse,
+    65	    ServerSentEvent,
+    66	    format_sse_event,
+    67	)
+    68	from fastapi.types import DecoratedCallable, IncEx
+    69	from fastapi.utils import (
+    70	    create_model_field,
+    71	    generate_unique_id,
+    72	    get_value_or_default,
+    73	    is_body_allowed_for_status_code,
+    74	)
+    75	from starlette import routing
+    76	from starlette._exception_handler import wrap_app_handling_exceptions
+    77	from starlette._utils import is_async_callable
+    78	from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
+    79	from starlette.datastructures import FormData
+    80	from starlette.exceptions import HTTPException
+    90	from starlette.types import AppType, ASGIApp, Lifespan, Receive, Scope, Send
+    91	from starlette.websockets import WebSocket
+    92	from typing_extensions import deprecated
+    93	
+    94	
+    95	# Copy of starlette.routing.request_response modified to include the
+    96	# dependencies' AsyncExitStack
+    97	def request_response(
+    98	    func: Callable[[Request], Awaitable[Response] | Response],
+    99	) -> ASGIApp:
+   100	    """
+   101	    Takes a function or coroutine `func(request) -> response`,
+   102	    and returns an ASGI application.
+   103	    """
+   104	    f: Callable[[Request], Awaitable[Response]] = (
+   105	        func  # type: ignore[assignment]  # ty: ignore[unused-ignore-comment]
+   106	        if is_async_callable(func)
+   107	        else functools.partial(run_in_threadpool, func)  # type: ignore[call-arg]  # ty: ignore[unused-ignore-comment]
+   108	    )  # ty: ignore[invalid-assignment]
+   109	
+   110	    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+   111	        request = Request(scope, receive, send)
+   112	
+   113	        async def app(scope: Scope, receive: Receive, send: Send) -> None:
+   114	            # Starts customization
+   115	            response_awaited = False
+   116	            async with AsyncExitStack() as request_stack:
+   117	                scope["fastapi_inner_astack"] = request_stack
+   118	                async with AsyncExitStack() as function_stack:
+   119	                    scope["fastapi_function_astack"] = function_stack
+   120	                    response = await f(request)
+   121	                await response(scope, receive, send)
+   122	                # Continues customization
+   123	                response_awaited = True
+   124	            if not response_awaited:
+   125	                raise FastAPIError(
+
+exec
+/bin/zsh -lc "rg -n \"response\\(scope|await response|request_response|Response\\(\" fastapi -g '*.py'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+fastapi/sse.py:20:class EventSourceResponse(StreamingResponse):
+fastapi/routing.py:95:# Copy of starlette.routing.request_response modified to include the
+fastapi/routing.py:97:def request_response(
+fastapi/routing.py:121:                await response(scope, receive, send)
+fastapi/routing.py:611:                response = StreamingResponse(
+fastapi/routing.py:647:                response = StreamingResponse(
+fastapi/routing.py:709:                        response = Response(
+fastapi/routing.py:976:        self.app = request_response(self.get_route_handler())
+fastapi/responses.py:48:class UJSONResponse(JSONResponse):
+fastapi/responses.py:78:class ORJSONResponse(JSONResponse):
+fastapi/exception_handlers.py:14:        return Response(status_code=exc.status_code, headers=headers)
+fastapi/exception_handlers.py:15:    return JSONResponse(
+fastapi/exception_handlers.py:23:    return JSONResponse(
+fastapi/dependencies/utils.py:623:        response = Response()
+fastapi/openapi/models.py:282:class Response(BaseModelWithConfig):
+fastapi/openapi/docs.py:194:    return HTMLResponse(html)
+fastapi/openapi/docs.py:298:    return HTMLResponse(html)
+fastapi/openapi/docs.py:389:    return HTMLResponse(content=html)
+fastapi/applications.py:1114:                return JSONResponse(schema)
+fastapi/applications.py:4680:            return JSONResponse(
+
+exec
+/bin/zsh -lc "nl -ba /opt/homebrew/lib/python3.14/site-packages/starlette/responses.py | sed -n '20,55p;220,245p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+    20	import anyio.to_thread
+    21	
+    22	from starlette._utils import collapse_excgroups
+    23	from starlette.background import BackgroundTask
+    24	from starlette.concurrency import iterate_in_threadpool
+    25	from starlette.datastructures import URL, Headers, MutableHeaders
+    26	from starlette.requests import ClientDisconnect
+    27	from starlette.types import Receive, Scope, Send
+    28	
+    29	
+    30	class Response:
+    31	    media_type = None
+    32	    charset = "utf-8"
+    33	
+    34	    def __init__(
+    35	        self,
+    36	        content: Any = None,
+    37	        status_code: int = 200,
+    38	        headers: Mapping[str, str] | None = None,
+    39	        media_type: str | None = None,
+    40	        background: BackgroundTask | None = None,
+    41	    ) -> None:
+    42	        self.status_code = status_code
+    43	        if media_type is not None:
+    44	            self.media_type = media_type
+    45	        self.background = background
+    46	        self.body = self.render(content)
+    47	        self.init_headers(headers)
+    48	
+    49	    def render(self, content: Any) -> bytes | memoryview:
+    50	        if content is None:
+    51	            return b""
+    52	        if isinstance(content, bytes | memoryview):
+    53	            return content
+    54	        return content.encode(self.charset)  # type: ignore
+    55	
+   220	    body_iterator: AsyncContentStream
+   221	
+   222	    def __init__(
+   223	        self,
+   224	        content: ContentStream,
+   225	        status_code: int = 200,
+   226	        headers: Mapping[str, str] | None = None,
+   227	        media_type: str | None = None,
+   228	        background: BackgroundTask | None = None,
+   229	    ) -> None:
+   230	        if isinstance(content, AsyncIterable):
+   231	            self.body_iterator = content
+   232	        else:
+   233	            self.body_iterator = iterate_in_threadpool(content)
+   234	        self.status_code = status_code
+   235	        self.media_type = self.media_type if media_type is None else media_type
+   236	        self.background = background
+   237	        self.init_headers(headers)
+   238	
+   239	    async def listen_for_disconnect(self, receive: Receive) -> None:
+   240	        while True:
+   241	            message = await receive()
+   242	            if message["type"] == "http.disconnect":
+   243	                break
+   244	
+   245	    async def stream_response(self, send: Send) -> None:
+
+exec
+/bin/zsh -lc "nl -ba fastapi/dependencies/models.py | sed -n '35,50p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+    35	    header_params: list[ModelField] = field(default_factory=list)
+    36	    cookie_params: list[ModelField] = field(default_factory=list)
+    37	    body_params: list[ModelField] = field(default_factory=list)
+    38	    dependencies: list["Dependant"] = field(default_factory=list)
+    39	    name: str | None = None
+    40	    call: Callable[..., Any] | None = None
+    41	    request_param_name: str | None = None
+    42	    websocket_param_name: str | None = None
+    43	    http_connection_param_name: str | None = None
+    44	    response_param_name: str | None = None
+    45	    background_tasks_param_name: str | None = None
+    46	    security_scopes_param_name: str | None = None
+    47	    own_oauth_scopes: list[str] | None = None
+    48	    parent_oauth_scopes: list[str] | None = None
+    49	    use_cache: bool = True
+    50	    path: str | None = None
+
+exec
+/bin/zsh -lc "nl -ba fastapi/__init__.py | sed -n '1,15p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+     1	"""FastAPI framework, high performance, easy to learn, fast to code, ready for production"""
+     2	
+     3	__version__ = "0.136.1"
+     4	
+     5	from starlette import status as status
+     6	
+     7	from .applications import FastAPI as FastAPI
+     8	from .background import BackgroundTasks as BackgroundTasks
+     9	from .datastructures import UploadFile as UploadFile
+    10	from .exceptions import HTTPException as HTTPException
+    11	from .exceptions import WebSocketException as WebSocketException
+    12	from .param_functions import Body as Body
+    13	from .param_functions import Cookie as Cookie
+    14	from .param_functions import Depends as Depends
+    15	from .param_functions import File as File
+
+exec
+/bin/zsh -lc "nl -ba fastapi/dependencies/utils.py | sed -n '585,667p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   585	        cm = contextmanager_in_threadpool(contextmanager(dependant.call)(**sub_values))
+   586	    return await stack.enter_async_context(cm)
+   587	
+   588	
+   589	@dataclass
+   590	class SolvedDependency:
+   591	    values: dict[str, Any]
+   592	    errors: list[Any]
+   593	    background_tasks: StarletteBackgroundTasks | None
+   594	    response: Response
+   595	    dependency_cache: dict[DependencyCacheKey, Any]
+   596	
+   597	
+   598	async def solve_dependencies(
+   599	    *,
+   600	    request: Request | WebSocket,
+   601	    dependant: Dependant,
+   602	    body: dict[str, Any] | FormData | bytes | None = None,
+   603	    background_tasks: StarletteBackgroundTasks | None = None,
+   604	    response: Response | None = None,
+   605	    dependency_overrides_provider: Any | None = None,
+   606	    dependency_cache: dict[DependencyCacheKey, Any] | None = None,
+   607	    # TODO: remove this parameter later, no longer used, not removing it yet as some
+   608	    # people might be monkey patching this function (although that's not supported)
+   609	    async_exit_stack: AsyncExitStack,
+   610	    embed_body_fields: bool,
+   611	) -> SolvedDependency:
+   612	    request_astack = request.scope.get("fastapi_inner_astack")
+   613	    assert isinstance(request_astack, AsyncExitStack), (
+   614	        "fastapi_inner_astack not found in request scope"
+   615	    )
+   616	    function_astack = request.scope.get("fastapi_function_astack")
+   617	    assert isinstance(function_astack, AsyncExitStack), (
+   618	        "fastapi_function_astack not found in request scope"
+   619	    )
+   620	    values: dict[str, Any] = {}
+   621	    errors: list[Any] = []
+   622	    if response is None:
+   623	        response = Response()
+   624	        del response.headers["content-length"]
+   625	        response.status_code = None  # type: ignore  # ty: ignore[unused-ignore-comment]
+   626	    if dependency_cache is None:
+   627	        dependency_cache = {}
+   628	    for sub_dependant in dependant.dependencies:
+   629	        sub_dependant.call = cast(Callable[..., Any], sub_dependant.call)
+   630	        call = sub_dependant.call
+   631	        use_sub_dependant = sub_dependant
+   632	        if (
+   633	            dependency_overrides_provider
+   634	            and dependency_overrides_provider.dependency_overrides
+   635	        ):
+   636	            original_call = sub_dependant.call
+   637	            call = getattr(
+   638	                dependency_overrides_provider, "dependency_overrides", {}
+   639	            ).get(original_call, original_call)
+   640	            use_path: str = sub_dependant.path  # type: ignore
+   641	            use_sub_dependant = get_dependant(
+   642	                path=use_path,
+   643	                call=call,
+   644	                name=sub_dependant.name,
+   645	                parent_oauth_scopes=sub_dependant.oauth_scopes,
+   646	                scope=sub_dependant.scope,
+   647	            )
+   648	
+   649	        solved_result = await solve_dependencies(
+   650	            request=request,
+   651	            dependant=use_sub_dependant,
+   652	            body=body,
+   653	            background_tasks=background_tasks,
+   654	            response=response,
+   655	            dependency_overrides_provider=dependency_overrides_provider,
+   656	            dependency_cache=dependency_cache,
+   657	            async_exit_stack=async_exit_stack,
+   658	            embed_body_fields=embed_body_fields,
+   659	        )
+   660	        background_tasks = solved_result.background_tasks
+   661	        if solved_result.errors:
+   662	            errors.extend(solved_result.errors)
+   663	            continue
+   664	        if sub_dependant.use_cache and sub_dependant.cache_key in dependency_cache:
+   665	            solved = dependency_cache[sub_dependant.cache_key]
+   666	        elif (
+   667	            use_sub_dependant.is_gen_callable or use_sub_dependant.is_async_gen_callable
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '540,585p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   540	                    # from the generator independently, so
+   541	                    # `anyio.fail_after` never wraps the generator's
+   542	                    # `__anext__` directly - avoiding CancelledError that
+   543	                    # would finalize the generator and also working for sync
+   544	                    # generators running in a thread pool.
+   545	                    #
+   546	                    # This context manager is entered on the request-scoped
+   547	                    # AsyncExitStack so its __aexit__ (which cancels the
+   548	                    # task group) is called by the exit stack after the
+   549	                    # streaming response completes — not by async generator
+   550	                    # finalization via GeneratorExit.
+   551	                    # Ref: https://peps.python.org/pep-0789/
+   552	                    send_stream, receive_stream = anyio.create_memory_object_stream[
+   553	                        bytes
+   554	                    ](max_buffer_size=1)
+   555	
+   556	                    async def _producer() -> None:
+   557	                        async with send_stream:
+   558	                            async for raw_item in sse_aiter:
+   559	                                await send_stream.send(_serialize_sse_item(raw_item))
+   560	
+   561	                    send_keepalive, receive_keepalive = (
+   562	                        anyio.create_memory_object_stream[bytes](max_buffer_size=1)
+   563	                    )
+   564	
+   565	                    async def _keepalive_inserter() -> None:
+   566	                        """Read from the producer and forward to the output,
+   567	                        inserting keepalive comments on timeout."""
+   568	                        async with send_keepalive, receive_stream:
+   569	                            try:
+   570	                                while True:
+   571	                                    try:
+   572	                                        with anyio.fail_after(_PING_INTERVAL):
+   573	                                            data = await receive_stream.receive()
+   574	                                        await send_keepalive.send(data)
+   575	                                    except TimeoutError:
+   576	                                        await send_keepalive.send(KEEPALIVE_COMMENT)
+   577	                            except anyio.EndOfStream:
+   578	                                pass
+   579	
+   580	                    async with anyio.create_task_group() as tg:
+   581	                        tg.start_soon(_producer)
+   582	                        tg.start_soon(_keepalive_inserter)
+   583	                        yield receive_keepalive
+   584	                        tg.cancel_scope.cancel()
+   585	
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '420,480p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   420	                                subtype = message.get_content_subtype()
+   421	                                if subtype == "json" or subtype.endswith("+json"):
+   422	                                    json_body = await request.json()
+   423	                        if json_body != Undefined:
+   424	                            body = json_body
+   425	                        else:
+   426	                            body = body_bytes
+   427	        except json.JSONDecodeError as e:
+   428	            validation_error = RequestValidationError(
+   429	                [
+   430	                    {
+   431	                        "type": "json_invalid",
+   432	                        "loc": ("body", e.pos),
+   433	                        "msg": "JSON decode error",
+   434	                        "input": {},
+   435	                        "ctx": {"error": e.msg},
+   436	                    }
+   437	                ],
+   438	                body=e.doc,
+   439	                endpoint_ctx=endpoint_ctx,
+   440	            )
+   441	            raise validation_error from e
+   442	        except HTTPException:
+   443	            # If a middleware raises an HTTPException, it should be raised again
+   444	            raise
+   445	        except Exception as e:
+   446	            http_error = HTTPException(
+   447	                status_code=400, detail="There was an error parsing the body"
+   448	            )
+   449	            raise http_error from e
+   450	
+   451	        # Solve dependencies and run path operation function, auto-closing dependencies
+   452	        errors: list[Any] = []
+   453	        async_exit_stack = request.scope.get("fastapi_inner_astack")
+   454	        assert isinstance(async_exit_stack, AsyncExitStack), (
+   455	            "fastapi_inner_astack not found in request scope"
+   456	        )
+   457	        solved_result = await solve_dependencies(
+   458	            request=request,
+   459	            dependant=dependant,
+   460	            body=cast(dict[str, Any] | FormData | bytes | None, body),
+   461	            dependency_overrides_provider=dependency_overrides_provider,
+   462	            async_exit_stack=async_exit_stack,
+   463	            embed_body_fields=embed_body_fields,
+   464	        )
+   465	        errors = solved_result.errors
+   466	        assert dependant.call  # For types
+   467	        if not errors:
+   468	            # Shared serializer for stream items (JSONL and SSE).
+   469	            # Validates against stream_item_field when set, then
+   470	            # serializes to JSON bytes.
+   471	            def _serialize_data(data: Any) -> bytes:
+   472	                if stream_item_field:
+   473	                    value, errors_ = stream_item_field.validate(
+   474	                        data, {}, loc=("response",)
+   475	                    )
+   476	                    if errors_:
+   477	                        ctx = endpoint_ctx or EndpointContext()
+   478	                        raise ResponseValidationError(
+   479	                            errors=errors_,
+   480	                            body=data,
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '930,985p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   930	        response_fields = {}
+   931	        for additional_status_code, response in self.responses.items():
+   932	            assert isinstance(response, dict), "An additional response must be a dict"
+   933	            model = response.get("model")
+   934	            if model:
+   935	                assert is_body_allowed_for_status_code(additional_status_code), (
+   936	                    f"Status code {additional_status_code} must not have a response body"
+   937	                )
+   938	                response_name = f"Response_{additional_status_code}_{self.unique_id}"
+   939	                response_field = create_model_field(
+   940	                    name=response_name, type_=model, mode="serialization"
+   941	                )
+   942	                response_fields[additional_status_code] = response_field
+   943	        if response_fields:
+   944	            self.response_fields: dict[int | str, ModelField] = response_fields
+   945	        else:
+   946	            self.response_fields = {}
+   947	
+   948	        assert callable(endpoint), "An endpoint must be a callable"
+   949	        self.dependant = get_dependant(
+   950	            path=self.path_format, call=self.endpoint, scope="function"
+   951	        )
+   952	        for depends in self.dependencies[::-1]:
+   953	            self.dependant.dependencies.insert(
+   954	                0,
+   955	                get_parameterless_sub_dependant(depends=depends, path=self.path_format),
+   956	            )
+   957	        self._flat_dependant = get_flat_dependant(self.dependant)
+   958	        self._embed_body_fields = _should_embed_body_fields(
+   959	            self._flat_dependant.body_params
+   960	        )
+   961	        self.body_field = get_body_field(
+   962	            flat_dependant=self._flat_dependant,
+   963	            name=self.unique_id,
+   964	            embed_body_fields=self._embed_body_fields,
+   965	        )
+   966	        # Detect generator endpoints that should stream as JSONL or SSE
+   967	        is_generator = (
+   968	            self.dependant.is_async_gen_callable or self.dependant.is_gen_callable
+   969	        )
+   970	        self.is_sse_stream = is_generator and lenient_issubclass(
+   971	            response_class, EventSourceResponse
+   972	        )
+   973	        self.is_json_stream = is_generator and isinstance(
+   974	            response_class, DefaultPlaceholder
+   975	        )
+   976	        self.app = request_response(self.get_route_handler())
+   977	
+   978	    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+   979	        return get_request_handler(
+   980	            dependant=self.dependant,
+   981	            body_field=self.body_field,
+   982	            status_code=self.status_code,
+   983	            response_class=self.response_class,
+   984	            response_field=self.response_field,
+   985	            response_model_include=self.response_model_include,
+
+codex
+Answer: `fastapi.BackgroundTasks` is a thin subclass of Starlette’s class; `add_task()` delegates to `super().add_task(...)`. Dependency analysis records `BackgroundTasks` parameters, dependency solving creates/injects one shared `BackgroundTasks()` instance, and returns it as `solved_result.background_tasks`. FastAPI attaches that object to the outgoing response via `background=...`, or sets `raw_response.background` when the endpoint returned a `Response`. The ASGI wrapper then awaits `response(scope, receive, send)`. Starlette sends the response body/stream first, then runs `await self.background()`. Starlette’s `BackgroundTasks.__call__` iterates the queued `BackgroundTask`s; async callables are awaited, sync callables run in a threadpool.
+Citations: fastapi/background.py:11, fastapi/background.py:40, fastapi/background.py:61, fastapi/dependencies/utils.py:377, fastapi/dependencies/utils.py:719, fastapi/dependencies/utils.py:721, fastapi/dependencies/utils.py:732, fastapi/routing.py:337, fastapi/routing.py:614, fastapi/routing.py:680, fastapi/routing.py:681, fastapi/routing.py:121, /opt/homebrew/lib/python3.14/site-packages/starlette/responses.py:164, /opt/homebrew/lib/python3.14/site-packages/starlette/responses.py:166, /opt/homebrew/lib/python3.14/site-packages/starlette/background.py:30, /opt/homebrew/lib/python3.14/site-packages/starlette/background.py:34
+Confidence: High
+tokens used
+67,897
+Answer: `fastapi.BackgroundTasks` is a thin subclass of Starlette’s class; `add_task()` delegates to `super().add_task(...)`. Dependency analysis records `BackgroundTasks` parameters, dependency solving creates/injects one shared `BackgroundTasks()` instance, and returns it as `solved_result.background_tasks`. FastAPI attaches that object to the outgoing response via `background=...`, or sets `raw_response.background` when the endpoint returned a `Response`. The ASGI wrapper then awaits `response(scope, receive, send)`. Starlette sends the response body/stream first, then runs `await self.background()`. Starlette’s `BackgroundTasks.__call__` iterates the queued `BackgroundTask`s; async callables are awaited, sync callables run in a threadpool.
+Citations: fastapi/background.py:11, fastapi/background.py:40, fastapi/background.py:61, fastapi/dependencies/utils.py:377, fastapi/dependencies/utils.py:719, fastapi/dependencies/utils.py:721, fastapi/dependencies/utils.py:732, fastapi/routing.py:337, fastapi/routing.py:614, fastapi/routing.py:680, fastapi/routing.py:681, fastapi/routing.py:121, /opt/homebrew/lib/python3.14/site-packages/starlette/responses.py:164, /opt/homebrew/lib/python3.14/site-packages/starlette/responses.py:166, /opt/homebrew/lib/python3.14/site-packages/starlette/background.py:30, /opt/homebrew/lib/python3.14/site-packages/starlette/background.py:34
+Confidence: High

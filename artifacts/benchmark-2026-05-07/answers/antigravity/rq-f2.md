@@ -1,0 +1,1 @@
+The provided context does not specify any function or method in the 'requests' module related to redirect resolution or the maximum default redirect limit. Therefore, no specific information can be derived from the available data.

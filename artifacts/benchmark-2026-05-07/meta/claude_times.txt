@@ -1,0 +1,15 @@
+fa-f1:21
+fa-f2:44
+fa-d1:63
+fa-d2:61
+fa-x1:84
+rq-f1:20
+rq-f2:21
+rq-d1:34
+rq-d2:36
+rq-x1:72
+sm-f1:16
+sm-f2:22
+sm-d1:44
+sm-d2:42
+sm-x1:48

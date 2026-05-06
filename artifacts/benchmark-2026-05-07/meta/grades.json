@@ -1,0 +1,77 @@
+{
+  "fa-f1": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "empty stdout"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "frozen dataclass at params.py:746, 3 attrs correct, also notes the user-facing wrapper"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 2, "verify": 3, "note": "params.py:746, attrs correct, less detail about wrapper but right"}
+  },
+  "fa-f2": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "claims knowledge does not contain it; refresh routed wrong"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "applications.py:1068 openapi(); calls openapi/utils.py:514 get_openapi"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same correct entry+helper"}
+  },
+  "fa-d1": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "answers 'unrelated content about Playwright'"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "Dependant tree with Body/Query split, solve_dependencies order, correct lines"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same two-phase model, classification + solve_dependencies, line ranges accurate"}
+  },
+  "fa-d2": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "knowledge does not contain it"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "is_coroutine_callable in models.py:158, run_endpoint_function branch in routing.py:327"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same answer, equivalent citations"}
+  },
+  "fa-x1": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "empty stdout"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "full trace through dependencies/utils, routing.py background= passing, ASGI await, Starlette BG iteration"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same content, slightly fewer Starlette-side citations"}
+  },
+  "rq-f1": {
+    "antigravity": {"accuracy": 1, "citations": 1, "depth": 1, "verify": 1, "note": "right file path; says line 901 (wrong, real 395) and 881 (wrong, real 502); names HTTPAdapter correctly"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 2, "verify": 3, "note": "sessions.py:395, mounts at 502/503, HTTPAdapter — all correct"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 2, "verify": 3, "note": "same correct facts"}
+  },
+  "rq-f2": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "claims context does not include it"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "resolve_redirects, DEFAULT_REDIRECT_LIMIT=30, sessions.py and models.py lines correct"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same correct facts including TooManyRedirects"}
+  },
+  "rq-d1": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "explicitly declines to answer"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "PoolManager + cached ProxyManager, get_connection_with_tls_context flow"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same architecture; explicit line ranges for init_poolmanager and proxy_manager_for"}
+  },
+  "rq-d2": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "declines"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "verify resolution, DEFAULT_CA_BUNDLE_PATH, certifi reexport, env overrides"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same content, slightly tighter narrative"}
+  },
+  "rq-x1": {
+    "antigravity": {"accuracy": 1, "citations": 0, "depth": 1, "verify": 1, "note": "names api.py:get correctly; everything else hand-wavy ('use graph tool to trace')"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "full chain api.get → Session.send → HTTPAdapter.send → urllib3.urlopen → socket"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same chain; less depth on socket layer than codex but accurate end-to-end"}
+  },
+  "sm-f1": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "WRONG file path; invents Team/Hero parents from tutorial examples"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "main.py:804, BaseModel + SQLModelMetaclass(ModelMetaclass, DeclarativeMeta)"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same; both name the metaclass parents explicitly"}
+  },
+  "sm-f2": {
+    "antigravity": {"accuracy": 1, "citations": 0, "depth": 1, "verify": 1, "note": "names create_engine but invents 'sqlalchemy.orm.create_engine' (real path is sqlalchemy.engine.create_engine)"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "exact reexport line in __init__.py"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same"}
+  },
+  "sm-d1": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "fabricates a non-existent 'as_sql_model' API; real reconciliation via FieldInfoMetadata + metaclass not mentioned"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "FieldInfo extension, FieldInfoMetadata, SQLModelMetaclass, get_column_from_field"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same reconciliation model with line ranges"}
+  },
+  "sm-d2": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 1, "verify": 0, "note": "describes Field at surface level but conflates pydantic.Field with sqlalchemy.Column ('these functions handle data type annotations')"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "FieldInfo subclass + sa_column escape hatch + get_column_from_field"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same"}
+  },
+  "sm-x1": {
+    "antigravity": {"accuracy": 0, "citations": 0, "depth": 0, "verify": 0, "note": "vague 'session manager initializes the mapping' — wrong; truth is DeclarativeMeta.__init__"},
+    "codex":       {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "Phase 1 __new__ Column attach, Phase 2 __init__ → DeclarativeMeta.__init__"},
+    "claude":      {"accuracy": 3, "citations": 3, "depth": 3, "verify": 3, "note": "same two-phase trace"}
+  }
+}

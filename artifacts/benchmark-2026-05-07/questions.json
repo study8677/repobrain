@@ -1,0 +1,23 @@
+{
+  "fastapi": [
+    {"id": "fa-f1", "type": "factual",      "q": "Where in the FastAPI source is the `Depends` callable class defined, and what does its `__init__` accept?"},
+    {"id": "fa-f2", "type": "factual",      "q": "Which file and class implements FastAPI's automatic OpenAPI schema generation, and what is the entry method name?"},
+    {"id": "fa-d1", "type": "design",       "q": "Explain how FastAPI resolves request body parameters versus query parameters versus dependency-injected values when a single endpoint mixes all three. Cite the source files."},
+    {"id": "fa-d2", "type": "design",       "q": "How does FastAPI decide whether an endpoint should be run with `await` or in a threadpool? Where is this decision made?"},
+    {"id": "fa-x1", "type": "cross-cutting","q": "How are background tasks defined by users actually executed after a response is sent? Trace the path from `BackgroundTasks` to execution."}
+  ],
+  "requests": [
+    {"id": "rq-f1", "type": "factual",      "q": "In the `requests` library, where is the `Session` class defined and what HTTP adapter does it mount by default?"},
+    {"id": "rq-f2", "type": "factual",      "q": "What function or method handles redirect resolution in `requests`, and what is the maximum default redirect limit?"},
+    {"id": "rq-d1", "type": "design",       "q": "How does `requests` choose between `urllib3` connection pools? Explain the `HTTPAdapter` design."},
+    {"id": "rq-d2", "type": "design",       "q": "How does `requests` handle SSL/TLS verification, including `verify=` parameter, default CA bundle, and certifi integration?"},
+    {"id": "rq-x1", "type": "cross-cutting","q": "Trace what happens when a user calls `requests.get(url)` end-to-end: from module-level helper to actual socket I/O."}
+  ],
+  "sqlmodel": [
+    {"id": "sm-f1", "type": "factual",      "q": "Where is the `SQLModel` base class defined and which two parent classes does it combine?"},
+    {"id": "sm-f2", "type": "factual",      "q": "What function is used to create a new database engine in SQLModel, and what underlying SQLAlchemy function does it wrap?"},
+    {"id": "sm-d1", "type": "design",       "q": "How does SQLModel reconcile Pydantic field validation with SQLAlchemy column metadata in a single model class? Cite the relevant source."},
+    {"id": "sm-d2", "type": "design",       "q": "What is the role of `Field()` in SQLModel and how does it differ from `pydantic.Field` and `sqlalchemy.Column`?"},
+    {"id": "sm-x1", "type": "cross-cutting","q": "When a user defines a SQLModel class with `table=True`, what mechanism causes a SQLAlchemy mapper to be registered? Trace metaclass behavior."}
+  ]
+}

@@ -1,0 +1,554 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/sqlmodel
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe66-0f4e-7f81-9263-04591fc3b8b2
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+What function is used to create a new database engine in SQLModel, and what underlying SQLAlchemy function does it wrap?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the repo guidance first, then search for the engine creation API and its implementation so the answer can cite exact lines.
+exec
+/bin/zsh -lc ls in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+CITATION.cff
+CONTRIBUTING.md
+LICENSE
+README.md
+SECURITY.md
+data
+docs
+docs_src
+mkdocs.env.yml
+mkdocs.yml
+pyproject.toml
+scripts
+sqlmodel
+sqlmodel-slim
+tests
+uv.lock
+
+exec
+/bin/zsh -lc 'rg -n "create_engine|def .*engine|sqlalchemy.*create_engine" .' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+./README.md:151:from sqlmodel import Field, Session, SQLModel, create_engine
+./README.md:166:engine = create_engine("sqlite:///database.db")
+./README.md:185:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./README.md:195:engine = create_engine("sqlite:///database.db")
+./docs_src/tutorial/indexes/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/indexes/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/indexes/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/indexes/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs/index.md:164:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs/index.md:179:engine = create_engine("sqlite:///database.db")
+./docs/index.md:198:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs/index.md:208:engine = create_engine("sqlite:///database.db")
+./docs_src/tutorial/one/tutorial009_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/one/tutorial009_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/one/tutorial008_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/one/tutorial008_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./sqlmodel/__init__.py:4:from sqlalchemy.engine import create_engine as create_engine
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:33:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/one/tutorial003_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/one/tutorial003_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:29:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/one/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/one/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/one/tutorial004_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/one/tutorial004_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:29:engine = create_engine(sqlite_url, echo=True)
+./tests/test_instance_no_args.py:3:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./tests/test_instance_no_args.py:12:    engine = create_engine("sqlite:///:memory:")
+./docs_src/tutorial/one/tutorial005_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/one/tutorial005_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_annotated_uuid.py:3:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./tests/test_annotated_uuid.py:13:    engine = create_engine("sqlite:///:memory:")
+./tests/test_select_typing.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./tests/test_select_typing.py:13:    engine = create_engine(
+./docs_src/tutorial/one/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/one/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/where/tutorial009_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, or_, select
+./docs_src/tutorial/where/tutorial009_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/one/tutorial007_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/one/tutorial007_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_create_db_and_table/test_tutorial003.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_create_db_and_table/test_tutorial003.py:21:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_create_db_and_table/test_tutorial002.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_create_db_and_table/test_tutorial002.py:21:    module.engine = create_engine(module.sqlite_url)
+./docs_src/tutorial/one/tutorial006_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/one/tutorial006_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/where/tutorial008_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial008_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_main.py:6:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./tests/test_main.py:19:    engine = create_engine("sqlite://")
+./tests/test_main.py:49:    engine = create_engine("sqlite://")
+./tests/test_main.py:81:    engine = create_engine("sqlite://")
+./tests/test_main.py:117:    engine = create_engine("sqlite://", echo=True)
+./tests/test_main.py:136:    engine = create_engine("sqlite://")
+./tests/test_main.py:171:    engine = create_engine("sqlite://")
+./tests/test_main.py:211:    engine = create_engine("sqlite://")
+./docs_src/tutorial/where/tutorial003_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial003_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/delete/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/delete/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_where/test_tutorial011.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial011.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/where/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_where/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial001.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs/tutorial/create-db-and-table.md:151:Creating the **engine** is very simple, just call `create_engine()` with a URL for the database to use:
+./docs/tutorial/create-db-and-table.md:194:engine = create_engine(sqlite_url)
+./docs/tutorial/create-db-and-table.md:207:**SQLModel** defines its own `create_engine()` function. It is the same as SQLAlchemy's `create_engine()`, but with the difference that it defaults to use `future=True` (which means that it uses the style of the latest SQLAlchemy, 1.4, and the future 2.0).
+./docs/tutorial/create-db-and-table.md:209:And SQLModel's version of `create_engine()` is type annotated internally, so your editor will be able to help you with autocompletion and inline errors.
+./docs/tutorial/create-db-and-table.md:287:from sqlmodel import SQLModel, create_engine
+./docs/tutorial/create-db-and-table.md:294:engine = create_engine(sqlite_url)
+./tests/test_future_annotations.py:5:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./tests/test_future_annotations.py:17:    engine = create_engine("sqlite://")
+./tests/test_future_annotations.py:46:    engine = create_engine("sqlite://")
+./tests/test_tutorial/test_where/test_tutorial005.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial005.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/where/tutorial004_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial004_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_query.py:2:from sqlmodel import Field, Session, SQLModel, create_engine
+./tests/test_query.py:14:    engine = create_engine("sqlite://")
+./tests/test_tutorial/test_where/test_tutorial004.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial004.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/delete/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/delete/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/where/tutorial005_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial005_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/where/tutorial006b_py310.py:1:from sqlmodel import Field, Session, SQLModel, col, create_engine, select
+./docs_src/tutorial/where/tutorial006b_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_where/test_tutorial007.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial007.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_automatic_id_none_refresh/test_tutorial001_tutorial002.py:6:from sqlmodel import create_engine
+./tests/test_tutorial/test_automatic_id_none_refresh/test_tutorial001_tutorial002.py:150:    module.engine = create_engine(module.sqlite_url)
+./docs_src/tutorial/where/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/update/tutorial003_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/update/tutorial003_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_where/test_tutorial003.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial003.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/where/tutorial011_py310.py:1:from sqlmodel import Field, Session, SQLModel, col, create_engine, select
+./docs_src/tutorial/where/tutorial011_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_select/test_tutorial001_tutorial002.py:6:from sqlmodel import create_engine
+./tests/test_tutorial/test_select/test_tutorial001_tutorial002.py:36:    module.engine = create_engine(module.sqlite_url)
+./docs_src/tutorial/update/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/update/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_where/test_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial002.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/where/tutorial007_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial007_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_select/test_tutorial003_tutorial004.py:6:from sqlmodel import create_engine
+./tests/test_tutorial/test_select/test_tutorial003_tutorial004.py:38:    module.engine = create_engine(module.sqlite_url)
+./docs_src/tutorial/update/tutorial004_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/update/tutorial004_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/where/tutorial006_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/where/tutorial006_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_where/test_tutorial006.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial006.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_update/test_tutorial001_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_update/test_tutorial001_tutorial002.py:35:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_where/test_tutorial009.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial009.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_update/test_tutorial003_tutorial004.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_update/test_tutorial003_tutorial004.py:48:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_where/test_tutorial006b.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial006b.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_delete/test_tutorial001_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_delete/test_tutorial001_tutorial002.py:67:    module.engine = create_engine(module.sqlite_url)
+./docs_src/tutorial/update/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/update/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/connect/select/tutorial003_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/connect/select/tutorial003_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_where/test_tutorial008.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_where/test_tutorial008.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/connect/select/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/connect/select/tutorial002_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/create_db_and_table/tutorial003_py310.py:1:from sqlmodel import Field, SQLModel, create_engine  # (2)!
+./docs_src/tutorial/create_db_and_table/tutorial003_py310.py:14:engine = create_engine(sqlite_url, echo=True)  # (10)!
+./docs_src/tutorial/create_db_and_table/tutorial002_py310.py:1:from sqlmodel import Field, SQLModel, create_engine
+./docs_src/tutorial/create_db_and_table/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/connect/select/tutorial004_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/connect/select/tutorial004_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/connect/select/tutorial005_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/connect/select/tutorial005_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/create_db_and_table/annotations/en/tutorial003.md:2:2. Import the things we will need from `sqlmodel`: `Field`, `SQLModel`, `create_engine`.
+./docs_src/tutorial/connect/select/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/connect/select/tutorial001_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/create_db_and_table/tutorial001_py310.py:1:from sqlmodel import Field, SQLModel, create_engine
+./docs_src/tutorial/create_db_and_table/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_insert/test_tutorial001.py:5:from sqlmodel import Session, create_engine, select
+./tests/test_tutorial/test_insert/test_tutorial001.py:17:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:1:from sqlmodel import Field, SQLModel, create_engine
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/insert/tutorial003_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/insert/tutorial003_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/insert/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/insert/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_connect/test_create_connected_tables/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_create_connected_tables/test_tutorial001.py:25:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_insert/test_tutorial003.py:5:from sqlmodel import Session, create_engine, select
+./tests/test_tutorial/test_insert/test_tutorial003.py:17:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/connect/update/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/connect/update/tutorial001_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/insert/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/insert/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:22:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_connect/test_select/test_tutorial001_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_select/test_tutorial001_tutorial002.py:73:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_insert/test_tutorial002.py:5:from sqlmodel import Session, create_engine, select
+./tests/test_tutorial/test_insert/test_tutorial002.py:17:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_connect/test_select/test_tutorial005.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_select/test_tutorial005.py:66:    module.engine = create_engine(module.sqlite_url)
+./docs_src/tutorial/select/tutorial003_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/select/tutorial003_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/automatic_id_none_refresh/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/automatic_id_none_refresh/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_connect/test_select/test_tutorial004.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_select/test_tutorial004.py:64:    module.engine = create_engine(module.sqlite_url)
+./docs_src/tutorial/select/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select  # (1)!
+./docs_src/tutorial/select/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)  # (3)!
+./tests/test_tutorial/test_connect/test_select/test_tutorial003.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_select/test_tutorial003.py:90:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_connect/test_update/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_update/test_tutorial001.py:64:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_many_to_many/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_many_to_many/test_tutorial001.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/select/tutorial004_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/select/tutorial004_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/automatic_id_none_refresh/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/tutorial/automatic_id_none_refresh/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_connect/test_delete/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_delete/test_tutorial001.py:74:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_many_to_many/test_tutorial003.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_many_to_many/test_tutorial003.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:25:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/select/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/select/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_connect/test_insert/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_connect/test_insert/test_tutorial001.py:54:    module.engine = create_engine(module.sqlite_url)
+./tests/test_tutorial/test_many_to_many/test_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_many_to_many/test_tutorial002.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/offset_and_limit/tutorial003_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/offset_and_limit/tutorial003_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:25:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_code_structure/test_tutorial001.py:6:from sqlmodel import create_engine
+./tests/test_tutorial/test_code_structure/test_tutorial001.py:48:    database_module.engine = create_engine(database_module.sqlite_url)
+./docs_src/tutorial/offset_and_limit/tutorial002_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/offset_and_limit/tutorial002_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/offset_and_limit/tutorial004_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/offset_and_limit/tutorial004_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:25:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/offset_and_limit/tutorial001_py310.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/offset_and_limit/tutorial001_py310.py:14:engine = create_engine(sqlite_url, echo=True)
+./tests/test_field_sa_args_kwargs.py:2:from sqlmodel import Field, SQLModel, create_engine
+./tests/test_field_sa_args_kwargs.py:17:    engine = create_engine("sqlite://", echo=True)
+./tests/test_field_sa_args_kwargs.py:32:    engine = create_engine("sqlite://", echo=True)
+./tests/test_tutorial/test_code_structure/test_tutorial002.py:6:from sqlmodel import create_engine
+./tests/test_tutorial/test_code_structure/test_tutorial002.py:48:    database_module.engine = create_engine(database_module.sqlite_url)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:1:from sqlmodel import Field, Relationship, SQLModel, create_engine
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:45:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_indexes/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_indexes/test_tutorial001.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:25:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:2:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:71:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./tests/test_tutorial/test_indexes/test_tutorial002.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_indexes/test_tutorial002.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:25:engine = create_engine(sqlite_url, echo=True)
+./tests/test_advanced/test_uuid/test_tutorial001.py:6:from sqlmodel import create_engine
+./tests/test_advanced/test_uuid/test_tutorial001.py:20:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_advanced/test_uuid/test_tutorial002.py:6:from sqlmodel import create_engine
+./tests/test_advanced/test_uuid/test_tutorial002.py:20:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main.py:3:from sqlmodel import Session, SQLModel, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main.py:11:    engine = create_engine(
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/main.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/main.py:33:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:25:engine = create_engine(sqlite_url, echo=True)
+./tests/test_advanced/test_decimal/test_tutorial001.py:6:from sqlmodel import create_engine
+./tests/test_advanced/test_decimal/test_tutorial001.py:20:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_relationship_attributes/test_back_populates/test_tutorial001.py:6:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_back_populates/test_tutorial001.py:22:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select, text
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:27:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_005.py:3:from sqlmodel import Session, SQLModel, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_005.py:11:    engine = create_engine(
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_001.py:2:from sqlmodel import Session, SQLModel, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_001.py:8:    engine = create_engine(
+./tests/test_nullable.py:3:from sqlmodel import Field, Session, SQLModel, create_engine
+./tests/test_nullable.py:51:    engine = create_engine("sqlite://", echo=True)
+./tests/test_nullable.py:90:    engine = create_engine("sqlite://", echo=True)
+./tests/test_nullable.py:117:    engine = create_engine("sqlite://", echo=True)
+./tests/test_tutorial/test_relationship_attributes/test_back_populates/test_tutorial003.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_back_populates/test_tutorial003.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:27:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_004.py:2:from sqlmodel import Session, SQLModel, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_004.py:9:    engine = create_engine(
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_003.py:2:from sqlmodel import Session, SQLModel, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_003.py:8:    engine = create_engine(  # (2)!
+./tests/test_tutorial/test_relationship_attributes/test_define_relationship_attributes/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_define_relationship_attributes/test_tutorial001.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_extra_coverage.py:3:from sqlmodel import Session, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_extra_coverage.py:13:    app_mod.engine = create_engine("sqlite://")
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_extra_coverage.py:20:    app_mod.engine = create_engine("sqlite://")
+./tests/test_tutorial/test_relationship_attributes/test_back_populates/test_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_back_populates/test_tutorial002.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select, text
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:27:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_006.py:3:from sqlmodel import Session, SQLModel, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_006.py:11:    engine = create_engine(
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_002.py:2:from sqlmodel import Session, SQLModel, create_engine
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/test_main_002.py:8:    engine = create_engine(
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial001.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/simple_hero_api/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/simple_hero_api/tutorial001_py310.py:16:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./tests/test_tutorial/test_limit_and_offset/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_limit_and_offset/test_tutorial001.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial005.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial005.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:2:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:62:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select, text
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:27:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/fastapi/limit_and_offset/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/limit_and_offset/tutorial001_py310.py:27:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial004.py:6:from sqlmodel import Session, create_engine, select
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial004.py:22:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/read_one/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/read_one/tutorial001_py310.py:27:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./tests/test_tutorial/test_limit_and_offset/test_tutorial004.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_limit_and_offset/test_tutorial004.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/multiple_models/tutorial002_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/multiple_models/tutorial002_py310.py:27:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./docs_src/advanced/uuid/tutorial002_py310.py:3:from sqlmodel import Field, Session, SQLModel, create_engine
+./docs_src/advanced/uuid/tutorial002_py310.py:16:engine = create_engine(sqlite_url, echo=True)
+./docs_src/tutorial/fastapi/multiple_models/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/multiple_models/tutorial001_py310.py:29:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:1:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:25:engine = create_engine(sqlite_url, echo=True)
+./docs_src/advanced/uuid/tutorial001_py310.py:3:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/advanced/uuid/tutorial001_py310.py:16:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_limit_and_offset/test_tutorial003.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_limit_and_offset/test_tutorial003.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/update/tutorial002_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/update/tutorial002_py310.py:35:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./docs_src/tutorial/fastapi/update/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/update/tutorial001_py310.py:33:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./docs_src/advanced/decimal/tutorial001_py310.py:3:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/advanced/decimal/tutorial001_py310.py:17:engine = create_engine(sqlite_url, echo=True)
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial003.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial003.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/delete/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/delete/tutorial001_py310.py:33:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./tests/test_tutorial/test_limit_and_offset/test_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_limit_and_offset/test_tutorial002.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/fastapi/response_model/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/response_model/tutorial001_py310.py:16:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./docs_src/tutorial/fastapi/session_with_dependency/tutorial001_py310.py:2:from sqlmodel import Field, Session, SQLModel, create_engine, select
+./docs_src/tutorial/fastapi/session_with_dependency/tutorial001_py310.py:33:engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+./tests/test_tutorial/test_relationship_attributes/test_read_relationships/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_read_relationships/test_tutorial001.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_delete_records_relationship/test_tutorial002.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./docs_src/tutorial/code_structure/tutorial002_py310/database.py:1:from sqlmodel import SQLModel, create_engine
+./docs_src/tutorial/code_structure/tutorial002_py310/database.py:6:engine = create_engine(sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_one/test_tutorial001.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial003.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_one/test_tutorial003.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_relationship_attributes/test_read_relationships/test_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_read_relationships/test_tutorial002.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_relationship_attributes/test_create_and_update_relationships/test_tutorial001.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_relationship_attributes/test_create_and_update_relationships/test_tutorial001.py:21:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial009.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_one/test_tutorial009.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial002.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_one/test_tutorial002.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial005.py:6:from sqlmodel import Session, create_engine, delete
+./tests/test_tutorial/test_one/test_tutorial005.py:20:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial004.py:6:from sqlmodel import Session, create_engine, delete
+./tests/test_tutorial/test_one/test_tutorial004.py:20:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial008.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_one/test_tutorial008.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial006.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_one/test_tutorial006.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:22:    mod.engine = create_engine(
+./docs_src/tutorial/code_structure/tutorial001_py310/database.py:1:from sqlmodel import SQLModel, create_engine
+./docs_src/tutorial/code_structure/tutorial001_py310/database.py:6:engine = create_engine(sqlite_url)
+./tests/test_tutorial/test_one/test_tutorial007.py:5:from sqlmodel import create_engine
+./tests/test_tutorial/test_one/test_tutorial007.py:19:    mod.engine = create_engine(mod.sqlite_url)
+./tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:22:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:22:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:9:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:24:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:22:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:20:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:22:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:9:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:24:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:20:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:7:from sqlmodel import Session, create_engine
+./tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:20:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:20:    mod.engine = create_engine(
+./tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:7:from sqlmodel import create_engine
+./tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:20:    mod.engine = create_engine(
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+codex
+The key implementation appears to be the package export: `sqlmodel.create_engine` is imported directly from SQLAlchemy. I’m checking the exact source and docs lines now for the concise citation.
+exec
+/bin/zsh -lc "nl -ba sqlmodel/__init__.py | sed -n '1,20p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	__version__ = "0.0.38"
+     2	
+     3	# Re-export from SQLAlchemy
+     4	from sqlalchemy.engine import create_engine as create_engine
+     5	from sqlalchemy.engine import create_mock_engine as create_mock_engine
+     6	from sqlalchemy.engine import engine_from_config as engine_from_config
+     7	from sqlalchemy.inspection import inspect as inspect
+     8	from sqlalchemy.pool import QueuePool as QueuePool
+     9	from sqlalchemy.pool import StaticPool as StaticPool
+    10	from sqlalchemy.schema import BLANK_SCHEMA as BLANK_SCHEMA
+    11	from sqlalchemy.schema import DDL as DDL
+    12	from sqlalchemy.schema import CheckConstraint as CheckConstraint
+    13	from sqlalchemy.schema import Column as Column
+    14	from sqlalchemy.schema import ColumnDefault as ColumnDefault
+    15	from sqlalchemy.schema import Computed as Computed
+    16	from sqlalchemy.schema import Constraint as Constraint
+    17	from sqlalchemy.schema import DefaultClause as DefaultClause
+    18	from sqlalchemy.schema import FetchedValue as FetchedValue
+    19	from sqlalchemy.schema import ForeignKey as ForeignKey
+    20	from sqlalchemy.schema import ForeignKeyConstraint as ForeignKeyConstraint
+
+exec
+/bin/zsh -lc "nl -ba docs/tutorial/create-db-and-table.md | sed -n '145,215p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   145	Now we need to create the SQLAlchemy **Engine**.
+   146	
+   147	It is an object that handles the communication with the database.
+   148	
+   149	If you have a server database (for example PostgreSQL or MySQL), the **engine** will hold the **network connections** to that database.
+   150	
+   151	Creating the **engine** is very simple, just call `create_engine()` with a URL for the database to use:
+   152	
+   153	{* ./docs_src/tutorial/create_db_and_table/tutorial001_py310.py ln[1:16] hl[1,14] *}
+   154	
+   155	You should normally have a single **engine** object for your whole application and re-use it everywhere.
+   156	
+   157	/// tip
+   158	
+   159	There's another related thing called a **Session** that normally should *not* be a single object per application.
+   160	
+   161	But we will talk about it later.
+   162	
+   163	///
+   164	
+   165	### Engine Database URL
+   166	
+   167	Each supported database has its own URL type. For example, for **SQLite** it is `sqlite:///` followed by the file path. For example:
+   168	
+   169	* `sqlite:///database.db`
+   170	* `sqlite:///databases/local/application.db`
+   171	* `sqlite:///db.sqlite`
+   172	
+   173	SQLite supports a special database that lives all *in memory*. Hence, it's very fast, but be careful, the database gets deleted after the program terminates. You can specify this in-memory database by using just two slash characters (`//`) and no file name:
+   174	
+   175	* `sqlite://`
+   176	
+   177	{* ./docs_src/tutorial/create_db_and_table/tutorial001_py310.py ln[1:16] hl[11:12,14] *}
+   178	
+   179	You can read a lot more about all the databases supported by **SQLAlchemy** (and that way supported by **SQLModel**) in the <a href="https://docs.sqlalchemy.org/en/14/core/engines.html" class="external-link" target="_blank">SQLAlchemy documentation</a>.
+   180	
+   181	### Engine Echo
+   182	
+   183	In this example, we are also using the argument `echo=True`.
+   184	
+   185	It will make the engine print all the SQL statements it executes, which can help you understand what's happening.
+   186	
+   187	It is particularly useful for **learning** and **debugging**:
+   188	
+   189	{* ./docs_src/tutorial/create_db_and_table/tutorial001_py310.py ln[1:16] hl[14] *}
+   190	
+   191	But in production, you would probably want to remove `echo=True`:
+   192	
+   193	```Python
+   194	engine = create_engine(sqlite_url)
+   195	```
+   196	
+   197	### Engine Technical Details
+   198	
+   199	/// tip
+   200	
+   201	If you didn't know about SQLAlchemy before and are just learning **SQLModel**, you can probably skip this section, scroll below.
+   202	
+   203	///
+   204	
+   205	You can read a lot more about the engine in the <a href="https://docs.sqlalchemy.org/en/14/tutorial/engine.html" class="external-link" target="_blank">SQLAlchemy documentation</a>.
+   206	
+   207	**SQLModel** defines its own `create_engine()` function. It is the same as SQLAlchemy's `create_engine()`, but with the difference that it defaults to use `future=True` (which means that it uses the style of the latest SQLAlchemy, 1.4, and the future 2.0).
+   208	
+   209	And SQLModel's version of `create_engine()` is type annotated internally, so your editor will be able to help you with autocompletion and inline errors.
+   210	
+   211	## Create the Database and Table
+   212	
+   213	Now everything is in place to finally create the database and table:
+   214	
+   215	{* ./docs_src/tutorial/create_db_and_table/tutorial001_py310.py hl[16] *}
+
+exec
+/bin/zsh -lc "rg -n \"from sqlalchemy\\.engine import create_engine|create_engine\\(\\)\" sqlmodel docs README.md" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+sqlmodel/__init__.py:4:from sqlalchemy.engine import create_engine as create_engine
+docs/tutorial/create-db-and-table.md:151:Creating the **engine** is very simple, just call `create_engine()` with a URL for the database to use:
+docs/tutorial/create-db-and-table.md:207:**SQLModel** defines its own `create_engine()` function. It is the same as SQLAlchemy's `create_engine()`, but with the difference that it defaults to use `future=True` (which means that it uses the style of the latest SQLAlchemy, 1.4, and the future 2.0).
+docs/tutorial/create-db-and-table.md:209:And SQLModel's version of `create_engine()` is type annotated internally, so your editor will be able to help you with autocompletion and inline errors.
+
+codex
+Answer: SQLModel uses `create_engine()` to create a new database engine. In current source, it is a re-export: `from sqlalchemy.engine import create_engine as create_engine`, so the underlying SQLAlchemy function is `sqlalchemy.engine.create_engine`. The docs also describe SQLModel’s function as “the same as SQLAlchemy's `create_engine()`”.
+Citations: sqlmodel/__init__.py:3, sqlmodel/__init__.py:4, docs/tutorial/create-db-and-table.md:151, docs/tutorial/create-db-and-table.md:207
+Confidence: High
+tokens used
+21,598
+Answer: SQLModel uses `create_engine()` to create a new database engine. In current source, it is a re-export: `from sqlalchemy.engine import create_engine as create_engine`, so the underlying SQLAlchemy function is `sqlalchemy.engine.create_engine`. The docs also describe SQLModel’s function as “the same as SQLAlchemy's `create_engine()`”.
+Citations: sqlmodel/__init__.py:3, sqlmodel/__init__.py:4, docs/tutorial/create-db-and-table.md:151, docs/tutorial/create-db-and-table.md:207
+Confidence: High

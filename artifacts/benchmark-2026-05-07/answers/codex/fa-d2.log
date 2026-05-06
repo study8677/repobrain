@@ -1,0 +1,462 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/fastapi
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe57-3b03-74e2-916a-6e9687fa5a6f
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+How does FastAPI decide whether an endpoint should be run with `await` or in a threadpool? Where is this decision made?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the repo guidance first, then trace the request handling path where FastAPI classifies endpoint callables and invokes them.
+exec
+/bin/zsh -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"'" in /tmp/ag-bench/fastapi
+ exited 1 in 0ms:
+/private/tmp/ag-bench/fastapi
+
+exec
+/bin/zsh -lc 'rg "threadpool|run_in_threadpool|is_coroutine|iscoroutine|dependant.call" -n fastapi tests' in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+fastapi/datastructures.py:82:        To be awaitable, compatible with async, this is run in threadpool.
+fastapi/datastructures.py:100:        To be awaitable, compatible with async, this is run in threadpool.
+fastapi/datastructures.py:120:        To be awaitable, compatible with async, this is run in threadpool.
+fastapi/datastructures.py:128:        To be awaitable, compatible with async, this is run in threadpool.
+fastapi/dependencies/utils.py:55:    contextmanager_in_threadpool,
+fastapi/dependencies/utils.py:66:from starlette.concurrency import run_in_threadpool
+fastapi/dependencies/utils.py:159:        call=dependant.call,
+fastapi/dependencies/utils.py:324:                assert dependant.call
+fastapi/dependencies/utils.py:325:                call_name = getattr(dependant.call, "__name__", "<unnamed_callable>")
+fastapi/dependencies/utils.py:581:    assert dependant.call
+fastapi/dependencies/utils.py:583:        cm = asynccontextmanager(dependant.call)(**sub_values)
+fastapi/dependencies/utils.py:585:        cm = contextmanager_in_threadpool(contextmanager(dependant.call)(**sub_values))
+fastapi/dependencies/utils.py:629:        sub_dependant.call = cast(Callable[..., Any], sub_dependant.call)
+fastapi/dependencies/utils.py:630:        call = sub_dependant.call
+fastapi/dependencies/utils.py:636:            original_call = sub_dependant.call
+fastapi/dependencies/utils.py:677:        elif use_sub_dependant.is_coroutine_callable:
+fastapi/dependencies/utils.py:680:            solved = await run_in_threadpool(call, **solved_result.values)
+fastapi/dependencies/models.py:13:    from inspect import iscoroutinefunction
+fastapi/dependencies/models.py:15:    from asyncio import iscoroutinefunction
+fastapi/dependencies/models.py:158:    def is_coroutine_callable(self) -> bool:
+fastapi/dependencies/models.py:161:        if inspect.isroutine(_impartial(self.call)) and iscoroutinefunction(
+fastapi/dependencies/models.py:165:        if inspect.isroutine(_unwrapped_call(self.call)) and iscoroutinefunction(
+fastapi/dependencies/models.py:174:        if iscoroutinefunction(_impartial(dunder_call)) or iscoroutinefunction(
+fastapi/dependencies/models.py:181:        if iscoroutinefunction(
+fastapi/dependencies/models.py:183:        ) or iscoroutinefunction(_unwrapped_call(dunder_unwrapped_call)):
+fastapi/concurrency.py:8:from starlette.concurrency import iterate_in_threadpool as iterate_in_threadpool  # noqa
+fastapi/concurrency.py:9:from starlette.concurrency import run_in_threadpool as run_in_threadpool  # noqa
+fastapi/concurrency.py:18:async def contextmanager_in_threadpool(
+fastapi/concurrency.py:29:        yield await run_in_threadpool(cm.__enter__)
+fastapi/routing.py:78:from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
+fastapi/routing.py:107:        else functools.partial(run_in_threadpool, func)  # type: ignore[call-arg]  # ty: ignore[unused-ignore-comment]
+fastapi/routing.py:147:    # assert asyncio.iscoroutinefunction(func), "WebSocket endpoints must be async"
+fastapi/routing.py:287:    is_coroutine: bool = True,
+fastapi/routing.py:292:        if is_coroutine:
+fastapi/routing.py:295:            value, errors = await run_in_threadpool(
+fastapi/routing.py:321:    *, dependant: Dependant, values: dict[str, Any], is_coroutine: bool
+fastapi/routing.py:325:    assert dependant.call is not None, "dependant.call must be a function"
+fastapi/routing.py:327:    if is_coroutine:
+fastapi/routing.py:328:        return await dependant.call(**values)
+fastapi/routing.py:330:        return await run_in_threadpool(dependant.call, **values)
+fastapi/routing.py:369:    assert dependant.call is not None, "dependant.call must be a function"
+fastapi/routing.py:370:    is_coroutine = dependant.is_coroutine_callable
+fastapi/routing.py:391:            _extract_endpoint_context(dependant.call)
+fastapi/routing.py:392:            if dependant.call
+fastapi/routing.py:466:        assert dependant.call  # For types
+fastapi/routing.py:498:                gen = dependant.call(**solved_result.values)
+fastapi/routing.py:532:                    sse_aiter = iterate_in_threadpool(gen)
+fastapi/routing.py:622:                gen = dependant.call(**solved_result.values)
+fastapi/routing.py:655:                gen = dependant.call(**solved_result.values)
+fastapi/routing.py:677:                    is_coroutine=is_coroutine,
+fastapi/routing.py:704:                        is_coroutine=is_coroutine,
+fastapi/routing.py:739:            _extract_endpoint_context(dependant.call)
+fastapi/routing.py:740:            if dependant.call
+fastapi/routing.py:763:        assert dependant.call is not None, "dependant.call must be a function"
+fastapi/routing.py:764:        await dependant.call(**solved_result.values)
+tests/test_dependency_wrapped.py:8:from fastapi.concurrency import iterate_in_threadpool, run_in_threadpool
+tests/test_dependency_wrapped.py:12:    from inspect import iscoroutinefunction
+tests/test_dependency_wrapped.py:14:    from asyncio import iscoroutinefunction
+tests/test_dependency_wrapped.py:30:            async for item in iterate_in_threadpool(func(*args, **kwargs)):
+tests/test_dependency_wrapped.py:46:        if inspect.isroutine(func) and iscoroutinefunction(func):
+tests/test_dependency_wrapped.py:49:            return await run_in_threadpool(func, *args, **kwargs)
+tests/test_dependency_wrapped.py:51:        if iscoroutinefunction(dunder_call):
+tests/test_dependency_wrapped.py:53:        return await run_in_threadpool(func, *args, **kwargs)
+
+codex
+The first search found the relevant routing and dependency model files. I’m checking exact line numbers now and also confirming whether any AGENTS.md applies above this directory.
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '315,375p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   315	
+   316	    else:
+   317	        return jsonable_encoder(response_content)
+   318	
+   319	
+   320	async def run_endpoint_function(
+   321	    *, dependant: Dependant, values: dict[str, Any], is_coroutine: bool
+   322	) -> Any:
+   323	    # Only called by get_request_handler. Has been split into its own function to
+   324	    # facilitate profiling endpoints, since inner functions are harder to profile.
+   325	    assert dependant.call is not None, "dependant.call must be a function"
+   326	
+   327	    if is_coroutine:
+   328	        return await dependant.call(**values)
+   329	    else:
+   330	        return await run_in_threadpool(dependant.call, **values)
+   331	
+   332	
+   333	def _build_response_args(
+   334	    *, status_code: int | None, solved_result: Any
+   335	) -> dict[str, Any]:
+   336	    response_args: dict[str, Any] = {
+   337	        "background": solved_result.background_tasks,
+   338	    }
+   339	    # If status_code was set, use it, otherwise use the default from the
+   340	    # response class, in the case of redirect it's 307
+   341	    current_status_code = (
+   342	        status_code if status_code else solved_result.response.status_code
+   343	    )
+   344	    if current_status_code is not None:
+   345	        response_args["status_code"] = current_status_code
+   346	    if solved_result.response.status_code:
+   347	        response_args["status_code"] = solved_result.response.status_code
+   348	    return response_args
+   349	
+   350	
+   351	def get_request_handler(
+   352	    dependant: Dependant,
+   353	    body_field: ModelField | None = None,
+   354	    status_code: int | None = None,
+   355	    response_class: type[Response] | DefaultPlaceholder = Default(JSONResponse),
+   356	    response_field: ModelField | None = None,
+   357	    response_model_include: IncEx | None = None,
+   358	    response_model_exclude: IncEx | None = None,
+   359	    response_model_by_alias: bool = True,
+   360	    response_model_exclude_unset: bool = False,
+   361	    response_model_exclude_defaults: bool = False,
+   362	    response_model_exclude_none: bool = False,
+   363	    dependency_overrides_provider: Any | None = None,
+   364	    embed_body_fields: bool = False,
+   365	    strict_content_type: bool | DefaultPlaceholder = Default(True),
+   366	    stream_item_field: ModelField | None = None,
+   367	    is_json_stream: bool = False,
+   368	) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+   369	    assert dependant.call is not None, "dependant.call must be a function"
+   370	    is_coroutine = dependant.is_coroutine_callable
+   371	    is_body_form = body_field and isinstance(body_field.field_info, params.Form)
+   372	    if isinstance(response_class, DefaultPlaceholder):
+   373	        actual_response_class: type[Response] = response_class.value
+   374	    else:
+   375	        actual_response_class = response_class
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '660,708p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   660	                    ) -> AsyncIterator[Any]:
+   661	                        async for chunk in async_gen:
+   662	                            yield chunk
+   663	                            # To allow for cancellation to trigger
+   664	                            # Ref: https://github.com/fastapi/fastapi/issues/14680
+   665	                            await anyio.sleep(0)
+   666	
+   667	                    gen = _async_stream_raw(gen)
+   668	                response_args = _build_response_args(
+   669	                    status_code=status_code, solved_result=solved_result
+   670	                )
+   671	                response = actual_response_class(content=gen, **response_args)
+   672	                response.headers.raw.extend(solved_result.response.headers.raw)
+   673	            else:
+   674	                raw_response = await run_endpoint_function(
+   675	                    dependant=dependant,
+   676	                    values=solved_result.values,
+   677	                    is_coroutine=is_coroutine,
+   678	                )
+   679	                if isinstance(raw_response, Response):
+   680	                    if raw_response.background is None:
+   681	                        raw_response.background = solved_result.background_tasks
+   682	                    response = raw_response
+   683	                else:
+   684	                    response_args = _build_response_args(
+   685	                        status_code=status_code, solved_result=solved_result
+   686	                    )
+   687	                    # Use the fast path (dump_json) when no custom response
+   688	                    # class was set and a response field with a TypeAdapter
+   689	                    # exists. Serializes directly to JSON bytes via Pydantic's
+   690	                    # Rust core, skipping the intermediate Python dict +
+   691	                    # json.dumps() step.
+   692	                    use_dump_json = response_field is not None and isinstance(
+   693	                        response_class, DefaultPlaceholder
+   694	                    )
+   695	                    content = await serialize_response(
+   696	                        field=response_field,
+   697	                        response_content=raw_response,
+   698	                        include=response_model_include,
+   699	                        exclude=response_model_exclude,
+   700	                        by_alias=response_model_by_alias,
+   701	                        exclude_unset=response_model_exclude_unset,
+   702	                        exclude_defaults=response_model_exclude_defaults,
+   703	                        exclude_none=response_model_exclude_none,
+   704	                        is_coroutine=is_coroutine,
+   705	                        endpoint_ctx=endpoint_ctx,
+   706	                        dump_json=use_dump_json,
+   707	                    )
+   708	                    if use_dump_json:
+
+exec
+/bin/zsh -lc "nl -ba fastapi/dependencies/models.py | sed -n '150,186p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   150	            return False  # pragma: no cover
+   151	        if inspect.isasyncgenfunction(
+   152	            _impartial(dunder_unwrapped_call)
+   153	        ) or inspect.isasyncgenfunction(_unwrapped_call(dunder_unwrapped_call)):
+   154	            return True
+   155	        return False
+   156	
+   157	    @cached_property
+   158	    def is_coroutine_callable(self) -> bool:
+   159	        if self.call is None:
+   160	            return False  # pragma: no cover
+   161	        if inspect.isroutine(_impartial(self.call)) and iscoroutinefunction(
+   162	            _impartial(self.call)
+   163	        ):
+   164	            return True
+   165	        if inspect.isroutine(_unwrapped_call(self.call)) and iscoroutinefunction(
+   166	            _unwrapped_call(self.call)
+   167	        ):
+   168	            return True
+   169	        if inspect.isclass(_unwrapped_call(self.call)):
+   170	            return False
+   171	        dunder_call = getattr(_impartial(self.call), "__call__", None)  # noqa: B004
+   172	        if dunder_call is None:
+   173	            return False  # pragma: no cover
+   174	        if iscoroutinefunction(_impartial(dunder_call)) or iscoroutinefunction(
+   175	            _unwrapped_call(dunder_call)
+   176	        ):
+   177	            return True
+   178	        dunder_unwrapped_call = getattr(_unwrapped_call(self.call), "__call__", None)  # noqa: B004
+   179	        if dunder_unwrapped_call is None:
+   180	            return False  # pragma: no cover
+   181	        if iscoroutinefunction(
+   182	            _impartial(dunder_unwrapped_call)
+   183	        ) or iscoroutinefunction(_unwrapped_call(dunder_unwrapped_call)):
+   184	            return True
+   185	        return False
+   186	
+
+exec
+/bin/zsh -lc 'find /tmp/ag-bench -name AGENTS.md -print' in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+codex
+There’s no AGENTS.md under `/tmp/ag-bench`, so no repo-local guidance applies. The endpoint path is in `fastapi/routing.py`, with callable classification delegated to `Dependant`.
+exec
+/bin/zsh -lc "nl -ba fastapi/dependencies/models.py | sed -n '1,22p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+     1	import inspect
+     2	import sys
+     3	from collections.abc import Callable
+     4	from dataclasses import dataclass, field
+     5	from functools import cached_property, partial
+     6	from typing import Any, Literal
+     7	
+     8	from fastapi._compat import ModelField
+     9	from fastapi.security.base import SecurityBase
+    10	from fastapi.types import DependencyCacheKey
+    11	
+    12	if sys.version_info >= (3, 13):  # pragma: no cover
+    13	    from inspect import iscoroutinefunction
+    14	else:  # pragma: no cover
+    15	    from asyncio import iscoroutinefunction
+    16	
+    17	
+    18	def _unwrapped_call(call: Callable[..., Any] | None) -> Any:
+    19	    if call is None:
+    20	        return call  # pragma: no cover
+    21	    unwrapped = inspect.unwrap(_impartial(call))
+    22	    return unwrapped
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '90,112p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+    90	from starlette.types import AppType, ASGIApp, Lifespan, Receive, Scope, Send
+    91	from starlette.websockets import WebSocket
+    92	from typing_extensions import deprecated
+    93	
+    94	
+    95	# Copy of starlette.routing.request_response modified to include the
+    96	# dependencies' AsyncExitStack
+    97	def request_response(
+    98	    func: Callable[[Request], Awaitable[Response] | Response],
+    99	) -> ASGIApp:
+   100	    """
+   101	    Takes a function or coroutine `func(request) -> response`,
+   102	    and returns an ASGI application.
+   103	    """
+   104	    f: Callable[[Request], Awaitable[Response]] = (
+   105	        func  # type: ignore[assignment]  # ty: ignore[unused-ignore-comment]
+   106	        if is_async_callable(func)
+   107	        else functools.partial(run_in_threadpool, func)  # type: ignore[call-arg]  # ty: ignore[unused-ignore-comment]
+   108	    )  # ty: ignore[invalid-assignment]
+   109	
+   110	    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+   111	        request = Request(scope, receive, send)
+   112	
+
+exec
+/bin/zsh -lc "rg \"get_request_handler\\(\" -n fastapi/routing.py" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+351:def get_request_handler(
+979:        return get_request_handler(
+
+exec
+/bin/zsh -lc "nl -ba fastapi/routing.py | sed -n '940,985p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   940	                    name=response_name, type_=model, mode="serialization"
+   941	                )
+   942	                response_fields[additional_status_code] = response_field
+   943	        if response_fields:
+   944	            self.response_fields: dict[int | str, ModelField] = response_fields
+   945	        else:
+   946	            self.response_fields = {}
+   947	
+   948	        assert callable(endpoint), "An endpoint must be a callable"
+   949	        self.dependant = get_dependant(
+   950	            path=self.path_format, call=self.endpoint, scope="function"
+   951	        )
+   952	        for depends in self.dependencies[::-1]:
+   953	            self.dependant.dependencies.insert(
+   954	                0,
+   955	                get_parameterless_sub_dependant(depends=depends, path=self.path_format),
+   956	            )
+   957	        self._flat_dependant = get_flat_dependant(self.dependant)
+   958	        self._embed_body_fields = _should_embed_body_fields(
+   959	            self._flat_dependant.body_params
+   960	        )
+   961	        self.body_field = get_body_field(
+   962	            flat_dependant=self._flat_dependant,
+   963	            name=self.unique_id,
+   964	            embed_body_fields=self._embed_body_fields,
+   965	        )
+   966	        # Detect generator endpoints that should stream as JSONL or SSE
+   967	        is_generator = (
+   968	            self.dependant.is_async_gen_callable or self.dependant.is_gen_callable
+   969	        )
+   970	        self.is_sse_stream = is_generator and lenient_issubclass(
+   971	            response_class, EventSourceResponse
+   972	        )
+   973	        self.is_json_stream = is_generator and isinstance(
+   974	            response_class, DefaultPlaceholder
+   975	        )
+   976	        self.app = request_response(self.get_route_handler())
+   977	
+   978	    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+   979	        return get_request_handler(
+   980	            dependant=self.dependant,
+   981	            body_field=self.body_field,
+   982	            status_code=self.status_code,
+   983	            response_class=self.response_class,
+   984	            response_field=self.response_field,
+   985	            response_model_include=self.response_model_include,
+
+exec
+/bin/zsh -lc "nl -ba fastapi/dependencies/utils.py | sed -n '620,684p'" in /tmp/ag-bench/fastapi
+exec
+/bin/zsh -lc "rg \"self.dependant|get_dependant\\(\" -n fastapi/routing.py | head -20" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   620	    values: dict[str, Any] = {}
+   621	    errors: list[Any] = []
+   622	    if response is None:
+   623	        response = Response()
+   624	        del response.headers["content-length"]
+   625	        response.status_code = None  # type: ignore  # ty: ignore[unused-ignore-comment]
+   626	    if dependency_cache is None:
+   627	        dependency_cache = {}
+   628	    for sub_dependant in dependant.dependencies:
+   629	        sub_dependant.call = cast(Callable[..., Any], sub_dependant.call)
+   630	        call = sub_dependant.call
+   631	        use_sub_dependant = sub_dependant
+   632	        if (
+   633	            dependency_overrides_provider
+   634	            and dependency_overrides_provider.dependency_overrides
+   635	        ):
+   636	            original_call = sub_dependant.call
+   637	            call = getattr(
+   638	                dependency_overrides_provider, "dependency_overrides", {}
+   639	            ).get(original_call, original_call)
+   640	            use_path: str = sub_dependant.path  # type: ignore
+   641	            use_sub_dependant = get_dependant(
+   642	                path=use_path,
+   643	                call=call,
+   644	                name=sub_dependant.name,
+   645	                parent_oauth_scopes=sub_dependant.oauth_scopes,
+   646	                scope=sub_dependant.scope,
+   647	            )
+   648	
+   649	        solved_result = await solve_dependencies(
+   650	            request=request,
+   651	            dependant=use_sub_dependant,
+   652	            body=body,
+   653	            background_tasks=background_tasks,
+   654	            response=response,
+   655	            dependency_overrides_provider=dependency_overrides_provider,
+   656	            dependency_cache=dependency_cache,
+   657	            async_exit_stack=async_exit_stack,
+   658	            embed_body_fields=embed_body_fields,
+   659	        )
+   660	        background_tasks = solved_result.background_tasks
+   661	        if solved_result.errors:
+   662	            errors.extend(solved_result.errors)
+   663	            continue
+   664	        if sub_dependant.use_cache and sub_dependant.cache_key in dependency_cache:
+   665	            solved = dependency_cache[sub_dependant.cache_key]
+   666	        elif (
+   667	            use_sub_dependant.is_gen_callable or use_sub_dependant.is_async_gen_callable
+   668	        ):
+   669	            use_astack = request_astack
+   670	            if sub_dependant.scope == "function":
+   671	                use_astack = function_astack
+   672	            solved = await _solve_generator(
+   673	                dependant=use_sub_dependant,
+   674	                stack=use_astack,
+   675	                sub_values=solved_result.values,
+   676	            )
+   677	        elif use_sub_dependant.is_coroutine_callable:
+   678	            solved = await call(**solved_result.values)
+   679	        else:
+   680	            solved = await run_in_threadpool(call, **solved_result.values)
+   681	        if sub_dependant.name is not None:
+   682	            values[sub_dependant.name] = solved
+   683	        if sub_dependant.cache_key not in dependency_cache:
+   684	            dependency_cache[sub_dependant.cache_key] = solved
+
+ succeeded in 0ms:
+784:        self.dependant = get_dependant(
+788:            self.dependant.dependencies.insert(
+792:        self._flat_dependant = get_flat_dependant(self.dependant)
+798:                dependant=self.dependant,
+949:        self.dependant = get_dependant(
+953:            self.dependant.dependencies.insert(
+957:        self._flat_dependant = get_flat_dependant(self.dependant)
+968:            self.dependant.is_async_gen_callable or self.dependant.is_gen_callable
+980:            dependant=self.dependant,
+
+codex
+Answer: FastAPI computes `is_coroutine = dependant.is_coroutine_callable` in `get_request_handler`, then passes it into `run_endpoint_function`. That function branches: `"await dependant.call"` for async endpoints, `"run_in_threadpool"` for sync endpoints. The classification lives in `Dependant.is_coroutine_callable`, which checks `iscoroutinefunction` on the endpoint, its unwrapped form, and callable `__call__`; classes return false.
+Citations: fastapi/routing.py:370, fastapi/routing.py:674, fastapi/routing.py:677, fastapi/routing.py:327, fastapi/routing.py:330, fastapi/dependencies/models.py:158, fastapi/dependencies/models.py:161, fastapi/dependencies/models.py:174
+Confidence: High
+tokens used
+49,579
+Answer: FastAPI computes `is_coroutine = dependant.is_coroutine_callable` in `get_request_handler`, then passes it into `run_endpoint_function`. That function branches: `"await dependant.call"` for async endpoints, `"run_in_threadpool"` for sync endpoints. The classification lives in `Dependant.is_coroutine_callable`, which checks `iscoroutinefunction` on the endpoint, its unwrapped form, and callable `__call__`; classes return false.
+Citations: fastapi/routing.py:370, fastapi/routing.py:674, fastapi/routing.py:677, fastapi/routing.py:327, fastapi/routing.py:330, fastapi/dependencies/models.py:158, fastapi/dependencies/models.py:161, fastapi/dependencies/models.py:174
+Confidence: High

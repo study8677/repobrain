@@ -1,0 +1,751 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/fastapi
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe54-62e0-78b0-bc69-ac90cb9a133b
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+Which file and class implements FastAPI's automatic OpenAPI schema generation, and what is the entry method name?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the repo instructions first, then trace the OpenAPI generation code and cite the exact class/method lines.
+exec
+/bin/zsh -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"'" in /tmp/ag-bench/fastapi
+ exited 1 in 0ms:
+/private/tmp/ag-bench/fastapi
+
+exec
+/bin/zsh -lc "rg -n \"def openapi|class FastAPI|OpenAPI\" fastapi tests docs -g '*.py'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+fastapi/param_functions.py:43:            This will be used to extract the data and for the generated OpenAPI.
+fastapi/param_functions.py:239:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/param_functions.py:247:            OpenAPI-specific examples.
+fastapi/param_functions.py:249:            It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:252:            OpenAPI-specific examples than the JSON Schema `examples`, that's the main
+fastapi/param_functions.py:266:            It will affect the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:274:            To include (or not) this parameter field in the generated OpenAPI.
+fastapi/param_functions.py:277:            This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:387:            This will be used to extract the data and for the generated OpenAPI.
+fastapi/param_functions.py:598:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/param_functions.py:606:            OpenAPI-specific examples.
+fastapi/param_functions.py:608:            It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:611:            OpenAPI-specific examples than the JSON Schema `examples`, that's the main
+fastapi/param_functions.py:625:            It will affect the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:636:            To include (or not) this parameter field in the generated OpenAPI.
+fastapi/param_functions.py:639:            This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:728:            This will be used to extract the data and for the generated OpenAPI.
+fastapi/param_functions.py:920:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/param_functions.py:928:            OpenAPI-specific examples.
+fastapi/param_functions.py:930:            It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:933:            OpenAPI-specific examples than the JSON Schema `examples`, that's the main
+fastapi/param_functions.py:947:            It will affect the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:955:            To include (or not) this parameter field in the generated OpenAPI.
+fastapi/param_functions.py:958:            This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1045:            This will be used to extract the data and for the generated OpenAPI.
+fastapi/param_functions.py:1226:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/param_functions.py:1234:            OpenAPI-specific examples.
+fastapi/param_functions.py:1236:            It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1239:            OpenAPI-specific examples than the JSON Schema `examples`, that's the main
+fastapi/param_functions.py:1253:            It will affect the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1261:            To include (or not) this parameter field in the generated OpenAPI.
+fastapi/param_functions.py:1264:            This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1363:            generated OpenAPI, but currently it doesn't affect the parsing of the data.
+fastapi/param_functions.py:1373:            This will be used to extract the data and for the generated OpenAPI.
+fastapi/param_functions.py:1554:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/param_functions.py:1562:            OpenAPI-specific examples.
+fastapi/param_functions.py:1564:            It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1567:            OpenAPI-specific examples than the JSON Schema `examples`, that's the main
+fastapi/param_functions.py:1581:            It will affect the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1589:            To include (or not) this parameter field in the generated OpenAPI.
+fastapi/param_functions.py:1592:            This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1679:            generated OpenAPI, but currently it doesn't affect the parsing of the data.
+fastapi/param_functions.py:1689:            This will be used to extract the data and for the generated OpenAPI.
+fastapi/param_functions.py:1870:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/param_functions.py:1878:            OpenAPI-specific examples.
+fastapi/param_functions.py:1880:            It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1883:            OpenAPI-specific examples than the JSON Schema `examples`, that's the main
+fastapi/param_functions.py:1897:            It will affect the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1905:            To include (or not) this parameter field in the generated OpenAPI.
+fastapi/param_functions.py:1908:            This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:1994:            generated OpenAPI, but currently it doesn't affect the parsing of the data.
+fastapi/param_functions.py:2004:            This will be used to extract the data and for the generated OpenAPI.
+fastapi/param_functions.py:2185:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/param_functions.py:2193:            OpenAPI-specific examples.
+fastapi/param_functions.py:2195:            It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:2198:            OpenAPI-specific examples than the JSON Schema `examples`, that's the main
+fastapi/param_functions.py:2212:            It will affect the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:2220:            To include (or not) this parameter field in the generated OpenAPI.
+fastapi/param_functions.py:2223:            This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/param_functions.py:2399:            These scopes are integrated with OpenAPI (and the API docs at `/docs`).
+fastapi/param_functions.py:2400:            So they are visible in the OpenAPI specification.
+fastapi/param_functions.py:2429:    scopes that will be integrated with OpenAPI and the automatic UI docs (by default
+fastapi/exceptions.py:161:class FastAPIError(RuntimeError):
+fastapi/exceptions.py:252:class FastAPIDeprecationWarning(UserWarning):
+fastapi/routing.py:859:                    # into validation or OpenAPI schema generation.
+fastapi/routing.py:1043:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1077:                Additional responses to be shown in OpenAPI.
+fastapi/routing.py:1079:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1082:                [FastAPI docs for Additional Responses in OpenAPI](https://fastapi.tiangolo.com/advanced/additional-responses/).
+fastapi/routing.py:1093:                OpenAPI callbacks that should apply to all *path operations* in this
+fastapi/routing.py:1096:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1099:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:1210:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1222:                generated OpenAPI.
+fastapi/routing.py:1224:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1236:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:1590:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1624:                Additional responses to be shown in OpenAPI.
+fastapi/routing.py:1626:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1629:                [FastAPI docs for Additional Responses in OpenAPI](https://fastapi.tiangolo.com/advanced/additional-responses/).
+fastapi/routing.py:1640:                OpenAPI callbacks that should apply to all *path operations* in this
+fastapi/routing.py:1643:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1646:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:1656:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1668:                generated OpenAPI schema.
+fastapi/routing.py:1670:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1679:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:1856:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:1897:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1922:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1940:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1953:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1963:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:1973:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2089:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:2091:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2123:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:2125:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:2128:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2131:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:2139:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:2152:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:2233:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:2274:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2299:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2317:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2330:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2340:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2350:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2466:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:2468:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2500:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:2502:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:2505:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2508:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:2516:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:2529:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:2615:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:2656:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2681:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2699:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2712:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2722:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2732:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2848:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:2850:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2882:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:2884:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:2887:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:2890:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:2898:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:2911:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:2997:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:3038:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3063:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3081:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3094:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3104:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3114:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3230:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:3232:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3264:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:3266:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:3269:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3272:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:3280:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:3293:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:3374:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:3415:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3440:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3458:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3471:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3481:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3491:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3607:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:3609:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3641:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:3643:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:3646:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3649:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:3657:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:3670:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:3751:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:3792:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3817:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3835:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3848:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3858:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3868:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:3984:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:3986:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4018:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:4020:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:4023:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4026:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:4034:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:4047:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:4133:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:4174:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4199:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4217:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4230:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4240:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4250:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4366:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:4368:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4400:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:4402:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:4405:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4408:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:4416:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:4429:                operations* shown in the generated OpenAPI.
+fastapi/routing.py:4515:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/routing.py:4556:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4581:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4599:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4612:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4622:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4632:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4748:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/routing.py:4750:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4782:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/routing.py:4784:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/routing.py:4787:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/routing.py:4790:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/routing.py:4798:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/routing.py:4811:                operations* shown in the generated OpenAPI.
+fastapi/utils.py:29:    # Ref: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#patterned-fields-1
+tests/test_top_level_security_scheme_in_openapi.py:1:# Test security scheme at the top level, including OpenAPI
+fastapi/sse.py:7:# Canonical SSE event schema matching the OpenAPI 3.2 spec
+tests/test_response_by_alias.py:20:                "proper OpenAPI use another model with the correct field names"
+tests/test_response_by_alias.py:325:                        "description": "response_model_by_alias=False is basically a quick hack, to support proper OpenAPI use another model with the correct field names",
+fastapi/openapi/utils.py:28:from fastapi.openapi.models import OpenAPI
+fastapi/openapi/utils.py:278:    assert current_response_class, "A response class is needed to generate OpenAPI"
+fastapi/openapi/utils.py:606:    return jsonable_encoder(OpenAPI(**output), by_alias=True, exclude_none=True)  # type: ignore  # ty: ignore[unused-ignore-comment]
+fastapi/openapi/docs.py:46:            The OpenAPI URL that Swagger UI should load and use.
+fastapi/openapi/docs.py:52:            [FastAPI docs for Conditional OpenAPI](https://fastapi.tiangolo.com/how-to/conditional-openapi/#conditional-openapi-from-settings-and-env-vars)
+fastapi/openapi/docs.py:203:            The OpenAPI URL that ReDoc should load and use.
+fastapi/openapi/docs.py:209:            [FastAPI docs for Conditional OpenAPI](https://fastapi.tiangolo.com/how-to/conditional-openapi/#conditional-openapi-from-settings-and-env-vars)
+fastapi/openapi/models.py:193:    # Ref: OpenAPI 3.1.0: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#schema-object
+fastapi/openapi/models.py:201:            "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/openapi/models.py:419:class OpenAPI(BaseModelWithConfig):
+tests/test_tutorial/test_extending_openapi/test_tutorial001.py:23:                "summary": "This is a very custom OpenAPI schema",
+tests/test_tutorial/test_extending_openapi/test_tutorial001.py:24:                "description": "Here's a longer description of the custom **OpenAPI** schema",
+fastapi/applications.py:41:class FastAPI(Starlette):
+fastapi/applications.py:100:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:121:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:143:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:181:                the OpenAPI specification nor the version of FastAPI being used.
+fastapi/applications.py:183:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:202:                The URL where the OpenAPI schema will be served from.
+fastapi/applications.py:204:                If you set it to `None`, no OpenAPI schema will be served publicly, and
+fastapi/applications.py:225:                A list of tags used by OpenAPI, these are the same `tags` you can set
+fastapi/applications.py:293:                `servers` property in the generated OpenAPI will be:
+fastapi/applications.py:297:                * otherwise, the `servers` property will be omitted from the OpenAPI
+fastapi/applications.py:304:                to the location where the OpenAPI document is being served. Variable
+fastapi/applications.py:544:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:571:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:602:                    field. Available since OpenAPI 3.1.0, FastAPI 0.99.0.
+fastapi/applications.py:606:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:628:                A URL prefix for the OpenAPI URL.
+fastapi/applications.py:664:                in the autogenerated OpenAPI using the `root_path`.
+fastapi/applications.py:683:                Additional responses to be shown in OpenAPI.
+fastapi/applications.py:685:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:688:                [FastAPI docs for Additional Responses in OpenAPI](https://fastapi.tiangolo.com/advanced/additional-responses/).
+fastapi/applications.py:699:                OpenAPI callbacks that should apply to all *path operations*.
+fastapi/applications.py:701:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:704:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:712:                Add OpenAPI webhooks. This is similar to `callbacks` but it doesn't
+fastapi/applications.py:715:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:717:                **Note**: This is available since OpenAPI 3.1.0, FastAPI 0.99.0.
+fastapi/applications.py:720:                [FastAPI docs for OpenAPI Webhooks](https://fastapi.tiangolo.com/advanced/openapi-webhooks/).
+fastapi/applications.py:731:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:742:                To include (or not) all the *path operations* in the generated OpenAPI.
+fastapi/applications.py:745:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:769:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:783:                Whether to generate separate OpenAPI schemas for request body and
+fastapi/applications.py:896:                The version string of OpenAPI.
+fastapi/applications.py:898:                FastAPI will generate OpenAPI version 3.1.0, and will output that as
+fastapi/applications.py:899:                the OpenAPI version. But some tools, even though they might be
+fastapi/applications.py:900:                compatible with OpenAPI 3.1.0, might not recognize it as a valid.
+fastapi/applications.py:903:                the generated OpenAPI. Have in mind that this is a hack. But if you
+fastapi/applications.py:904:                avoid using features added in OpenAPI 3.1.0, it might work for your
+fastapi/applications.py:908:                giving the false idea that FastAPI would generate a different OpenAPI
+fastapi/applications.py:925:            assert self.title, "A title must be provided for OpenAPI, e.g.: 'My API'"
+fastapi/applications.py:926:            assert self.version, "A version must be provided for OpenAPI, e.g.: '2.1.0'"
+fastapi/applications.py:943:                [FastAPI docs for OpenAPI Webhooks](https://fastapi.tiangolo.com/advanced/openapi-webhooks/).
+fastapi/applications.py:1068:    def openapi(self) -> dict[str, Any]:
+fastapi/applications.py:1070:        Generate the OpenAPI schema of the application. This is called by FastAPI
+fastapi/applications.py:1077:        If you need to modify the generated OpenAPI schema, you could modify it.
+fastapi/applications.py:1080:        [FastAPI docs for OpenAPI](https://fastapi.tiangolo.com/how-to/extending-openapi/).
+fastapi/applications.py:1104:            async def openapi(req: Request) -> JSONResponse:
+fastapi/applications.py:1370:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1409:                Additional responses to be shown in OpenAPI.
+fastapi/applications.py:1411:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1414:                [FastAPI docs for Additional Responses in OpenAPI](https://fastapi.tiangolo.com/advanced/additional-responses/).
+fastapi/applications.py:1427:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1451:                generated OpenAPI schema.
+fastapi/applications.py:1453:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1504:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:1506:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:1509:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1512:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:1521:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:1588:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:1629:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1654:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1672:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1685:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1695:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1705:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1821:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:1823:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1855:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:1857:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:1860:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:1863:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:1871:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:1884:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:1961:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:2002:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2027:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2045:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2058:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2068:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2078:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2194:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:2196:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2228:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:2230:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:2233:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2236:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:2244:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:2257:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:2339:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:2380:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2405:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2423:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2436:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2446:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2456:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2572:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:2574:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2606:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:2608:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:2611:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2614:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:2622:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:2635:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:2717:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:2758:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2783:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2801:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2814:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2824:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2834:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2950:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:2952:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2984:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:2986:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:2989:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:2992:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:3000:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:3013:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:3090:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:3131:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3156:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3174:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3187:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3197:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3207:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3323:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:3325:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3357:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:3359:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:3362:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3365:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:3373:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:3386:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:3463:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:3504:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3529:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3547:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3560:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3570:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3580:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3696:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:3698:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3730:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:3732:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:3735:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3738:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:3746:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:3759:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:3836:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:3877:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3902:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3920:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3933:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3943:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:3953:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4069:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:4071:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4103:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:4105:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:4108:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4111:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:4119:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:4132:                operations* shown in the generated OpenAPI.
+fastapi/applications.py:4214:                * Documentation: the generated OpenAPI (and the UI at `/docs`) will
+fastapi/applications.py:4255:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4280:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4298:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4311:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4321:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4331:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4447:                Include this *path operation* in the generated OpenAPI schema.
+fastapi/applications.py:4449:                This affects the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4481:                List of *path operations* that will be used as OpenAPI callbacks.
+fastapi/applications.py:4483:                This is only for OpenAPI documentation, the callbacks won't be used
+fastapi/applications.py:4486:                It will be added to the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/applications.py:4489:                [FastAPI docs for OpenAPI Callbacks](https://fastapi.tiangolo.com/advanced/openapi-callbacks/).
+fastapi/applications.py:4497:                Extra metadata to be included in the OpenAPI schema for this *path
+fastapi/applications.py:4510:                operations* shown in the generated OpenAPI.
+fastapi/security/http.py:149:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/http.py:167:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/http.py:264:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/http.py:274:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/http.py:323:    **Warning**: this is only a stub to connect the components with OpenAPI in FastAPI,
+fastapi/security/http.py:366:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/http.py:376:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/api_key.py:60:    with the API key and integrates that into the OpenAPI documentation. It extracts
+fastapi/security/api_key.py:100:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/api_key.py:110:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/api_key.py:152:    the API key and integrates that into the OpenAPI documentation. It extracts
+fastapi/security/api_key.py:189:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/api_key.py:199:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/api_key.py:240:    the API key and integrates that into the OpenAPI documentation. It extracts
+fastapi/security/api_key.py:277:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/api_key.py:287:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/oauth2.py:360:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/oauth2.py:370:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/oauth2.py:462:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/oauth2.py:484:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/oauth2.py:578:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/oauth2.py:597:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/open_id_connect_url.py:16:    **Warning**: this is only a stub to connect the components with OpenAPI in FastAPI,
+fastapi/security/open_id_connect_url.py:39:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/security/open_id_connect_url.py:49:                It will be included in the generated OpenAPI (e.g. visible at `/docs`).
+fastapi/params.py:64:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/params.py:175:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/params.py:259:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/params.py:342:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/params.py:425:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/params.py:507:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/params.py:618:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+fastapi/params.py:700:                "Deprecated in OpenAPI 3.1.0 that now uses JSON Schema 2020-12, "
+
+codex
+The initial search points to `fastapi/applications.py`; I’m narrowing to the class, method, and call site so the answer can cite the implementation rather than nearby documentation text.
+exec
+/bin/zsh -lc "nl -ba fastapi/applications.py | sed -n '40,70p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+    40	
+    41	class FastAPI(Starlette):
+    42	    """
+    43	    `FastAPI` app class, the main entrypoint to use FastAPI.
+    44	
+    45	    Read more in the
+    46	    [FastAPI docs for First Steps](https://fastapi.tiangolo.com/tutorial/first-steps/).
+    47	
+    48	    ## Example
+    49	
+    50	    ```python
+    51	    from fastapi import FastAPI
+    52	
+    53	    app = FastAPI()
+    54	    ```
+    55	    """
+    56	
+    57	    def __init__(
+    58	        self: AppType,
+    59	        *,
+    60	        debug: Annotated[
+    61	            bool,
+    62	            Doc(
+    63	                """
+    64	                Boolean indicating if debug tracebacks should be returned on server
+    65	                errors.
+    66	
+    67	                Read more in the
+    68	                [Starlette docs for Applications](https://www.starlette.dev/applications/#instantiating-the-application).
+    69	                """
+    70	            ),
+
+exec
+/bin/zsh -lc "nl -ba fastapi/applications.py | sed -n '1060,1098p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+  1060	            ]
+  1061	        )
+  1062	
+  1063	        app = self.router
+  1064	        for cls, args, kwargs in reversed(middleware):
+  1065	            app = cls(app, *args, **kwargs)
+  1066	        return app
+  1067	
+  1068	    def openapi(self) -> dict[str, Any]:
+  1069	        """
+  1070	        Generate the OpenAPI schema of the application. This is called by FastAPI
+  1071	        internally.
+  1072	
+  1073	        The first time it is called it stores the result in the attribute
+  1074	        `app.openapi_schema`, and next times it is called, it just returns that same
+  1075	        result. To avoid the cost of generating the schema every time.
+  1076	
+  1077	        If you need to modify the generated OpenAPI schema, you could modify it.
+  1078	
+  1079	        Read more in the
+  1080	        [FastAPI docs for OpenAPI](https://fastapi.tiangolo.com/how-to/extending-openapi/).
+  1081	        """
+  1082	        if not self.openapi_schema:
+  1083	            self.openapi_schema = get_openapi(
+  1084	                title=self.title,
+  1085	                version=self.version,
+  1086	                openapi_version=self.openapi_version,
+  1087	                summary=self.summary,
+  1088	                description=self.description,
+  1089	                terms_of_service=self.terms_of_service,
+  1090	                contact=self.contact,
+  1091	                license_info=self.license_info,
+  1092	                routes=self.routes,
+  1093	                webhooks=self.webhooks.routes,
+  1094	                tags=self.openapi_tags,
+  1095	                servers=self.servers,
+  1096	                separate_input_output_schemas=self.separate_input_output_schemas,
+  1097	                external_docs=self.openapi_external_docs,
+  1098	            )
+
+exec
+/bin/zsh -lc "nl -ba fastapi/applications.py | sed -n '1098,1112p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+  1098	            )
+  1099	        return self.openapi_schema
+  1100	
+  1101	    def setup(self) -> None:
+  1102	        if self.openapi_url:
+  1103	
+  1104	            async def openapi(req: Request) -> JSONResponse:
+  1105	                root_path = req.scope.get("root_path", "").rstrip("/")
+  1106	                schema = self.openapi()
+  1107	                if root_path and self.root_path_in_servers:
+  1108	                    server_urls = {s.get("url") for s in schema.get("servers", [])}
+  1109	                    if root_path not in server_urls:
+  1110	                        schema = dict(schema)
+  1111	                        schema["servers"] = [{"url": root_path}] + schema.get(
+  1112	                            "servers", []
+
+exec
+/bin/zsh -lc "nl -ba fastapi/openapi/utils.py | sed -n '450,500p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   450	                        or "Additional Response"
+   451	                    )
+   452	                    deep_dict_update(openapi_response, process_response)
+   453	                    openapi_response["description"] = description
+   454	            http422 = "422"
+   455	            all_route_params = get_flat_params(route.dependant)
+   456	            if (all_route_params or route.body_field) and not any(
+   457	                status in operation["responses"]
+   458	                for status in [http422, "4XX", "default"]
+   459	            ):
+   460	                operation["responses"][http422] = {
+   461	                    "description": "Validation Error",
+   462	                    "content": {
+   463	                        "application/json": {
+   464	                            "schema": {"$ref": REF_PREFIX + "HTTPValidationError"}
+   465	                        }
+   466	                    },
+   467	                }
+   468	                if "ValidationError" not in definitions:
+   469	                    definitions.update(
+   470	                        {
+   471	                            "ValidationError": validation_error_definition,
+   472	                            "HTTPValidationError": validation_error_response_definition,
+   473	                        }
+   474	                    )
+   475	            if route.openapi_extra:
+   476	                deep_dict_update(operation, route.openapi_extra)
+   477	            path[method.lower()] = operation
+   478	    return path, security_schemes, definitions
+   479	
+   480	
+   481	def get_fields_from_routes(
+   482	    routes: Sequence[BaseRoute],
+   483	) -> list[ModelField]:
+   484	    body_fields_from_routes: list[ModelField] = []
+   485	    responses_from_routes: list[ModelField] = []
+   486	    request_fields_from_routes: list[ModelField] = []
+   487	    callback_flat_models: list[ModelField] = []
+   488	    for route in routes:
+   489	        if not isinstance(route, routing.APIRoute):
+   490	            continue
+   491	        if route.include_in_schema:
+   492	            if route.body_field:
+   493	                assert isinstance(route.body_field, ModelField), (
+   494	                    "A request body must be a Pydantic Field"
+   495	                )
+   496	                body_fields_from_routes.append(route.body_field)
+   497	            if route.response_field:
+   498	                responses_from_routes.append(route.response_field)
+   499	            if route.response_fields:
+   500	                responses_from_routes.extend(route.response_fields.values())
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+exec
+/bin/zsh -lc "nl -ba fastapi/openapi/utils.py | sed -n '510,590p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   510	    )
+   511	    return flat_models
+   512	
+   513	
+   514	def get_openapi(
+   515	    *,
+   516	    title: str,
+   517	    version: str,
+   518	    openapi_version: str = "3.1.0",
+   519	    summary: str | None = None,
+   520	    description: str | None = None,
+   521	    routes: Sequence[BaseRoute],
+   522	    webhooks: Sequence[BaseRoute] | None = None,
+   523	    tags: list[dict[str, Any]] | None = None,
+   524	    servers: list[dict[str, str | Any]] | None = None,
+   525	    terms_of_service: str | None = None,
+   526	    contact: dict[str, str | Any] | None = None,
+   527	    license_info: dict[str, str | Any] | None = None,
+   528	    separate_input_output_schemas: bool = True,
+   529	    external_docs: dict[str, Any] | None = None,
+   530	) -> dict[str, Any]:
+   531	    info: dict[str, Any] = {"title": title, "version": version}
+   532	    if summary:
+   533	        info["summary"] = summary
+   534	    if description:
+   535	        info["description"] = description
+   536	    if terms_of_service:
+   537	        info["termsOfService"] = terms_of_service
+   538	    if contact:
+   539	        info["contact"] = contact
+   540	    if license_info:
+   541	        info["license"] = license_info
+   542	    output: dict[str, Any] = {"openapi": openapi_version, "info": info}
+   543	    if servers:
+   544	        output["servers"] = servers
+   545	    components: dict[str, dict[str, Any]] = {}
+   546	    paths: dict[str, dict[str, Any]] = {}
+   547	    webhook_paths: dict[str, dict[str, Any]] = {}
+   548	    operation_ids: set[str] = set()
+   549	    all_fields = get_fields_from_routes(list(routes or []) + list(webhooks or []))
+   550	    flat_models = get_flat_models_from_fields(all_fields, known_models=set())
+   551	    model_name_map = get_model_name_map(flat_models)
+   552	    field_mapping, definitions = get_definitions(
+   553	        fields=all_fields,
+   554	        model_name_map=model_name_map,
+   555	        separate_input_output_schemas=separate_input_output_schemas,
+   556	    )
+   557	    for route in routes or []:
+   558	        if isinstance(route, routing.APIRoute):
+   559	            result = get_openapi_path(
+   560	                route=route,
+   561	                operation_ids=operation_ids,
+   562	                model_name_map=model_name_map,
+   563	                field_mapping=field_mapping,
+   564	                separate_input_output_schemas=separate_input_output_schemas,
+   565	            )
+   566	            if result:
+   567	                path, security_schemes, path_definitions = result
+   568	                if path:
+   569	                    paths.setdefault(route.path_format, {}).update(path)
+   570	                if security_schemes:
+   571	                    components.setdefault("securitySchemes", {}).update(
+   572	                        security_schemes
+   573	                    )
+   574	                if path_definitions:
+   575	                    definitions.update(path_definitions)
+   576	    for webhook in webhooks or []:
+   577	        if isinstance(webhook, routing.APIRoute):
+   578	            result = get_openapi_path(
+   579	                route=webhook,
+   580	                operation_ids=operation_ids,
+   581	                model_name_map=model_name_map,
+   582	                field_mapping=field_mapping,
+   583	                separate_input_output_schemas=separate_input_output_schemas,
+   584	            )
+   585	            if result:
+   586	                path, security_schemes, path_definitions = result
+   587	                if path:
+   588	                    webhook_paths.setdefault(webhook.path_format, {}).update(path)
+   589	                if security_schemes:
+   590	                    components.setdefault("securitySchemes", {}).update(
+
+exec
+/bin/zsh -lc 'rg -n "''^def get_openapi'"\\b|def get_openapi_path\\b|def get_openapi_operation\\b\" fastapi/openapi/utils.py" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+260:def get_openapi_path(
+514:def get_openapi(
+
+exec
+/bin/zsh -lc "nl -ba fastapi/applications.py | sed -n '1112,1125p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+  1112	                            "servers", []
+  1113	                        )
+  1114	                return JSONResponse(schema)
+  1115	
+  1116	            self.add_route(self.openapi_url, openapi, include_in_schema=False)
+  1117	        if self.openapi_url and self.docs_url:
+  1118	
+  1119	            async def swagger_ui_html(req: Request) -> HTMLResponse:
+  1120	                root_path = req.scope.get("root_path", "").rstrip("/")
+  1121	                openapi_url = root_path + self.openapi_url
+  1122	                oauth2_redirect_url = self.swagger_ui_oauth2_redirect_url
+  1123	                if oauth2_redirect_url:
+  1124	                    oauth2_redirect_url = root_path + oauth2_redirect_url
+  1125	                return get_swagger_ui_html(
+
+codex
+Answer: `fastapi/applications.py`, class `FastAPI`, implements the automatic OpenAPI entry point.
+Answer: The entry method name is `openapi`.
+Answer: `FastAPI.openapi()` is documented as “Generate the OpenAPI schema” and calls `get_openapi(...)`.
+Answer: The generated `/openapi.json` handler calls `self.openapi()`.
+Citations: fastapi/applications.py:41, fastapi/applications.py:1068, fastapi/applications.py:1070, fastapi/applications.py:1082, fastapi/openapi/utils.py:514, fastapi/applications.py:1106
+Confidence: High
+tokens used
+27,570
+Answer: `fastapi/applications.py`, class `FastAPI`, implements the automatic OpenAPI entry point.
+Answer: The entry method name is `openapi`.
+Answer: `FastAPI.openapi()` is documented as “Generate the OpenAPI schema” and calls `get_openapi(...)`.
+Answer: The generated `/openapi.json` handler calls `self.openapi()`.
+Citations: fastapi/applications.py:41, fastapi/applications.py:1068, fastapi/applications.py:1070, fastapi/applications.py:1082, fastapi/openapi/utils.py:514, fastapi/applications.py:1106
+Confidence: High

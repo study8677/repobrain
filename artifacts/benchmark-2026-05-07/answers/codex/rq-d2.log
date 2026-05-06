@@ -1,0 +1,528 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/requests
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe5f-0b63-7752-bcf2-1f8d264381af
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+How does `requests` handle SSL/TLS verification, including `verify=` parameter, default CA bundle, and certifi integration?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+2026-05-06T17:39:04.112651Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/wham/apps)")))
+codex
+I’ll inspect the local `requests` source and its scoped instructions, then cite the exact lines that define verification behavior.
+exec
+/bin/zsh -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!*.pyc'"'" in /tmp/ag-bench/requests
+ exited 1 in 0ms:
+/private/tmp/ag-bench/requests
+
+exec
+/bin/zsh -lc 'rg -n "verify|certifi|DEFAULT_CA_BUNDLE|CA_BUNDLE|DEFAULT_CA_BUNDLE_PATH|cert_reqs|ssl_context|merge_environment_settings" .' in /tmp/ag-bench/requests
+ succeeded in 0ms:
+./pyproject.toml:22:    "certifi>=2023.5.7"
+./src/requests/sessions.py:90:    # Bypass if not a dictionary (e.g. verify)
+./src/requests/sessions.py:192:        verify: _t.VerifyType = True,
+./src/requests/sessions.py:296:                    verify=verify,
+./src/requests/sessions.py:420:    verify: _t.VerifyType
+./src/requests/sessions.py:434:        "verify",
+./src/requests/sessions.py:469:        #: Defaults to `True`, requiring requests to verify the TLS certificate at the
+./src/requests/sessions.py:471:        #: If verify is set to `False`, requests will accept any TLS certificate
+./src/requests/sessions.py:473:        #: expired certificates, which will make your application vulnerable to
+./src/requests/sessions.py:476:        #: If verify is set to a string, it must be the path to a CA bundle file
+./src/requests/sessions.py:477:        #: that will be used to verify the TLS certificate.
+./src/requests/sessions.py:478:        self.verify = True
+./src/requests/sessions.py:480:        #: SSL client certificate default, if String, path to ssl client
+./src/requests/sessions.py:572:        verify: _t.VerifyType | None = None,
+./src/requests/sessions.py:607:        :param verify: (optional) Either a boolean, in which case it controls whether we verify
+./src/requests/sessions.py:608:            the server's TLS certificate, or a string, in which case it must be a path
+./src/requests/sessions.py:610:            ``False``, requests will accept any TLS certificate presented by
+./src/requests/sessions.py:612:            certificates, which will make your application vulnerable to
+./src/requests/sessions.py:613:            man-in-the-middle (MitM) attacks. Setting verify to ``False``
+./src/requests/sessions.py:641:        settings = self.merge_environment_settings(
+./src/requests/sessions.py:642:            prep.url, proxies, stream, verify, cert
+./src/requests/sessions.py:753:        kwargs.setdefault("verify", self.verify)
+./src/requests/sessions.py:824:    def merge_environment_settings(
+./src/requests/sessions.py:829:        verify: _t.VerifyType | None,
+./src/requests/sessions.py:848:            if verify is True or verify is None:
+./src/requests/sessions.py:849:                verify = (
+./src/requests/sessions.py:850:                    os.environ.get("REQUESTS_CA_BUNDLE")
+./src/requests/sessions.py:851:                    or os.environ.get("CURL_CA_BUNDLE")
+./src/requests/sessions.py:852:                    or verify
+./src/requests/sessions.py:858:        verify = merge_setting(verify, self.verify)
+./src/requests/sessions.py:861:        return {"proxies": proxies, "stream": stream, "verify": verify, "cert": cert}
+./src/requests/adapters.py:54:    DEFAULT_CA_BUNDLE_PATH,
+./src/requests/adapters.py:87:    verify: bool | str | None,
+./src/requests/adapters.py:97:    cert_reqs = "CERT_REQUIRED"
+./src/requests/adapters.py:98:    if verify is False:
+./src/requests/adapters.py:99:        cert_reqs = "CERT_NONE"
+./src/requests/adapters.py:100:    elif isinstance(verify, str):
+./src/requests/adapters.py:101:        if not os.path.isdir(verify):
+./src/requests/adapters.py:102:            pool_kwargs["ca_certs"] = verify
+./src/requests/adapters.py:104:            pool_kwargs["ca_cert_dir"] = verify
+./src/requests/adapters.py:105:    pool_kwargs["cert_reqs"] = cert_reqs
+./src/requests/adapters.py:133:        verify: _t.VerifyType = True,
+./src/requests/adapters.py:145:        :param verify: (optional) Either a boolean, in which case it controls whether we verify
+./src/requests/adapters.py:146:            the server's TLS certificate, or a string, in which case it must be a path
+./src/requests/adapters.py:148:        :param cert: (optional) Any user-provided SSL certificate to be trusted.
+./src/requests/adapters.py:307:    def cert_verify(
+./src/requests/adapters.py:308:        self, conn: Any, url: str, verify: _t.VerifyType, cert: _t.CertType
+./src/requests/adapters.py:310:        """Verify a SSL certificate. This method should not be called from user
+./src/requests/adapters.py:316:        :param verify: Either a boolean, in which case it controls whether we verify
+./src/requests/adapters.py:317:            the server's TLS certificate, or a string, in which case it must be a path
+./src/requests/adapters.py:319:        :param cert: The SSL certificate to verify.
+./src/requests/adapters.py:321:        if url.lower().startswith("https") and verify:
+./src/requests/adapters.py:325:            if verify is not True:
+./src/requests/adapters.py:326:                cert_loc = verify
+./src/requests/adapters.py:329:                cert_loc = DEFAULT_CA_BUNDLE_PATH
+./src/requests/adapters.py:333:                    f"Could not find a suitable TLS CA certificate bundle, "
+./src/requests/adapters.py:337:            conn.cert_reqs = "CERT_REQUIRED"
+./src/requests/adapters.py:344:            conn.cert_reqs = "CERT_NONE"
+./src/requests/adapters.py:357:                    f"Could not find the TLS certificate file, "
+./src/requests/adapters.py:404:        self, request: PreparedRequest, verify: _t.VerifyType, cert: _t.CertType = None
+./src/requests/adapters.py:408:        This looks at the PreparedRequest, the user-specified verify value,
+./src/requests/adapters.py:416:        * If ``verify`` is ``True``, ``"ssl_context"`` will be set and will be the
+./src/requests/adapters.py:418:        * If ``verify`` is ``False``, ``"ssl_context"`` will not be set but
+./src/requests/adapters.py:419:          ``"cert_reqs"`` will be set
+./src/requests/adapters.py:420:        * If ``verify`` is a string, (i.e., it is a user-specified trust bundle)
+./src/requests/adapters.py:431:        must both set ``"ssl_context"`` and based on what else they require,
+./src/requests/adapters.py:438:        :param verify:
+./src/requests/adapters.py:440:            we verify the server's TLS certificate, or a string, in which case it
+./src/requests/adapters.py:443:            (optional) Any user-provided SSL certificate for client
+./src/requests/adapters.py:445:            the path to a file which holds both certificate and key) or a
+./src/requests/adapters.py:446:            tuple of length 2 with the certificate file path and key file
+./src/requests/adapters.py:453:        return _urllib3_request_context(request, verify, cert, self.poolmanager)
+./src/requests/adapters.py:458:        verify: _t.VerifyType,
+./src/requests/adapters.py:469:        :param verify:
+./src/requests/adapters.py:470:            Either a boolean, in which case it controls whether we verify the
+./src/requests/adapters.py:471:            server's TLS certificate, or a string, in which case it must be a
+./src/requests/adapters.py:476:            (optional) Any user-provided SSL certificate to be used for client
+./src/requests/adapters.py:487:                verify,
+./src/requests/adapters.py:641:        verify: _t.VerifyType = True,
+./src/requests/adapters.py:653:        :param verify: (optional) Either a boolean, in which case it controls whether
+./src/requests/adapters.py:654:            we verify the server's TLS certificate, or a string, in which case it
+./src/requests/adapters.py:656:        :param cert: (optional) Any user-provided SSL certificate to be trusted.
+./src/requests/adapters.py:665:                request, verify, proxies=proxies, cert=cert
+./src/requests/adapters.py:670:        self.cert_verify(conn, request.url, verify, cert)
+./src/requests/adapters.py:676:            verify=verify,
+./docs/community/faq.rst:74:These errors occur when :ref:`SSL certificate verification <verification>`
+./docs/community/faq.rst:75:fails to match the certificate the server responds with to the hostname
+./docs/community/faq.rst:85:certificate based on the hostname the client is connecting to.
+./src/requests/api.py:51:    :param verify: (optional) Either a boolean, in which case it controls whether we verify
+./src/requests/api.py:52:            the server's TLS certificate, or a string, in which case it must be a path
+./docs/community/recommended.rst:13:validating the trustworthiness of SSL certificates while verifying the
+./docs/community/recommended.rst:16:.. _Certifi: https://github.com/certifi/python-certifi
+./src/requests/utils.py:81:# Certificate is extracted by certifi when needed.
+./src/requests/utils.py:82:DEFAULT_CA_BUNDLE_PATH: str = certs.where()
+./src/requests/certs.py:7:This module returns the preferred default CA certificate bundle. There is
+./src/requests/certs.py:8:only one — the one from the certifi package.
+./src/requests/certs.py:15:from certifi import where
+./tests/test_help.py:17:    """Older versions of IDNA don't provide a __version__ attribute, verify
+./tests/testserver/server.py:161:        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+./tests/testserver/server.py:162:        self.ssl_context.load_cert_chain(self.cert_chain, keyfile=self.keyfile)
+./tests/testserver/server.py:167:            # issued by the same CA as our Server certificate
+./tests/testserver/server.py:168:            self.ssl_context.verify_mode = ssl.CERT_OPTIONAL
+./tests/testserver/server.py:169:            self.ssl_context.load_verify_locations(self.cacert)
+./tests/testserver/server.py:173:        sock = self.ssl_context.wrap_socket(sock, server_side=True)
+./tests/certs/expired/README.md:3:This has a valid certificate authority in [ca](./ca) and an invalid server
+./tests/certs/expired/README.md:4:certificate in [server](./server).
+./tests/certs/README.md:3:This is a collection of certificates useful for testing aspects of Requests'
+./tests/certs/README.md:6:The certificates include:
+./tests/certs/README.md:8:* [expired](./expired) server certificate with a valid certificate authority
+./tests/certs/README.md:9:* [mtls](./mtls) provides a valid client certificate with a 2 year validity
+./tests/certs/README.md:10:* [valid](./valid) has a valid server certificate
+./HISTORY.md:126:- Fixed an issue where setting `verify=False` on the first request from a
+./HISTORY.md:128:  cert verification, regardless of the value of `verify`.
+./HISTORY.md:132:- `verify=True` now reuses a global SSLContext which should improve
+./HISTORY.md:134:  also minimize certificate load time on Windows systems when using a Python
+./HISTORY.md:258:- Fixed bug where setting `CURL_CA_BUNDLE` to an empty string would disable
+./HISTORY.md:504:-   Fixed issue where loading the default certificate bundle from a zip
+./HISTORY.md:712:-   When users provide invalid paths to certificate bundle files or
+./HISTORY.md:714:    the time of the HTTPS request with a fairly inscrutable certificate
+./HISTORY.md:750:-   Updated bundled certifi to 2017.4.17.
+./HISTORY.md:867:-   Updated bundled certifi certs to 2016.09.26.
+./HISTORY.md:960:-   The `verify` keyword argument now supports being passed a path to a
+./HISTORY.md:961:    directory of CA certificates, not just a single-file bundle.
+./HISTORY.md:997:-   Update certificate bundle to match `certifi` 2015.9.6.2's weak
+./HISTORY.md:998:    certificate bundle.
+./HISTORY.md:1112:-   Revert changes to our vendored certificate bundle. For more context
+./HISTORY.md:1455:-   certifi support was removed
+./HISTORY.md:1590:-   client certificates are ignored when verify=False
+./HISTORY.md:1598:-   Client certificates no longer ignored when verify=False
+./HISTORY.md:1599:-   Add openSUSE certificate support
+./HISTORY.md:1647:-   Attempt to use the OS's certificate bundle if `certifi` isn't
+./HISTORY.md:1745:-   SSL verify=False bugfix (apparent on windows machines).
+./HISTORY.md:1768:-   verify ssl is default.
+./HISTORY.md:1780:-   New 'verify' argument for SSL requests.
+./tests/certs/expired/server/cert.cnf:14:# Extensions to add to a certificate request
+./src/requests/models.py:524:        # behaviour. For strings containing only ASCII characters, we need to also verify
+./tests/certs/valid/server/cert.cnf:14:# Extensions to add to a certificate request
+./tests/certs/valid/server/cert.cnf:21:# Extensions to add to a certificate request
+./src/requests/_types.py:155:        verify: VerifyType | None
+./tests/certs/mtls/client/cert.cnf:14:# Extensions to add to a certificate request
+./tests/test_requests.py:967:        requests.get(httpbin_secure("status", "301"), verify=httpbin_ca_bundle)
+./tests/test_requests.py:969:    def test_invalid_ca_certificate_path(self, httpbin_secure):
+./tests/test_requests.py:972:            requests.get(httpbin_secure(), verify=INVALID_PATH)
+./tests/test_requests.py:975:            == f"Could not find a suitable TLS CA certificate bundle, invalid path: {INVALID_PATH}"
+./tests/test_requests.py:978:    def test_invalid_ssl_certificate_files(self, httpbin_secure):
+./tests/test_requests.py:984:            == f"Could not find the TLS certificate file, invalid path: {INVALID_PATH}"
+./tests/test_requests.py:997:            ({"REQUESTS_CA_BUNDLE": "/some/path"}, "/some/path"),
+./tests/test_requests.py:998:            ({"REQUESTS_CA_BUNDLE": ""}, True),
+./tests/test_requests.py:999:            ({"CURL_CA_BUNDLE": "/some/path"}, "/some/path"),
+./tests/test_requests.py:1000:            ({"CURL_CA_BUNDLE": ""}, True),
+./tests/test_requests.py:1001:            ({"REQUESTS_CA_BUNDLE": "", "CURL_CA_BUNDLE": ""}, True),
+./tests/test_requests.py:1004:                    "REQUESTS_CA_BUNDLE": "/some/path",
+./tests/test_requests.py:1005:                    "CURL_CA_BUNDLE": "/curl/path",
+./tests/test_requests.py:1011:                    "REQUESTS_CA_BUNDLE": "",
+./tests/test_requests.py:1012:                    "CURL_CA_BUNDLE": "/curl/path",
+./tests/test_requests.py:1021:            settings = s.merge_environment_settings(
+./tests/test_requests.py:1022:                url=httpbin("get"), proxies={}, stream=False, verify=True, cert=None
+./tests/test_requests.py:1024:        assert settings["verify"] == expected
+./tests/test_requests.py:1026:    def test_http_with_certificate(self, httpbin):
+./tests/test_requests.py:1048:            requests.get(f"https://localhost:{port}/", verify=ca_bundle)
+./tests/test_requests.py:1059:    def test_certificate_failure(self, httpbin_secure):
+./tests/test_requests.py:1523:        # verify we can pickle the original request
+./tests/test_requests.py:1526:        # verify we can pickle the response and that we have access to
+./tests/test_requests.py:1902:            verify=httpbin_ca_bundle,
+./tests/test_requests.py:2521:        Instead we verify that setting the timeout to None does not prevent the
+./tests/test_requests.py:2617:        "verify": True,
+./tests/test_requests.py:2887:    def test_different_connection_pool_for_tls_settings_verify_True(self):
+./tests/test_requests.py:2908:            r1 = s.get(url, verify=False)
+./tests/test_requests.py:2911:            # Cannot verify self-signed certificate
+./tests/test_requests.py:2918:    def test_different_connection_pool_for_tls_settings_verify_bundle_expired_cert(
+./tests/test_requests.py:2941:            r1 = s.get(url, verify=False)
+./tests/test_requests.py:2944:            # Has right trust bundle, but certificate expired
+./tests/test_requests.py:2946:                s.get(url, verify="tests/certs/expired/ca/ca.crt")
+./tests/test_requests.py:2951:    def test_different_connection_pool_for_tls_settings_verify_bundle_unexpired_cert(
+./tests/test_requests.py:2974:            r1 = s.get(url, verify=False)
+./tests/test_requests.py:2977:            r2 = s.get(url, verify="tests/certs/valid/ca/ca.crt")
+./tests/test_requests.py:3014:            r1 = s.get(url, verify=False, cert=cert)
+./docs/user/authentication.rst:79:    >>> url = 'https://api.twitter.com/1.1/account/verify_credentials.json'
+./tests/certs/mtls/README.md:3:This has some generated certificates for mTLS utilization. The idea is to be
+./tests/certs/mtls/README.md:4:able to have testing around how Requests handles client certificates.
+./docs/user/advanced.rst:145:        verify=verify,
+./docs/user/advanced.rst:182:        verify=verify,
+./docs/user/advanced.rst:192:For example: Self-signed SSL certificates specified in ``REQUESTS_CA_BUNDLE`` will not be taken into account.
+./docs/user/advanced.rst:204:    settings = s.merge_environment_settings(prepped.url, {}, None, None, None)
+./docs/user/advanced.rst:214:Requests verifies SSL certificates for HTTPS requests, just like a web browser.
+./docs/user/advanced.rst:216:it's unable to verify the certificate::
+./docs/user/advanced.rst:226:You can pass ``verify`` the path to a CA_BUNDLE file or directory with certificates of trusted CAs::
+./docs/user/advanced.rst:228:    >>> requests.get('https://github.com', verify='/path/to/certfile')
+./docs/user/advanced.rst:233:    s.verify = '/path/to/certfile'
+./docs/user/advanced.rst:235:.. note:: If ``verify`` is set to a path to a directory, the directory must have been processed using
+./docs/user/advanced.rst:238:This list of trusted CAs can also be specified through the ``REQUESTS_CA_BUNDLE`` environment variable.
+./docs/user/advanced.rst:239:If ``REQUESTS_CA_BUNDLE`` is not set, ``CURL_CA_BUNDLE`` will be used as fallback.
+./docs/user/advanced.rst:241:Requests can also ignore verifying the SSL certificate if you set ``verify`` to False::
+./docs/user/advanced.rst:243:    >>> requests.get('https://kennethreitz.org', verify=False)
+./docs/user/advanced.rst:246:Note that when ``verify`` is set to ``False``, requests will accept any TLS
+./docs/user/advanced.rst:247:certificate presented by the server, and will ignore hostname mismatches
+./docs/user/advanced.rst:248:and/or expired certificates, which will make your application vulnerable to
+./docs/user/advanced.rst:249:man-in-the-middle (MitM) attacks. Setting verify to ``False`` may be useful
+./docs/user/advanced.rst:252:By default, ``verify`` is set to True. Option ``verify`` only applies to host certs.
+./docs/user/advanced.rst:257:You can also specify a local cert to use as client side certificate, as a single
+./docs/user/advanced.rst:258:file (containing the private key and the certificate) or as a tuple of both
+./docs/user/advanced.rst:274:.. warning:: The private key to your local certificate *must* be unencrypted.
+./docs/user/advanced.rst:277:.. _ca-certificates:
+./docs/user/advanced.rst:282:Requests uses certificates from the package `certifi`_. This allows for users
+./docs/user/advanced.rst:283:to update their trusted certificates without changing the version of Requests.
+./docs/user/advanced.rst:286:sourced from the `Mozilla trust store`_. The certificates were only updated
+./docs/user/advanced.rst:287:once for each Requests version. When ``certifi`` was not installed, this led to
+./docs/user/advanced.rst:288:extremely out-of-date certificate bundles when using significantly older
+./docs/user/advanced.rst:291:For the sake of security we recommend upgrading certifi frequently!
+./docs/user/advanced.rst:295:.. _certifi: https://certifiio.readthedocs.io/
+./docs/user/advanced.rst:653:local machine to trust the proxy's root certificate. By default the list of
+./docs/user/advanced.rst:654:certificates trusted by Requests can be found with::
+./docs/user/advanced.rst:656:    from requests.utils import DEFAULT_CA_BUNDLE_PATH
+./docs/user/advanced.rst:657:    print(DEFAULT_CA_BUNDLE_PATH)
+./docs/user/advanced.rst:659:You override this default certificate bundle by setting the ``REQUESTS_CA_BUNDLE``
+./docs/user/advanced.rst:660:(or ``CURL_CA_BUNDLE``) environment variable to another file path::
+./docs/user/advanced.rst:662:    $ export REQUESTS_CA_BUNDLE="/usr/local/myproxy_info/cacert.pem"
+
+codex
+The relevant code is in `sessions.py`, `adapters.py`, `utils.py`, and `certs.py`; I’m pulling the exact line ranges now so the answer can stay tight and cited.
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '460,482p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   460	        #: Dictionary of querystring data to attach to each
+   461	        #: :class:`Request <Request>`. The dictionary values may be lists for
+   462	        #: representing multivalued query parameters.
+   463	        self.params = {}
+   464	
+   465	        #: Stream response content default.
+   466	        self.stream = False
+   467	
+   468	        #: SSL Verification default.
+   469	        #: Defaults to `True`, requiring requests to verify the TLS certificate at the
+   470	        #: remote end.
+   471	        #: If verify is set to `False`, requests will accept any TLS certificate
+   472	        #: presented by the server, and will ignore hostname mismatches and/or
+   473	        #: expired certificates, which will make your application vulnerable to
+   474	        #: man-in-the-middle (MitM) attacks.
+   475	        #: Only set this to `False` for testing.
+   476	        #: If verify is set to a string, it must be the path to a CA bundle file
+   477	        #: that will be used to verify the TLS certificate.
+   478	        self.verify = True
+   479	
+   480	        #: SSL client certificate default, if String, path to ssl client
+   481	        #: cert file (.pem). If Tuple, ('cert', 'key') pair.
+   482	        self.cert = None
+
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '824,862p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   824	    def merge_environment_settings(
+   825	        self,
+   826	        url: str,
+   827	        proxies: dict[str, str] | None,
+   828	        stream: bool | None,
+   829	        verify: _t.VerifyType | None,
+   830	        cert: _t.CertType,
+   831	    ) -> dict[str, Any]:
+   832	        """
+   833	        Check the environment and merge it with some settings.
+   834	
+   835	        :rtype: dict
+   836	        """
+   837	        # Gather clues from the surrounding environment.
+   838	        if self.trust_env:
+   839	            # Set environment's proxies.
+   840	            no_proxy = proxies.get("no_proxy") if proxies is not None else None
+   841	            env_proxies = get_environ_proxies(url, no_proxy=no_proxy)
+   842	            if proxies is not None:
+   843	                for k, v in env_proxies.items():
+   844	                    proxies.setdefault(k, v)
+   845	
+   846	            # Look for requests environment configuration
+   847	            # and be compatible with cURL.
+   848	            if verify is True or verify is None:
+   849	                verify = (
+   850	                    os.environ.get("REQUESTS_CA_BUNDLE")
+   851	                    or os.environ.get("CURL_CA_BUNDLE")
+   852	                    or verify
+   853	                )
+   854	
+   855	        # Merge all the kwargs.
+   856	        proxies = merge_setting(proxies, self.proxies)
+   857	        stream = merge_setting(stream, self.stream)
+   858	        verify = merge_setting(verify, self.verify)
+   859	        cert = merge_setting(cert, self.cert)
+   860	
+   861	        return {"proxies": proxies, "stream": stream, "verify": verify, "cert": cert}
+   862	
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '87,106p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+    87	    verify: bool | str | None,
+    88	    client_cert: tuple[str, str] | str | None,
+    89	    poolmanager: PoolManager,
+    90	) -> tuple[dict[str, Any], dict[str, Any]]:
+    91	    host_params: dict[str, Any] = {}
+    92	    pool_kwargs: dict[str, Any] = {}
+    93	    parsed_request_url = urlparse(request.url)
+    94	    scheme = parsed_request_url.scheme.lower()
+    95	    port = parsed_request_url.port
+    96	
+    97	    cert_reqs = "CERT_REQUIRED"
+    98	    if verify is False:
+    99	        cert_reqs = "CERT_NONE"
+   100	    elif isinstance(verify, str):
+   101	        if not os.path.isdir(verify):
+   102	            pool_kwargs["ca_certs"] = verify
+   103	        else:
+   104	            pool_kwargs["ca_cert_dir"] = verify
+   105	    pool_kwargs["cert_reqs"] = cert_reqs
+   106	    if client_cert is not None:
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '321,345p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   321	        if url.lower().startswith("https") and verify:
+   322	            cert_loc = None
+   323	
+   324	            # Allow self-specified cert location.
+   325	            if verify is not True:
+   326	                cert_loc = verify
+   327	
+   328	            if not cert_loc:
+   329	                cert_loc = DEFAULT_CA_BUNDLE_PATH
+   330	
+   331	            if not cert_loc or not os.path.exists(cert_loc):
+   332	                raise OSError(
+   333	                    f"Could not find a suitable TLS CA certificate bundle, "
+   334	                    f"invalid path: {cert_loc}"
+   335	                )
+   336	
+   337	            conn.cert_reqs = "CERT_REQUIRED"
+   338	
+   339	            if not os.path.isdir(cert_loc):
+   340	                conn.ca_certs = cert_loc
+   341	            else:
+   342	                conn.ca_cert_dir = cert_loc
+   343	        else:
+   344	            conn.cert_reqs = "CERT_NONE"
+   345	            conn.ca_certs = None
+
+exec
+/bin/zsh -lc "nl -ba src/requests/utils.py | sed -n '76,84p'" in /tmp/ag-bench/requests
+exec
+/bin/zsh -lc "nl -ba src/requests/certs.py | sed -n '1,16p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+     1	#!/usr/bin/env python
+     2	
+     3	"""
+     4	requests.certs
+     5	~~~~~~~~~~~~~~
+     6	
+     7	This module returns the preferred default CA certificate bundle. There is
+     8	only one — the one from the certifi package.
+     9	
+    10	If you are packaging Requests, e.g., for a Linux distribution or a managed
+    11	environment, you can change the definition of where() to return a separately
+    12	packaged CA bundle.
+    13	"""
+    14	
+    15	from certifi import where
+    16	
+
+ succeeded in 0ms:
+    76	    from .models import PreparedRequest, Request, Response
+    77	
+    78	NETRC_FILES: Final = (".netrc", "_netrc")
+    79	
+    80	
+    81	# Certificate is extracted by certifi when needed.
+    82	DEFAULT_CA_BUNDLE_PATH: str = certs.where()
+    83	
+    84	
+
+exec
+/bin/zsh -lc "nl -ba pyproject.toml | sed -n '18,24p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+    18	dependencies = [
+    19	    "charset_normalizer>=2,<4",
+    20	    "idna>=2.5,<4",
+    21	    "urllib3>=1.26,<3",
+    22	    "certifi>=2023.5.7"
+    23	]
+    24	dynamic = ["version"]
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/requests
+ succeeded in 0ms:
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '404,454p'" in /tmp/ag-bench/requests
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '45,57p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+    45	    InvalidURL,
+    46	    ProxyError,
+    47	    ReadTimeout,
+    48	    RetryError,
+    49	    SSLError,
+    50	)
+    51	from .models import Response
+    52	from .structures import CaseInsensitiveDict
+    53	from .utils import (
+    54	    DEFAULT_CA_BUNDLE_PATH,
+    55	    get_auth_from_url,
+    56	    get_encoding_from_headers,
+    57	    prepend_scheme_if_needed,
+
+ succeeded in 0ms:
+   404	        self, request: PreparedRequest, verify: _t.VerifyType, cert: _t.CertType = None
+   405	    ) -> tuple[dict[str, Any], dict[str, Any]]:
+   406	        """Build the PoolKey attributes used by urllib3 to return a connection.
+   407	
+   408	        This looks at the PreparedRequest, the user-specified verify value,
+   409	        and the value of the cert parameter to determine what PoolKey values
+   410	        to use to select a connection from a given urllib3 Connection Pool.
+   411	
+   412	        The SSL related pool key arguments are not consistently set. As of
+   413	        this writing, use the following to determine what keys may be in that
+   414	        dictionary:
+   415	
+   416	        * If ``verify`` is ``True``, ``"ssl_context"`` will be set and will be the
+   417	          default Requests SSL Context
+   418	        * If ``verify`` is ``False``, ``"ssl_context"`` will not be set but
+   419	          ``"cert_reqs"`` will be set
+   420	        * If ``verify`` is a string, (i.e., it is a user-specified trust bundle)
+   421	          ``"ca_certs"`` will be set if the string is not a directory recognized
+   422	          by :py:func:`os.path.isdir`, otherwise ``"ca_cert_dir"`` will be
+   423	          set.
+   424	        * If ``"cert"`` is specified, ``"cert_file"`` will always be set. If
+   425	          ``"cert"`` is a tuple with a second item, ``"key_file"`` will also
+   426	          be present
+   427	
+   428	        To override these settings, one may subclass this class, call this
+   429	        method and use the above logic to change parameters as desired. For
+   430	        example, if one wishes to use a custom :py:class:`ssl.SSLContext` one
+   431	        must both set ``"ssl_context"`` and based on what else they require,
+   432	        alter the other keys to ensure the desired behaviour.
+   433	
+   434	        :param request:
+   435	            The PreparedRequest being sent over the connection.
+   436	        :type request:
+   437	            :class:`~requests.models.PreparedRequest`
+   438	        :param verify:
+   439	            Either a boolean, in which case it controls whether
+   440	            we verify the server's TLS certificate, or a string, in which case it
+   441	            must be a path to a CA bundle to use.
+   442	        :param cert:
+   443	            (optional) Any user-provided SSL certificate for client
+   444	            authentication (a.k.a., mTLS). This may be a string (i.e., just
+   445	            the path to a file which holds both certificate and key) or a
+   446	            tuple of length 2 with the certificate file path and key file
+   447	            path.
+   448	        :returns:
+   449	            A tuple of two dictionaries. The first is the "host parameters"
+   450	            portion of the Pool Key including scheme, hostname, and port. The
+   451	            second is a dictionary of SSLContext related parameters.
+   452	        """
+   453	        return _urllib3_request_context(request, verify, cert, self.poolmanager)
+   454	
+
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '640,644p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   640	
+   641	        settings = self.merge_environment_settings(
+   642	            prep.url, proxies, stream, verify, cert
+   643	        )
+   644	
+
+exec
+/bin/zsh -lc "nl -ba src/requests/api.py | sed -n '45,55p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+    45	        before giving up, as a float, or a :ref:`(connect timeout, read
+    46	        timeout) <timeouts>` tuple.
+    47	    :type timeout: float or tuple
+    48	    :param allow_redirects: (optional) Boolean. Enable/disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection. Defaults to ``True``.
+    49	    :type allow_redirects: bool
+    50	    :param proxies: (optional) Dictionary mapping protocol to the URL of the proxy.
+    51	    :param verify: (optional) Either a boolean, in which case it controls whether we verify
+    52	            the server's TLS certificate, or a string, in which case it must be a path
+    53	            to a CA bundle to use. Defaults to ``True``.
+    54	    :param stream: (optional) if ``False``, the response content will be immediately downloaded.
+    55	    :param cert: (optional) if String, path to ssl client cert file (.pem). If Tuple, ('cert', 'key') pair.
+
+codex
+Answer: Requests defaults TLS verification on: `Session.verify` is `"True"`. If `trust_env` is enabled and `verify` is True/None, `REQUESTS_CA_BUNDLE` then `CURL_CA_BUNDLE` can override it. In adapters, `verify=False` sets `"CERT_NONE"`; a string path becomes `ca_certs` or `ca_cert_dir`; otherwise HTTPS uses `DEFAULT_CA_BUNDLE_PATH` and `"CERT_REQUIRED"`. The default bundle is `certs.where()`, and `requests.certs` gets `where` from certifi; certifi is also a project dependency.  
+Citations: src/requests/sessions.py:468, src/requests/sessions.py:478, src/requests/sessions.py:848, src/requests/sessions.py:850, src/requests/sessions.py:851, src/requests/adapters.py:97, src/requests/adapters.py:98, src/requests/adapters.py:100, src/requests/adapters.py:328, src/requests/adapters.py:329, src/requests/adapters.py:337, src/requests/adapters.py:339, src/requests/utils.py:81, src/requests/utils.py:82, src/requests/certs.py:15, pyproject.toml:22  
+Confidence: High
+tokens used
+12,691
+Answer: Requests defaults TLS verification on: `Session.verify` is `"True"`. If `trust_env` is enabled and `verify` is True/None, `REQUESTS_CA_BUNDLE` then `CURL_CA_BUNDLE` can override it. In adapters, `verify=False` sets `"CERT_NONE"`; a string path becomes `ca_certs` or `ca_cert_dir`; otherwise HTTPS uses `DEFAULT_CA_BUNDLE_PATH` and `"CERT_REQUIRED"`. The default bundle is `certs.where()`, and `requests.certs` gets `where` from certifi; certifi is also a project dependency.  
+Citations: src/requests/sessions.py:468, src/requests/sessions.py:478, src/requests/sessions.py:848, src/requests/sessions.py:850, src/requests/sessions.py:851, src/requests/adapters.py:97, src/requests/adapters.py:98, src/requests/adapters.py:100, src/requests/adapters.py:328, src/requests/adapters.py:329, src/requests/adapters.py:337, src/requests/adapters.py:339, src/requests/utils.py:81, src/requests/utils.py:82, src/requests/certs.py:15, pyproject.toml:22  
+Confidence: High

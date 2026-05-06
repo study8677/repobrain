@@ -1,0 +1,3 @@
+Answer: SQLModel uses `create_engine()` to create a new database engine. In current source, it is a re-export: `from sqlalchemy.engine import create_engine as create_engine`, so the underlying SQLAlchemy function is `sqlalchemy.engine.create_engine`. The docs also describe SQLModel’s function as “the same as SQLAlchemy's `create_engine()`”.
+Citations: sqlmodel/__init__.py:3, sqlmodel/__init__.py:4, docs/tutorial/create-db-and-table.md:151, docs/tutorial/create-db-and-table.md:207
+Confidence: High

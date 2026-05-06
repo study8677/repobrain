@@ -1,0 +1,295 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/fastapi
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe52-c4d7-7790-b19b-8dd48a25cb7d
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+Where in the FastAPI source is the `Depends` callable class defined, and what does its `__init__` accept?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the local guidance first, then locate the `Depends` definition and its initializer in the FastAPI source.
+exec
+/bin/zsh -lc 'rg -n "class Depends|def __init__" fastapi' in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+fastapi/datastructures.py:161:    def __init__(self, value: Any):
+fastapi/exceptions.py:45:    def __init__(
+fastapi/exceptions.py:128:    def __init__(
+fastapi/exceptions.py:175:    def __init__(
+fastapi/exceptions.py:213:    def __init__(
+fastapi/exceptions.py:225:    def __init__(
+fastapi/exceptions.py:235:    def __init__(
+fastapi/security/open_id_connect_url.py:22:    def __init__(
+fastapi/params.py:29:    def __init__(
+fastapi/params.py:140:    def __init__(
+fastapi/params.py:224:    def __init__(
+fastapi/params.py:306:    def __init__(
+fastapi/params.py:390:    def __init__(
+fastapi/params.py:470:    def __init__(
+fastapi/params.py:582:    def __init__(
+fastapi/params.py:664:    def __init__(
+fastapi/params.py:746:class Depends:
+fastapi/routing.py:176:    def __init__(self, cm: AbstractContextManager[_T]) -> None:
+fastapi/routing.py:237:    def __init__(self, router: "APIRouter") -> None:
+fastapi/routing.py:770:    def __init__(
+fastapi/routing.py:812:    def __init__(
+fastapi/routing.py:1032:    def __init__(
+fastapi/middleware/asyncexitstack.py:9:    def __init__(
+fastapi/security/oauth2.py:59:    def __init__(
+fastapi/security/oauth2.py:226:    def __init__(
+fastapi/security/oauth2.py:343:    def __init__(
+fastapi/security/oauth2.py:442:    def __init__(
+fastapi/security/oauth2.py:553:    def __init__(
+fastapi/security/oauth2.py:666:    def __init__(
+fastapi/security/api_key.py:14:    def __init__(
+fastapi/security/api_key.py:87:    def __init__(
+fastapi/security/api_key.py:179:    def __init__(
+fastapi/security/api_key.py:267:    def __init__(
+fastapi/security/http.py:72:    def __init__(
+fastapi/security/http.py:140:    def __init__(
+fastapi/security/http.py:254:    def __init__(
+fastapi/security/http.py:357:    def __init__(
+fastapi/applications.py:57:    def __init__(
+fastapi/applications.py:4671:            def __init__(self, name: str):
+
+exec
+/bin/zsh -lc 'rg --files -g AGENTS.md' in /tmp/ag-bench/fastapi
+ exited 1 in 0ms:
+codex
+I found the likely class in `fastapi/params.py`; I’m checking the exact lines around it and any parent `AGENTS.md` files that apply.
+exec
+/bin/zsh -lc 'find / /tmp /tmp/ag-bench /tmp/ag-bench/fastapi -maxdepth 1 -name AGENTS.md -print' in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+exec
+/bin/zsh -lc "nl -ba fastapi/params.py | sed -n '730,775p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+   730	            strict=strict,
+   731	            multiple_of=multiple_of,
+   732	            allow_inf_nan=allow_inf_nan,
+   733	            max_digits=max_digits,
+   734	            decimal_places=decimal_places,
+   735	            deprecated=deprecated,
+   736	            example=example,
+   737	            examples=examples,
+   738	            openapi_examples=openapi_examples,
+   739	            include_in_schema=include_in_schema,
+   740	            json_schema_extra=json_schema_extra,
+   741	            **extra,
+   742	        )
+   743	
+   744	
+   745	@dataclass(frozen=True)
+   746	class Depends:
+   747	    dependency: Callable[..., Any] | None = None
+   748	    use_cache: bool = True
+   749	    scope: Literal["function", "request"] | None = None
+   750	
+   751	
+   752	@dataclass(frozen=True)
+   753	class Security(Depends):
+   754	    scopes: Sequence[str] | None = None
+
+exec
+/bin/zsh -lc 'rg -n "from .*Depends|Depends =|class Depends|def Depends" fastapi' in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+fastapi/__init__.py:14:from .param_functions import Depends as Depends
+fastapi/params.py:746:class Depends:
+fastapi/param_functions.py:2283:def Depends(  # noqa: N802
+fastapi/param_functions.py:2355:    from fastapi import Depends, FastAPI
+fastapi/security/api_key.py:73:    from fastapi import Depends, FastAPI
+fastapi/security/api_key.py:165:    from fastapi import Depends, FastAPI
+fastapi/security/api_key.py:253:    from fastapi import Depends, FastAPI
+fastapi/security/oauth2.py:33:    from fastapi import Depends, FastAPI
+fastapi/security/oauth2.py:187:    from fastapi import Depends, FastAPI
+fastapi/applications.py:22:from fastapi.params import Depends
+fastapi/applications.py:343:                from fastapi import Depends, FastAPI
+fastapi/applications.py:1390:                from fastapi import Depends, FastAPI
+fastapi/security/http.py:126:    from fastapi import Depends, FastAPI
+fastapi/security/http.py:238:    from fastapi import Depends, FastAPI
+fastapi/security/http.py:341:    from fastapi import Depends, FastAPI
+
+exec
+/bin/zsh -lc "nl -ba fastapi/param_functions.py | sed -n '2275,2325p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+  2275	        openapi_examples=openapi_examples,
+  2276	        deprecated=deprecated,
+  2277	        include_in_schema=include_in_schema,
+  2278	        json_schema_extra=json_schema_extra,
+  2279	        **extra,
+  2280	    )
+  2281	
+  2282	
+  2283	def Depends(  # noqa: N802
+  2284	    dependency: Annotated[
+  2285	        Callable[..., Any] | None,
+  2286	        Doc(
+  2287	            """
+  2288	            A "dependable" callable (like a function).
+  2289	
+  2290	            Don't call it directly, FastAPI will call it for you, just pass the object
+  2291	            directly.
+  2292	
+  2293	            Read more about it in the
+  2294	            [FastAPI docs for Dependencies](https://fastapi.tiangolo.com/tutorial/dependencies/)
+  2295	            """
+  2296	        ),
+  2297	    ] = None,
+  2298	    *,
+  2299	    use_cache: Annotated[
+  2300	        bool,
+  2301	        Doc(
+  2302	            """
+  2303	            By default, after a dependency is called the first time in a request, if
+  2304	            the dependency is declared again for the rest of the request (for example
+  2305	            if the dependency is needed by several dependencies), the value will be
+  2306	            re-used for the rest of the request.
+  2307	
+  2308	            Set `use_cache` to `False` to disable this behavior and ensure the
+  2309	            dependency is called again (if declared more than once) in the same request.
+  2310	
+  2311	            Read more about it in the
+  2312	            [FastAPI docs about sub-dependencies](https://fastapi.tiangolo.com/tutorial/dependencies/sub-dependencies/#using-the-same-dependency-multiple-times)
+  2313	            """
+  2314	        ),
+  2315	    ] = True,
+  2316	    scope: Annotated[
+  2317	        Literal["function", "request"] | None,
+  2318	        Doc(
+  2319	            """
+  2320	            Mainly for dependencies with `yield`, define when the dependency function
+  2321	            should start (the code before `yield`) and when it should end (the code
+  2322	            after `yield`).
+  2323	
+  2324	            * `"function"`: start the dependency before the *path operation function*
+  2325	                that handles the request, end the dependency after the *path operation
+
+exec
+/bin/zsh -lc "nl -ba fastapi/__init__.py | sed -n '1,25p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+     1	"""FastAPI framework, high performance, easy to learn, fast to code, ready for production"""
+     2	
+     3	__version__ = "0.136.1"
+     4	
+     5	from starlette import status as status
+     6	
+     7	from .applications import FastAPI as FastAPI
+     8	from .background import BackgroundTasks as BackgroundTasks
+     9	from .datastructures import UploadFile as UploadFile
+    10	from .exceptions import HTTPException as HTTPException
+    11	from .exceptions import WebSocketException as WebSocketException
+    12	from .param_functions import Body as Body
+    13	from .param_functions import Cookie as Cookie
+    14	from .param_functions import Depends as Depends
+    15	from .param_functions import File as File
+    16	from .param_functions import Form as Form
+    17	from .param_functions import Header as Header
+    18	from .param_functions import Path as Path
+    19	from .param_functions import Query as Query
+    20	from .param_functions import Security as Security
+    21	from .requests import Request as Request
+    22	from .responses import Response as Response
+    23	from .routing import APIRouter as APIRouter
+    24	from .websockets import WebSocket as WebSocket
+    25	from .websockets import WebSocketDisconnect as WebSocketDisconnect
+
+exec
+/bin/zsh -lc "nl -ba fastapi/param_functions.py | sed -n '2325,2368p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+  2325	                that handles the request, end the dependency after the *path operation
+  2326	                function* ends, but **before** the response is sent back to the client.
+  2327	                So, the dependency function will be executed **around** the *path operation
+  2328	                **function***.
+  2329	            * `"request"`: start the dependency before the *path operation function*
+  2330	                that handles the request (similar to when using `"function"`), but end
+  2331	                **after** the response is sent back to the client. So, the dependency
+  2332	                function will be executed **around** the **request** and response cycle.
+  2333	
+  2334	            Read more about it in the
+  2335	            [FastAPI docs for FastAPI Dependencies with yield](https://fastapi.tiangolo.com/tutorial/dependencies/dependencies-with-yield/#early-exit-and-scope)
+  2336	            """
+  2337	        ),
+  2338	    ] = None,
+  2339	) -> Any:
+  2340	    """
+  2341	    Declare a FastAPI dependency.
+  2342	
+  2343	    It takes a single "dependable" callable (like a function).
+  2344	
+  2345	    Don't call it directly, FastAPI will call it for you.
+  2346	
+  2347	    Read more about it in the
+  2348	    [FastAPI docs for Dependencies](https://fastapi.tiangolo.com/tutorial/dependencies/).
+  2349	
+  2350	    **Example**
+  2351	
+  2352	    ```python
+  2353	    from typing import Annotated
+  2354	
+  2355	    from fastapi import Depends, FastAPI
+  2356	
+  2357	    app = FastAPI()
+  2358	
+  2359	
+  2360	    async def common_parameters(q: str | None = None, skip: int = 0, limit: int = 100):
+  2361	        return {"q": q, "skip": skip, "limit": limit}
+  2362	
+  2363	
+  2364	    @app.get("/items/")
+  2365	    async def read_items(commons: Annotated[dict, Depends(common_parameters)]):
+  2366	        return commons
+  2367	    ```
+  2368	    """
+
+exec
+/bin/zsh -lc "nl -ba fastapi/param_functions.py | sed -n '2368,2388p'" in /tmp/ag-bench/fastapi
+ succeeded in 0ms:
+  2368	    """
+  2369	    return params.Depends(dependency=dependency, use_cache=use_cache, scope=scope)
+  2370	
+  2371	
+  2372	def Security(  # noqa: N802
+  2373	    dependency: Annotated[
+  2374	        Callable[..., Any] | None,
+  2375	        Doc(
+  2376	            """
+  2377	            A "dependable" callable (like a function).
+  2378	
+  2379	            Don't call it directly, FastAPI will call it for you, just pass the object
+  2380	            directly.
+  2381	
+  2382	            Read more about it in the
+  2383	            [FastAPI docs for Dependencies](https://fastapi.tiangolo.com/tutorial/dependencies/)
+  2384	            """
+  2385	        ),
+  2386	    ] = None,
+  2387	    *,
+  2388	    scopes: Annotated[
+
+codex
+Answer: `Depends` is defined in [fastapi/params.py](/tmp/ag-bench/fastapi/fastapi/params.py:746) as a frozen dataclass: `class Depends:`.
+Answer: Its generated `__init__` accepts `dependency=None`, `use_cache=True`, and `scope=None`.
+Answer: Types are `Callable[..., Any] | None`, `bool`, and `Literal["function", "request"] | None`.
+Answer: The public `fastapi.Depends` function returns `params.Depends(...)` with those same three arguments.
+Citations: fastapi/params.py:745, fastapi/params.py:746, fastapi/params.py:747, fastapi/params.py:748, fastapi/params.py:749, fastapi/param_functions.py:2283, fastapi/param_functions.py:2369
+Confidence: High
+tokens used
+34,095
+Answer: `Depends` is defined in [fastapi/params.py](/tmp/ag-bench/fastapi/fastapi/params.py:746) as a frozen dataclass: `class Depends:`.
+Answer: Its generated `__init__` accepts `dependency=None`, `use_cache=True`, and `scope=None`.
+Answer: Types are `Callable[..., Any] | None`, `bool`, and `Literal["function", "request"] | None`.
+Answer: The public `fastapi.Depends` function returns `params.Depends(...)` with those same three arguments.
+Citations: fastapi/params.py:745, fastapi/params.py:746, fastapi/params.py:747, fastapi/params.py:748, fastapi/params.py:749, fastapi/param_functions.py:2283, fastapi/param_functions.py:2369
+Confidence: High

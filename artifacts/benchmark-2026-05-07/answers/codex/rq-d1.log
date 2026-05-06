@@ -1,0 +1,1238 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/requests
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe5d-4d65-7d50-b20c-ac384d3ca7cb
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+How does `requests` choose between `urllib3` connection pools? Explain the `HTTPAdapter` design.
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the local `requests` tree and its AGENTS guidance, then trace `HTTPAdapter` pool selection with line-level citations.
+exec
+/bin/zsh -lc "rg -n \"class HTTPAdapter|PoolManager|proxy_manager|connection_from|cert_verify|get_connection|init_poolmanager|proxy_manager_for|send\\(\" ." in /tmp/ag-bench/requests
+ succeeded in 0ms:
+./src/requests/adapters.py:31:from urllib3.poolmanager import PoolManager, proxy_from_url
+./src/requests/adapters.py:72:    from urllib3.poolmanager import PoolManager as _PoolManager
+./src/requests/adapters.py:89:    poolmanager: PoolManager,
+./src/requests/adapters.py:128:    def send(
+./src/requests/adapters.py:158:class HTTPAdapter(BaseAdapter):
+./src/requests/adapters.py:195:    proxy_manager: dict[str, Any]
+./src/requests/adapters.py:199:    poolmanager: _PoolManager
+./src/requests/adapters.py:213:        self.proxy_manager = {}
+./src/requests/adapters.py:221:        self.init_poolmanager(pool_connections, pool_maxsize, block=pool_block)
+./src/requests/adapters.py:227:        # Can't handle by adding 'proxy_manager' to self.__attrs__ because
+./src/requests/adapters.py:229:        self.proxy_manager = {}
+./src/requests/adapters.py:235:        self.init_poolmanager(
+./src/requests/adapters.py:239:    def init_poolmanager(
+./src/requests/adapters.py:246:        """Initializes a urllib3 PoolManager.
+./src/requests/adapters.py:262:        self.poolmanager = PoolManager(
+./src/requests/adapters.py:269:    def proxy_manager_for(self, proxy: str, **proxy_kwargs: Any) -> Any:
+./src/requests/adapters.py:281:        if proxy in self.proxy_manager:
+./src/requests/adapters.py:282:            manager = self.proxy_manager[proxy]
+./src/requests/adapters.py:285:            manager = self.proxy_manager[proxy] = SOCKSProxyManager(
+./src/requests/adapters.py:296:            manager = self.proxy_manager[proxy] = proxy_from_url(
+./src/requests/adapters.py:307:    def cert_verify(
+./src/requests/adapters.py:455:    def get_connection_with_tls_context(
+./src/requests/adapters.py:500:            proxy_manager = self.proxy_manager_for(proxy)
+./src/requests/adapters.py:501:            conn = proxy_manager.connection_from_host(
+./src/requests/adapters.py:506:            conn = self.poolmanager.connection_from_host(
+./src/requests/adapters.py:512:    def get_connection(
+./src/requests/adapters.py:515:        """DEPRECATED: Users should move to `get_connection_with_tls_context`
+./src/requests/adapters.py:528:                "`get_connection` has been deprecated in favor of "
+./src/requests/adapters.py:529:                "`get_connection_with_tls_context`. Custom HTTPAdapter subclasses "
+./src/requests/adapters.py:545:            proxy_manager = self.proxy_manager_for(proxy)
+./src/requests/adapters.py:546:            conn = proxy_manager.connection_from_url(url)
+./src/requests/adapters.py:551:            conn = self.poolmanager.connection_from_url(url)
+./src/requests/adapters.py:558:        Currently, this closes the PoolManager and any active ProxyManager,
+./src/requests/adapters.py:562:        for proxy in self.proxy_manager.values():
+./src/requests/adapters.py:611:        :param kwargs: The keyword arguments from the call to send().
+./src/requests/adapters.py:636:    def send(
+./src/requests/adapters.py:664:            conn = self.get_connection_with_tls_context(
+./src/requests/adapters.py:670:        self.cert_verify(conn, request.url, verify, cert)
+./src/requests/sessions.py:132:    def send(self, request: PreparedRequest, **kwargs: Any) -> Response: ...
+./src/requests/sessions.py:292:                resp = self.send(
+./src/requests/sessions.py:651:        resp = self.send(prep, **send_kwargs)
+./src/requests/sessions.py:745:    def send(self, request: PreparedRequest, **kwargs: Any) -> Response:
+./src/requests/sessions.py:777:        r = adapter.send(request, **kwargs)
+./docs/user/advanced.rst:143:    resp = s.send(prepped,
+./docs/user/advanced.rst:180:    resp = s.send(prepped,
+./docs/user/advanced.rst:205:    resp = s.send(prepped, **settings)
+./docs/user/advanced.rst:1018:    from urllib3.poolmanager import PoolManager
+./docs/user/advanced.rst:1026:        def init_poolmanager(self, connections, maxsize, block=False):
+./docs/user/advanced.rst:1027:            self.poolmanager = PoolManager(
+./src/requests/auth.py:312:            _r = r.connection.send(prep, **kwargs)
+./tests/test_lowlevel.py:21:    sock.send(text_200)
+./tests/test_lowlevel.py:46:        sock.send(
+./tests/test_lowlevel.py:113:        sock.send(response)
+./tests/test_lowlevel.py:156:        sock.send(text_401)
+./tests/test_lowlevel.py:161:        sock.send(text_302)
+./tests/test_lowlevel.py:167:        sock.send(text_401)
+./tests/test_lowlevel.py:172:        sock.send(text_200)
+./tests/test_lowlevel.py:212:        sock.send(text_401)
+./tests/test_lowlevel.py:218:        sock.send(text_401)
+./tests/test_lowlevel.py:255:        sock.send(text_200_chal)
+./tests/test_lowlevel.py:316:        sock.send(
+./tests/test_lowlevel.py:325:        sock.send(b'HTTP/1.1 200 OK\r\n\r\n')
+./tests/test_lowlevel.py:372:        sock.send(
+./tests/test_lowlevel.py:378:        sock.send(
+./tests/test_lowlevel.py:384:        sock.send(
+./tests/test_lowlevel.py:411:        sock.send(
+./src/requests/models.py:393:      >>> s.send(r)
+./HISTORY.md:106:  by the CVE changes in 2.32.0, we've renamed `_get_connection` to
+./HISTORY.md:107:  a new public API, `get_connection_with_tls_context`. Existing custom
+./HISTORY.md:109:  `get_connection` is considered deprecated in all versions of Requests>=2.32.0.
+./HISTORY.md:652:    from requests.packages.urllib3.poolmanager import PoolManager
+./HISTORY.md:657:    urllib3.poolmanager.PoolManager
+./HISTORY.md:661:    from urllib3.poolmanager import PoolManager
+./tests/testserver/server.py:55:            sock.send(text.encode("utf-8"))
+./tests/test_requests.py:97:        from requests.packages.urllib3.poolmanager import PoolManager  # noqa:F401
+./tests/test_requests.py:202:        r = s.send(r.prepare())
+./tests/test_requests.py:210:        r = s.send(r.prepare())
+./tests/test_requests.py:325:        resp = ses.send(prep)
+./tests/test_requests.py:465:        resp = s.send(prep_req)
+./tests/test_requests.py:622:                session.send(request.prepare())
+./tests/test_requests.py:630:                session.send(prepared)
+./tests/test_requests.py:639:                session.send(request.prepare())
+./tests/test_requests.py:1141:        resp = s.send(prep)
+./tests/test_requests.py:1149:            s.send(req)
+./tests/test_requests.py:1172:        s.send(prep)
+./tests/test_requests.py:1209:        resp = s.send(prep)
+./tests/test_requests.py:1226:        resp = s.send(prep)
+./tests/test_requests.py:1543:        resp = s.send(r)
+./tests/test_requests.py:1559:        resp = s.send(r)
+./tests/test_requests.py:1575:        resp = s.send(r)
+./tests/test_requests.py:1581:            requests.Session().send(r)
+./tests/test_requests.py:1600:        r = s.send(r.prepare())
+./tests/test_requests.py:2174:        with mock.patch.dict(session.adapters["http://"].proxy_manager, proxies):
+./tests/test_requests.py:2575:    def send(self, *args, **kwargs):
+./tests/test_requests.py:2611:    r0 = session.send(prep)
+./tests/test_requests.py:2890:            sock.send(
+./tests/test_requests.py:2923:            sock.send(
+./tests/test_requests.py:2956:            sock.send(
+./tests/test_requests.py:2990:            sock.send(
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/requests
+ succeeded in 0ms:
+codex
+The relevant code is in `src/requests/adapters.py`; I’m also checking `sessions.py` because Requests first chooses an adapter by URL prefix before the adapter chooses a urllib3 pool.
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '158,310p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   158	class HTTPAdapter(BaseAdapter):
+   159	    """The built-in HTTP Adapter for urllib3.
+   160	
+   161	    Provides a general-case interface for Requests sessions to contact HTTP and
+   162	    HTTPS urls by implementing the Transport Adapter interface. This class will
+   163	    usually be created by the :class:`Session <Session>` class under the
+   164	    covers.
+   165	
+   166	    :param pool_connections: The number of urllib3 connection pools to cache.
+   167	    :param pool_maxsize: The maximum number of connections to save in the pool.
+   168	    :param max_retries: The maximum number of retries each connection
+   169	        should attempt. Note, this applies only to failed DNS lookups, socket
+   170	        connections and connection timeouts, never to requests where data has
+   171	        made it to the server. By default, Requests does not retry failed
+   172	        connections. If you need granular control over the conditions under
+   173	        which we retry a request, import urllib3's ``Retry`` class and pass
+   174	        that instead.
+   175	    :param pool_block: Whether the connection pool should block for connections.
+   176	
+   177	    Usage::
+   178	
+   179	      >>> import requests
+   180	      >>> s = requests.Session()
+   181	      >>> a = requests.adapters.HTTPAdapter(max_retries=3)
+   182	      >>> s.mount('http://', a)
+   183	    """
+   184	
+   185	    __attrs__: list[str] = [
+   186	        "max_retries",
+   187	        "config",
+   188	        "_pool_connections",
+   189	        "_pool_maxsize",
+   190	        "_pool_block",
+   191	    ]
+   192	
+   193	    max_retries: Retry
+   194	    config: dict[str, Any]
+   195	    proxy_manager: dict[str, Any]
+   196	    _pool_connections: int
+   197	    _pool_maxsize: int
+   198	    _pool_block: bool
+   199	    poolmanager: _PoolManager
+   200	
+   201	    def __init__(
+   202	        self,
+   203	        pool_connections: int = DEFAULT_POOLSIZE,
+   204	        pool_maxsize: int = DEFAULT_POOLSIZE,
+   205	        max_retries: int | Retry = DEFAULT_RETRIES,
+   206	        pool_block: bool = DEFAULT_POOLBLOCK,
+   207	    ) -> None:
+   208	        if max_retries == DEFAULT_RETRIES:
+   209	            self.max_retries = Retry(0, read=False)
+   210	        else:
+   211	            self.max_retries = Retry.from_int(max_retries)
+   212	        self.config = {}
+   213	        self.proxy_manager = {}
+   214	
+   215	        super().__init__()
+   216	
+   217	        self._pool_connections = pool_connections
+   218	        self._pool_maxsize = pool_maxsize
+   219	        self._pool_block = pool_block
+   220	
+   221	        self.init_poolmanager(pool_connections, pool_maxsize, block=pool_block)
+   222	
+   223	    def __getstate__(self) -> dict[str, Any]:
+   224	        return {attr: getattr(self, attr, None) for attr in self.__attrs__}
+   225	
+   226	    def __setstate__(self, state: dict[str, Any]) -> None:
+   227	        # Can't handle by adding 'proxy_manager' to self.__attrs__ because
+   228	        # self.poolmanager uses a lambda function, which isn't pickleable.
+   229	        self.proxy_manager = {}
+   230	        self.config = {}
+   231	
+   232	        for attr, value in state.items():
+   233	            setattr(self, attr, value)
+   234	
+   235	        self.init_poolmanager(
+   236	            self._pool_connections, self._pool_maxsize, block=self._pool_block
+   237	        )
+   238	
+   239	    def init_poolmanager(
+   240	        self,
+   241	        connections: int,
+   242	        maxsize: int,
+   243	        block: bool = DEFAULT_POOLBLOCK,
+   244	        **pool_kwargs: Any,
+   245	    ) -> None:
+   246	        """Initializes a urllib3 PoolManager.
+   247	
+   248	        This method should not be called from user code, and is only
+   249	        exposed for use when subclassing the
+   250	        :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   251	
+   252	        :param connections: The number of urllib3 connection pools to cache.
+   253	        :param maxsize: The maximum number of connections to save in the pool.
+   254	        :param block: Block when no free connections are available.
+   255	        :param pool_kwargs: Extra keyword arguments used to initialize the Pool Manager.
+   256	        """
+   257	        # save these values for pickling
+   258	        self._pool_connections = connections
+   259	        self._pool_maxsize = maxsize
+   260	        self._pool_block = block
+   261	
+   262	        self.poolmanager = PoolManager(
+   263	            num_pools=connections,
+   264	            maxsize=maxsize,
+   265	            block=block,
+   266	            **pool_kwargs,
+   267	        )
+   268	
+   269	    def proxy_manager_for(self, proxy: str, **proxy_kwargs: Any) -> Any:
+   270	        """Return urllib3 ProxyManager for the given proxy.
+   271	
+   272	        This method should not be called from user code, and is only
+   273	        exposed for use when subclassing the
+   274	        :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   275	
+   276	        :param proxy: The proxy to return a urllib3 ProxyManager for.
+   277	        :param proxy_kwargs: Extra keyword arguments used to configure the Proxy Manager.
+   278	        :returns: ProxyManager
+   279	        :rtype: urllib3.ProxyManager
+   280	        """
+   281	        if proxy in self.proxy_manager:
+   282	            manager = self.proxy_manager[proxy]
+   283	        elif proxy.lower().startswith("socks"):
+   284	            username, password = get_auth_from_url(proxy)
+   285	            manager = self.proxy_manager[proxy] = SOCKSProxyManager(
+   286	                proxy,
+   287	                username=username,
+   288	                password=password,
+   289	                num_pools=self._pool_connections,
+   290	                maxsize=self._pool_maxsize,
+   291	                block=self._pool_block,
+   292	                **proxy_kwargs,
+   293	            )
+   294	        else:
+   295	            proxy_headers = self.proxy_headers(proxy)
+   296	            manager = self.proxy_manager[proxy] = proxy_from_url(
+   297	                proxy,
+   298	                proxy_headers=proxy_headers,
+   299	                num_pools=self._pool_connections,
+   300	                maxsize=self._pool_maxsize,
+   301	                block=self._pool_block,
+   302	                **proxy_kwargs,
+   303	            )
+   304	
+   305	        return manager
+   306	
+   307	    def cert_verify(
+   308	        self, conn: Any, url: str, verify: _t.VerifyType, cert: _t.CertType
+   309	    ) -> None:
+   310	        """Verify a SSL certificate. This method should not be called from user
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '455,555p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   455	    def get_connection_with_tls_context(
+   456	        self,
+   457	        request: PreparedRequest,
+   458	        verify: _t.VerifyType,
+   459	        proxies: dict[str, str] | None = None,
+   460	        cert: _t.CertType = None,
+   461	    ) -> HTTPConnectionPool:
+   462	        """Returns a urllib3 connection for the given request and TLS settings.
+   463	        This should not be called from user code, and is only exposed for use
+   464	        when subclassing the :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   465	
+   466	        :param request:
+   467	            The :class:`PreparedRequest <PreparedRequest>` object to be sent
+   468	            over the connection.
+   469	        :param verify:
+   470	            Either a boolean, in which case it controls whether we verify the
+   471	            server's TLS certificate, or a string, in which case it must be a
+   472	            path to a CA bundle to use.
+   473	        :param proxies:
+   474	            (optional) The proxies dictionary to apply to the request.
+   475	        :param cert:
+   476	            (optional) Any user-provided SSL certificate to be used for client
+   477	            authentication (a.k.a., mTLS).
+   478	        :rtype:
+   479	            urllib3.HTTPConnectionPool
+   480	        """
+   481	        assert _is_prepared(request)
+   482	
+   483	        proxy = select_proxy(request.url, proxies)
+   484	        try:
+   485	            host_params, pool_kwargs = self.build_connection_pool_key_attributes(
+   486	                request,
+   487	                verify,
+   488	                cert,
+   489	            )
+   490	        except ValueError as e:
+   491	            raise InvalidURL(e, request=request)
+   492	        if proxy:
+   493	            proxy = prepend_scheme_if_needed(proxy, "http")
+   494	            proxy_url = parse_url(proxy)
+   495	            if not proxy_url.host:
+   496	                raise InvalidProxyURL(
+   497	                    "Please check proxy URL. It is malformed "
+   498	                    "and could be missing the host."
+   499	                )
+   500	            proxy_manager = self.proxy_manager_for(proxy)
+   501	            conn = proxy_manager.connection_from_host(
+   502	                **host_params, pool_kwargs=pool_kwargs
+   503	            )
+   504	        else:
+   505	            # Only scheme should be lower case
+   506	            conn = self.poolmanager.connection_from_host(
+   507	                **host_params, pool_kwargs=pool_kwargs
+   508	            )
+   509	
+   510	        return conn
+   511	
+   512	    def get_connection(
+   513	        self, url: str, proxies: dict[str, str] | None = None
+   514	    ) -> HTTPConnectionPool:
+   515	        """DEPRECATED: Users should move to `get_connection_with_tls_context`
+   516	        for all subclasses of HTTPAdapter using Requests>=2.32.2.
+   517	
+   518	        Returns a urllib3 connection for the given URL. This should not be
+   519	        called from user code, and is only exposed for use when subclassing the
+   520	        :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   521	
+   522	        :param url: The URL to connect to.
+   523	        :param proxies: (optional) A Requests-style dictionary of proxies used on this request.
+   524	        :rtype: urllib3.HTTPConnectionPool
+   525	        """
+   526	        warnings.warn(
+   527	            (
+   528	                "`get_connection` has been deprecated in favor of "
+   529	                "`get_connection_with_tls_context`. Custom HTTPAdapter subclasses "
+   530	                "will need to migrate for Requests>=2.32.2. Please see "
+   531	                "https://github.com/psf/requests/pull/6710 for more details."
+   532	            ),
+   533	            DeprecationWarning,
+   534	        )
+   535	        proxy = select_proxy(url, proxies)
+   536	
+   537	        if proxy:
+   538	            proxy = prepend_scheme_if_needed(proxy, "http")
+   539	            proxy_url = parse_url(proxy)
+   540	            if not proxy_url.host:
+   541	                raise InvalidProxyURL(
+   542	                    "Please check proxy URL. It is malformed "
+   543	                    "and could be missing the host."
+   544	                )
+   545	            proxy_manager = self.proxy_manager_for(proxy)
+   546	            conn = proxy_manager.connection_from_url(url)
+   547	        else:
+   548	            # Only scheme should be lower case
+   549	            parsed = urlparse(url)
+   550	            url = parsed.geturl()
+   551	            conn = self.poolmanager.connection_from_url(url)
+   552	
+   553	        return conn
+   554	
+   555	    def close(self) -> None:
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '636,715p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   636	    def send(
+   637	        self,
+   638	        request: PreparedRequest,
+   639	        stream: bool = False,
+   640	        timeout: _t.TimeoutType = None,
+   641	        verify: _t.VerifyType = True,
+   642	        cert: _t.CertType = None,
+   643	        proxies: dict[str, str] | None = None,
+   644	    ) -> Response:
+   645	        """Sends PreparedRequest object. Returns Response object.
+   646	
+   647	        :param request: The :class:`PreparedRequest <PreparedRequest>` being sent.
+   648	        :param stream: (optional) Whether to stream the request content.
+   649	        :param timeout: (optional) How long to wait for the server to send
+   650	            data before giving up, as a float, or a :ref:`(connect timeout,
+   651	            read timeout) <timeouts>` tuple.
+   652	        :type timeout: float or tuple or urllib3 Timeout object
+   653	        :param verify: (optional) Either a boolean, in which case it controls whether
+   654	            we verify the server's TLS certificate, or a string, in which case it
+   655	            must be a path to a CA bundle to use
+   656	        :param cert: (optional) Any user-provided SSL certificate to be trusted.
+   657	        :param proxies: (optional) The proxies dictionary to apply to the request.
+   658	        :rtype: requests.Response
+   659	        """
+   660	
+   661	        assert _is_prepared(request)
+   662	
+   663	        try:
+   664	            conn = self.get_connection_with_tls_context(
+   665	                request, verify, proxies=proxies, cert=cert
+   666	            )
+   667	        except LocationValueError as e:
+   668	            raise InvalidURL(e, request=request)
+   669	
+   670	        self.cert_verify(conn, request.url, verify, cert)
+   671	        url = self.request_url(request, proxies)
+   672	        self.add_headers(
+   673	            request,
+   674	            stream=stream,
+   675	            timeout=timeout,
+   676	            verify=verify,
+   677	            cert=cert,
+   678	            proxies=proxies,
+   679	        )
+   680	
+   681	        chunked = not (request.body is None or "Content-Length" in request.headers)
+   682	
+   683	        if isinstance(timeout, tuple):
+   684	            try:
+   685	                connect, read = timeout
+   686	                resolved_timeout = TimeoutSauce(connect=connect, read=read)
+   687	            except ValueError:
+   688	                raise ValueError(
+   689	                    f"Invalid timeout {timeout}. Pass a (connect, read) timeout tuple, "
+   690	                    f"or a single float to set both timeouts to the same value."
+   691	                )
+   692	        elif isinstance(timeout, TimeoutSauce):
+   693	            resolved_timeout = timeout
+   694	        else:
+   695	            resolved_timeout = TimeoutSauce(connect=timeout, read=timeout)
+   696	
+   697	        try:
+   698	            resp = conn.urlopen(
+   699	                method=request.method,
+   700	                url=url,
+   701	                body=request.body,  # type: ignore[arg-type]  # urllib3 stubs don't accept Iterable[bytes | str]
+   702	                headers=request.headers,  # type: ignore[arg-type]  # urllib3#3072
+   703	                redirect=False,
+   704	                assert_same_host=False,
+   705	                preload_content=False,
+   706	                decode_content=False,
+   707	                retries=self.max_retries,
+   708	                timeout=resolved_timeout,
+   709	                chunked=chunked,
+   710	            )
+   711	
+   712	        except (ProtocolError, OSError) as err:
+   713	            raise ConnectionError(err, request=request)
+   714	
+   715	        except MaxRetryError as e:
+
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '435,470p;745,782p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   435	        "cert",
+   436	        "adapters",
+   437	        "stream",
+   438	        "trust_env",
+   439	        "max_redirects",
+   440	    ]
+   441	
+   442	    def __init__(self) -> None:
+   443	        #: A case-insensitive dictionary of headers to be sent on each
+   444	        #: :class:`Request <Request>` sent from this
+   445	        #: :class:`Session <Session>`.
+   446	        self.headers = default_headers()
+   447	
+   448	        #: Default Authentication tuple or object to attach to
+   449	        #: :class:`Request <Request>`.
+   450	        self.auth = None
+   451	
+   452	        #: Dictionary mapping protocol or protocol and host to the URL of the proxy
+   453	        #: (e.g. {'http': 'foo.bar:3128', 'http://host.name': 'foo.bar:4012'}) to
+   454	        #: be used on each :class:`Request <Request>`.
+   455	        self.proxies = {}
+   456	
+   457	        #: Event-handling hooks.
+   458	        self.hooks = default_hooks()
+   459	
+   460	        #: Dictionary of querystring data to attach to each
+   461	        #: :class:`Request <Request>`. The dictionary values may be lists for
+   462	        #: representing multivalued query parameters.
+   463	        self.params = {}
+   464	
+   465	        #: Stream response content default.
+   466	        self.stream = False
+   467	
+   468	        #: SSL Verification default.
+   469	        #: Defaults to `True`, requiring requests to verify the TLS certificate at the
+   470	        #: remote end.
+   745	    def send(self, request: PreparedRequest, **kwargs: Any) -> Response:
+   746	        """Send a given PreparedRequest.
+   747	
+   748	        :rtype: requests.Response
+   749	        """
+   750	        # Set defaults that the hooks can utilize to ensure they always have
+   751	        # the correct parameters to reproduce the previous request.
+   752	        kwargs.setdefault("stream", self.stream)
+   753	        kwargs.setdefault("verify", self.verify)
+   754	        kwargs.setdefault("cert", self.cert)
+   755	        if "proxies" not in kwargs:
+   756	            kwargs["proxies"] = resolve_proxies(request, self.proxies, self.trust_env)
+   757	
+   758	        # It's possible that users might accidentally send a Request object.
+   759	        # Guard against that specific failure case.
+   760	        if isinstance(request, Request):
+   761	            raise ValueError("You can only send PreparedRequests.")
+   762	
+   763	        assert _is_prepared(request)
+   764	
+   765	        # Set up variables needed for resolve_redirects and dispatching of hooks
+   766	        allow_redirects = kwargs.pop("allow_redirects", True)
+   767	        stream = kwargs.get("stream")
+   768	        hooks = request.hooks
+   769	
+   770	        # Get the appropriate adapter to use
+   771	        adapter = self.get_adapter(url=request.url)
+   772	
+   773	        # Start time (approximately) of the request
+   774	        start = preferred_clock()
+   775	
+   776	        # Send the request
+   777	        r = adapter.send(request, **kwargs)
+   778	
+   779	        # Total elapsed time of the request (approximately)
+   780	        elapsed = preferred_clock() - start
+   781	        r.elapsed = timedelta(seconds=elapsed)
+   782	
+
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '474,505p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   474	        #: man-in-the-middle (MitM) attacks.
+   475	        #: Only set this to `False` for testing.
+   476	        #: If verify is set to a string, it must be the path to a CA bundle file
+   477	        #: that will be used to verify the TLS certificate.
+   478	        self.verify = True
+   479	
+   480	        #: SSL client certificate default, if String, path to ssl client
+   481	        #: cert file (.pem). If Tuple, ('cert', 'key') pair.
+   482	        self.cert = None
+   483	
+   484	        #: Maximum number of redirects allowed. If the request exceeds this
+   485	        #: limit, a :class:`TooManyRedirects` exception is raised.
+   486	        #: This defaults to requests.models.DEFAULT_REDIRECT_LIMIT, which is
+   487	        #: 30.
+   488	        self.max_redirects = DEFAULT_REDIRECT_LIMIT
+   489	
+   490	        #: Trust environment settings for proxy configuration, default
+   491	        #: authentication and similar.
+   492	        self.trust_env = True
+   493	
+   494	        #: A CookieJar containing all currently outstanding cookies set on this
+   495	        #: session. By default it is a
+   496	        #: :class:`RequestsCookieJar <requests.cookies.RequestsCookieJar>`, but
+   497	        #: may be any other ``cookielib.CookieJar`` compatible object.
+   498	        self.cookies = cookiejar_from_dict({})
+   499	
+   500	        # Default connection adapters.
+   501	        self.adapters = OrderedDict()
+   502	        self.mount("https://", HTTPAdapter())
+   503	        self.mount("http://", HTTPAdapter())
+   504	
+   505	    def __enter__(self) -> Self:
+
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '779,835p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   779	        # Total elapsed time of the request (approximately)
+   780	        elapsed = preferred_clock() - start
+   781	        r.elapsed = timedelta(seconds=elapsed)
+   782	
+   783	        # Response manipulation hooks
+   784	        r = dispatch_hook("response", hooks, r, **kwargs)
+   785	
+   786	        # Persist cookies
+   787	        if r.history:
+   788	            # If the hooks create history then we want those cookies too
+   789	            for resp in r.history:
+   790	                extract_cookies_to_jar(self.cookies, resp.request, resp.raw)
+   791	
+   792	        extract_cookies_to_jar(self.cookies, request, r.raw)
+   793	
+   794	        # Resolve redirects if allowed.
+   795	        if allow_redirects:
+   796	            # Redirect resolving generator.
+   797	            gen = self.resolve_redirects(r, request, **kwargs)
+   798	            history = [resp for resp in gen]
+   799	        else:
+   800	            history = []
+   801	
+   802	        # Shuffle things around if there's history.
+   803	        if history:
+   804	            # Insert the first (original) request at the start
+   805	            history.insert(0, r)
+   806	            # Get the last request made
+   807	            r = history.pop()
+   808	            r.history = history
+   809	
+   810	        # If redirects aren't being followed, store the response on the Request for Response.next().
+   811	        if not allow_redirects:
+   812	            try:
+   813	                r._next = next(  # type: ignore[assignment]  # yield_requests=True returns PreparedRequest
+   814	                    self.resolve_redirects(r, request, yield_requests=True, **kwargs)
+   815	                )
+   816	            except StopIteration:
+   817	                pass
+   818	
+   819	        if not stream:
+   820	            r.content
+   821	
+   822	        return r
+   823	
+   824	    def merge_environment_settings(
+   825	        self,
+   826	        url: str,
+   827	        proxies: dict[str, str] | None,
+   828	        stream: bool | None,
+   829	        verify: _t.VerifyType | None,
+   830	        cert: _t.CertType,
+   831	    ) -> dict[str, Any]:
+   832	        """
+   833	        Check the environment and merge it with some settings.
+   834	
+   835	        :rtype: dict
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '390,455p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   390	            response.url = req.url.decode("utf-8")
+   391	        else:
+   392	            response.url = req.url
+   393	
+   394	        # Add new cookies from the server.
+   395	        extract_cookies_to_jar(response.cookies, req, resp)
+   396	
+   397	        # Give the Response some context.
+   398	        response.request = req
+   399	        response.connection = self
+   400	
+   401	        return response
+   402	
+   403	    def build_connection_pool_key_attributes(
+   404	        self, request: PreparedRequest, verify: _t.VerifyType, cert: _t.CertType = None
+   405	    ) -> tuple[dict[str, Any], dict[str, Any]]:
+   406	        """Build the PoolKey attributes used by urllib3 to return a connection.
+   407	
+   408	        This looks at the PreparedRequest, the user-specified verify value,
+   409	        and the value of the cert parameter to determine what PoolKey values
+   410	        to use to select a connection from a given urllib3 Connection Pool.
+   411	
+   412	        The SSL related pool key arguments are not consistently set. As of
+   413	        this writing, use the following to determine what keys may be in that
+   414	        dictionary:
+   415	
+   416	        * If ``verify`` is ``True``, ``"ssl_context"`` will be set and will be the
+   417	          default Requests SSL Context
+   418	        * If ``verify`` is ``False``, ``"ssl_context"`` will not be set but
+   419	          ``"cert_reqs"`` will be set
+   420	        * If ``verify`` is a string, (i.e., it is a user-specified trust bundle)
+   421	          ``"ca_certs"`` will be set if the string is not a directory recognized
+   422	          by :py:func:`os.path.isdir`, otherwise ``"ca_cert_dir"`` will be
+   423	          set.
+   424	        * If ``"cert"`` is specified, ``"cert_file"`` will always be set. If
+   425	          ``"cert"`` is a tuple with a second item, ``"key_file"`` will also
+   426	          be present
+   427	
+   428	        To override these settings, one may subclass this class, call this
+   429	        method and use the above logic to change parameters as desired. For
+   430	        example, if one wishes to use a custom :py:class:`ssl.SSLContext` one
+   431	        must both set ``"ssl_context"`` and based on what else they require,
+   432	        alter the other keys to ensure the desired behaviour.
+   433	
+   434	        :param request:
+   435	            The PreparedRequest being sent over the connection.
+   436	        :type request:
+   437	            :class:`~requests.models.PreparedRequest`
+   438	        :param verify:
+   439	            Either a boolean, in which case it controls whether
+   440	            we verify the server's TLS certificate, or a string, in which case it
+   441	            must be a path to a CA bundle to use.
+   442	        :param cert:
+   443	            (optional) Any user-provided SSL certificate for client
+   444	            authentication (a.k.a., mTLS). This may be a string (i.e., just
+   445	            the path to a file which holds both certificate and key) or a
+   446	            tuple of length 2 with the certificate file path and key file
+   447	            path.
+   448	        :returns:
+   449	            A tuple of two dictionaries. The first is the "host parameters"
+   450	            portion of the Pool Key including scheme, hostname, and port. The
+   451	            second is a dictionary of SSLContext related parameters.
+   452	        """
+   453	        return _urllib3_request_context(request, verify, cert, self.poolmanager)
+   454	
+   455	    def get_connection_with_tls_context(
+
+exec
+/bin/zsh -lc "rg -n \"build_connection_pool_key_attributes|select_proxy|mount\\(\" src/requests tests -g'*.py'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+src/requests/adapters.py:58:    select_proxy,
+src/requests/adapters.py:182:      >>> s.mount('http://', a)
+src/requests/adapters.py:403:    def build_connection_pool_key_attributes(
+src/requests/adapters.py:483:        proxy = select_proxy(request.url, proxies)
+src/requests/adapters.py:485:            host_params, pool_kwargs = self.build_connection_pool_key_attributes(
+src/requests/adapters.py:535:        proxy = select_proxy(url, proxies)
+src/requests/adapters.py:583:        proxy = select_proxy(request.url, proxies)
+src/requests/utils.py:883:def select_proxy(url: str, proxies: dict[str, str] | None) -> str | None:
+src/requests/sessions.py:502:        self.mount("https://", HTTPAdapter())
+src/requests/sessions.py:503:        self.mount("http://", HTTPAdapter())
+src/requests/sessions.py:881:    def mount(self, prefix: str, adapter: BaseAdapter) -> None:
+tests/test_requests.py:1625:        s.mount("http://git", HTTPAdapter())
+tests/test_requests.py:1626:        s.mount("http://github", HTTPAdapter())
+tests/test_requests.py:1627:        s.mount("http://github.com", HTTPAdapter())
+tests/test_requests.py:1628:        s.mount("http://github.com/about/", HTTPAdapter())
+tests/test_requests.py:1638:        s.mount("http://gittip", HTTPAdapter())
+tests/test_requests.py:1639:        s.mount("http://gittip.com", HTTPAdapter())
+tests/test_requests.py:1640:        s.mount("http://gittip.com/about/", HTTPAdapter())
+tests/test_requests.py:1655:        s2.mount("https://", HTTPAdapter())
+tests/test_requests.py:1670:        s.mount(prefix, prefix_adapter)
+tests/test_requests.py:1671:        s.mount(more_specific_prefix, more_specific_prefix_adapter)
+tests/test_requests.py:1689:        s.mount(mixed_case_prefix, my_adapter)
+tests/test_requests.py:1701:        s.mount(mixed_case_prefix, my_adapter)
+tests/test_requests.py:1713:        s.mount(prefix, adapter)
+tests/test_requests.py:1726:        s.mount(prefix, adapter)
+tests/test_requests.py:2703:    s.mount("http://", HTTPAdapter(max_retries=Retry(total=2, status_forcelist=[500])))
+tests/test_requests.py:2711:    s.mount("http://", HTTPAdapter(pool_connections=0, pool_maxsize=0))
+tests/test_utils.py:36:    select_proxy,
+tests/test_utils.py:565:    assert select_proxy(url, proxies) == expected
+
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '858,900p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   858	        verify = merge_setting(verify, self.verify)
+   859	        cert = merge_setting(cert, self.cert)
+   860	
+   861	        return {"proxies": proxies, "stream": stream, "verify": verify, "cert": cert}
+   862	
+   863	    def get_adapter(self, url: str) -> BaseAdapter:
+   864	        """
+   865	        Returns the appropriate connection adapter for the given URL.
+   866	
+   867	        :rtype: requests.adapters.BaseAdapter
+   868	        """
+   869	        for prefix, adapter in self.adapters.items():
+   870	            if url.lower().startswith(prefix.lower()):
+   871	                return adapter
+   872	
+   873	        # Nothing matches :-/
+   874	        raise InvalidSchema(f"No connection adapters were found for {url!r}")
+   875	
+   876	    def close(self) -> None:
+   877	        """Closes all adapters and as such the session"""
+   878	        for v in self.adapters.values():
+   879	            v.close()
+   880	
+   881	    def mount(self, prefix: str, adapter: BaseAdapter) -> None:
+   882	        """Registers a connection adapter to a prefix.
+   883	
+   884	        Adapters are sorted in descending order by prefix length.
+   885	        """
+   886	        self.adapters[prefix] = adapter
+   887	        keys_to_move = [k for k in self.adapters if len(k) < len(prefix)]
+   888	
+   889	        for key in keys_to_move:
+   890	            self.adapters[key] = self.adapters.pop(key)
+   891	
+   892	    def __getstate__(self) -> dict[str, Any]:
+   893	        state = {attr: getattr(self, attr, None) for attr in self.__attrs__}
+   894	        return state
+   895	
+   896	    def __setstate__(self, state: dict[str, Any]) -> None:
+   897	        for attr, value in state.items():
+   898	            setattr(self, attr, value)
+   899	
+   900	
+
+exec
+/bin/zsh -lc "nl -ba src/requests/utils.py | sed -n '883,910p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   883	def select_proxy(url: str, proxies: dict[str, str] | None) -> str | None:
+   884	    """Select a proxy for the url, if applicable.
+   885	
+   886	    :param url: The url being for the request
+   887	    :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs
+   888	    """
+   889	    proxies = proxies or {}
+   890	    urlparts = urlparse(url)
+   891	    if urlparts.hostname is None:
+   892	        return proxies.get(urlparts.scheme, proxies.get("all"))
+   893	
+   894	    proxy_keys = [
+   895	        urlparts.scheme + "://" + urlparts.hostname,
+   896	        urlparts.scheme,
+   897	        "all://" + urlparts.hostname,
+   898	        "all",
+   899	    ]
+   900	    proxy = None
+   901	    for proxy_key in proxy_keys:
+   902	        if proxy_key in proxies:
+   903	            proxy = proxies[proxy_key]
+   904	            break
+   905	
+   906	    return proxy
+   907	
+   908	
+   909	def resolve_proxies(
+   910	    request: Request | PreparedRequest,
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '1,80p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+     1	"""
+     2	requests.adapters
+     3	~~~~~~~~~~~~~~~~~
+     4	
+     5	This module contains the transport adapters that Requests uses to define
+     6	and maintain connections.
+     7	"""
+     8	
+     9	from __future__ import annotations
+    10	
+    11	import os.path
+    12	import socket  # noqa: F401  # type: ignore[reportUnusedImport]
+    13	import typing
+    14	import warnings
+    15	from typing import Any
+    16	
+    17	from urllib3.exceptions import (
+    18	    ClosedPoolError,
+    19	    ConnectTimeoutError,
+    20	    LocationValueError,
+    21	    MaxRetryError,
+    22	    NewConnectionError,
+    23	    ProtocolError,
+    24	    ReadTimeoutError,
+    25	    ResponseError,
+    26	)
+    27	from urllib3.exceptions import HTTPError as _HTTPError
+    28	from urllib3.exceptions import InvalidHeader as _InvalidHeader
+    29	from urllib3.exceptions import ProxyError as _ProxyError
+    30	from urllib3.exceptions import SSLError as _SSLError
+    31	from urllib3.poolmanager import PoolManager, proxy_from_url
+    32	from urllib3.util import Timeout as TimeoutSauce
+    33	from urllib3.util import parse_url
+    34	from urllib3.util.retry import Retry
+    35	
+    36	from .auth import _basic_auth_str  # type: ignore[reportPrivateUsage]
+    37	from .compat import basestring, urlparse
+    38	from .cookies import extract_cookies_to_jar
+    39	from .exceptions import (
+    40	    ConnectionError,
+    41	    ConnectTimeout,
+    42	    InvalidHeader,
+    43	    InvalidProxyURL,
+    44	    InvalidSchema,
+    45	    InvalidURL,
+    46	    ProxyError,
+    47	    ReadTimeout,
+    48	    RetryError,
+    49	    SSLError,
+    50	)
+    51	from .models import Response
+    52	from .structures import CaseInsensitiveDict
+    53	from .utils import (
+    54	    DEFAULT_CA_BUNDLE_PATH,
+    55	    get_auth_from_url,
+    56	    get_encoding_from_headers,
+    57	    prepend_scheme_if_needed,
+    58	    select_proxy,
+    59	    urldefragauth,
+    60	)
+    61	
+    62	try:
+    63	    from urllib3.contrib.socks import SOCKSProxyManager  # type: ignore[assignment]
+    64	except ImportError:
+    65	
+    66	    def SOCKSProxyManager(*args: Any, **kwargs: Any) -> None:
+    67	        raise InvalidSchema("Missing dependencies for SOCKS support.")
+    68	
+    69	
+    70	if typing.TYPE_CHECKING:
+    71	    from urllib3.connectionpool import HTTPConnectionPool
+    72	    from urllib3.poolmanager import PoolManager as _PoolManager
+    73	
+    74	    from . import _types as _t
+    75	    from .models import PreparedRequest
+    76	
+    77	from ._types import is_prepared as _is_prepared
+    78	
+    79	DEFAULT_POOLBLOCK = False
+    80	DEFAULT_POOLSIZE = 10
+
+exec
+/bin/zsh -lc "nl -ba tests/test_requests.py | sed -n '1620,1735p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+  1620	
+  1621	    def test_transport_adapter_ordering(self):
+  1622	        s = requests.Session()
+  1623	        order = ["https://", "http://"]
+  1624	        assert order == list(s.adapters)
+  1625	        s.mount("http://git", HTTPAdapter())
+  1626	        s.mount("http://github", HTTPAdapter())
+  1627	        s.mount("http://github.com", HTTPAdapter())
+  1628	        s.mount("http://github.com/about/", HTTPAdapter())
+  1629	        order = [
+  1630	            "http://github.com/about/",
+  1631	            "http://github.com",
+  1632	            "http://github",
+  1633	            "http://git",
+  1634	            "https://",
+  1635	            "http://",
+  1636	        ]
+  1637	        assert order == list(s.adapters)
+  1638	        s.mount("http://gittip", HTTPAdapter())
+  1639	        s.mount("http://gittip.com", HTTPAdapter())
+  1640	        s.mount("http://gittip.com/about/", HTTPAdapter())
+  1641	        order = [
+  1642	            "http://github.com/about/",
+  1643	            "http://gittip.com/about/",
+  1644	            "http://github.com",
+  1645	            "http://gittip.com",
+  1646	            "http://github",
+  1647	            "http://gittip",
+  1648	            "http://git",
+  1649	            "https://",
+  1650	            "http://",
+  1651	        ]
+  1652	        assert order == list(s.adapters)
+  1653	        s2 = requests.Session()
+  1654	        s2.adapters = {"http://": HTTPAdapter()}
+  1655	        s2.mount("https://", HTTPAdapter())
+  1656	        assert "http://" in s2.adapters
+  1657	        assert "https://" in s2.adapters
+  1658	
+  1659	    def test_session_get_adapter_prefix_matching(self):
+  1660	        prefix = "https://example.com"
+  1661	        more_specific_prefix = prefix + "/some/path"
+  1662	
+  1663	        url_matching_only_prefix = prefix + "/another/path"
+  1664	        url_matching_more_specific_prefix = more_specific_prefix + "/longer/path"
+  1665	        url_not_matching_prefix = "https://another.example.com/"
+  1666	
+  1667	        s = requests.Session()
+  1668	        prefix_adapter = HTTPAdapter()
+  1669	        more_specific_prefix_adapter = HTTPAdapter()
+  1670	        s.mount(prefix, prefix_adapter)
+  1671	        s.mount(more_specific_prefix, more_specific_prefix_adapter)
+  1672	
+  1673	        assert s.get_adapter(url_matching_only_prefix) is prefix_adapter
+  1674	        assert (
+  1675	            s.get_adapter(url_matching_more_specific_prefix)
+  1676	            is more_specific_prefix_adapter
+  1677	        )
+  1678	        assert s.get_adapter(url_not_matching_prefix) not in (
+  1679	            prefix_adapter,
+  1680	            more_specific_prefix_adapter,
+  1681	        )
+  1682	
+  1683	    def test_session_get_adapter_prefix_matching_mixed_case(self):
+  1684	        mixed_case_prefix = "hTtPs://eXamPle.CoM/MixEd_CAse_PREfix"
+  1685	        url_matching_prefix = mixed_case_prefix + "/full_url"
+  1686	
+  1687	        s = requests.Session()
+  1688	        my_adapter = HTTPAdapter()
+  1689	        s.mount(mixed_case_prefix, my_adapter)
+  1690	
+  1691	        assert s.get_adapter(url_matching_prefix) is my_adapter
+  1692	
+  1693	    def test_session_get_adapter_prefix_matching_is_case_insensitive(self):
+  1694	        mixed_case_prefix = "hTtPs://eXamPle.CoM/MixEd_CAse_PREfix"
+  1695	        url_matching_prefix_with_different_case = (
+  1696	            "HtTpS://exaMPLe.cOm/MiXeD_caSE_preFIX/another_url"
+  1697	        )
+  1698	
+  1699	        s = requests.Session()
+  1700	        my_adapter = HTTPAdapter()
+  1701	        s.mount(mixed_case_prefix, my_adapter)
+  1702	
+  1703	        assert s.get_adapter(url_matching_prefix_with_different_case) is my_adapter
+  1704	
+  1705	    def test_session_get_adapter_prefix_with_trailing_slash(self):
+  1706	        # from issue #6935
+  1707	        prefix = "https://example.com/"  # trailing slash
+  1708	        url_matching_prefix = "https://example.com/some/path"
+  1709	        url_not_matching_prefix = "https://example.com.other.com/some/path"
+  1710	
+  1711	        s = requests.Session()
+  1712	        adapter = HTTPAdapter()
+  1713	        s.mount(prefix, adapter)
+  1714	
+  1715	        assert s.get_adapter(url_matching_prefix) is adapter
+  1716	        assert s.get_adapter(url_not_matching_prefix) is not adapter
+  1717	
+  1718	    def test_session_get_adapter_prefix_without_trailing_slash(self):
+  1719	        # from issue #6935
+  1720	        prefix = "https://example.com"  # no trailing slash
+  1721	        url_matching_prefix = "https://example.com/some/path"
+  1722	        url_extended_hostname = "https://example.com.other.com/some/path"
+  1723	
+  1724	        s = requests.Session()
+  1725	        adapter = HTTPAdapter()
+  1726	        s.mount(prefix, adapter)
+  1727	
+  1728	        assert s.get_adapter(url_matching_prefix) is adapter
+  1729	        assert s.get_adapter(url_extended_hostname) is adapter
+  1730	
+  1731	    def test_header_remove_is_case_insensitive(self, httpbin):
+  1732	        # From issue #1321
+  1733	        s = requests.Session()
+  1734	        s.headers["foo"] = "bar"
+  1735	        r = s.get(httpbin("get"), headers={"FOO": None})
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '80,128p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+    80	DEFAULT_POOLSIZE = 10
+    81	DEFAULT_RETRIES = 0
+    82	DEFAULT_POOL_TIMEOUT = None
+    83	
+    84	
+    85	def _urllib3_request_context(
+    86	    request: PreparedRequest,
+    87	    verify: bool | str | None,
+    88	    client_cert: tuple[str, str] | str | None,
+    89	    poolmanager: PoolManager,
+    90	) -> tuple[dict[str, Any], dict[str, Any]]:
+    91	    host_params: dict[str, Any] = {}
+    92	    pool_kwargs: dict[str, Any] = {}
+    93	    parsed_request_url = urlparse(request.url)
+    94	    scheme = parsed_request_url.scheme.lower()
+    95	    port = parsed_request_url.port
+    96	
+    97	    cert_reqs = "CERT_REQUIRED"
+    98	    if verify is False:
+    99	        cert_reqs = "CERT_NONE"
+   100	    elif isinstance(verify, str):
+   101	        if not os.path.isdir(verify):
+   102	            pool_kwargs["ca_certs"] = verify
+   103	        else:
+   104	            pool_kwargs["ca_cert_dir"] = verify
+   105	    pool_kwargs["cert_reqs"] = cert_reqs
+   106	    if client_cert is not None:
+   107	        if isinstance(client_cert, tuple) and len(client_cert) == 2:
+   108	            pool_kwargs["cert_file"] = client_cert[0]
+   109	            pool_kwargs["key_file"] = client_cert[1]
+   110	        else:
+   111	            # According to our docs, we allow users to specify just the client
+   112	            # cert path
+   113	            pool_kwargs["cert_file"] = client_cert
+   114	    host_params = {
+   115	        "scheme": scheme,
+   116	        "host": parsed_request_url.hostname,
+   117	        "port": port,
+   118	    }
+   119	    return host_params, pool_kwargs
+   120	
+   121	
+   122	class BaseAdapter:
+   123	    """The Base Transport Adapter"""
+   124	
+   125	    def __init__(self) -> None:
+   126	        super().__init__()
+   127	
+   128	    def send(
+
+exec
+/bin/zsh -lc "rg -n \"def _urllib3_request_context|host_params|pool_kwargs|cert_reqs|ssl_context|ca_certs|ca_cert_dir|cert_file|key_file\" src/requests/adapters.py tests -g'*.py'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+src/requests/adapters.py:85:def _urllib3_request_context(
+src/requests/adapters.py:91:    host_params: dict[str, Any] = {}
+src/requests/adapters.py:92:    pool_kwargs: dict[str, Any] = {}
+src/requests/adapters.py:97:    cert_reqs = "CERT_REQUIRED"
+src/requests/adapters.py:99:        cert_reqs = "CERT_NONE"
+src/requests/adapters.py:102:            pool_kwargs["ca_certs"] = verify
+src/requests/adapters.py:104:            pool_kwargs["ca_cert_dir"] = verify
+src/requests/adapters.py:105:    pool_kwargs["cert_reqs"] = cert_reqs
+src/requests/adapters.py:108:            pool_kwargs["cert_file"] = client_cert[0]
+src/requests/adapters.py:109:            pool_kwargs["key_file"] = client_cert[1]
+src/requests/adapters.py:113:            pool_kwargs["cert_file"] = client_cert
+src/requests/adapters.py:114:    host_params = {
+src/requests/adapters.py:119:    return host_params, pool_kwargs
+src/requests/adapters.py:244:        **pool_kwargs: Any,
+src/requests/adapters.py:255:        :param pool_kwargs: Extra keyword arguments used to initialize the Pool Manager.
+src/requests/adapters.py:266:            **pool_kwargs,
+src/requests/adapters.py:337:            conn.cert_reqs = "CERT_REQUIRED"
+src/requests/adapters.py:340:                conn.ca_certs = cert_loc
+src/requests/adapters.py:342:                conn.ca_cert_dir = cert_loc
+src/requests/adapters.py:344:            conn.cert_reqs = "CERT_NONE"
+src/requests/adapters.py:345:            conn.ca_certs = None
+src/requests/adapters.py:346:            conn.ca_cert_dir = None
+src/requests/adapters.py:350:                conn.cert_file = cert[0]
+src/requests/adapters.py:351:                conn.key_file = cert[1]
+src/requests/adapters.py:353:                conn.cert_file = cert
+src/requests/adapters.py:354:                conn.key_file = None
+src/requests/adapters.py:355:            if conn.cert_file and not os.path.exists(conn.cert_file):
+src/requests/adapters.py:358:                    f"invalid path: {conn.cert_file}"
+src/requests/adapters.py:360:            if conn.key_file and not os.path.exists(conn.key_file):
+src/requests/adapters.py:362:                    f"Could not find the TLS key file, invalid path: {conn.key_file}"
+src/requests/adapters.py:416:        * If ``verify`` is ``True``, ``"ssl_context"`` will be set and will be the
+src/requests/adapters.py:418:        * If ``verify`` is ``False``, ``"ssl_context"`` will not be set but
+src/requests/adapters.py:419:          ``"cert_reqs"`` will be set
+src/requests/adapters.py:421:          ``"ca_certs"`` will be set if the string is not a directory recognized
+src/requests/adapters.py:422:          by :py:func:`os.path.isdir`, otherwise ``"ca_cert_dir"`` will be
+src/requests/adapters.py:424:        * If ``"cert"`` is specified, ``"cert_file"`` will always be set. If
+src/requests/adapters.py:425:          ``"cert"`` is a tuple with a second item, ``"key_file"`` will also
+src/requests/adapters.py:431:        must both set ``"ssl_context"`` and based on what else they require,
+src/requests/adapters.py:485:            host_params, pool_kwargs = self.build_connection_pool_key_attributes(
+src/requests/adapters.py:502:                **host_params, pool_kwargs=pool_kwargs
+src/requests/adapters.py:507:                **host_params, pool_kwargs=pool_kwargs
+tests/testserver/server.py:161:        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+tests/testserver/server.py:162:        self.ssl_context.load_cert_chain(self.cert_chain, keyfile=self.keyfile)
+tests/testserver/server.py:168:            self.ssl_context.verify_mode = ssl.CERT_OPTIONAL
+tests/testserver/server.py:169:            self.ssl_context.load_verify_locations(self.cacert)
+tests/testserver/server.py:173:        sock = self.ssl_context.wrap_socket(sock, server_side=True)
+
+exec
+/bin/zsh -lc "nl -ba src/requests/adapters.py | sed -n '555,635p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   555	    def close(self) -> None:
+   556	        """Disposes of any internal state.
+   557	
+   558	        Currently, this closes the PoolManager and any active ProxyManager,
+   559	        which closes any pooled connections.
+   560	        """
+   561	        self.poolmanager.clear()
+   562	        for proxy in self.proxy_manager.values():
+   563	            proxy.clear()
+   564	
+   565	    def request_url(
+   566	        self, request: PreparedRequest, proxies: dict[str, str] | None
+   567	    ) -> str:
+   568	        """Obtain the url to use when making the final request.
+   569	
+   570	        If the message is being sent through a HTTP proxy, the full URL has to
+   571	        be used. Otherwise, we should only use the path portion of the URL.
+   572	
+   573	        This should not be called from user code, and is only exposed for use
+   574	        when subclassing the
+   575	        :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   576	
+   577	        :param request: The :class:`PreparedRequest <PreparedRequest>` being sent.
+   578	        :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs.
+   579	        :rtype: str
+   580	        """
+   581	        assert _is_prepared(request)
+   582	
+   583	        proxy = select_proxy(request.url, proxies)
+   584	        scheme = urlparse(request.url).scheme
+   585	
+   586	        is_proxied_http_request = proxy and scheme != "https"
+   587	        using_socks_proxy = False
+   588	        if proxy:
+   589	            proxy_scheme = urlparse(proxy).scheme.lower()
+   590	            using_socks_proxy = proxy_scheme.startswith("socks")
+   591	
+   592	        url = request.path_url
+   593	        if url.startswith("//"):  # Don't confuse urllib3
+   594	            url = f"/{url.lstrip('/')}"
+   595	
+   596	        if is_proxied_http_request and not using_socks_proxy:
+   597	            url = urldefragauth(request.url)
+   598	
+   599	        return url
+   600	
+   601	    def add_headers(self, request: PreparedRequest, **kwargs: Any) -> None:
+   602	        """Add any headers needed by the connection. As of v2.0 this does
+   603	        nothing by default, but is left for overriding by users that subclass
+   604	        the :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   605	
+   606	        This should not be called from user code, and is only exposed for use
+   607	        when subclassing the
+   608	        :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   609	
+   610	        :param request: The :class:`PreparedRequest <PreparedRequest>` to add headers to.
+   611	        :param kwargs: The keyword arguments from the call to send().
+   612	        """
+   613	        pass
+   614	
+   615	    def proxy_headers(self, proxy: str) -> dict[str, str]:
+   616	        """Returns a dictionary of the headers to add to any request sent
+   617	        through a proxy. This works with urllib3 magic to ensure that they are
+   618	        correctly sent to the proxy, rather than in a tunnelled request if
+   619	        CONNECT is being used.
+   620	
+   621	        This should not be called from user code, and is only exposed for use
+   622	        when subclassing the
+   623	        :class:`HTTPAdapter <requests.adapters.HTTPAdapter>`.
+   624	
+   625	        :param proxy: The url of the proxy being used for this request.
+   626	        :rtype: dict
+   627	        """
+   628	        headers: dict[str, str] = {}
+   629	        username, password = get_auth_from_url(proxy)
+   630	
+   631	        if username:
+   632	            headers["Proxy-Authorization"] = _basic_auth_str(username, password)
+   633	
+   634	        return headers
+   635	
+
+codex
+I found the two-stage dispatch: `Session` picks a mounted adapter by longest matching URL prefix, then `HTTPAdapter` asks urllib3’s normal or proxy manager for a pool using host and TLS-derived key attributes.
+codex
+Answer: `Session` first picks an adapter: defaults mount `https://` and `http://`, and longer custom prefixes sort first. `get_adapter` returns the first case-insensitive prefix match. `HTTPAdapter` owns a direct urllib3 `PoolManager` configured by `num_pools`, `maxsize`, and `block`. For each send, it builds pool key inputs from request scheme/host/port plus TLS/cert settings. Then it chooses proxy vs direct: a matching proxy uses a cached per-proxy `ProxyManager` or `SOCKSProxyManager`; no proxy uses the direct `PoolManager`. Both paths call `connection_from_host(..., pool_kwargs=pool_kwargs)`, so urllib3 selects the actual connection pool by host plus TLS/proxy context, then Requests calls `conn.urlopen`.
+Citations: src/requests/sessions.py:500, src/requests/sessions.py:502, src/requests/sessions.py:503, src/requests/sessions.py:869, src/requests/sessions.py:870, src/requests/sessions.py:884, src/requests/sessions.py:887, src/requests/adapters.py:262, src/requests/adapters.py:263, src/requests/adapters.py:264, src/requests/adapters.py:265, src/requests/adapters.py:93, src/requests/adapters.py:97, src/requests/adapters.py:105, src/requests/adapters.py:114, src/requests/adapters.py:483, src/requests/adapters.py:500, src/requests/adapters.py:501, src/requests/adapters.py:506, src/requests/adapters.py:698
+Confidence: High
+tokens used
+36,296
+Answer: `Session` first picks an adapter: defaults mount `https://` and `http://`, and longer custom prefixes sort first. `get_adapter` returns the first case-insensitive prefix match. `HTTPAdapter` owns a direct urllib3 `PoolManager` configured by `num_pools`, `maxsize`, and `block`. For each send, it builds pool key inputs from request scheme/host/port plus TLS/cert settings. Then it chooses proxy vs direct: a matching proxy uses a cached per-proxy `ProxyManager` or `SOCKSProxyManager`; no proxy uses the direct `PoolManager`. Both paths call `connection_from_host(..., pool_kwargs=pool_kwargs)`, so urllib3 selects the actual connection pool by host plus TLS/proxy context, then Requests calls `conn.urlopen`.
+Citations: src/requests/sessions.py:500, src/requests/sessions.py:502, src/requests/sessions.py:503, src/requests/sessions.py:869, src/requests/sessions.py:870, src/requests/sessions.py:884, src/requests/sessions.py:887, src/requests/adapters.py:262, src/requests/adapters.py:263, src/requests/adapters.py:264, src/requests/adapters.py:265, src/requests/adapters.py:93, src/requests/adapters.py:97, src/requests/adapters.py:105, src/requests/adapters.py:114, src/requests/adapters.py:483, src/requests/adapters.py:500, src/requests/adapters.py:501, src/requests/adapters.py:506, src/requests/adapters.py:698
+Confidence: High

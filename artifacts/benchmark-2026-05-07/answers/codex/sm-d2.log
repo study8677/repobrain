@@ -1,0 +1,1944 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/sqlmodel
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe69-e367-7260-b8b4-367009419a53
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+What is the role of `Field()` in SQLModel and how does it differ from `pydantic.Field` and `sqlalchemy.Column`?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the repository guidance first, then trace `Field` through the implementation and docs/tests so the answer is grounded in local lines.
+exec
+/bin/zsh -lc "rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"'" in /tmp/ag-bench/sqlmodel
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc "pwd && rg -n \"def Field|class Field|pydantic\\.Field|Column\\(|sa_column|Field\\(\" -S ." in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+/private/tmp/ag-bench/sqlmodel
+./docs_src/tutorial/indexes/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/indexes/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/indexes/tutorial002_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/indexes/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/indexes/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/indexes/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs/tutorial/indexes.md:266:We use the same `Field()` again as we did before, and set `index=True`. That's it! 🚀
+./docs/tutorial/indexes.md:331:In this case, we want the default value of `age` to continue being `None`, so we set `default=None` when using `Field()`.
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:5:    team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:6:    hero_id: int | None = Field(default=None, foreign_key="hero.id", primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:14:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:15:    name: str = Field(index=True)
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:22:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:23:    name: str = Field(index=True)
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:25:    age: int | None = Field(default=None, index=True)
+./docs/index.md:125:    id: int | None = Field(default=None, primary_key=True)
+./docs/index.md:168:    id: int | None = Field(default=None, primary_key=True)
+./docs/index.md:202:    id: int | None = Field(default=None, primary_key=True)
+./docs/release-notes.md:687:* ✨ Add support for passing a custom SQLAlchemy type to `Field()` with `sa_type`. PR [#505](https://github.com/tiangolo/sqlmodel/pull/505) by [@maru0123-2004](https://github.com/maru0123-2004).
+./docs/release-notes.md:689:* ✨ Do not allow invalid combinations of field parameters for columns and relationships, `sa_column` excludes `sa_column_args`, `primary_key`, `nullable`, etc. PR [#681](https://github.com/tiangolo/sqlmodel/pull/681) by [@tiangolo](https://github.com/tiangolo).
+./docs/release-notes.md:807:* ✨ Allow setting `unique` in `Field()` for a column. PR [#83](https://github.com/tiangolo/sqlmodel/pull/83) by [@raphaelgibson](https://github.com/raphaelgibson).
+./docs/release-notes.md:882:    id: Optional[int] = Field(default=None, primary_key=True)
+./docs/release-notes.md:894:    id: Optional[int] = Field(default=None, primary_key=True)
+./docs/release-notes.md:895:    name: str = Field(index=True)
+./docs/release-notes.md:896:    secret_name: str = Field(index=True)
+./docs/release-notes.md:897:    age: Optional[int] = Field(default=None, index=True)
+./docs/release-notes.md:904:    id: Optional[int] = Field(default=None, primary_key=True)
+./docs/release-notes.md:905:    name: str = Field(index=True)
+./docs/release-notes.md:907:    age: Optional[int] = Field(default=None, index=True)
+./docs/advanced/decimal.md:24:When you use `Decimal` you can specify the number of digits and decimal places to support in the `Field()` function. They will be validated by Pydantic (for example when using FastAPI) and the same information will also be used for the database columns.
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:5:    team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:6:    hero_id: int | None = Field(default=None, foreign_key="hero.id", primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:10:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:11:    name: str = Field(index=True)
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:18:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:19:    name: str = Field(index=True)
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:21:    age: int | None = Field(default=None, index=True)
+./sqlmodel/main.py:103:class FieldInfo(PydanticFieldInfo):  # ty: ignore[subclass-of-final-class]
+./sqlmodel/main.py:113:        sa_column = kwargs.pop("sa_column", Undefined)
+./sqlmodel/main.py:114:        sa_column_args = kwargs.pop("sa_column_args", Undefined)
+./sqlmodel/main.py:115:        sa_column_kwargs = kwargs.pop("sa_column_kwargs", Undefined)
+./sqlmodel/main.py:116:        if sa_column is not Undefined:
+./sqlmodel/main.py:117:            if sa_column_args is not Undefined:
+./sqlmodel/main.py:119:                    "Passing sa_column_args is not supported when "
+./sqlmodel/main.py:120:                    "also passing a sa_column"
+./sqlmodel/main.py:122:            if sa_column_kwargs is not Undefined:
+./sqlmodel/main.py:124:                    "Passing sa_column_kwargs is not supported when "
+./sqlmodel/main.py:125:                    "also passing a sa_column"
+./sqlmodel/main.py:129:                    "Passing primary_key is not supported when also passing a sa_column"
+./sqlmodel/main.py:133:                    "Passing nullable is not supported when also passing a sa_column"
+./sqlmodel/main.py:137:                    "Passing foreign_key is not supported when also passing a sa_column"
+./sqlmodel/main.py:141:                    "Passing ondelete is not supported when also passing a sa_column"
+./sqlmodel/main.py:145:                    "Passing unique is not supported when also passing a sa_column"
+./sqlmodel/main.py:149:                    "Passing index is not supported when also passing a sa_column"
+./sqlmodel/main.py:153:                    "Passing sa_type is not supported when also passing a sa_column"
+./sqlmodel/main.py:166:        self.sa_column = sa_column
+./sqlmodel/main.py:167:        self.sa_column_args = sa_column_args
+./sqlmodel/main.py:168:        self.sa_column_kwargs = sa_column_kwargs
+./sqlmodel/main.py:204:class FieldInfoMetadata:
+./sqlmodel/main.py:212:    sa_column: Column[Any] | UndefinedType = Undefined
+./sqlmodel/main.py:213:    sa_column_args: Sequence[Any] | UndefinedType = Undefined
+./sqlmodel/main.py:214:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined
+./sqlmodel/main.py:235:# include sa_type, sa_column_args, sa_column_kwargs
+./sqlmodel/main.py:237:def Field(
+./sqlmodel/main.py:271:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+./sqlmodel/main.py:272:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+./sqlmodel/main.py:278:# include sa_type, sa_column_args, sa_column_kwargs
+./sqlmodel/main.py:280:def Field(
+./sqlmodel/main.py:315:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+./sqlmodel/main.py:316:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+./sqlmodel/main.py:321:# Include sa_column, don't include
+./sqlmodel/main.py:329:# sa_column_args
+./sqlmodel/main.py:330:# sa_column_kwargs
+./sqlmodel/main.py:332:def Field(
+./sqlmodel/main.py:360:    sa_column: Column[Any] | UndefinedType = Undefined,
+./sqlmodel/main.py:365:def Field(
+./sqlmodel/main.py:400:    sa_column: Column | UndefinedType = Undefined,
+./sqlmodel/main.py:401:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+./sqlmodel/main.py:402:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+./sqlmodel/main.py:439:        "sa_column": sa_column,
+./sqlmodel/main.py:440:        "sa_column_args": sa_column_args,
+./sqlmodel/main.py:441:        "sa_column_kwargs": sa_column_kwargs,
+./sqlmodel/main.py:466:        sa_column=sa_column,
+./sqlmodel/main.py:467:        sa_column_args=sa_column_args,
+./sqlmodel/main.py:468:        sa_column_kwargs=sa_column_kwargs,
+./sqlmodel/main.py:742:    sa_column = _get_sqlmodel_field_value(field_info, "sa_column", Undefined)
+./sqlmodel/main.py:743:    if isinstance(sa_column, Column):
+./sqlmodel/main.py:744:        return sa_column
+./sqlmodel/main.py:788:    sa_column_args = _get_sqlmodel_field_value(field_info, "sa_column_args", Undefined)
+./sqlmodel/main.py:789:    if sa_column_args is not Undefined:
+./sqlmodel/main.py:790:        args.extend(list(cast(Sequence[Any], sa_column_args)))
+./sqlmodel/main.py:791:    sa_column_kwargs = _get_sqlmodel_field_value(
+./sqlmodel/main.py:792:        field_info, "sa_column_kwargs", Undefined
+./sqlmodel/main.py:794:    if sa_column_kwargs is not Undefined:
+./sqlmodel/main.py:795:        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+./sqlmodel/main.py:796:    return Column(sa_type, *args, **kwargs)
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:142:For those cases, we can configure the database to **automatically delete** the related records with the `ondelete` parameter in `Field()`.
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:166:The `ondelete` parameter is set in the `Field()`, on the model that **has a foreign key**.
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:196:### `cascade_delete` on `Relationship()` and `ondelete` on `Field()`
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:200:* `ondelete` is put on the `Field()` with a **foreign key**. On the **"many"** side in "one-to-many" relationships.
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:206:    team_id: int = Field(foreign_key="team.id", ondelete="CASCADE")
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:298:In this case, the side with `Relationship()` won't have `cascade_delete`, but the side with `Field()` and a `foreign_key` will have `ondelete="SET NULL"`.
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:453:We will also use `ondelete="SET NULL"` in the `Hero` model table, in the foreign key `Field()` for the `team_id` to make the database set those fields to `NULL` automatically.
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:523:Let's set `ondelete="RESTRICT"` in the foreign key `Field()` for the `team_id` in the `Hero` model table.
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:647:* And use `ondelete="CASCADE"` in the `Field()` with the **foreign key**
+./docs/db-to-code.md:255:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:5:    team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:6:    hero_id: int | None = Field(default=None, foreign_key="hero.id", primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:10:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:11:    name: str = Field(index=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:18:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:19:    name: str = Field(index=True)
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:21:    age: int | None = Field(default=None, index=True)
+./docs/tutorial/relationship-attributes/define-relationships-attributes.md:79:If it was required for a `Hero` instance to belong to a `Team`, then the `team_id` would be `int` instead of `int | None`, its `Field` would be `Field(foreign_key="team.id")` instead of `Field(default=None, foreign_key="team.id")` and the `team` attribute would be a `Team` instead of `Team | None`.
+./docs/tutorial/create-db-and-table.md:135:Now, because we are taking the place of the default value with our `Field()` function, we set **the actual default value** of `id` to `None` with the argument `default=None` in `Field()`:
+./docs/tutorial/create-db-and-table.md:138:Field(default=None)
+./docs_src/tutorial/where/tutorial009_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial008_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./tests/test_instance_no_args.py:8:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_instance_no_args.py:28:        id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial004_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs/tutorial/automatic-id-none-refresh.md:5:Now let's talk a bit about why the `id` field **can't be `NULL`** on the database because it's a **primary key**, and we declare it using `Field(primary_key=True)`.
+./docs/tutorial/automatic-id-none-refresh.md:7:But the same `id` field actually **can be `None`** in the Python code, so we declare the type with `int | None`, and set the default value to `Field(default=None)`:
+./docs/tutorial/automatic-id-none-refresh.md:23:Because we don't set the `id`, it takes the Python's default value of `None` that we set in `Field(default=None)`.
+./tests/test_annotated_uuid.py:11:        id: UUID4 | None = Field(default_factory=uuid.uuid4, primary_key=True)
+./docs_src/tutorial/where/tutorial005_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./tests/test_missing_type.py:19:            id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial006b_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial011_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/where/tutorial007_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./tests/test_main.py:11:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_main.py:41:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_main.py:43:        secret_name: str = Field(unique=False)
+./tests/test_main.py:73:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_main.py:75:        secret_name: str = Field(unique=True)
+./tests/test_main.py:100:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_main.py:101:        name: str = Field(unique=True)
+./tests/test_main.py:107:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_main.py:108:        name: str = Field(unique=True)
+./tests/test_main.py:109:        team_id: int | None = Field(default=None, foreign_key="team.id")
+./tests/test_main.py:132:        user_id: int = Field(primary_key=True)
+./tests/test_main.py:133:        resource_id: int = Field(primary_key=True)
+./tests/test_main.py:165:        user_id: int = Field(primary_key=True)
+./tests/test_main.py:166:        resource_id: Annotated[int, AfterValidator(validate_resource_id)] = Field(
+./tests/test_main.py:200:        id: int = Field(primary_key=True)
+./tests/test_main.py:204:        id: int = Field(primary_key=True)
+./tests/test_main.py:205:        team_id: Annotated[int, AfterValidator(ensure_positive)] = Field(
+./docs_src/tutorial/where/tutorial006_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./tests/test_nullable.py:8:        primary_key: int | None = Field(
+./tests/test_nullable.py:13:        optional_default_ellipsis: str | None = Field(default=...)
+./tests/test_nullable.py:14:        optional_default_none: str | None = Field(default=None)
+./tests/test_nullable.py:15:        optional_non_nullable: str | None = Field(
+./tests/test_nullable.py:18:        optional_nullable: str | None = Field(
+./tests/test_nullable.py:21:        optional_default_ellipses_non_nullable: str | None = Field(
+./tests/test_nullable.py:25:        optional_default_ellipses_nullable: str | None = Field(
+./tests/test_nullable.py:29:        optional_default_none_non_nullable: str | None = Field(
+./tests/test_nullable.py:33:        optional_default_none_nullable: str | None = Field(
+./tests/test_nullable.py:37:        default_ellipses_non_nullable: str = Field(default=..., nullable=False)
+./tests/test_nullable.py:39:        optional_default_str_non_nullable: str | None = Field(
+./tests/test_nullable.py:42:        optional_default_str_nullable: str | None = Field(
+./tests/test_nullable.py:46:        str_default_str_non_nullable: str = Field(default="default", nullable=False)
+./tests/test_nullable.py:47:        str_default_str_nullable: str = Field(default="default", nullable=True)
+./tests/test_nullable.py:48:        str_default_ellipsis_non_nullable: str = Field(default=..., nullable=False)
+./tests/test_nullable.py:49:        str_default_ellipsis_nullable: str = Field(default=..., nullable=True)
+./tests/test_nullable.py:83:        primary_key: int | None = Field(
+./tests/test_nullable.py:88:        optional_non_nullable_no_default: str | None = Field(nullable=False)
+./tests/test_nullable.py:111:        nullable_integer_primary_key: int | None = Field(
+./tests/test_enums_models.py:18:    id: uuid.UUID = Field(primary_key=True)
+./tests/test_enums_models.py:23:    id: uuid.UUID = Field(primary_key=True)
+./docs/tutorial/connect/create-connected-tables.md:85:We add a default of `None` to the `Field()` so we don't have to explicitly pass `team_id=None` when creating a hero.
+./docs/tutorial/connect/create-connected-tables.md:89:In `Field()` we pass the argument `foreign_key="team.id"`. This tells the database that this column `team_id` is a foreign key to the table `team`. A "**foreign key**" just means that this column will have the **key** to identify a row in a **foreign** table.
+./docs/tutorial/connect/create-connected-tables.md:213:Using **SQLModel**, in most of the cases you only need a field (column) with a `foreign_key` in the `Field()` with a string pointing to another table and column to connect two tables.
+./docs_src/tutorial/connect/select/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial003_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial003_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial003_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial003_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/select/tutorial003_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./tests/test_field_sa_column.py:8:def test_sa_column_takes_precedence() -> None:
+./tests/test_field_sa_column.py:10:        id: int | None = Field(
+./tests/test_field_sa_column.py:12:            sa_column=Column(String, primary_key=True, nullable=False),
+./tests/test_field_sa_column.py:15:    # It would have been nullable with no sa_column
+./tests/test_field_sa_column.py:20:def test_sa_column_with_annotated_metadata() -> None:
+./tests/test_field_sa_column.py:22:        id: Annotated[int | None, "meta"] = Field(
+./tests/test_field_sa_column.py:24:            sa_column=Column(String, primary_key=True, nullable=False),
+./tests/test_field_sa_column.py:31:def test_sa_column_no_sa_args() -> None:
+./tests/test_field_sa_column.py:35:            id: int | None = Field(
+./tests/test_field_sa_column.py:37:                sa_column_args=[Integer],
+./tests/test_field_sa_column.py:38:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:42:def test_sa_column_no_sa_kargs() -> None:
+./tests/test_field_sa_column.py:46:            id: int | None = Field(
+./tests/test_field_sa_column.py:48:                sa_column_kwargs={"primary_key": True},
+./tests/test_field_sa_column.py:49:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:53:def test_sa_column_no_type() -> None:
+./tests/test_field_sa_column.py:57:            id: int | None = Field(
+./tests/test_field_sa_column.py:60:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:64:def test_sa_column_no_primary_key() -> None:
+./tests/test_field_sa_column.py:68:            id: int | None = Field(
+./tests/test_field_sa_column.py:71:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:75:def test_sa_column_no_nullable() -> None:
+./tests/test_field_sa_column.py:79:            id: int | None = Field(
+./tests/test_field_sa_column.py:82:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:86:def test_sa_column_no_foreign_key() -> None:
+./tests/test_field_sa_column.py:90:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_column.py:94:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_column.py:95:            team_id: int | None = Field(
+./tests/test_field_sa_column.py:98:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:102:def test_sa_column_no_unique() -> None:
+./tests/test_field_sa_column.py:106:            id: int | None = Field(
+./tests/test_field_sa_column.py:109:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:113:def test_sa_column_no_index() -> None:
+./tests/test_field_sa_column.py:117:            id: int | None = Field(
+./tests/test_field_sa_column.py:120:                sa_column=Column(Integer, primary_key=True),
+./tests/test_field_sa_column.py:124:def test_sa_column_no_ondelete() -> None:
+./tests/test_field_sa_column.py:128:            id: int | None = Field(
+./tests/test_field_sa_column.py:130:                sa_column=Column(Integer, primary_key=True),
+./docs_src/tutorial/connect/select/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial002_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial002_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial002_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/select/tutorial002_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./tests/test_select_typing.py:7:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_relationship.py:10:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_relationship.py:11:            name: str = Field(index=True)
+./tests/test_field_sa_relationship.py:21:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_relationship.py:22:            name: str = Field(index=True)
+./tests/test_field_sa_relationship.py:24:            age: int | None = Field(default=None, index=True)
+./tests/test_field_sa_relationship.py:26:            team_id: int | None = Field(default=None, foreign_key="team.id")
+./tests/test_field_sa_relationship.py:34:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_relationship.py:35:            name: str = Field(index=True)
+./tests/test_field_sa_relationship.py:45:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_relationship.py:46:            name: str = Field(index=True)
+./tests/test_field_sa_relationship.py:48:            age: int | None = Field(default=None, index=True)
+./tests/test_field_sa_relationship.py:50:            team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/connect/select/tutorial004_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial004_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial004_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial004_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial004_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/select/tutorial004_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./tests/test_query.py:7:        id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial005_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial005_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial005_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial005_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial005_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/select/tutorial005_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/connect/select/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial001_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/select/tutorial001_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/select/tutorial001_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/select/tutorial001_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/one/tutorial009_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial009_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial009_py310.py:8:    age: int | None = Field(default=None, index=True)
+./tests/test_pydantic/test_field.py:11:        dec: Decimal = Field(max_digits=4, decimal_places=2)
+./tests/test_pydantic/test_field.py:41:        pet: Cat | Dog | Lizard = Field(..., discriminator="pet_type")
+./tests/test_pydantic/test_field.py:52:        id: int | None = Field(primary_key=True)
+./tests/test_pydantic/test_field.py:53:        foo: str = Field(repr=False)
+./tests/test_aliases.py:12:    full_name: str = PField(alias="fullName")
+./tests/test_aliases.py:16:    full_name: str = Field(alias="fullName")
+./tests/test_aliases.py:97:    first_name: str = PField(validation_alias="firstName", serialization_alias="f_name")
+./tests/test_aliases.py:101:    first_name: str = Field(validation_alias="firstName", serialization_alias="f_name")
+./tests/test_aliases.py:126:        f: str = Field(schema_extra={"validation_alias": "f_alias"})
+./tests/test_aliases.py:134:        f: str = Field(schema_extra={"serialization_alias": "f_out"})
+./tests/test_aliases.py:145:        first_name: str = Field(alias="fullName", validation_alias="v_name")
+./tests/test_aliases.py:153:        first_name: str = Field(alias="fullName", serialization_alias="f_name")
+./tests/test_aliases.py:165:        f: str = Field()
+./tests/test_aliases.py:176:        f: str = Field(alias="custom")
+./docs_src/tutorial/automatic_id_none_refresh/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial008_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial008_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial008_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/one/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial003_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial003_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/select/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs/tutorial/fastapi/multiple-models.md:238:Notice that the parent model `HeroBase`  is not a **table model**, but still, we can declare `name` and `age` using `Field(index=True)`.
+./docs_src/tutorial/one/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial002_py310.py:8:    age: int | None = Field(default=None, index=True)
+./tests/test_sqlalchemy_type_errors.py:11:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_sqlalchemy_type_errors.py:19:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_sqlalchemy_type_errors.py:27:            id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/automatic_id_none_refresh/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial004_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial004_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial004_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/select/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial005_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial005_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial005_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/select/tutorial004_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:31:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:33:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:35:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:39:    id: int | None = Field(default=None, primary_key=True)
+./tests/test_future_annotations.py:10:        id: Annotated[int | None, Field(primary_key=True)] = None
+./tests/test_future_annotations.py:38:        id: Annotated[int | None, Field(primary_key=True)] = None
+./tests/test_future_annotations.py:42:        id: Annotated[int | None, Field(primary_key=True)] = None
+./tests/test_future_annotations.py:44:        team_id: Annotated[int | None, Field(foreign_key="team.id")] = None
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/one/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./tests/test_fields_set.py:10:        last_updated: datetime = Field(default_factory=datetime.now)
+./docs_src/tutorial/select/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial007_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial007_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial007_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/one/tutorial006_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/one/tutorial006_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/one/tutorial006_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/update/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/update/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/connect/update/tutorial001_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/connect/update/tutorial001_py310.py:12:    name: str = Field(index=True)
+./docs_src/tutorial/connect/update/tutorial001_py310.py:14:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/connect/update/tutorial001_py310.py:16:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:13:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:15:    hero_id: int = Field(foreign_key="hero.id")
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:20:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:21:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:28:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:29:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:31:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:33:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:36:    weapon_id: int | None = Field(default=None, foreign_key="weapon.id")
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/main.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/main.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/main.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/offset_and_limit/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/offset_and_limit/tutorial003_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/offset_and_limit/tutorial003_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/delete/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/delete/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/delete/tutorial002_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/offset_and_limit/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/offset_and_limit/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/offset_and_limit/tutorial002_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/offset_and_limit/tutorial004_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/offset_and_limit/tutorial004_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/offset_and_limit/tutorial004_py310.py:8:    age: int | None = Field(default=None, index=True)
+./tests/test_field_sa_args_kwargs.py:5:def test_sa_column_args(clear_sqlmodel, caplog) -> None:
+./tests/test_field_sa_args_kwargs.py:7:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_args_kwargs.py:11:        id: int | None = Field(default=None, primary_key=True)
+./tests/test_field_sa_args_kwargs.py:12:        team_id: int | None = Field(
+./tests/test_field_sa_args_kwargs.py:14:            sa_column_args=[ForeignKey("team.id")],
+./tests/test_field_sa_args_kwargs.py:25:def test_sa_column_kargs(clear_sqlmodel, caplog) -> None:
+./tests/test_field_sa_args_kwargs.py:27:        id: int | None = Field(
+./tests/test_field_sa_args_kwargs.py:29:            sa_column_kwargs={"primary_key": True},
+./docs_src/tutorial/delete/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/delete/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/delete/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/offset_and_limit/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/offset_and_limit/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/offset_and_limit/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./tests/test_ondelete_raises.py:11:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_ondelete_raises.py:18:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_ondelete_raises.py:19:            name: str = Field(index=True)
+./tests/test_ondelete_raises.py:21:            age: int | None = Field(default=None, index=True)
+./tests/test_ondelete_raises.py:23:            team_id: int = Field(foreign_key="team.id", ondelete="SET NULL")
+./tests/test_ondelete_raises.py:33:            id: int | None = Field(default=None, primary_key=True)
+./tests/test_ondelete_raises.py:35:            age: int = Field(ondelete="CASCADE")
+./docs_src/tutorial/update/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/update/tutorial003_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/update/tutorial003_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./tests/test_update.py:6:        id: int = Field(default=None, primary_key=True)
+./docs_src/tutorial/update/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/update/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/update/tutorial002_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/update/tutorial004_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/update/tutorial004_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/update/tutorial004_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:18:    team_id: int | None = Field(
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:18:    team_id: int | None = Field(
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:18:    team_id: int | None = Field(
+./docs_src/tutorial/update/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/update/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/update/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:18:    team_id: int | None = Field(
+./docs_src/tutorial/fastapi/simple_hero_api/tutorial001_py310.py:6:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/simple_hero_api/tutorial001_py310.py:7:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/simple_hero_api/tutorial001_py310.py:9:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id", ondelete="CASCADE")
+./docs_src/tutorial/create_db_and_table/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)  # (4)!
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:11:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:30:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:32:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:34:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:38:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/advanced/uuid/tutorial002_py310.py:7:    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+./docs_src/advanced/uuid/tutorial002_py310.py:8:    name: str = Field(index=True)
+./docs_src/advanced/uuid/tutorial002_py310.py:10:    age: int | None = Field(default=None, index=True)
+./docs_src/advanced/uuid/tutorial001_py310.py:7:    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+./docs_src/advanced/uuid/tutorial001_py310.py:8:    name: str = Field(index=True)
+./docs_src/advanced/uuid/tutorial001_py310.py:10:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/create_db_and_table/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/limit_and_offset/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/limit_and_offset/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/limit_and_offset/tutorial001_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/read_one/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/read_one/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/read_one/tutorial001_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/advanced/decimal/tutorial001_py310.py:7:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/advanced/decimal/tutorial001_py310.py:8:    name: str = Field(index=True)
+./docs_src/advanced/decimal/tutorial001_py310.py:10:    age: int | None = Field(default=None, index=True)
+./docs_src/advanced/decimal/tutorial001_py310.py:11:    money: Decimal = Field(default=0, max_digits=5, decimal_places=3)
+./docs_src/tutorial/create_db_and_table/annotations/en/tutorial003.md:11:    It is a **primary key**, so we use `Field()` and the argument `primary_key=True`.
+./docs_src/tutorial/create_db_and_table/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/multiple_models/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/multiple_models/tutorial002_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/multiple_models/tutorial002_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/multiple_models/tutorial001_py310.py:6:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/multiple_models/tutorial001_py310.py:7:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/multiple_models/tutorial001_py310.py:9:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/insert/tutorial003_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/delete/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/delete/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/delete/tutorial001_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/insert/tutorial002_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/response_model/tutorial001_py310.py:6:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/response_model/tutorial001_py310.py:7:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/response_model/tutorial001_py310.py:9:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/insert/tutorial001_py310.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/update/tutorial002_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/update/tutorial002_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/update/tutorial002_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/update/tutorial002_py310.py:13:    hashed_password: str = Field()
+./docs_src/tutorial/fastapi/session_with_dependency/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/session_with_dependency/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/session_with_dependency/tutorial001_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/fastapi/update/tutorial001_py310.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/fastapi/update/tutorial001_py310.py:8:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/fastapi/update/tutorial001_py310.py:12:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/code_structure/tutorial002_py310/hero_model.py:10:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/code_structure/tutorial002_py310/hero_model.py:11:    name: str = Field(index=True)
+./docs_src/tutorial/code_structure/tutorial002_py310/hero_model.py:13:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/code_structure/tutorial002_py310/hero_model.py:15:    team_id: int | None = Field(default=None, foreign_key="team.id")
+./README.md:112:    id: int | None = Field(default=None, primary_key=True)
+./README.md:155:    id: int | None = Field(default=None, primary_key=True)
+./README.md:189:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/code_structure/tutorial002_py310/team_model.py:10:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/code_structure/tutorial002_py310/team_model.py:11:    name: str = Field(index=True)
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:5:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:6:    name: str = Field(index=True)
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:13:    id: int | None = Field(default=None, primary_key=True)
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:14:    name: str = Field(index=True)
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:16:    age: int | None = Field(default=None, index=True)
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:18:    team_id: int | None = Field(default=None, foreign_key="team.id")
+
+codex
+The repository search found the implementation in `sqlmodel/main.py`, and there does not appear to be a repo-local `AGENTS.md`; I’ll still check parent scopes before using the lines.
+exec
+/bin/zsh -lc 'for p in /tmp/ag-bench/sqlmodel /tmp/ag-bench /tmp /; do [ -f "$p/AGENTS.md" ] && printf '"'%s\\n' \""'$p/AGENTS.md"; done' in /tmp/ag-bench/sqlmodel
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '1,190p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	from __future__ import annotations
+     2	
+     3	import builtins
+     4	import ipaddress
+     5	import uuid
+     6	from collections.abc import Callable, Mapping, Sequence, Set
+     7	from dataclasses import dataclass
+     8	from datetime import date, datetime, time, timedelta
+     9	from decimal import Decimal
+    10	from enum import Enum
+    11	from pathlib import Path
+    12	from typing import (
+    13	    TYPE_CHECKING,
+    14	    Any,
+    15	    ClassVar,
+    16	    Literal,
+    17	    TypeAlias,
+    18	    TypeVar,
+    19	    Union,
+    20	    cast,
+    21	    get_origin,
+    22	    overload,
+    23	)
+    24	
+    25	from pydantic import BaseModel, EmailStr
+    26	from pydantic.fields import FieldInfo as PydanticFieldInfo
+    27	from sqlalchemy import (
+    28	    Boolean,
+    29	    Column,
+    30	    Date,
+    31	    DateTime,
+    32	    Float,
+    33	    ForeignKey,
+    34	    Integer,
+    35	    Interval,
+    36	    Numeric,
+    37	    inspect,
+    38	)
+    39	from sqlalchemy import Enum as sa_Enum
+    40	from sqlalchemy.orm import (
+    41	    Mapped,
+    42	    RelationshipProperty,
+    43	    declared_attr,
+    44	    registry,
+    45	    relationship,
+    46	)
+    47	from sqlalchemy.orm.attributes import set_attribute
+    48	from sqlalchemy.orm.decl_api import DeclarativeMeta
+    49	from sqlalchemy.orm.instrumentation import is_instrumented
+    50	from sqlalchemy.sql.schema import MetaData
+    51	from sqlalchemy.sql.sqltypes import LargeBinary, Time, Uuid
+    52	from typing_extensions import deprecated
+    53	
+    54	from ._compat import (
+    55	    PYDANTIC_MINOR_VERSION,
+    56	    BaseConfig,
+    57	    ModelMetaclass,
+    58	    Representation,
+    59	    SQLModelConfig,
+    60	    Undefined,
+    61	    UndefinedType,
+    62	    finish_init,
+    63	    get_annotations,
+    64	    get_field_metadata,
+    65	    get_model_fields,
+    66	    get_relationship_to,
+    67	    get_sa_type_from_field,
+    68	    init_pydantic_private_attrs,
+    69	    is_field_noneable,
+    70	    is_table_model_class,
+    71	    sqlmodel_init,
+    72	    sqlmodel_validate,
+    73	)
+    74	from .sql.sqltypes import AutoString
+    75	
+    76	if TYPE_CHECKING:
+    77	    from pydantic._internal._model_construction import ModelMetaclass as ModelMetaclass
+    78	    from pydantic._internal._repr import Representation as Representation
+    79	    from pydantic_core import PydanticUndefined as Undefined
+    80	    from pydantic_core import PydanticUndefinedType as UndefinedType
+    81	
+    82	_T = TypeVar("_T")
+    83	NoArgAnyCallable = Callable[[], Any]
+    84	IncEx: TypeAlias = (
+    85	    set[int]
+    86	    | set[str]
+    87	    | Mapping[int, Union["IncEx", bool]]
+    88	    | Mapping[str, Union["IncEx", bool]]
+    89	)
+    90	OnDeleteType = Literal["CASCADE", "SET NULL", "RESTRICT"]
+    91	
+    92	
+    93	def __dataclass_transform__(
+    94	    *,
+    95	    eq_default: bool = True,
+    96	    order_default: bool = False,
+    97	    kw_only_default: bool = False,
+    98	    field_descriptors: tuple[type | Callable[..., Any], ...] = (()),
+    99	) -> Callable[[_T], _T]:
+   100	    return lambda a: a
+   101	
+   102	
+   103	class FieldInfo(PydanticFieldInfo):  # ty: ignore[subclass-of-final-class]
+   104	    # mypy - ignore that PydanticFieldInfo is @final
+   105	    def __init__(self, default: Any = Undefined, **kwargs: Any) -> None:
+   106	        primary_key = kwargs.pop("primary_key", False)
+   107	        nullable = kwargs.pop("nullable", Undefined)
+   108	        foreign_key = kwargs.pop("foreign_key", Undefined)
+   109	        ondelete = kwargs.pop("ondelete", Undefined)
+   110	        unique = kwargs.pop("unique", False)
+   111	        index = kwargs.pop("index", Undefined)
+   112	        sa_type = kwargs.pop("sa_type", Undefined)
+   113	        sa_column = kwargs.pop("sa_column", Undefined)
+   114	        sa_column_args = kwargs.pop("sa_column_args", Undefined)
+   115	        sa_column_kwargs = kwargs.pop("sa_column_kwargs", Undefined)
+   116	        if sa_column is not Undefined:
+   117	            if sa_column_args is not Undefined:
+   118	                raise RuntimeError(
+   119	                    "Passing sa_column_args is not supported when "
+   120	                    "also passing a sa_column"
+   121	                )
+   122	            if sa_column_kwargs is not Undefined:
+   123	                raise RuntimeError(
+   124	                    "Passing sa_column_kwargs is not supported when "
+   125	                    "also passing a sa_column"
+   126	                )
+   127	            if primary_key is not Undefined:
+   128	                raise RuntimeError(
+   129	                    "Passing primary_key is not supported when also passing a sa_column"
+   130	                )
+   131	            if nullable is not Undefined:
+   132	                raise RuntimeError(
+   133	                    "Passing nullable is not supported when also passing a sa_column"
+   134	                )
+   135	            if foreign_key is not Undefined:
+   136	                raise RuntimeError(
+   137	                    "Passing foreign_key is not supported when also passing a sa_column"
+   138	                )
+   139	            if ondelete is not Undefined:
+   140	                raise RuntimeError(
+   141	                    "Passing ondelete is not supported when also passing a sa_column"
+   142	                )
+   143	            if unique is not Undefined:
+   144	                raise RuntimeError(
+   145	                    "Passing unique is not supported when also passing a sa_column"
+   146	                )
+   147	            if index is not Undefined:
+   148	                raise RuntimeError(
+   149	                    "Passing index is not supported when also passing a sa_column"
+   150	                )
+   151	            if sa_type is not Undefined:
+   152	                raise RuntimeError(
+   153	                    "Passing sa_type is not supported when also passing a sa_column"
+   154	                )
+   155	        if ondelete is not Undefined:
+   156	            if foreign_key is Undefined:
+   157	                raise RuntimeError("ondelete can only be used with foreign_key")
+   158	        super().__init__(default=default, **kwargs)
+   159	        self.primary_key = primary_key
+   160	        self.nullable = nullable
+   161	        self.foreign_key = foreign_key
+   162	        self.ondelete = ondelete
+   163	        self.unique = unique
+   164	        self.index = index
+   165	        self.sa_type = sa_type
+   166	        self.sa_column = sa_column
+   167	        self.sa_column_args = sa_column_args
+   168	        self.sa_column_kwargs = sa_column_kwargs
+   169	
+   170	
+   171	class RelationshipInfo(Representation):
+   172	    def __init__(
+   173	        self,
+   174	        *,
+   175	        back_populates: str | None = None,
+   176	        cascade_delete: bool | None = False,
+   177	        passive_deletes: bool | Literal["all"] | None = False,
+   178	        link_model: Any | None = None,
+   179	        sa_relationship: RelationshipProperty | None = None,
+   180	        sa_relationship_args: Sequence[Any] | None = None,
+   181	        sa_relationship_kwargs: Mapping[str, Any] | None = None,
+   182	    ) -> None:
+   183	        if sa_relationship is not None:
+   184	            if sa_relationship_args is not None:
+   185	                raise RuntimeError(
+   186	                    "Passing sa_relationship_args is not supported when "
+   187	                    "also passing a sa_relationship"
+   188	                )
+   189	            if sa_relationship_kwargs is not None:
+   190	                raise RuntimeError(
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '230,475p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   230	    if metadata is not None and hasattr(metadata, attribute):
+   231	        return getattr(metadata, attribute)
+   232	    return getattr(field_info, attribute, default)
+   233	
+   234	
+   235	# include sa_type, sa_column_args, sa_column_kwargs
+   236	@overload
+   237	def Field(
+   238	    default: Any = Undefined,
+   239	    *,
+   240	    default_factory: NoArgAnyCallable | None = None,
+   241	    alias: str | None = None,
+   242	    validation_alias: str | None = None,
+   243	    serialization_alias: str | None = None,
+   244	    title: str | None = None,
+   245	    description: str | None = None,
+   246	    exclude: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   247	    include: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   248	    const: bool | None = None,
+   249	    gt: float | None = None,
+   250	    ge: float | None = None,
+   251	    lt: float | None = None,
+   252	    le: float | None = None,
+   253	    multiple_of: float | None = None,
+   254	    max_digits: int | None = None,
+   255	    decimal_places: int | None = None,
+   256	    min_items: int | None = None,
+   257	    max_items: int | None = None,
+   258	    unique_items: bool | None = None,
+   259	    min_length: int | None = None,
+   260	    max_length: int | None = None,
+   261	    allow_mutation: bool = True,
+   262	    regex: str | None = None,
+   263	    discriminator: str | None = None,
+   264	    repr: bool = True,
+   265	    primary_key: bool | UndefinedType = Undefined,
+   266	    foreign_key: Any = Undefined,
+   267	    unique: bool | UndefinedType = Undefined,
+   268	    nullable: bool | UndefinedType = Undefined,
+   269	    index: bool | UndefinedType = Undefined,
+   270	    sa_type: type[Any] | UndefinedType = Undefined,
+   271	    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+   272	    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+   273	    schema_extra: dict[str, Any] | None = None,
+   274	) -> Any: ...
+   275	
+   276	
+   277	# When foreign_key is str, include ondelete
+   278	# include sa_type, sa_column_args, sa_column_kwargs
+   279	@overload
+   280	def Field(
+   281	    default: Any = Undefined,
+   282	    *,
+   283	    default_factory: NoArgAnyCallable | None = None,
+   284	    alias: str | None = None,
+   285	    validation_alias: str | None = None,
+   286	    serialization_alias: str | None = None,
+   287	    title: str | None = None,
+   288	    description: str | None = None,
+   289	    exclude: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   290	    include: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   291	    const: bool | None = None,
+   292	    gt: float | None = None,
+   293	    ge: float | None = None,
+   294	    lt: float | None = None,
+   295	    le: float | None = None,
+   296	    multiple_of: float | None = None,
+   297	    max_digits: int | None = None,
+   298	    decimal_places: int | None = None,
+   299	    min_items: int | None = None,
+   300	    max_items: int | None = None,
+   301	    unique_items: bool | None = None,
+   302	    min_length: int | None = None,
+   303	    max_length: int | None = None,
+   304	    allow_mutation: bool = True,
+   305	    regex: str | None = None,
+   306	    discriminator: str | None = None,
+   307	    repr: bool = True,
+   308	    primary_key: bool | UndefinedType = Undefined,
+   309	    foreign_key: str,
+   310	    ondelete: OnDeleteType | UndefinedType = Undefined,
+   311	    unique: bool | UndefinedType = Undefined,
+   312	    nullable: bool | UndefinedType = Undefined,
+   313	    index: bool | UndefinedType = Undefined,
+   314	    sa_type: type[Any] | UndefinedType = Undefined,
+   315	    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+   316	    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+   317	    schema_extra: dict[str, Any] | None = None,
+   318	) -> Any: ...
+   319	
+   320	
+   321	# Include sa_column, don't include
+   322	# primary_key
+   323	# foreign_key
+   324	# ondelete
+   325	# unique
+   326	# nullable
+   327	# index
+   328	# sa_type
+   329	# sa_column_args
+   330	# sa_column_kwargs
+   331	@overload
+   332	def Field(
+   333	    default: Any = Undefined,
+   334	    *,
+   335	    default_factory: NoArgAnyCallable | None = None,
+   336	    alias: str | None = None,
+   337	    validation_alias: str | None = None,
+   338	    serialization_alias: str | None = None,
+   339	    title: str | None = None,
+   340	    description: str | None = None,
+   341	    exclude: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   342	    include: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   343	    const: bool | None = None,
+   344	    gt: float | None = None,
+   345	    ge: float | None = None,
+   346	    lt: float | None = None,
+   347	    le: float | None = None,
+   348	    multiple_of: float | None = None,
+   349	    max_digits: int | None = None,
+   350	    decimal_places: int | None = None,
+   351	    min_items: int | None = None,
+   352	    max_items: int | None = None,
+   353	    unique_items: bool | None = None,
+   354	    min_length: int | None = None,
+   355	    max_length: int | None = None,
+   356	    allow_mutation: bool = True,
+   357	    regex: str | None = None,
+   358	    discriminator: str | None = None,
+   359	    repr: bool = True,
+   360	    sa_column: Column[Any] | UndefinedType = Undefined,
+   361	    schema_extra: dict[str, Any] | None = None,
+   362	) -> Any: ...
+   363	
+   364	
+   365	def Field(
+   366	    default: Any = Undefined,
+   367	    *,
+   368	    default_factory: NoArgAnyCallable | None = None,
+   369	    alias: str | None = None,
+   370	    validation_alias: str | None = None,
+   371	    serialization_alias: str | None = None,
+   372	    title: str | None = None,
+   373	    description: str | None = None,
+   374	    exclude: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   375	    include: Set[int | str] | Mapping[int | str, Any] | Any = None,
+   376	    const: bool | None = None,
+   377	    gt: float | None = None,
+   378	    ge: float | None = None,
+   379	    lt: float | None = None,
+   380	    le: float | None = None,
+   381	    multiple_of: float | None = None,
+   382	    max_digits: int | None = None,
+   383	    decimal_places: int | None = None,
+   384	    min_items: int | None = None,
+   385	    max_items: int | None = None,
+   386	    unique_items: bool | None = None,
+   387	    min_length: int | None = None,
+   388	    max_length: int | None = None,
+   389	    allow_mutation: bool = True,
+   390	    regex: str | None = None,
+   391	    discriminator: str | None = None,
+   392	    repr: bool = True,
+   393	    primary_key: bool | UndefinedType = Undefined,
+   394	    foreign_key: Any = Undefined,
+   395	    ondelete: OnDeleteType | UndefinedType = Undefined,
+   396	    unique: bool | UndefinedType = Undefined,
+   397	    nullable: bool | UndefinedType = Undefined,
+   398	    index: bool | UndefinedType = Undefined,
+   399	    sa_type: type[Any] | UndefinedType = Undefined,
+   400	    sa_column: Column | UndefinedType = Undefined,
+   401	    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+   402	    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+   403	    schema_extra: dict[str, Any] | None = None,
+   404	) -> Any:
+   405	    current_schema_extra = schema_extra or {}
+   406	    # Extract possible alias settings from schema_extra so we can control precedence
+   407	    schema_validation_alias = current_schema_extra.pop("validation_alias", None)
+   408	    schema_serialization_alias = current_schema_extra.pop("serialization_alias", None)
+   409	    field_info_kwargs = {
+   410	        "alias": alias,
+   411	        "title": title,
+   412	        "description": description,
+   413	        "exclude": exclude,
+   414	        "include": include,
+   415	        "const": const,
+   416	        "gt": gt,
+   417	        "ge": ge,
+   418	        "lt": lt,
+   419	        "le": le,
+   420	        "multiple_of": multiple_of,
+   421	        "max_digits": max_digits,
+   422	        "decimal_places": decimal_places,
+   423	        "min_items": min_items,
+   424	        "max_items": max_items,
+   425	        "unique_items": unique_items,
+   426	        "min_length": min_length,
+   427	        "max_length": max_length,
+   428	        "allow_mutation": allow_mutation,
+   429	        "regex": regex,
+   430	        "discriminator": discriminator,
+   431	        "repr": repr,
+   432	        "primary_key": primary_key,
+   433	        "foreign_key": foreign_key,
+   434	        "ondelete": ondelete,
+   435	        "unique": unique,
+   436	        "nullable": nullable,
+   437	        "index": index,
+   438	        "sa_type": sa_type,
+   439	        "sa_column": sa_column,
+   440	        "sa_column_args": sa_column_args,
+   441	        "sa_column_kwargs": sa_column_kwargs,
+   442	        **current_schema_extra,
+   443	    }
+   444	
+   445	    # explicit params > schema_extra > alias propagation
+   446	    field_info_kwargs["validation_alias"] = (
+   447	        validation_alias or schema_validation_alias or alias
+   448	    )
+   449	    field_info_kwargs["serialization_alias"] = (
+   450	        serialization_alias or schema_serialization_alias or alias
+   451	    )
+   452	
+   453	    field_info = FieldInfo(
+   454	        default,
+   455	        default_factory=default_factory,
+   456	        **field_info_kwargs,
+   457	    )
+   458	    field_metadata = FieldInfoMetadata(
+   459	        primary_key=primary_key,
+   460	        nullable=nullable,
+   461	        foreign_key=foreign_key,
+   462	        ondelete=ondelete,
+   463	        unique=unique,
+   464	        index=index,
+   465	        sa_type=sa_type,
+   466	        sa_column=sa_column,
+   467	        sa_column_args=sa_column_args,
+   468	        sa_column_kwargs=sa_column_kwargs,
+   469	    )
+   470	    if hasattr(field_info, "metadata"):
+   471	        field_info.metadata.append(field_metadata)
+   472	    return field_info
+   473	
+   474	
+   475	@overload
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '730,805p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   730	    if issubclass(type_, Decimal):
+   731	        return Numeric(
+   732	            precision=getattr(metadata, "max_digits", None),
+   733	            scale=getattr(metadata, "decimal_places", None),
+   734	        )
+   735	    if issubclass(type_, uuid.UUID):
+   736	        return Uuid
+   737	    raise ValueError(f"{type_} has no matching SQLAlchemy type")
+   738	
+   739	
+   740	def get_column_from_field(field: Any) -> Column:
+   741	    field_info = field
+   742	    sa_column = _get_sqlmodel_field_value(field_info, "sa_column", Undefined)
+   743	    if isinstance(sa_column, Column):
+   744	        return sa_column
+   745	    sa_type = get_sqlalchemy_type(field)
+   746	    primary_key = _get_sqlmodel_field_value(field_info, "primary_key", Undefined)
+   747	    if primary_key is Undefined:
+   748	        primary_key = False
+   749	    index = _get_sqlmodel_field_value(field_info, "index", Undefined)
+   750	    if index is Undefined:
+   751	        index = False
+   752	    nullable = not primary_key and is_field_noneable(field)
+   753	    # Override derived nullability if the nullable property is set explicitly
+   754	    # on the field
+   755	    field_nullable = _get_sqlmodel_field_value(field_info, "nullable", Undefined)
+   756	    if field_nullable is not Undefined:
+   757	        assert not isinstance(field_nullable, UndefinedType)
+   758	        nullable = field_nullable
+   759	    args = []
+   760	    foreign_key = _get_sqlmodel_field_value(field_info, "foreign_key", Undefined)
+   761	    if foreign_key is Undefined:
+   762	        foreign_key = None
+   763	    unique = _get_sqlmodel_field_value(field_info, "unique", Undefined)
+   764	    if unique is Undefined:
+   765	        unique = False
+   766	    if foreign_key:
+   767	        ondelete_value = _get_sqlmodel_field_value(field_info, "ondelete", Undefined)
+   768	        if ondelete_value is Undefined:
+   769	            ondelete_value = None
+   770	        if ondelete_value == "SET NULL" and not nullable:
+   771	            raise RuntimeError('ondelete="SET NULL" requires nullable=True')
+   772	        assert isinstance(foreign_key, str)
+   773	        assert isinstance(ondelete_value, (str, type(None)))  # for typing
+   774	        args.append(ForeignKey(foreign_key, ondelete=ondelete_value))
+   775	    kwargs: dict[str, Any] = {
+   776	        "primary_key": primary_key,
+   777	        "nullable": nullable,
+   778	        "index": index,
+   779	        "unique": unique,
+   780	    }
+   781	    sa_default = Undefined
+   782	    if field_info.default_factory:
+   783	        sa_default = field_info.default_factory
+   784	    elif field_info.default is not Undefined:
+   785	        sa_default = field_info.default
+   786	    if sa_default is not Undefined:
+   787	        kwargs["default"] = sa_default
+   788	    sa_column_args = _get_sqlmodel_field_value(field_info, "sa_column_args", Undefined)
+   789	    if sa_column_args is not Undefined:
+   790	        args.extend(list(cast(Sequence[Any], sa_column_args)))
+   791	    sa_column_kwargs = _get_sqlmodel_field_value(
+   792	        field_info, "sa_column_kwargs", Undefined
+   793	    )
+   794	    if sa_column_kwargs is not Undefined:
+   795	        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+   796	    return Column(sa_type, *args, **kwargs)
+   797	
+   798	
+   799	default_registry = registry()
+   800	
+   801	_TSQLModel = TypeVar("_TSQLModel", bound="SQLModel")
+   802	
+   803	
+   804	class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+   805	    # SQLAlchemy needs to set weakref(s), Pydantic will set the other slots values
+
+codex
+`FieldInfo` subclasses Pydantic’s `FieldInfo`, then SQLModel adds SQLAlchemy-specific metadata and turns it into a `Column` later. I’m grabbing the surrounding metadata and table-construction lines to make the distinction precise.
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '190,235p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   190	                raise RuntimeError(
+   191	                    "Passing sa_relationship_kwargs is not supported when "
+   192	                    "also passing a sa_relationship"
+   193	                )
+   194	        self.back_populates = back_populates
+   195	        self.cascade_delete = cascade_delete
+   196	        self.passive_deletes = passive_deletes
+   197	        self.link_model = link_model
+   198	        self.sa_relationship = sa_relationship
+   199	        self.sa_relationship_args = sa_relationship_args
+   200	        self.sa_relationship_kwargs = sa_relationship_kwargs
+   201	
+   202	
+   203	@dataclass
+   204	class FieldInfoMetadata:
+   205	    primary_key: bool | UndefinedType = Undefined
+   206	    nullable: bool | UndefinedType = Undefined
+   207	    foreign_key: Any = Undefined
+   208	    ondelete: OnDeleteType | UndefinedType = Undefined
+   209	    unique: bool | UndefinedType = Undefined
+   210	    index: bool | UndefinedType = Undefined
+   211	    sa_type: type[Any] | UndefinedType = Undefined
+   212	    sa_column: Column[Any] | UndefinedType = Undefined
+   213	    sa_column_args: Sequence[Any] | UndefinedType = Undefined
+   214	    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined
+   215	
+   216	
+   217	def _get_sqlmodel_field_metadata(field_info: Any) -> FieldInfoMetadata | None:
+   218	    metadata_items = getattr(field_info, "metadata", None)
+   219	    if metadata_items:
+   220	        for meta in metadata_items:
+   221	            if isinstance(meta, FieldInfoMetadata):
+   222	                return meta
+   223	    return None
+   224	
+   225	
+   226	def _get_sqlmodel_field_value(
+   227	    field_info: Any, attribute: str, default: Any = Undefined
+   228	) -> Any:
+   229	    metadata = _get_sqlmodel_field_metadata(field_info)
+   230	    if metadata is not None and hasattr(metadata, attribute):
+   231	        return getattr(metadata, attribute)
+   232	    return getattr(field_info, attribute, default)
+   233	
+   234	
+   235	# include sa_type, sa_column_args, sa_column_kwargs
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '525,590p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   525	
+   526	    # Replicate SQLAlchemy
+   527	    def __setattr__(cls, name: str, value: Any) -> None:  # ty: ignore[invalid-method-override]
+   528	        if is_table_model_class(cls):
+   529	            DeclarativeMeta.__setattr__(cls, name, value)
+   530	        else:
+   531	            super().__setattr__(name, value)
+   532	
+   533	    def __delattr__(cls, name: str) -> None:  # ty: ignore[invalid-method-override]
+   534	        if is_table_model_class(cls):
+   535	            DeclarativeMeta.__delattr__(cls, name)
+   536	        else:
+   537	            super().__delattr__(name)
+   538	
+   539	    # From Pydantic
+   540	    def __new__(
+   541	        cls,
+   542	        name: str,
+   543	        bases: tuple[type[Any], ...],
+   544	        class_dict: dict[str, Any],
+   545	        **kwargs: Any,
+   546	    ) -> Any:
+   547	        relationships: dict[str, RelationshipInfo] = {}
+   548	        dict_for_pydantic = {}
+   549	        original_annotations = get_annotations(class_dict)
+   550	        pydantic_annotations = {}
+   551	        relationship_annotations = {}
+   552	        for k, v in class_dict.items():
+   553	            if isinstance(v, RelationshipInfo):
+   554	                relationships[k] = v
+   555	            else:
+   556	                dict_for_pydantic[k] = v
+   557	        for k, v in original_annotations.items():
+   558	            if k in relationships:
+   559	                relationship_annotations[k] = v
+   560	            else:
+   561	                pydantic_annotations[k] = v
+   562	        dict_used = {
+   563	            **dict_for_pydantic,
+   564	            "__weakref__": None,
+   565	            "__sqlmodel_relationships__": relationships,
+   566	            "__annotations__": pydantic_annotations,
+   567	        }
+   568	        # Duplicate logic from Pydantic to filter config kwargs because if they are
+   569	        # passed directly including the registry Pydantic will pass them over to the
+   570	        # superclass causing an error
+   571	        allowed_config_kwargs: set[str] = {
+   572	            key
+   573	            for key in dir(BaseConfig)
+   574	            if not (
+   575	                key.startswith("__") and key.endswith("__")
+   576	            )  # skip dunder methods and attributes
+   577	        }
+   578	        config_kwargs = {
+   579	            key: kwargs[key] for key in kwargs.keys() & allowed_config_kwargs
+   580	        }
+   581	        new_cls = cast(
+   582	            "SQLModel", super().__new__(cls, name, bases, dict_used, **config_kwargs)
+   583	        )
+   584	        new_cls.__annotations__ = {
+   585	            **relationship_annotations,
+   586	            **pydantic_annotations,
+   587	            **new_cls.__annotations__,
+   588	        }
+   589	
+   590	        def get_config(name: str) -> Any:
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/__init__.py | sed -n '1,80p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	__version__ = "0.0.38"
+     2	
+     3	# Re-export from SQLAlchemy
+     4	from sqlalchemy.engine import create_engine as create_engine
+     5	from sqlalchemy.engine import create_mock_engine as create_mock_engine
+     6	from sqlalchemy.engine import engine_from_config as engine_from_config
+     7	from sqlalchemy.inspection import inspect as inspect
+     8	from sqlalchemy.pool import QueuePool as QueuePool
+     9	from sqlalchemy.pool import StaticPool as StaticPool
+    10	from sqlalchemy.schema import BLANK_SCHEMA as BLANK_SCHEMA
+    11	from sqlalchemy.schema import DDL as DDL
+    12	from sqlalchemy.schema import CheckConstraint as CheckConstraint
+    13	from sqlalchemy.schema import Column as Column
+    14	from sqlalchemy.schema import ColumnDefault as ColumnDefault
+    15	from sqlalchemy.schema import Computed as Computed
+    16	from sqlalchemy.schema import Constraint as Constraint
+    17	from sqlalchemy.schema import DefaultClause as DefaultClause
+    18	from sqlalchemy.schema import FetchedValue as FetchedValue
+    19	from sqlalchemy.schema import ForeignKey as ForeignKey
+    20	from sqlalchemy.schema import ForeignKeyConstraint as ForeignKeyConstraint
+    21	from sqlalchemy.schema import Identity as Identity
+    22	from sqlalchemy.schema import Index as Index
+    23	from sqlalchemy.schema import MetaData as MetaData
+    24	from sqlalchemy.schema import PrimaryKeyConstraint as PrimaryKeyConstraint
+    25	from sqlalchemy.schema import Sequence as Sequence
+    26	from sqlalchemy.schema import Table as Table
+    27	from sqlalchemy.schema import UniqueConstraint as UniqueConstraint
+    28	from sqlalchemy.sql import LABEL_STYLE_DEFAULT as LABEL_STYLE_DEFAULT
+    29	from sqlalchemy.sql import (
+    30	    LABEL_STYLE_DISAMBIGUATE_ONLY as LABEL_STYLE_DISAMBIGUATE_ONLY,
+    31	)
+    32	from sqlalchemy.sql import LABEL_STYLE_NONE as LABEL_STYLE_NONE
+    33	from sqlalchemy.sql import (
+    34	    LABEL_STYLE_TABLENAME_PLUS_COL as LABEL_STYLE_TABLENAME_PLUS_COL,
+    35	)
+    36	from sqlalchemy.sql import alias as alias
+    37	from sqlalchemy.sql import bindparam as bindparam
+    38	from sqlalchemy.sql import column as column
+    39	from sqlalchemy.sql import delete as delete
+    40	from sqlalchemy.sql import except_ as except_
+    41	from sqlalchemy.sql import except_all as except_all
+    42	from sqlalchemy.sql import exists as exists
+    43	from sqlalchemy.sql import false as false
+    44	from sqlalchemy.sql import func as func
+    45	from sqlalchemy.sql import insert as insert
+    46	from sqlalchemy.sql import intersect as intersect
+    47	from sqlalchemy.sql import intersect_all as intersect_all
+    48	from sqlalchemy.sql import join as join
+    49	from sqlalchemy.sql import lambda_stmt as lambda_stmt
+    50	from sqlalchemy.sql import lateral as lateral
+    51	from sqlalchemy.sql import literal as literal
+    52	from sqlalchemy.sql import literal_column as literal_column
+    53	from sqlalchemy.sql import modifier as modifier
+    54	from sqlalchemy.sql import null as null
+    55	from sqlalchemy.sql import nullsfirst as nullsfirst
+    56	from sqlalchemy.sql import nullslast as nullslast
+    57	from sqlalchemy.sql import outerjoin as outerjoin
+    58	from sqlalchemy.sql import outparam as outparam
+    59	from sqlalchemy.sql import table as table
+    60	from sqlalchemy.sql import tablesample as tablesample
+    61	from sqlalchemy.sql import text as text
+    62	from sqlalchemy.sql import true as true
+    63	from sqlalchemy.sql import union as union
+    64	from sqlalchemy.sql import union_all as union_all
+    65	from sqlalchemy.sql import update as update
+    66	from sqlalchemy.sql import values as values
+    67	from sqlalchemy.types import ARRAY as ARRAY
+    68	from sqlalchemy.types import BIGINT as BIGINT
+    69	from sqlalchemy.types import BINARY as BINARY
+    70	from sqlalchemy.types import BLOB as BLOB
+    71	from sqlalchemy.types import BOOLEAN as BOOLEAN
+    72	from sqlalchemy.types import CHAR as CHAR
+    73	from sqlalchemy.types import CLOB as CLOB
+    74	from sqlalchemy.types import DATE as DATE
+    75	from sqlalchemy.types import DATETIME as DATETIME
+    76	from sqlalchemy.types import DECIMAL as DECIMAL
+    77	from sqlalchemy.types import DOUBLE as DOUBLE
+    78	from sqlalchemy.types import DOUBLE_PRECISION as DOUBLE_PRECISION
+    79	from sqlalchemy.types import FLOAT as FLOAT
+    80	from sqlalchemy.types import INT as INT
+
+exec
+/bin/zsh -lc "rg -n \"from pydantic|FieldInfo|def Field\\(|get_column_from_field|sa_column|primary_key|foreign_key|nullable|index|return Column\" sqlmodel tests docs README.md -S" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+README.md:112:    id: int | None = Field(default=None, primary_key=True)
+README.md:140:<img class="shadow" src="https://sqlmodel.tiangolo.com/img/index/autocompletion01.png">
+README.md:144:<img class="shadow" src="https://sqlmodel.tiangolo.com/img/index/inline-errors01.png">
+README.md:155:    id: int | None = Field(default=None, primary_key=True)
+README.md:189:    id: int | None = Field(default=None, primary_key=True)
+README.md:207:<img class="shadow" src="https://sqlmodel.tiangolo.com/img/index/autocompletion02.png">
+docs/features.md:19:You will also see a 20 seconds refresher on the section [Tutorial - User Guide: First Steps](tutorial/index.md){.internal-link target=_blank}.
+docs/features.md:29:<img class="shadow" src="/img/index/autocompletion02.png">
+docs/features.md:41:<img class="shadow" src="/img/index/autocompletion01.png">
+tests/test_instance_no_args.py:2:from pydantic import ValidationError
+tests/test_instance_no_args.py:8:        id: int | None = Field(default=None, primary_key=True)
+tests/test_instance_no_args.py:28:        id: int | None = Field(default=None, primary_key=True)
+tests/test_annotated_uuid.py:7:    from pydantic import UUID4
+tests/test_annotated_uuid.py:11:        id: UUID4 | None = Field(default_factory=uuid.uuid4, primary_key=True)
+docs/contributing.md:67:This command generates a directory `./htmlcov/`, if you open the file `./htmlcov/index.html` in your browser, you can explore interactively the regions of code that are covered by the tests, and notice if there is any region missing.
+tests/test_missing_type.py:2:from pydantic import BaseModel
+tests/test_missing_type.py:19:            id: int | None = Field(default=None, primary_key=True)
+docs/index.md:125:    id: int | None = Field(default=None, primary_key=True)
+docs/index.md:153:<img class="shadow" src="https://sqlmodel.tiangolo.com/img/index/autocompletion01.png">
+docs/index.md:157:<img class="shadow" src="https://sqlmodel.tiangolo.com/img/index/inline-errors01.png">
+docs/index.md:168:    id: int | None = Field(default=None, primary_key=True)
+docs/index.md:202:    id: int | None = Field(default=None, primary_key=True)
+docs/index.md:220:<img class="shadow" src="https://sqlmodel.tiangolo.com/img/index/autocompletion02.png">
+tests/test_main.py:11:        id: int | None = Field(default=None, primary_key=True)
+tests/test_main.py:41:        id: int | None = Field(default=None, primary_key=True)
+tests/test_main.py:73:        id: int | None = Field(default=None, primary_key=True)
+tests/test_main.py:100:        id: int | None = Field(default=None, primary_key=True)
+tests/test_main.py:107:        id: int | None = Field(default=None, primary_key=True)
+tests/test_main.py:109:        team_id: int | None = Field(default=None, foreign_key="team.id")
+tests/test_main.py:130:def test_composite_primary_key(clear_sqlmodel):
+tests/test_main.py:132:        user_id: int = Field(primary_key=True)
+tests/test_main.py:133:        resource_id: int = Field(primary_key=True)
+tests/test_main.py:139:    pk_column_names = {column.name for column in UserPermission.__table__.primary_key}
+tests/test_main.py:156:def test_composite_primary_key_and_validator(clear_sqlmodel):
+tests/test_main.py:157:    from pydantic import AfterValidator
+tests/test_main.py:165:        user_id: int = Field(primary_key=True)
+tests/test_main.py:167:            primary_key=True
+tests/test_main.py:174:    pk_column_names = {column.name for column in UserPermission.__table__.primary_key}
+tests/test_main.py:191:def test_foreign_key_ondelete_with_annotated(clear_sqlmodel):
+tests/test_main.py:192:    from pydantic import AfterValidator
+tests/test_main.py:200:        id: int = Field(primary_key=True)
+tests/test_main.py:204:        id: int = Field(primary_key=True)
+tests/test_main.py:206:            foreign_key="team.id",
+tests/test_main.py:215:    foreign_keys = list(team_id_column.foreign_keys)
+tests/test_main.py:216:    assert len(foreign_keys) == 1
+tests/test_main.py:217:    assert foreign_keys[0].ondelete == "CASCADE"
+tests/test_main.py:218:    assert team_id_column.nullable is False
+tests/test_enums_models.py:18:    id: uuid.UUID = Field(primary_key=True)
+tests/test_enums_models.py:23:    id: uuid.UUID = Field(primary_key=True)
+docs/js/custom.js:68:                        const promptStart = line.indexOf(promptLiteralStart);
+tests/test_field_sa_column.py:8:def test_sa_column_takes_precedence() -> None:
+tests/test_field_sa_column.py:12:            sa_column=Column(String, primary_key=True, nullable=False),
+tests/test_field_sa_column.py:15:    # It would have been nullable with no sa_column
+tests/test_field_sa_column.py:16:    assert Item.id.nullable is False  # type: ignore
+tests/test_field_sa_column.py:20:def test_sa_column_with_annotated_metadata() -> None:
+tests/test_field_sa_column.py:24:            sa_column=Column(String, primary_key=True, nullable=False),
+tests/test_field_sa_column.py:27:    assert Item.id.nullable is False  # type: ignore
+tests/test_field_sa_column.py:31:def test_sa_column_no_sa_args() -> None:
+tests/test_field_sa_column.py:37:                sa_column_args=[Integer],
+tests/test_field_sa_column.py:38:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:42:def test_sa_column_no_sa_kargs() -> None:
+tests/test_field_sa_column.py:48:                sa_column_kwargs={"primary_key": True},
+tests/test_field_sa_column.py:49:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:53:def test_sa_column_no_type() -> None:
+tests/test_field_sa_column.py:60:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:64:def test_sa_column_no_primary_key() -> None:
+tests/test_field_sa_column.py:70:                primary_key=True,
+tests/test_field_sa_column.py:71:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:75:def test_sa_column_no_nullable() -> None:
+tests/test_field_sa_column.py:81:                nullable=True,
+tests/test_field_sa_column.py:82:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:86:def test_sa_column_no_foreign_key() -> None:
+tests/test_field_sa_column.py:90:            id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_column.py:94:            id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_column.py:97:                foreign_key="team.id",
+tests/test_field_sa_column.py:98:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:102:def test_sa_column_no_unique() -> None:
+tests/test_field_sa_column.py:109:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:113:def test_sa_column_no_index() -> None:
+tests/test_field_sa_column.py:119:                index=True,
+tests/test_field_sa_column.py:120:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:124:def test_sa_column_no_ondelete() -> None:
+tests/test_field_sa_column.py:130:                sa_column=Column(Integer, primary_key=True),
+sqlmodel/main.py:25:from pydantic import BaseModel, EmailStr
+sqlmodel/main.py:26:from pydantic.fields import FieldInfo as PydanticFieldInfo
+sqlmodel/main.py:77:    from pydantic._internal._model_construction import ModelMetaclass as ModelMetaclass
+sqlmodel/main.py:78:    from pydantic._internal._repr import Representation as Representation
+sqlmodel/main.py:79:    from pydantic_core import PydanticUndefined as Undefined
+sqlmodel/main.py:80:    from pydantic_core import PydanticUndefinedType as UndefinedType
+sqlmodel/main.py:103:class FieldInfo(PydanticFieldInfo):  # ty: ignore[subclass-of-final-class]
+sqlmodel/main.py:104:    # mypy - ignore that PydanticFieldInfo is @final
+sqlmodel/main.py:106:        primary_key = kwargs.pop("primary_key", False)
+sqlmodel/main.py:107:        nullable = kwargs.pop("nullable", Undefined)
+sqlmodel/main.py:108:        foreign_key = kwargs.pop("foreign_key", Undefined)
+sqlmodel/main.py:111:        index = kwargs.pop("index", Undefined)
+sqlmodel/main.py:113:        sa_column = kwargs.pop("sa_column", Undefined)
+sqlmodel/main.py:114:        sa_column_args = kwargs.pop("sa_column_args", Undefined)
+sqlmodel/main.py:115:        sa_column_kwargs = kwargs.pop("sa_column_kwargs", Undefined)
+sqlmodel/main.py:116:        if sa_column is not Undefined:
+sqlmodel/main.py:117:            if sa_column_args is not Undefined:
+sqlmodel/main.py:119:                    "Passing sa_column_args is not supported when "
+sqlmodel/main.py:120:                    "also passing a sa_column"
+sqlmodel/main.py:122:            if sa_column_kwargs is not Undefined:
+sqlmodel/main.py:124:                    "Passing sa_column_kwargs is not supported when "
+sqlmodel/main.py:125:                    "also passing a sa_column"
+sqlmodel/main.py:127:            if primary_key is not Undefined:
+sqlmodel/main.py:129:                    "Passing primary_key is not supported when also passing a sa_column"
+sqlmodel/main.py:131:            if nullable is not Undefined:
+sqlmodel/main.py:133:                    "Passing nullable is not supported when also passing a sa_column"
+sqlmodel/main.py:135:            if foreign_key is not Undefined:
+sqlmodel/main.py:137:                    "Passing foreign_key is not supported when also passing a sa_column"
+sqlmodel/main.py:141:                    "Passing ondelete is not supported when also passing a sa_column"
+sqlmodel/main.py:145:                    "Passing unique is not supported when also passing a sa_column"
+sqlmodel/main.py:147:            if index is not Undefined:
+sqlmodel/main.py:149:                    "Passing index is not supported when also passing a sa_column"
+sqlmodel/main.py:153:                    "Passing sa_type is not supported when also passing a sa_column"
+sqlmodel/main.py:156:            if foreign_key is Undefined:
+sqlmodel/main.py:157:                raise RuntimeError("ondelete can only be used with foreign_key")
+sqlmodel/main.py:159:        self.primary_key = primary_key
+sqlmodel/main.py:160:        self.nullable = nullable
+sqlmodel/main.py:161:        self.foreign_key = foreign_key
+sqlmodel/main.py:164:        self.index = index
+sqlmodel/main.py:166:        self.sa_column = sa_column
+sqlmodel/main.py:167:        self.sa_column_args = sa_column_args
+sqlmodel/main.py:168:        self.sa_column_kwargs = sa_column_kwargs
+sqlmodel/main.py:204:class FieldInfoMetadata:
+sqlmodel/main.py:205:    primary_key: bool | UndefinedType = Undefined
+sqlmodel/main.py:206:    nullable: bool | UndefinedType = Undefined
+sqlmodel/main.py:207:    foreign_key: Any = Undefined
+sqlmodel/main.py:210:    index: bool | UndefinedType = Undefined
+sqlmodel/main.py:212:    sa_column: Column[Any] | UndefinedType = Undefined
+sqlmodel/main.py:213:    sa_column_args: Sequence[Any] | UndefinedType = Undefined
+sqlmodel/main.py:214:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined
+sqlmodel/main.py:217:def _get_sqlmodel_field_metadata(field_info: Any) -> FieldInfoMetadata | None:
+sqlmodel/main.py:221:            if isinstance(meta, FieldInfoMetadata):
+sqlmodel/main.py:235:# include sa_type, sa_column_args, sa_column_kwargs
+sqlmodel/main.py:237:def Field(
+sqlmodel/main.py:265:    primary_key: bool | UndefinedType = Undefined,
+sqlmodel/main.py:266:    foreign_key: Any = Undefined,
+sqlmodel/main.py:268:    nullable: bool | UndefinedType = Undefined,
+sqlmodel/main.py:269:    index: bool | UndefinedType = Undefined,
+sqlmodel/main.py:271:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:272:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+sqlmodel/main.py:277:# When foreign_key is str, include ondelete
+sqlmodel/main.py:278:# include sa_type, sa_column_args, sa_column_kwargs
+sqlmodel/main.py:280:def Field(
+sqlmodel/main.py:308:    primary_key: bool | UndefinedType = Undefined,
+sqlmodel/main.py:309:    foreign_key: str,
+sqlmodel/main.py:312:    nullable: bool | UndefinedType = Undefined,
+sqlmodel/main.py:313:    index: bool | UndefinedType = Undefined,
+sqlmodel/main.py:315:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:316:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+sqlmodel/main.py:321:# Include sa_column, don't include
+sqlmodel/main.py:322:# primary_key
+sqlmodel/main.py:323:# foreign_key
+sqlmodel/main.py:326:# nullable
+sqlmodel/main.py:327:# index
+sqlmodel/main.py:329:# sa_column_args
+sqlmodel/main.py:330:# sa_column_kwargs
+sqlmodel/main.py:332:def Field(
+sqlmodel/main.py:360:    sa_column: Column[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:365:def Field(
+sqlmodel/main.py:393:    primary_key: bool | UndefinedType = Undefined,
+sqlmodel/main.py:394:    foreign_key: Any = Undefined,
+sqlmodel/main.py:397:    nullable: bool | UndefinedType = Undefined,
+sqlmodel/main.py:398:    index: bool | UndefinedType = Undefined,
+sqlmodel/main.py:400:    sa_column: Column | UndefinedType = Undefined,
+sqlmodel/main.py:401:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:402:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+sqlmodel/main.py:432:        "primary_key": primary_key,
+sqlmodel/main.py:433:        "foreign_key": foreign_key,
+sqlmodel/main.py:436:        "nullable": nullable,
+sqlmodel/main.py:437:        "index": index,
+sqlmodel/main.py:439:        "sa_column": sa_column,
+sqlmodel/main.py:440:        "sa_column_args": sa_column_args,
+sqlmodel/main.py:441:        "sa_column_kwargs": sa_column_kwargs,
+sqlmodel/main.py:453:    field_info = FieldInfo(
+sqlmodel/main.py:458:    field_metadata = FieldInfoMetadata(
+sqlmodel/main.py:459:        primary_key=primary_key,
+sqlmodel/main.py:460:        nullable=nullable,
+sqlmodel/main.py:461:        foreign_key=foreign_key,
+sqlmodel/main.py:464:        index=index,
+sqlmodel/main.py:466:        sa_column=sa_column,
+sqlmodel/main.py:467:        sa_column_args=sa_column_args,
+sqlmodel/main.py:468:        sa_column_kwargs=sa_column_kwargs,
+sqlmodel/main.py:520:@__dataclass_transform__(kw_only_default=True, field_descriptors=(Field, FieldInfo))
+sqlmodel/main.py:524:    model_fields: ClassVar[dict[str, FieldInfo]]
+sqlmodel/main.py:604:                col = get_column_from_field(v)
+sqlmodel/main.py:740:def get_column_from_field(field: Any) -> Column:
+sqlmodel/main.py:742:    sa_column = _get_sqlmodel_field_value(field_info, "sa_column", Undefined)
+sqlmodel/main.py:743:    if isinstance(sa_column, Column):
+sqlmodel/main.py:744:        return sa_column
+sqlmodel/main.py:746:    primary_key = _get_sqlmodel_field_value(field_info, "primary_key", Undefined)
+sqlmodel/main.py:747:    if primary_key is Undefined:
+sqlmodel/main.py:748:        primary_key = False
+sqlmodel/main.py:749:    index = _get_sqlmodel_field_value(field_info, "index", Undefined)
+sqlmodel/main.py:750:    if index is Undefined:
+sqlmodel/main.py:751:        index = False
+sqlmodel/main.py:752:    nullable = not primary_key and is_field_noneable(field)
+sqlmodel/main.py:753:    # Override derived nullability if the nullable property is set explicitly
+sqlmodel/main.py:755:    field_nullable = _get_sqlmodel_field_value(field_info, "nullable", Undefined)
+sqlmodel/main.py:756:    if field_nullable is not Undefined:
+sqlmodel/main.py:757:        assert not isinstance(field_nullable, UndefinedType)
+sqlmodel/main.py:758:        nullable = field_nullable
+sqlmodel/main.py:760:    foreign_key = _get_sqlmodel_field_value(field_info, "foreign_key", Undefined)
+sqlmodel/main.py:761:    if foreign_key is Undefined:
+sqlmodel/main.py:762:        foreign_key = None
+sqlmodel/main.py:766:    if foreign_key:
+sqlmodel/main.py:770:        if ondelete_value == "SET NULL" and not nullable:
+sqlmodel/main.py:771:            raise RuntimeError('ondelete="SET NULL" requires nullable=True')
+sqlmodel/main.py:772:        assert isinstance(foreign_key, str)
+sqlmodel/main.py:774:        args.append(ForeignKey(foreign_key, ondelete=ondelete_value))
+sqlmodel/main.py:776:        "primary_key": primary_key,
+sqlmodel/main.py:777:        "nullable": nullable,
+sqlmodel/main.py:778:        "index": index,
+sqlmodel/main.py:788:    sa_column_args = _get_sqlmodel_field_value(field_info, "sa_column_args", Undefined)
+sqlmodel/main.py:789:    if sa_column_args is not Undefined:
+sqlmodel/main.py:790:        args.extend(list(cast(Sequence[Any], sa_column_args)))
+sqlmodel/main.py:791:    sa_column_kwargs = _get_sqlmodel_field_value(
+sqlmodel/main.py:792:        field_info, "sa_column_kwargs", Undefined
+sqlmodel/main.py:794:    if sa_column_kwargs is not Undefined:
+sqlmodel/main.py:795:        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+sqlmodel/main.py:796:    return Column(sa_type, *args, **kwargs)
+tests/test_field_sa_relationship.py:10:            id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_relationship.py:11:            name: str = Field(index=True)
+tests/test_field_sa_relationship.py:21:            id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_relationship.py:22:            name: str = Field(index=True)
+tests/test_field_sa_relationship.py:24:            age: int | None = Field(default=None, index=True)
+tests/test_field_sa_relationship.py:26:            team_id: int | None = Field(default=None, foreign_key="team.id")
+tests/test_field_sa_relationship.py:34:            id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_relationship.py:35:            name: str = Field(index=True)
+tests/test_field_sa_relationship.py:45:            id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_relationship.py:46:            name: str = Field(index=True)
+tests/test_field_sa_relationship.py:48:            age: int | None = Field(default=None, index=True)
+tests/test_field_sa_relationship.py:50:            team_id: int | None = Field(default=None, foreign_key="team.id")
+tests/test_query.py:7:        id: int | None = Field(default=None, primary_key=True)
+docs/release-notes.md:331:* ✏️ Tweak the grammar in `docs/learn/index.md`. PR [#1363](https://github.com/fastapi/sqlmodel/pull/1363) by [@brettcannon](https://github.com/brettcannon).
+docs/release-notes.md:439:* 📝 Remove highlights in `indexes.md` . PR [#1100](https://github.com/fastapi/sqlmodel/pull/1100) by [@alejsdev](https://github.com/alejsdev).
+docs/release-notes.md:552:* ✏️ Fix typo in `docs/tutorial/relationship-attributes/index.md`. PR [#880](https://github.com/tiangolo/sqlmodel/pull/880) by [@UncleGoogle](https://github.com/UncleGoogle).
+docs/release-notes.md:689:* ✨ Do not allow invalid combinations of field parameters for columns and relationships, `sa_column` excludes `sa_column_args`, `primary_key`, `nullable`, etc. PR [#681](https://github.com/tiangolo/sqlmodel/pull/681) by [@tiangolo](https://github.com/tiangolo).
+docs/release-notes.md:795:* 🐛 Fix auto detecting and setting `nullable`, allowing overrides in field. PR [#423](https://github.com/tiangolo/sqlmodel/pull/423) by [@JonasKs](https://github.com/JonasKs) and [@br-follow](https://github.com/br-follow).
+docs/release-notes.md:820:* 🐛 Fix setting nullable property of Fields that don't accept `None`. PR [#79](https://github.com/tiangolo/sqlmodel/pull/79) by [@van51](https://github.com/van51).
+docs/release-notes.md:828:* ✏ Fix typos in `docs/databases.md` and `docs/tutorial/index.md`. PR [#35](https://github.com/tiangolo/sqlmodel/pull/35) by [@prrao87](https://github.com/prrao87).
+docs/release-notes.md:842:* ✏ Fix typos in `docs/tutorial/code-structure.md`, `docs/tutorial/fastapi/multiple-models.md`, `docs/tutorial/fastapi/simple-hero-api.md`, `docs/tutorial/many-to-many/index.md`. PR [#116](https://github.com/tiangolo/sqlmodel/pull/116) by [@moonso](https://github.com/moonso).
+docs/release-notes.md:850:* ✏ Fix typo in `docs/tutorial/index.md`. PR [#398](https://github.com/tiangolo/sqlmodel/pull/398) by [@ryangrose](https://github.com/ryangrose).
+docs/release-notes.md:871:**SQLModel** no longer creates indexes by default for every column, indexes are now opt-in. You can read more about it in PR [#205](https://github.com/tiangolo/sqlmodel/pull/205).
+docs/release-notes.md:882:    id: Optional[int] = Field(default=None, primary_key=True)
+docs/release-notes.md:888:...when creating the tables, SQLModel version `0.0.5` and below, would also create an index for `name`, one for `secret_name`, and one for `age` (`id` is the primary key, so it doesn't need an additional index).
+docs/release-notes.md:890:If you depended on having an index for each one of those columns, now you can (and would have to) define them explicitly:
+docs/release-notes.md:894:    id: Optional[int] = Field(default=None, primary_key=True)
+docs/release-notes.md:895:    name: str = Field(index=True)
+docs/release-notes.md:896:    secret_name: str = Field(index=True)
+docs/release-notes.md:897:    age: Optional[int] = Field(default=None, index=True)
+docs/release-notes.md:900:There's a high chance you don't need indexes for all the columns. For example, you might only need indexes for `name` and `age`, but not for `secret_name`. In that case, you could define the model as:
+docs/release-notes.md:904:    id: Optional[int] = Field(default=None, primary_key=True)
+docs/release-notes.md:905:    name: str = Field(index=True)
+docs/release-notes.md:907:    age: Optional[int] = Field(default=None, index=True)
+docs/release-notes.md:910:If you already created your database tables with SQLModel using versions `0.0.5` or below, it would have also created those indexes in the database. In that case, you might want to manually drop (remove) some of those indexes, if they are unnecessary, to avoid the extra cost in performance and space.
+docs/release-notes.md:912:Depending on the database you are using, there will be a different way to find the available indexes.
+docs/release-notes.md:914:For example, let's say you no longer need the index for `secret_name`. You could check the current indexes in the database and find the one for `secret_name`, it could be named `ix_hero_secret_name`. Then you can remove it with SQL:
+docs/release-notes.md:926:Here's the new, extensive documentation explaining indexes and how to use them: [Indexes - Optimize Queries](https://sqlmodel.tiangolo.com/tutorial/indexes/).
+docs/release-notes.md:930:* ✨ Document indexes and make them opt-in. Here's the new documentation: [Indexes - Optimize Queries](https://sqlmodel.tiangolo.com/tutorial/indexes/). This is the same change described above in **Breaking Changes**. PR [#205](https://github.com/tiangolo/sqlmodel/pull/205) by [@tiangolo](https://github.com/tiangolo).
+docs/release-notes.md:936:* ✏ Fix typos in `docs/tutorial/index.md` and `docs/databases.md`. PR [#5](https://github.com/tiangolo/sqlmodel/pull/5) by [@sebastianmarines](https://github.com/sebastianmarines).
+sqlmodel/_compat.py:20:from pydantic import VERSION as P_VERSION
+sqlmodel/_compat.py:21:from pydantic import BaseModel
+sqlmodel/_compat.py:22:from pydantic import ConfigDict as ConfigDict
+sqlmodel/_compat.py:23:from pydantic._internal._fields import PydanticMetadata
+sqlmodel/_compat.py:24:from pydantic._internal._model_construction import ModelMetaclass as ModelMetaclass
+sqlmodel/_compat.py:25:from pydantic._internal._repr import Representation as Representation
+sqlmodel/_compat.py:26:from pydantic.fields import FieldInfo
+sqlmodel/_compat.py:27:from pydantic_core import PydanticUndefined as Undefined
+sqlmodel/_compat.py:28:from pydantic_core import PydanticUndefinedType as PydanticUndefinedType
+sqlmodel/_compat.py:83:def get_model_fields(model: InstanceOrType[BaseModel]) -> dict[str, "FieldInfo"]:
+sqlmodel/_compat.py:157:def is_field_noneable(field: "FieldInfo") -> bool:
+sqlmodel/_compat.py:158:    if getattr(field, "nullable", Undefined) is not Undefined:
+sqlmodel/_compat.py:159:        return field.nullable  # type: ignore
+tests/test_aliases.py:2:from pydantic import BaseModel, ValidationError
+tests/test_aliases.py:3:from pydantic import Field as PField
+docs/tutorial/where.md:757:In the next section I'll tell you how to add **indexes** to the database, this is what will make the queries **very efficient**. 😎
+tests/test_tutorial/test_where/test_tutorial011.py:42:        calls.pop(calls.index(call))
+docs/tutorial/fastapi/multiple-models.md:228:And now we only declare one single field directly, the `id`, that here is `int | None`, and is a `primary_key`.
+docs/tutorial/fastapi/multiple-models.md:238:Notice that the parent model `HeroBase`  is not a **table model**, but still, we can declare `name` and `age` using `Field(index=True)`.
+docs/tutorial/fastapi/multiple-models.md:244:But once the child model `Hero` (the actual **table model**) inherits those fields, it will use those field configurations to create the indexes when creating the tables in the database.
+tests/test_tutorial/test_where/test_tutorial004.py:42:        calls.pop(calls.index(call))
+tests/test_select_typing.py:7:        id: int | None = Field(default=None, primary_key=True)
+docs/tutorial/relationship-attributes/cascade-delete-relationships.md:185:PRAGMA foreign_keys = ON;
+docs/tutorial/relationship-attributes/cascade-delete-relationships.md:206:    team_id: int = Field(foreign_key="team.id", ondelete="CASCADE")
+docs/tutorial/relationship-attributes/cascade-delete-relationships.md:298:In this case, the side with `Relationship()` won't have `cascade_delete`, but the side with `Field()` and a `foreign_key` will have `ondelete="SET NULL"`.
+docs/tutorial/relationship-attributes/cascade-delete-relationships.md:480:INFO Engine PRAGMA foreign_keys=ON
+docs/tutorial/relationship-attributes/cascade-delete-relationships.md:576:If you want to test if the `PRAGMA foreign_keys=ON` is necessary, **comment that line** and run it again, you will **not see an error**. 😱
+tests/test_pydantic/test_field.py:5:from pydantic import ValidationError
+tests/test_pydantic/test_field.py:52:        id: int | None = Field(primary_key=True)
+tests/test_future_annotations.py:10:        id: Annotated[int | None, Field(primary_key=True)] = None
+tests/test_future_annotations.py:38:        id: Annotated[int | None, Field(primary_key=True)] = None
+tests/test_future_annotations.py:42:        id: Annotated[int | None, Field(primary_key=True)] = None
+tests/test_future_annotations.py:44:        team_id: Annotated[int | None, Field(foreign_key="team.id")] = None
+docs/tutorial/indexes.md:9:I'll show you how to handle it with a database **index**.
+docs/tutorial/indexes.md:21:Fine, in that case, you can **sneak peek** the final code to create indexes here.
+docs/tutorial/indexes.md:23:{* ./docs_src/tutorial/indexes/tutorial002_py310.py ln[0] *}
+docs/tutorial/indexes.md:29:In general, an **index** is just something we can have to help us **find things faster**. It normally works by having things in **order**. Let's think about some real-life examples before even thinking about databases and code.
+docs/tutorial/indexes.md:37:<img src="/img/tutorial/indexes/dictionary001.drawio.svg">
+docs/tutorial/indexes.md:41:<img src="/img/tutorial/indexes/dictionary002.drawio.svg">
+docs/tutorial/indexes.md:45:<img src="/img/tutorial/indexes/dictionary003.drawio.svg">
+docs/tutorial/indexes.md:49:<img src="/img/tutorial/indexes/dictionary004.drawio.svg">
+docs/tutorial/indexes.md:53:<img src="/img/tutorial/indexes/dictionary005.drawio.svg">
+docs/tutorial/indexes.md:57:<img src="/img/tutorial/indexes/dictionary005.drawio.svg">
+docs/tutorial/indexes.md:61:<img src="/img/tutorial/indexes/dictionary007.drawio.svg">
+docs/tutorial/indexes.md:65:<img src="/img/tutorial/indexes/dictionary008.drawio.svg">
+docs/tutorial/indexes.md:91:This book might have a **book index**: a section in the book that has some **names of topics covered** and the **page numbers** in the book where you can read about them. And the topic names are **sorted** in alphabetic order, pretty much like a dictionary (a book with words, as in the previous example).
+docs/tutorial/indexes.md:93:In this case, you can open that book in the end (or in the beginning) to find the **book index** section, it would have only a few pages. And then, you can do the same process as with the **dictionary** example above.
+docs/tutorial/indexes.md:95:Open the index, and after **5 or 10 steps**, quickly find the topic "**database**" with the page numbers where that is covered, for example "page 253 in Chapter 5". Now you used the dictionary technique to find the **topic**, and that topic gave you a **page number**.
+docs/tutorial/indexes.md:97:Now you know that you need to find "**page 253**". But by looking at the closed book you still don't know where that page is, so you have to **find that page**. To find it, you can do the same process again, but this time, instead of searching for a **topic** in the **index**, you are searching for a **page number** in the **entire book**. And after **5 or 10 more steps**, you find the page 253 in Chapter 5.
+docs/tutorial/indexes.md:99:<img src="/img/tutorial/indexes/techbook001.drawio.svg">
+docs/tutorial/indexes.md:103:The main point is that the index is **sorted**, so we can use the same process we used for the **dictionary** to find the topic. And then that gives us a page number, and the **page numbers are also sorted**! 😅
+docs/tutorial/indexes.md:105:When we have a list of sorted things we can apply the same technique, and that's the whole trick here, we use the same technique first for the **topics** in the index and then for the **page numbers** to find the actual chapter.
+docs/tutorial/indexes.md:111:**Database indexes** are very similar to **book indexes**.
+docs/tutorial/indexes.md:113:Database indexes store some info, some keys, in a way that makes it **easy and fast to find** (for example sorted), and then for each key they **point to some data somewhere else** in the database.
+docs/tutorial/indexes.md:138:But now let's say that the database has an index for the column `name`. The index could look something like this, we could imagine that the index is like an additional special table that the database manages automatically:
+docs/tutorial/indexes.md:157:Then the database would be able to use more or less the same ideas in the examples above with the **dictionary** and the **book index**.
+docs/tutorial/indexes.md:159:It could start somewhere (for example, in the middle of the index). It could arrive at some hero there in the middle, like `Rusty-Man`. And because the **index** has the `name` fields in order, the database would know that it can **discard all the previous index rows** and **only search** in the following index rows.
+docs/tutorial/indexes.md:176:And that way, as with the example with the dictionary above, **instead of reading thousands of heroes**, the database would be able to do a few steps, say **5 or 10 steps**, and arrive at the row of the index that has `Spider-Boy`, even if the table (and index) has thousands of rows:
+docs/tutorial/indexes.md:193:Then by looking at **this index row**, it would know that the `id` for `Spider-Boy` in the `hero` table is `2`.
+docs/tutorial/indexes.md:201:As you can imagine, for all this to work, the index would need to be **up to date** with the data in the database.
+docs/tutorial/indexes.md:203:If you had to update it **manually** in code, it would be very cumbersome and **error-prone**, as it would be easy to end up in a state where the index is not up to date and points to incorrect data. 😱
+docs/tutorial/indexes.md:205:Here's the good news: when you create an index in a **SQL Database**, the database takes care of **updating** it **automatically** whenever it's necessary. 😎🎉
+docs/tutorial/indexes.md:207:If you **add new records** to the `hero` table, the database will **automatically** update the index. It will do the **same process** of **finding** the right place to put the new index data (those **5 or 10 steps** described above), and then it will save the new index information there. The same would happen when you **update** or **delete** data.
+docs/tutorial/indexes.md:209:Defining and creating an index is very **easy** with SQL databases. And then **using it** is even easier... it's transparent. The database will figure out which index to use automatically, the SQL queries don't even change.
+docs/tutorial/indexes.md:211:So, in SQL databases **indexes are great**! And are super **easy to use**. Why not just have indexes for everything? .....Because indexes also have a "**cost**" in computation and storage (disk space).
+docs/tutorial/indexes.md:215:There's a **cost** associated with **indexes**. 💰
+docs/tutorial/indexes.md:217:When you don't have an index and add a **new row** to the table `hero`, the database has to perform **1 operation** to add the new hero row at the end of the table.
+docs/tutorial/indexes.md:219:But if you have an **index** for the **hero names**, now the database has to perform the same **1 operation** to add that row **plus** some extra **5 or 10 operations** in the index, to find the right spot for the name, to then add that **index record** there.
+docs/tutorial/indexes.md:221:And if you have an index for the `name`, one for the `age`, and one for the `secret_name`, now the database has to perform the same **1 operation** to add that row **plus** some extra **5 or 10 operations** in the index **times 3**, for each of the indexes. This means that now adding one row takes something like **31 operations**.
+docs/tutorial/indexes.md:225:If you have queries that get data out of the database comparing each one of those fields (for example using `WHERE`), then it makes total sense to have indexes for each one of them. Because **31 operations** while creating or updating data (plus the space of the index) is much, much better than the possible **500 or 1000 operations** to read all the rows to be able to compare them using each field.
+docs/tutorial/indexes.md:227:But if you **never** have queries that find records by the `secret_name` (you never use `secret_name` in the `WHERE` part) it probably doesn't make sense to have an index for the `secret_name` field/column, as that will increase the computational and space **cost** of writing and updating the database.
+docs/tutorial/indexes.md:233:The most important thing about indexes is **understanding** them, how, and when to use them.
+docs/tutorial/indexes.md:235:Let's now see the **SQL** syntax to create an **index**. It is very simple:
+docs/tutorial/indexes.md:246:> I want the name of the index to be `ix_hero_name`.
+docs/tutorial/indexes.md:248:> This index should be `ON` the table `hero`, it refers to that table.
+docs/tutorial/indexes.md:254:And now let's see how to define indexes in **SQLModel**.
+docs/tutorial/indexes.md:262:Let's now update it to tell **SQLModel** to create an index for the `name` field when creating the table:
+docs/tutorial/indexes.md:264:{* ./docs_src/tutorial/indexes/tutorial001_py310.py ln[1:8] hl[6] *}
+docs/tutorial/indexes.md:266:We use the same `Field()` again as we did before, and set `index=True`. That's it! 🚀
+docs/tutorial/indexes.md:272:SQLModel (actually SQLAlchemy) will **automatically generate the index name** for you.
+docs/tutorial/indexes.md:280:Now, to query the data using the field `name` and the new index we don't have to do anything special or different in the code, it's just **the same code**.
+docs/tutorial/indexes.md:284:This is great because it means that indexes are very **simple to use**. But it might also feel counterintuitive at first, as you are **not doing anything** explicitly in the code to make it obvious that the index is useful, it all happens in the database behind the scenes.
+docs/tutorial/indexes.md:286:{* ./docs_src/tutorial/indexes/tutorial001_py310.py ln[34:39] hl[36] *}
+docs/tutorial/indexes.md:288:This is exactly the same code as we had before, but now the database will **use the index** underneath.
+docs/tutorial/indexes.md:310:// Create the index 🤓🎉
+docs/tutorial/indexes.md:327:We are going to query the `hero` table doing comparisons on the `age` field too, so we should **define an index** for that one as well:
+docs/tutorial/indexes.md:329:{* ./docs_src/tutorial/indexes/tutorial002_py310.py ln[1:8] hl[8] *}
+docs/tutorial/indexes.md:333:Now when we use **SQLModel** to create the database and tables, it will also create the **indexes** for these two columns in the `hero` table.
+docs/tutorial/indexes.md:335:So, when we query the database for the `hero` table and use those **two columns** to define what data we get, the database will be able to **use those indexes** to improve the **reading performance**. 🚀
+docs/tutorial/indexes.md:339:You probably noticed that we didn't set `index=True` for the `id` field.
+docs/tutorial/indexes.md:341:Because the `id` is already the **primary key**, the database will automatically create an internal **index** for it.
+docs/tutorial/indexes.md:343:The database always creates an internal index for **primary keys** automatically, as those are the primary way to organize, store, and retrieve data. 🤓
+docs/tutorial/indexes.md:345:But if you want to be **frequently querying** the SQL database for any **other field** (e.g. using any other field in the `WHERE` section), you will probably want to have at least an **index** for that.
+tests/test_sqlalchemy_type_errors.py:11:            id: int | None = Field(default=None, primary_key=True)
+tests/test_sqlalchemy_type_errors.py:19:            id: int | None = Field(default=None, primary_key=True)
+tests/test_sqlalchemy_type_errors.py:27:            id: int | None = Field(default=None, primary_key=True)
+docs/tutorial/create-db-and-table.md:108:To do that, we use the special `Field` function from `sqlmodel` and set the argument `primary_key=True`:
+tests/conftest.py:10:from pydantic import BaseModel
+tests/test_field_sa_args_kwargs.py:5:def test_sa_column_args(clear_sqlmodel, caplog) -> None:
+tests/test_field_sa_args_kwargs.py:7:        id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_args_kwargs.py:11:        id: int | None = Field(default=None, primary_key=True)
+tests/test_field_sa_args_kwargs.py:14:            sa_column_args=[ForeignKey("team.id")],
+tests/test_field_sa_args_kwargs.py:25:def test_sa_column_kargs(clear_sqlmodel, caplog) -> None:
+tests/test_field_sa_args_kwargs.py:29:            sa_column_kwargs={"primary_key": True},
+tests/test_ondelete_raises.py:7:def test_ondelete_requires_nullable(clear_sqlmodel: Any) -> None:
+tests/test_ondelete_raises.py:11:            id: int | None = Field(default=None, primary_key=True)
+tests/test_ondelete_raises.py:18:            id: int | None = Field(default=None, primary_key=True)
+tests/test_ondelete_raises.py:19:            name: str = Field(index=True)
+tests/test_ondelete_raises.py:21:            age: int | None = Field(default=None, index=True)
+tests/test_ondelete_raises.py:23:            team_id: int = Field(foreign_key="team.id", ondelete="SET NULL")
+tests/test_ondelete_raises.py:26:    assert 'ondelete="SET NULL" requires nullable=True' in str(exc.value)
+tests/test_ondelete_raises.py:29:def test_ondelete_requires_foreign_key(clear_sqlmodel: Any) -> None:
+tests/test_ondelete_raises.py:33:            id: int | None = Field(default=None, primary_key=True)
+tests/test_ondelete_raises.py:37:    assert "ondelete can only be used with foreign_key" in str(exc.value)
+tests/test_tutorial/test_where/test_tutorial003.py:42:        calls.pop(calls.index(call))
+tests/test_validation.py:2:from pydantic.error_wrappers import ValidationError
+tests/test_validation.py:16:    from pydantic import field_validator
+tests/test_update.py:6:        id: int = Field(default=None, primary_key=True)
+docs/tutorial/relationship-attributes/define-relationships-attributes.md:79:If it was required for a `Hero` instance to belong to a `Team`, then the `team_id` would be `int` instead of `int | None`, its `Field` would be `Field(foreign_key="team.id")` instead of `Field(default=None, foreign_key="team.id")` and the `team` attribute would be a `Team` instead of `Team | None`.
+tests/test_nullable.py:6:def test_nullable_fields(clear_sqlmodel, caplog):
+tests/test_nullable.py:8:        primary_key: int | None = Field(
+tests/test_nullable.py:10:            primary_key=True,
+tests/test_nullable.py:15:        optional_non_nullable: str | None = Field(
+tests/test_nullable.py:16:            nullable=False,
+tests/test_nullable.py:18:        optional_nullable: str | None = Field(
+tests/test_nullable.py:19:            nullable=True,
+tests/test_nullable.py:21:        optional_default_ellipses_non_nullable: str | None = Field(
+tests/test_nullable.py:23:            nullable=False,
+tests/test_nullable.py:25:        optional_default_ellipses_nullable: str | None = Field(
+tests/test_nullable.py:27:            nullable=True,
+tests/test_nullable.py:29:        optional_default_none_non_nullable: str | None = Field(
+tests/test_nullable.py:31:            nullable=False,
+tests/test_nullable.py:33:        optional_default_none_nullable: str | None = Field(
+tests/test_nullable.py:35:            nullable=True,
+tests/test_nullable.py:37:        default_ellipses_non_nullable: str = Field(default=..., nullable=False)
+tests/test_nullable.py:39:        optional_default_str_non_nullable: str | None = Field(
+tests/test_nullable.py:40:            default="default", nullable=False
+tests/test_nullable.py:42:        optional_default_str_nullable: str | None = Field(
+tests/test_nullable.py:43:            default="default", nullable=True
+tests/test_nullable.py:46:        str_default_str_non_nullable: str = Field(default="default", nullable=False)
+tests/test_nullable.py:47:        str_default_str_nullable: str = Field(default="default", nullable=True)
+tests/test_nullable.py:48:        str_default_ellipsis_non_nullable: str = Field(default=..., nullable=False)
+tests/test_nullable.py:49:        str_default_ellipsis_nullable: str = Field(default=..., nullable=True)
+tests/test_nullable.py:57:    assert "primary_key INTEGER NOT NULL," in create_table_log
+tests/test_nullable.py:61:    assert "optional_non_nullable VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:62:    assert "optional_nullable VARCHAR," in create_table_log
+tests/test_nullable.py:64:        "optional_default_ellipses_non_nullable VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:66:    assert "optional_default_ellipses_nullable VARCHAR," in create_table_log
+tests/test_nullable.py:67:    assert "optional_default_none_non_nullable VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:68:    assert "optional_default_none_nullable VARCHAR," in create_table_log
+tests/test_nullable.py:69:    assert "default_ellipses_non_nullable VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:71:    assert "optional_default_str_non_nullable VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:72:    assert "optional_default_str_nullable VARCHAR," in create_table_log
+tests/test_nullable.py:74:    assert "str_default_str_non_nullable VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:75:    assert "str_default_str_nullable VARCHAR," in create_table_log
+tests/test_nullable.py:76:    assert "str_default_ellipsis_non_nullable VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:77:    assert "str_default_ellipsis_nullable VARCHAR," in create_table_log
+tests/test_nullable.py:81:def test_non_nullable_optional_field_with_no_default_set(clear_sqlmodel, caplog):
+tests/test_nullable.py:83:        primary_key: int | None = Field(
+tests/test_nullable.py:85:            primary_key=True,
+tests/test_nullable.py:88:        optional_non_nullable_no_default: str | None = Field(nullable=False)
+tests/test_nullable.py:96:    assert "primary_key INTEGER NOT NULL," in create_table_log
+tests/test_nullable.py:97:    assert "optional_non_nullable_no_default VARCHAR NOT NULL," in create_table_log
+tests/test_nullable.py:99:    # We can create a hero with `None` set for the optional non-nullable field
+tests/test_nullable.py:100:    hero = Hero(primary_key=123, optional_non_nullable_no_default=None)
+tests/test_nullable.py:108:def test_nullable_primary_key(clear_sqlmodel, caplog):
+tests/test_nullable.py:111:        nullable_integer_primary_key: int | None = Field(
+tests/test_nullable.py:113:            primary_key=True,
+tests/test_nullable.py:114:            nullable=True,
+tests/test_nullable.py:123:    assert "nullable_integer_primary_key INTEGER," in create_table_log
+docs/tutorial/connect/read-connected-data.md:252:And in SQLModel (actually SQLAlchemy), when using the `.join()`, because we already declared what is the `foreign_key` when creating the models, we don't have to pass an `ON` part, it is inferred automatically:
+docs/tutorial/connect/create-connected-tables.md:68:    * We also tell **SQLModel** to create an index for this column
+docs/tutorial/connect/create-connected-tables.md:89:In `Field()` we pass the argument `foreign_key="team.id"`. This tells the database that this column `team_id` is a foreign key to the table `team`. A "**foreign key**" just means that this column will have the **key** to identify a row in a **foreign** table.
+docs/tutorial/connect/create-connected-tables.md:93:#### The Value of `foreign_key`
+docs/tutorial/connect/create-connected-tables.md:95:Notice that the `foreign_key` is a string.
+docs/tutorial/connect/create-connected-tables.md:213:Using **SQLModel**, in most of the cases you only need a field (column) with a `foreign_key` in the `Field()` with a string pointing to another table and column to connect two tables.
+docs/tutorial/one.md:17:{* ./docs_src/tutorial/indexes/tutorial002_py310.py ln[0] *}
+docs/tutorial/one.md:25:{* ./docs_src/tutorial/indexes/tutorial002_py310.py ln[42:47] hl[46:47] *}
+docs/tutorial/automatic-id-none-refresh.md:5:Now let's talk a bit about why the `id` field **can't be `NULL`** on the database because it's a **primary key**, and we declare it using `Field(primary_key=True)`.
+tests/test_tutorial/test_indexes/test_tutorial001.py:19:    mod = importlib.import_module(f"docs_src.tutorial.indexes.{request.param}")
+tests/test_tutorial/test_indexes/test_tutorial001.py:32:    indexes = insp.get_indexes(str(mod.Hero.__tablename__))
+tests/test_tutorial/test_indexes/test_tutorial001.py:33:    expected_indexes = [
+tests/test_tutorial/test_indexes/test_tutorial001.py:47:    for index in expected_indexes:
+tests/test_tutorial/test_indexes/test_tutorial001.py:48:        assert index in indexes, "This expected index should be in the indexes in DB"
+tests/test_tutorial/test_indexes/test_tutorial001.py:49:        # Now that this index was checked, remove it from the list of indexes
+tests/test_tutorial/test_indexes/test_tutorial001.py:50:        indexes.pop(indexes.index(index))
+tests/test_tutorial/test_indexes/test_tutorial001.py:51:    assert len(indexes) == 0, "The database should only have the expected indexes"
+docs/tutorial/update.md:9:{* ./docs_src/tutorial/indexes/tutorial002_py310.py ln[0] *}
+tests/test_tutorial/test_indexes/test_tutorial002.py:19:    mod = importlib.import_module(f"docs_src.tutorial.indexes.{request.param}")
+tests/test_tutorial/test_indexes/test_tutorial002.py:33:    indexes = insp.get_indexes(str(mod.Hero.__tablename__))
+tests/test_tutorial/test_indexes/test_tutorial002.py:34:    expected_indexes = [
+tests/test_tutorial/test_indexes/test_tutorial002.py:48:    for index in expected_indexes:
+tests/test_tutorial/test_indexes/test_tutorial002.py:49:        assert index in indexes, "This expected index should be in the indexes in DB"
+tests/test_tutorial/test_indexes/test_tutorial002.py:50:        # Now that this index was checked, remove it from the list of indexes
+tests/test_tutorial/test_indexes/test_tutorial002.py:51:        indexes.pop(indexes.index(index))
+tests/test_tutorial/test_indexes/test_tutorial002.py:52:    assert len(indexes) == 0, "The database should only have the expected indexes"
+docs/db-to-code.md:255:    id: int | None = Field(default=None, primary_key=True)
+docs/install.md:39:Okay, let's get going! On the next section we'll start the [Tutorial - User Guide](tutorial/index.md). 🚀
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:220:    # Test inherited indexes
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:222:    indexes = insp.get_indexes(str(module.Hero.__tablename__))
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:223:    expected_indexes = [
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:237:    for index in expected_indexes:
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:238:        assert index in indexes, "This expected index should be in the indexes in DB"
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:239:        # Now that this index was checked, remove it from the list of indexes
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:240:        indexes.pop(indexes.index(index))
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:241:    assert len(indexes) == 0, "The database should only have the expected indexes"
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:220:    # Test inherited indexes
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:222:    indexes = insp.get_indexes(str(module.Hero.__tablename__))
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:223:    expected_indexes = [
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:237:    for index in expected_indexes:
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:238:        assert index in indexes, "This expected index should be in the indexes in DB"
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:239:        # Now that this index was checked, remove it from the list of indexes
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:240:        indexes.pop(indexes.index(index))
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:241:    assert len(indexes) == 0, "The database should only have the expected indexes"
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '590,615p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   590	        def get_config(name: str) -> Any:
+   591	            config_class_value = new_cls.model_config.get(name, Undefined)
+   592	            if config_class_value is not Undefined:
+   593	                return config_class_value
+   594	            kwarg_value = kwargs.get(name, Undefined)
+   595	            if kwarg_value is not Undefined:
+   596	                return kwarg_value
+   597	            return Undefined
+   598	
+   599	        config_table = get_config("table")
+   600	        if config_table is True:
+   601	            # If it was passed by kwargs, ensure it's also set in config
+   602	            new_cls.model_config["table"] = config_table
+   603	            for k, v in get_model_fields(new_cls).items():
+   604	                col = get_column_from_field(v)
+   605	                setattr(new_cls, k, col)
+   606	            # Set a config flag to tell FastAPI that this should be read with a field
+   607	            # in orm_mode instead of preemptively converting it to a dict.
+   608	            # This could be done by reading new_cls.model_config['table'] in FastAPI, but
+   609	            # that's very specific about SQLModel, so let's have another config that
+   610	            # other future tools based on Pydantic can use.
+   611	            new_cls.model_config["read_from_attributes"] = True  # ty: ignore[invalid-key]
+   612	            # For compatibility with older versions
+   613	            # TODO: remove this in the future
+   614	            new_cls.model_config["read_with_orm_mode"] = True  # ty: ignore[invalid-key]
+   615	
+
+exec
+/bin/zsh -lc "nl -ba docs/tutorial/create-db-and-table.md | sed -n '96,145p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    96	/// tip
+    97	
+    98	The default value could have been something else, like `= 42`.
+    99	
+   100	///
+   101	
+   102	### Primary Key `id`
+   103	
+   104	Now let's review the `id` field. This is the <abbr title="That unique identifier of each row in a specific table.">**primary key**</abbr> of the table.
+   105	
+   106	So, we need to mark `id` as the **primary key**.
+   107	
+   108	To do that, we use the special `Field` function from `sqlmodel` and set the argument `primary_key=True`:
+   109	
+   110	{* ./docs_src/tutorial/create_db_and_table/tutorial001_py310.py ln[1:8] hl[1,5] *}
+   111	
+   112	That way, we tell **SQLModel** that this `id` field/column is the primary key of the table.
+   113	
+   114	But inside the SQL database, it is **always required** and can't be `NULL`. Why should we declare it with `int | None`?
+   115	
+   116	The `id` will be required in the database, but it will be *generated by the database*, not by our code.
+   117	
+   118	So, whenever we create an instance of this class (in the next chapters), we *will not set the `id`*. And the value of `id` will be `None` **until we save it in the database**, and then it will finally have a value.
+   119	
+   120	```Python
+   121	my_hero = Hero(name="Spider-Boy", secret_name="Pedro Parqueador")
+   122	
+   123	do_something(my_hero.id)  # Oh no! my_hero.id is None! 😱🚨
+   124	
+   125	# Imagine this saves it to the database
+   126	somehow_save_in_db(my_hero)
+   127	
+   128	do_something(my_hero.id)  # Now my_hero.id has a value generated in DB 🎉
+   129	```
+   130	
+   131	So, because in *our code* (not in the database) the value of `id` *could be* `None`, we use `int | None`. This way **the editor will be able to help us**, for example, if we try to access the `id` of an object that we haven't saved in the database yet and would still be `None`.
+   132	
+   133	<img class="shadow" src="/img/create-db-and-table/inline-errors01.png">
+   134	
+   135	Now, because we are taking the place of the default value with our `Field()` function, we set **the actual default value** of `id` to `None` with the argument `default=None` in `Field()`:
+   136	
+   137	```Python
+   138	Field(default=None)
+   139	```
+   140	
+   141	If we didn't set the `default` value, whenever we use this model later to do data validation (powered by Pydantic) it would *accept* a value of `None` apart from an `int`, but it would still **require** passing that `None` value. And it would be confusing for whoever is using this model later (probably us), so **better set the default value here**.
+   142	
+   143	## Create the Engine
+   144	
+   145	Now we need to create the SQLAlchemy **Engine**.
+
+exec
+/bin/zsh -lc "nl -ba docs/tutorial/connect/create-connected-tables.md | sed -n '80,95p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    80	
+    81	Most of that should look familiar:
+    82	
+    83	The column will be named `team_id`. It will be an integer, and it could be `NULL` in the database (or `None` in Python), because there could be some heroes that don't belong to any team.
+    84	
+    85	We add a default of `None` to the `Field()` so we don't have to explicitly pass `team_id=None` when creating a hero.
+    86	
+    87	Now, here's the new part:
+    88	
+    89	In `Field()` we pass the argument `foreign_key="team.id"`. This tells the database that this column `team_id` is a foreign key to the table `team`. A "**foreign key**" just means that this column will have the **key** to identify a row in a **foreign** table.
+    90	
+    91	The value in this column `team_id` will be the same integer that is in some row in the `id` column on the `team` table. That is what connects the two tables.
+    92	
+    93	#### The Value of `foreign_key`
+    94	
+    95	Notice that the `foreign_key` is a string.
+
+exec
+/bin/zsh -lc "nl -ba docs/advanced/decimal.md | sed -n '18,28p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    18	In most cases this would probably not be a problem, for example measuring views in a video, or the life bar in a videogame. But as you can imagine, this is particularly important when dealing with **money** and **finances**.
+    19	
+    20	## Decimal Types
+    21	
+    22	Pydantic has special support for <a href="https://docs.pydantic.dev/latest/api/standard_library_types/#decimaldecimal" class="external-link" target="_blank">`Decimal` types</a>.
+    23	
+    24	When you use `Decimal` you can specify the number of digits and decimal places to support in the `Field()` function. They will be validated by Pydantic (for example when using FastAPI) and the same information will also be used for the database columns.
+    25	
+    26	/// info
+    27	
+    28	For the database, **SQLModel** will use <a href="https://docs.sqlalchemy.org/en/20/core/type_basics.html#sqlalchemy.types.DECIMAL" class="external-link" target="_blank">SQLAlchemy's `DECIMAL` type</a>.
+
+exec
+/bin/zsh -lc "nl -ba tests/test_field_sa_column.py | sed -n '1,25p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	from typing import Annotated
+     2	
+     3	import pytest
+     4	from sqlalchemy import Column, Integer, String
+     5	from sqlmodel import Field, SQLModel
+     6	
+     7	
+     8	def test_sa_column_takes_precedence() -> None:
+     9	    class Item(SQLModel, table=True):
+    10	        id: int | None = Field(
+    11	            default=None,
+    12	            sa_column=Column(String, primary_key=True, nullable=False),
+    13	        )
+    14	
+    15	    # It would have been nullable with no sa_column
+    16	    assert Item.id.nullable is False  # type: ignore
+    17	    assert isinstance(Item.id.type, String)  # type: ignore
+    18	
+    19	
+    20	def test_sa_column_with_annotated_metadata() -> None:
+    21	    class Item(SQLModel, table=True):
+    22	        id: Annotated[int | None, "meta"] = Field(
+    23	            default=None,
+    24	            sa_column=Column(String, primary_key=True, nullable=False),
+    25	        )
+
+codex
+Answer: `sqlmodel.Field()` is a Pydantic-compatible field factory that also carries SQL table metadata. Its `FieldInfo` subclasses Pydantic’s `FieldInfo`, then stores `primary_key`, `foreign_key`, `nullable`, `index`, `unique`, `sa_type`, and optional `sa_column`. For table models, SQLModel converts those fields into SQLAlchemy `Column` objects. Unlike `pydantic.Field`, it affects database schema, not just validation/schema metadata. Unlike `sqlalchemy.Column`, it is usually declarative metadata; a real `Column` is generated later, unless `sa_column=Column(...)` is supplied, in which case that column takes precedence.
+Citations: sqlmodel/main.py:26, sqlmodel/main.py:103, sqlmodel/main.py:106, sqlmodel/main.py:158, sqlmodel/main.py:159, sqlmodel/main.py:203, sqlmodel/main.py:365, sqlmodel/main.py:393, sqlmodel/main.py:453, sqlmodel/main.py:603, sqlmodel/main.py:740, sqlmodel/main.py:742, sqlmodel/main.py:796
+Confidence: High
+tokens used
+47,113
+Answer: `sqlmodel.Field()` is a Pydantic-compatible field factory that also carries SQL table metadata. Its `FieldInfo` subclasses Pydantic’s `FieldInfo`, then stores `primary_key`, `foreign_key`, `nullable`, `index`, `unique`, `sa_type`, and optional `sa_column`. For table models, SQLModel converts those fields into SQLAlchemy `Column` objects. Unlike `pydantic.Field`, it affects database schema, not just validation/schema metadata. Unlike `sqlalchemy.Column`, it is usually declarative metadata; a real `Column` is generated later, unless `sa_column=Column(...)` is supplied, in which case that column takes precedence.
+Citations: sqlmodel/main.py:26, sqlmodel/main.py:103, sqlmodel/main.py:106, sqlmodel/main.py:158, sqlmodel/main.py:159, sqlmodel/main.py:203, sqlmodel/main.py:365, sqlmodel/main.py:393, sqlmodel/main.py:453, sqlmodel/main.py:603, sqlmodel/main.py:740, sqlmodel/main.py:742, sqlmodel/main.py:796
+Confidence: High

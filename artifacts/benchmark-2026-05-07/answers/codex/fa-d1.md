@@ -1,0 +1,6 @@
+Answer: FastAPI builds a `Dependant` from the endpoint signature: `Depends` params become child dependencies, `Body` params go to `body_params`, and other `Param` fields are dispatched to `query_params` when `in_` is query.  
+Unannotated complex types default to `Body`; scalar types default to `Query`.  
+At request time, `solve_dependencies()` resolves child dependencies first and stores each result by parameter name.  
+It then reads query values from `request.query_params`, parses body values only when `body_params` exists, merges them into one `values` dict, and calls the endpoint as `dependant.call(**values)`.  
+Citations: fastapi/dependencies/utils.py:317, fastapi/dependencies/utils.py:343, fastapi/dependencies/utils.py:355, fastapi/dependencies/utils.py:515, fastapi/dependencies/utils.py:517, fastapi/dependencies/utils.py:567, fastapi/dependencies/utils.py:628, fastapi/dependencies/utils.py:681, fastapi/dependencies/utils.py:688, fastapi/dependencies/utils.py:702, fastapi/dependencies/utils.py:711, fastapi/routing.py:674, fastapi/routing.py:676, fastapi/routing.py:328  
+Confidence: High

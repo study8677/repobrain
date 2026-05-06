@@ -1,0 +1,11 @@
+Answer: `requests.get` is re-exported from `requests.api`; `api.get` calls `request("get", ...)`.
+`api.request` opens a temporary `Session` and calls `session.request(...)`.
+`Session.request` creates a `Request`, prepares it, merges env settings, then calls `self.send(prep, ...)`.
+`Session.send` selects the mounted `HTTPAdapter`; sessions mount `https://` and `http://` adapters by default.
+`HTTPAdapter.send` gets an urllib3 pool connection and calls `conn.urlopen(..., preload_content=False)`.
+urllib3 `urlopen` calls `_make_request`, which calls `conn.request(...)` and then `conn.getresponse()`.
+The socket is opened by urllib3 `HTTPConnection._new_conn`, through `create_connection`, ending at `sock.connect(sa)`.
+Writes go through `http.client.send`, which auto-connects if needed and calls `self.sock.sendall(...)`.
+For default `stream=False`, Requests forces `r.content`, which reads via `raw.stream/read` from the socket-backed file object.
+Citations: src/requests/__init__.py:171, src/requests/api.py:70, src/requests/api.py:87, src/requests/sessions.py:623, src/requests/sessions.py:635, src/requests/sessions.py:651, src/requests/sessions.py:502, src/requests/sessions.py:771, src/requests/sessions.py:777, src/requests/sessions.py:819, src/requests/adapters.py:664, src/requests/adapters.py:698, /opt/homebrew/lib/python3.14/site-packages/urllib3/connectionpool.py:787, /opt/homebrew/lib/python3.14/site-packages/urllib3/connectionpool.py:493, /opt/homebrew/lib/python3.14/site-packages/urllib3/connectionpool.py:534, /opt/homebrew/lib/python3.14/site-packages/urllib3/connection.py:204, /opt/homebrew/lib/python3.14/site-packages/urllib3/util/connection.py:73, /opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py:1055, /opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/client.py:1077, src/requests/models.py:937, /opt/homebrew/lib/python3.14/site-packages/urllib3/response.py:1257
+Confidence: High

@@ -1,0 +1,1 @@
+The provided context does not include specific details about how the "requests" module handles SSL/TLS verification, including the `verify=` parameter, default CA bundle, or integration with certifi. Since the information is not explicitly provided, I cannot offer direct specifications. For precise details, refer to the GitNexus documentation or the project's official resources.

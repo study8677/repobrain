@@ -1,0 +1,1817 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/sqlmodel
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe67-2617-7140-a42e-088226679a83
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+How does SQLModel reconcile Pydantic field validation with SQLAlchemy column metadata in a single model class? Cite the relevant source.
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the repo guidance first, then trace the SQLModel model/field construction paths so the answer points at exact lines.
+exec
+/bin/zsh -lc "rg --files -g 'AGENTS.md' -g '"'!.*'"'" in /tmp/ag-bench/sqlmodel
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc "pwd && rg -n \"SQLModel|FieldInfo|sa_column|Column|ModelMetaclass|validation|validate|__fields__|model_fields|Relationship|metadata\" sqlmodel tests -g '*.py'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+/private/tmp/ag-bench/sqlmodel
+tests/test_instance_no_args.py:3:from sqlmodel import Field, Session, SQLModel, create_engine, select
+tests/test_instance_no_args.py:7:    class Item(SQLModel, table=True):
+tests/test_instance_no_args.py:13:    SQLModel.metadata.create_all(engine)
+tests/test_instance_no_args.py:23:    SQLModel.metadata.clear()
+tests/test_instance_no_args.py:27:    class Item(SQLModel):
+tests/test_pydantic/test_field.py:6:from sqlmodel import Field, SQLModel
+tests/test_pydantic/test_field.py:10:    class Model(SQLModel):
+tests/test_pydantic/test_field.py:28:    class Cat(SQLModel):
+tests/test_pydantic/test_field.py:32:    class Dog(SQLModel):
+tests/test_pydantic/test_field.py:36:    class Lizard(SQLModel):
+tests/test_pydantic/test_field.py:40:    class Model(SQLModel):
+tests/test_pydantic/test_field.py:51:    class Model(SQLModel):
+tests/test_update.py:1:from sqlmodel import Field, SQLModel
+tests/test_update.py:5:    class Organization(SQLModel, table=True):
+tests/test_update.py:10:    class OrganizationUpdate(SQLModel):
+tests/test_field_sa_args_kwargs.py:2:from sqlmodel import Field, SQLModel, create_engine
+tests/test_field_sa_args_kwargs.py:5:def test_sa_column_args(clear_sqlmodel, caplog) -> None:
+tests/test_field_sa_args_kwargs.py:6:    class Team(SQLModel, table=True):
+tests/test_field_sa_args_kwargs.py:10:    class Hero(SQLModel, table=True):
+tests/test_field_sa_args_kwargs.py:14:            sa_column_args=[ForeignKey("team.id")],
+tests/test_field_sa_args_kwargs.py:18:    SQLModel.metadata.create_all(engine)
+tests/test_field_sa_args_kwargs.py:25:def test_sa_column_kargs(clear_sqlmodel, caplog) -> None:
+tests/test_field_sa_args_kwargs.py:26:    class Item(SQLModel, table=True):
+tests/test_field_sa_args_kwargs.py:29:            sa_column_kwargs={"primary_key": True},
+tests/test_field_sa_args_kwargs.py:33:    SQLModel.metadata.create_all(engine)
+tests/test_fields_set.py:3:from sqlmodel import Field, SQLModel
+tests/test_fields_set.py:7:    class User(SQLModel):
+tests/test_fields_set.py:13:    assert user.model_fields_set == {"username"}
+tests/test_fields_set.py:15:    assert user.model_fields_set == {"username", "email"}
+tests/test_fields_set.py:21:    assert user.model_fields_set == {"username", "email", "last_updated"}
+tests/test_validation.py:3:from sqlmodel import SQLModel
+tests/test_validation.py:6:def test_validation_pydantic_v2(clear_sqlmodel):
+tests/test_validation.py:7:    """Test validation of implicit and explicit None values.
+tests/test_validation.py:18:    class Hero(SQLModel):
+tests/test_validation.py:28:    Hero.model_validate({"age": 25})
+tests/test_validation.py:31:        Hero.model_validate({"name": None, "age": 25})
+tests/test_main.py:5:from sqlalchemy.orm import RelationshipProperty
+tests/test_main.py:6:from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+tests/test_main.py:10:    class Hero(SQLModel, table=True):
+tests/test_main.py:21:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:40:    class Hero(SQLModel, table=True):
+tests/test_main.py:51:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:72:    class Hero(SQLModel, table=True):
+tests/test_main.py:83:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:99:    class Team(SQLModel, table=True):
+tests/test_main.py:102:        heroes: list["Hero"] = Relationship(  # noqa: F821
+tests/test_main.py:103:            sa_relationship=RelationshipProperty("Hero", back_populates="team")
+tests/test_main.py:106:    class Hero(SQLModel, table=True):
+tests/test_main.py:110:        team: Team | None = Relationship(
+tests/test_main.py:111:            sa_relationship=RelationshipProperty("Team", back_populates="heroes")
+tests/test_main.py:119:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:131:    class UserPermission(SQLModel, table=True):
+tests/test_main.py:137:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:159:    def validate_resource_id(value: int) -> int:
+tests/test_main.py:164:    class UserPermission(SQLModel, table=True):
+tests/test_main.py:166:        resource_id: Annotated[int, AfterValidator(validate_resource_id)] = Field(
+tests/test_main.py:172:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:199:    class Team(SQLModel, table=True):
+tests/test_main.py:203:    class Hero(SQLModel, table=True):
+tests/test_main.py:212:    SQLModel.metadata.create_all(engine)
+sqlmodel/sql/_expression_select_gen.py:13:    Column,
+sqlmodel/sql/_expression_select_gen.py:18:from sqlalchemy.sql.roles import TypedColumnsClauseRole
+sqlmodel/sql/_expression_select_gen.py:25:_TCCA = TypedColumnsClauseRole[_T] | SQLCoreOperations[_T] | type[_T]
+sqlmodel/sql/_expression_select_gen.py:32:    Column,
+sqlmodel/sql/_expression_select_gen.py:50:    Column,
+sqlmodel/sql/_expression_select_gen.py:68:    Column,
+sqlmodel/sql/_expression_select_gen.py:86:    Column,
+tests/test_field_sa_relationship.py:3:from sqlmodel import Field, Relationship, SQLModel
+tests/test_field_sa_relationship.py:9:        class Team(SQLModel, table=True):
+tests/test_field_sa_relationship.py:14:            heroes: list["Hero"] = Relationship(
+tests/test_field_sa_relationship.py:20:        class Hero(SQLModel, table=True):
+tests/test_field_sa_relationship.py:27:            team: Team | None = Relationship(back_populates="heroes")
+tests/test_field_sa_relationship.py:33:        class Team(SQLModel, table=True):
+tests/test_field_sa_relationship.py:38:            heroes: list["Hero"] = Relationship(
+tests/test_field_sa_relationship.py:44:        class Hero(SQLModel, table=True):
+tests/test_field_sa_relationship.py:51:            team: Team | None = Relationship(back_populates="heroes")
+tests/test_future_annotations.py:5:from sqlmodel import Field, Session, SQLModel, create_engine, select
+tests/test_future_annotations.py:9:    class Hero(SQLModel, table=True):
+tests/test_future_annotations.py:18:    SQLModel.metadata.create_all(engine)
+tests/test_future_annotations.py:37:    class Team(SQLModel, table=True):
+tests/test_future_annotations.py:41:    class Player(SQLModel, table=True):
+tests/test_future_annotations.py:47:    SQLModel.metadata.create_all(engine)
+tests/test_enums_models.py:4:from sqlmodel import Field, SQLModel
+tests/test_enums_models.py:17:class BaseModel(SQLModel):
+tests/test_enums_models.py:22:class FlatModel(SQLModel, table=True):
+tests/conftest.py:11:from sqlmodel import SQLModel
+tests/conftest.py:20:    # Clear the tables in the metadata for the default base model
+tests/conftest.py:21:    SQLModel.metadata.clear()
+tests/conftest.py:25:    SQLModel.metadata.clear()
+tests/test_annotated_uuid.py:3:from sqlmodel import Field, Session, SQLModel, create_engine, select
+tests/test_annotated_uuid.py:9:    class Hero(SQLModel, table=True):
+tests/test_annotated_uuid.py:14:    SQLModel.metadata.create_all(engine)
+tests/test_sqlalchemy_type_errors.py:4:from sqlmodel import Field, SQLModel
+tests/test_sqlalchemy_type_errors.py:10:        class Hero(SQLModel, table=True):
+tests/test_sqlalchemy_type_errors.py:18:        class Hero(SQLModel, table=True):
+tests/test_sqlalchemy_type_errors.py:26:        class Hero(SQLModel, table=True):
+tests/test_deprecations.py:2:from sqlmodel import SQLModel
+tests/test_deprecations.py:5:class Item(SQLModel):
+tests/test_ondelete_raises.py:4:from sqlmodel import Field, Relationship, SQLModel
+tests/test_ondelete_raises.py:10:        class Team(SQLModel, table=True):
+tests/test_ondelete_raises.py:13:            heroes: list["Hero"] = Relationship(
+tests/test_ondelete_raises.py:17:        class Hero(SQLModel, table=True):
+tests/test_ondelete_raises.py:24:            team: Team = Relationship(back_populates="heroes")
+tests/test_ondelete_raises.py:32:        class Team(SQLModel, table=True):
+tests/test_missing_type.py:3:from sqlmodel import Field, SQLModel
+tests/test_missing_type.py:10:            yield cls.validate
+tests/test_missing_type.py:13:        def validate(cls, v):  # pragma: no cover
+tests/test_missing_type.py:18:        class Item(SQLModel, table=True):
+tests/test_query.py:2:from sqlmodel import Field, Session, SQLModel, create_engine
+tests/test_query.py:6:    class Hero(SQLModel, table=True):
+tests/test_query.py:16:    SQLModel.metadata.create_all(engine)
+tests/test_nullable.py:3:from sqlmodel import Field, Session, SQLModel, create_engine
+tests/test_nullable.py:7:    class Hero(SQLModel, table=True):
+tests/test_nullable.py:52:    SQLModel.metadata.create_all(engine)
+tests/test_nullable.py:82:    class Hero(SQLModel, table=True):
+tests/test_nullable.py:91:    SQLModel.metadata.create_all(engine)
+tests/test_nullable.py:110:    class Hero(SQLModel, table=True):
+tests/test_nullable.py:118:    SQLModel.metadata.create_all(engine)
+tests/test_field_sa_column.py:4:from sqlalchemy import Column, Integer, String
+tests/test_field_sa_column.py:5:from sqlmodel import Field, SQLModel
+tests/test_field_sa_column.py:8:def test_sa_column_takes_precedence() -> None:
+tests/test_field_sa_column.py:9:    class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:12:            sa_column=Column(String, primary_key=True, nullable=False),
+tests/test_field_sa_column.py:15:    # It would have been nullable with no sa_column
+tests/test_field_sa_column.py:20:def test_sa_column_with_annotated_metadata() -> None:
+tests/test_field_sa_column.py:21:    class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:24:            sa_column=Column(String, primary_key=True, nullable=False),
+tests/test_field_sa_column.py:31:def test_sa_column_no_sa_args() -> None:
+tests/test_field_sa_column.py:34:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:37:                sa_column_args=[Integer],
+tests/test_field_sa_column.py:38:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:42:def test_sa_column_no_sa_kargs() -> None:
+tests/test_field_sa_column.py:45:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:48:                sa_column_kwargs={"primary_key": True},
+tests/test_field_sa_column.py:49:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:53:def test_sa_column_no_type() -> None:
+tests/test_field_sa_column.py:56:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:60:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:64:def test_sa_column_no_primary_key() -> None:
+tests/test_field_sa_column.py:67:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:71:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:75:def test_sa_column_no_nullable() -> None:
+tests/test_field_sa_column.py:78:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:82:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:86:def test_sa_column_no_foreign_key() -> None:
+tests/test_field_sa_column.py:89:        class Team(SQLModel, table=True):
+tests/test_field_sa_column.py:93:        class Hero(SQLModel, table=True):
+tests/test_field_sa_column.py:98:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:102:def test_sa_column_no_unique() -> None:
+tests/test_field_sa_column.py:105:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:109:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:113:def test_sa_column_no_index() -> None:
+tests/test_field_sa_column.py:116:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:120:                sa_column=Column(Integer, primary_key=True),
+tests/test_field_sa_column.py:124:def test_sa_column_no_ondelete() -> None:
+tests/test_field_sa_column.py:127:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:130:                sa_column=Column(Integer, primary_key=True),
+tests/test_select_typing.py:1:from sqlmodel import Field, Session, SQLModel, create_engine, select
+tests/test_select_typing.py:6:    class Hero(SQLModel, table=True):
+tests/test_select_typing.py:17:    SQLModel.metadata.create_all(engine)
+sqlmodel/sql/expression.py:11:    Column,
+sqlmodel/sql/expression.py:12:    ColumnElement,
+sqlmodel/sql/expression.py:23:    _ColumnExpressionArgument,
+sqlmodel/sql/expression.py:24:    _ColumnExpressionOrLiteralArgument,
+sqlmodel/sql/expression.py:25:    _ColumnExpressionOrStrLabelArgument,
+sqlmodel/sql/expression.py:32:    ColumnClause,
+sqlmodel/sql/expression.py:50:def all_(expr: _ColumnExpressionArgument[_T] | _T) -> CollectionAggregate[bool]:
+sqlmodel/sql/expression.py:55:    initial_clause: Literal[True] | _ColumnExpressionArgument[bool] | bool,
+sqlmodel/sql/expression.py:56:    *clauses: _ColumnExpressionArgument[bool] | bool,
+sqlmodel/sql/expression.py:57:) -> ColumnElement[bool]:
+sqlmodel/sql/expression.py:61:def any_(expr: _ColumnExpressionArgument[_T] | _T) -> CollectionAggregate[bool]:
+sqlmodel/sql/expression.py:66:    column: _ColumnExpressionOrStrLabelArgument[_T] | _T,
+sqlmodel/sql/expression.py:72:    expression: _ColumnExpressionArgument[str] | str, collation: str
+sqlmodel/sql/expression.py:78:    expr: _ColumnExpressionOrLiteralArgument[_T] | _T,
+sqlmodel/sql/expression.py:86:def not_(clause: _ColumnExpressionArgument[_T] | _T) -> ColumnElement[_T]:
+sqlmodel/sql/expression.py:91:    *whens: tuple[_ColumnExpressionArgument[bool] | bool, Any] | Mapping[Any, Any],
+sqlmodel/sql/expression.py:99:    expression: _ColumnExpressionOrLiteralArgument[Any] | Any,
+sqlmodel/sql/expression.py:106:    expression: _ColumnExpressionOrLiteralArgument[Any] | Any,
+sqlmodel/sql/expression.py:113:    column: _ColumnExpressionOrStrLabelArgument[_T] | _T,
+sqlmodel/sql/expression.py:118:def distinct(expr: _ColumnExpressionArgument[_T] | _T) -> UnaryExpression[_T]:
+sqlmodel/sql/expression.py:122:def bitwise_not(expr: _ColumnExpressionArgument[_T] | _T) -> UnaryExpression[_T]:
+sqlmodel/sql/expression.py:126:def extract(field: str, expr: _ColumnExpressionArgument[Any] | Any) -> Extract:
+sqlmodel/sql/expression.py:131:    func: FunctionElement[_T], *criterion: _ColumnExpressionArgument[bool] | bool
+sqlmodel/sql/expression.py:138:    element: _ColumnExpressionArgument[_T] | _T,
+sqlmodel/sql/expression.py:145:    column: _ColumnExpressionArgument[_T] | _T,
+sqlmodel/sql/expression.py:150:def nulls_last(column: _ColumnExpressionArgument[_T] | _T) -> UnaryExpression[_T]:
+sqlmodel/sql/expression.py:155:    initial_clause: Literal[False] | _ColumnExpressionArgument[bool] | bool,
+sqlmodel/sql/expression.py:156:    *clauses: _ColumnExpressionArgument[bool] | bool,
+sqlmodel/sql/expression.py:157:) -> ColumnElement[bool]:
+sqlmodel/sql/expression.py:163:    partition_by: Iterable[_ColumnExpressionArgument[Any] | Any]
+sqlmodel/sql/expression.py:164:    | _ColumnExpressionArgument[Any]
+sqlmodel/sql/expression.py:167:    order_by: Iterable[_ColumnExpressionArgument[Any] | Any]
+sqlmodel/sql/expression.py:168:    | _ColumnExpressionArgument[Any]
+sqlmodel/sql/expression.py:180:    *clauses: _ColumnExpressionArgument[Any] | Any,
+sqlmodel/sql/expression.py:187:    expression: _ColumnExpressionOrLiteralArgument[Any] | Any,
+sqlmodel/sql/expression.py:194:    element: FunctionElement[_T], *order_by: _ColumnExpressionArgument[Any] | Any
+sqlmodel/sql/expression.py:200:    if not isinstance(column_expression, (ColumnClause, Column, InstrumentedAttribute)):
+sqlmodel/_compat.py:24:from pydantic._internal._model_construction import ModelMetaclass as ModelMetaclass
+sqlmodel/_compat.py:26:from pydantic.fields import FieldInfo
+sqlmodel/_compat.py:36:    from .main import RelationshipInfo, SQLModel
+sqlmodel/_compat.py:42:_TSQLModel = TypeVar("_TSQLModel", bound="SQLModel")
+sqlmodel/_compat.py:78:class SQLModelConfig(BaseConfig, total=False):
+sqlmodel/_compat.py:83:def get_model_fields(model: InstanceOrType[BaseModel]) -> dict[str, "FieldInfo"]:
+sqlmodel/_compat.py:91:    return use_model.model_fields
+sqlmodel/_compat.py:94:def init_pydantic_private_attrs(new_object: InstanceOrType["SQLModel"]) -> None:
+sqlmodel/_compat.py:124:    rel_info: "RelationshipInfo",
+sqlmodel/_compat.py:157:def is_field_noneable(field: "FieldInfo") -> bool:
+sqlmodel/_compat.py:201:def get_field_metadata(field: Any) -> Any:
+sqlmodel/_compat.py:202:    for meta in field.metadata:
+sqlmodel/_compat.py:210:    self_instance: _TSQLModel,
+sqlmodel/_compat.py:213:) -> _TSQLModel:
+sqlmodel/_compat.py:218:    # SQLModel override to get class SQLAlchemy __dict__ attributes and
+sqlmodel/_compat.py:223:    # End SQLModel override
+sqlmodel/_compat.py:229:    for name, field in cls.model_fields.items():
+sqlmodel/_compat.py:245:    # SQLModel override, do not include everything, only the model fields
+sqlmodel/_compat.py:248:    # End SQLModel override
+sqlmodel/_compat.py:249:    # SQLModel override
+sqlmodel/_compat.py:255:    # End SQLModel override
+sqlmodel/_compat.py:266:    # SQLModel override, set relationships
+sqlmodel/_compat.py:272:    # End SQLModel override
+sqlmodel/_compat.py:276:def sqlmodel_validate(
+sqlmodel/_compat.py:277:    cls: type[_TSQLModel],
+sqlmodel/_compat.py:284:) -> _TSQLModel:
+sqlmodel/_compat.py:286:        new_obj: _TSQLModel = cls.__new__(cls)
+sqlmodel/_compat.py:293:    # SQLModel Override to get class SQLAlchemy __dict__ attributes and
+sqlmodel/_compat.py:301:    cls.__pydantic_validator__.validate_python(
+sqlmodel/_compat.py:329:def sqlmodel_init(*, self: "SQLModel", data: dict[str, Any]) -> None:
+sqlmodel/_compat.py:332:        self.__pydantic_validator__.validate_python(
+tests/test_aliases.py:4:from sqlmodel import Field, SQLModel
+tests/test_aliases.py:7:Alias tests for SQLModel and Pydantic compatibility
+tests/test_aliases.py:15:class SQLModelUser(SQLModel):
+tests/test_aliases.py:19:# Models with config (validate_by_name=True)
+tests/test_aliases.py:21:    model_config = {"validate_by_name": True}
+tests/test_aliases.py:24:class SQLModelUserWithConfig(SQLModelUser):
+tests/test_aliases.py:25:    model_config = {"validate_by_name": True}
+tests/test_aliases.py:28:@pytest.mark.parametrize("model", [PydanticUser, SQLModelUser])
+tests/test_aliases.py:29:def test_create_with_field_name(model: type[PydanticUser] | type[SQLModelUser]):
+tests/test_aliases.py:34:@pytest.mark.parametrize("model", [PydanticUserWithConfig, SQLModelUserWithConfig])
+tests/test_aliases.py:36:    model: type[PydanticUserWithConfig] | type[SQLModelUserWithConfig],
+tests/test_aliases.py:44:    [PydanticUser, SQLModelUser, PydanticUserWithConfig, SQLModelUserWithConfig],
+tests/test_aliases.py:48:    | type[SQLModelUser]
+tests/test_aliases.py:50:    | type[SQLModelUserWithConfig],
+tests/test_aliases.py:56:@pytest.mark.parametrize("model", [PydanticUserWithConfig, SQLModelUserWithConfig])
+tests/test_aliases.py:58:    model: type[PydanticUserWithConfig] | type[SQLModelUserWithConfig],
+tests/test_aliases.py:64:@pytest.mark.parametrize("model", [PydanticUser, SQLModelUser])
+tests/test_aliases.py:66:    model: type[PydanticUser] | type[SQLModelUser],
+tests/test_aliases.py:75:@pytest.mark.parametrize("model", [PydanticUser, SQLModelUser])
+tests/test_aliases.py:77:    model: type[PydanticUser] | type[SQLModelUser],
+tests/test_aliases.py:86:@pytest.mark.parametrize("model", [PydanticUser, SQLModelUser])
+tests/test_aliases.py:88:    model: type[PydanticUser] | type[SQLModelUser],
+tests/test_aliases.py:97:    first_name: str = PField(validation_alias="firstName", serialization_alias="f_name")
+tests/test_aliases.py:100:class SQLModelUserV2(SQLModel):
+tests/test_aliases.py:101:    first_name: str = Field(validation_alias="firstName", serialization_alias="f_name")
+tests/test_aliases.py:104:@pytest.mark.parametrize("model", [PydanticUserV2, SQLModelUserV2])
+tests/test_aliases.py:105:def test_create_with_validation_alias(
+tests/test_aliases.py:106:    model: type[PydanticUserV2] | type[SQLModelUserV2],
+tests/test_aliases.py:112:@pytest.mark.parametrize("model", [PydanticUserV2, SQLModelUserV2])
+tests/test_aliases.py:114:    model: type[PydanticUserV2] | type[SQLModelUserV2],
+tests/test_aliases.py:124:def test_schema_extra_validation_alias_sqlmodel_v2():
+tests/test_aliases.py:125:    class M(SQLModel):
+tests/test_aliases.py:126:        f: str = Field(schema_extra={"validation_alias": "f_alias"})
+tests/test_aliases.py:128:    m = M.model_validate({"f_alias": "asd"})
+tests/test_aliases.py:133:    class M(SQLModel):
+tests/test_aliases.py:143:def test_alias_plus_validation_alias_prefers_validation_alias_sqlmodel_v2():
+tests/test_aliases.py:144:    class M(SQLModel):
+tests/test_aliases.py:145:        first_name: str = Field(alias="fullName", validation_alias="v_name")
+tests/test_aliases.py:147:    m = M.model_validate({"fullName": "A", "v_name": "B"})
+tests/test_aliases.py:152:    class M(SQLModel):
+tests/test_aliases.py:163:    class M(SQLModel):
+tests/test_aliases.py:167:    m = M.model_validate({"gen_f": "ok"})
+tests/test_aliases.py:174:    class M(SQLModel):
+tests/test_aliases.py:178:    m = M.model_validate({"custom": "ok"})
+sqlmodel/__init__.py:13:from sqlalchemy.schema import Column as Column
+sqlmodel/__init__.py:14:from sqlalchemy.schema import ColumnDefault as ColumnDefault
+sqlmodel/__init__.py:116:# From SQLModel, modifications of SQLAlchemy or equivalents of Pydantic
+sqlmodel/__init__.py:118:from .main import Relationship as Relationship
+sqlmodel/__init__.py:119:from .main import SQLModel as SQLModel
+sqlmodel/orm/session.py:15:from sqlalchemy.sql._typing import _ColumnsClauseArgument
+sqlmodel/orm/session.py:149:        `session.exec()` is SQLModel's own short version with increased type
+sqlmodel/orm/session.py:157:        self, *entities: _ColumnsClauseArgument[Any], **kwargs: Any
+sqlmodel/orm/session.py:162:        `session.exec()` is SQLModel's own short version with increased type
+sqlmodel/sql/_expression_select_cls.py:6:    _ColumnExpressionArgument,
+sqlmodel/sql/_expression_select_cls.py:19:    def where(self, *whereclause: _ColumnExpressionArgument[bool] | bool) -> Self:
+sqlmodel/sql/_expression_select_cls.py:25:    def having(self, *having: _ColumnExpressionArgument[bool] | bool) -> Self:
+tests/test_enums.py:6:from sqlmodel import SQLModel
+tests/test_enums.py:40:    SQLModel.metadata.create_all(bind=postgres_engine, checkfirst=False)
+tests/test_enums.py:50:    SQLModel.metadata.create_all(bind=sqlite_engine, checkfirst=False)
+sqlmodel/main.py:26:from pydantic.fields import FieldInfo as PydanticFieldInfo
+sqlmodel/main.py:29:    Column,
+sqlmodel/main.py:42:    RelationshipProperty,
+sqlmodel/main.py:57:    ModelMetaclass,
+sqlmodel/main.py:59:    SQLModelConfig,
+sqlmodel/main.py:64:    get_field_metadata,
+sqlmodel/main.py:65:    get_model_fields,
+sqlmodel/main.py:72:    sqlmodel_validate,
+sqlmodel/main.py:77:    from pydantic._internal._model_construction import ModelMetaclass as ModelMetaclass
+sqlmodel/main.py:103:class FieldInfo(PydanticFieldInfo):  # ty: ignore[subclass-of-final-class]
+sqlmodel/main.py:104:    # mypy - ignore that PydanticFieldInfo is @final
+sqlmodel/main.py:113:        sa_column = kwargs.pop("sa_column", Undefined)
+sqlmodel/main.py:114:        sa_column_args = kwargs.pop("sa_column_args", Undefined)
+sqlmodel/main.py:115:        sa_column_kwargs = kwargs.pop("sa_column_kwargs", Undefined)
+sqlmodel/main.py:116:        if sa_column is not Undefined:
+sqlmodel/main.py:117:            if sa_column_args is not Undefined:
+sqlmodel/main.py:119:                    "Passing sa_column_args is not supported when "
+sqlmodel/main.py:120:                    "also passing a sa_column"
+sqlmodel/main.py:122:            if sa_column_kwargs is not Undefined:
+sqlmodel/main.py:124:                    "Passing sa_column_kwargs is not supported when "
+sqlmodel/main.py:125:                    "also passing a sa_column"
+sqlmodel/main.py:129:                    "Passing primary_key is not supported when also passing a sa_column"
+sqlmodel/main.py:133:                    "Passing nullable is not supported when also passing a sa_column"
+sqlmodel/main.py:137:                    "Passing foreign_key is not supported when also passing a sa_column"
+sqlmodel/main.py:141:                    "Passing ondelete is not supported when also passing a sa_column"
+sqlmodel/main.py:145:                    "Passing unique is not supported when also passing a sa_column"
+sqlmodel/main.py:149:                    "Passing index is not supported when also passing a sa_column"
+sqlmodel/main.py:153:                    "Passing sa_type is not supported when also passing a sa_column"
+sqlmodel/main.py:166:        self.sa_column = sa_column
+sqlmodel/main.py:167:        self.sa_column_args = sa_column_args
+sqlmodel/main.py:168:        self.sa_column_kwargs = sa_column_kwargs
+sqlmodel/main.py:171:class RelationshipInfo(Representation):
+sqlmodel/main.py:179:        sa_relationship: RelationshipProperty | None = None,
+sqlmodel/main.py:204:class FieldInfoMetadata:
+sqlmodel/main.py:212:    sa_column: Column[Any] | UndefinedType = Undefined
+sqlmodel/main.py:213:    sa_column_args: Sequence[Any] | UndefinedType = Undefined
+sqlmodel/main.py:214:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined
+sqlmodel/main.py:217:def _get_sqlmodel_field_metadata(field_info: Any) -> FieldInfoMetadata | None:
+sqlmodel/main.py:218:    metadata_items = getattr(field_info, "metadata", None)
+sqlmodel/main.py:219:    if metadata_items:
+sqlmodel/main.py:220:        for meta in metadata_items:
+sqlmodel/main.py:221:            if isinstance(meta, FieldInfoMetadata):
+sqlmodel/main.py:229:    metadata = _get_sqlmodel_field_metadata(field_info)
+sqlmodel/main.py:230:    if metadata is not None and hasattr(metadata, attribute):
+sqlmodel/main.py:231:        return getattr(metadata, attribute)
+sqlmodel/main.py:235:# include sa_type, sa_column_args, sa_column_kwargs
+sqlmodel/main.py:242:    validation_alias: str | None = None,
+sqlmodel/main.py:271:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:272:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+sqlmodel/main.py:278:# include sa_type, sa_column_args, sa_column_kwargs
+sqlmodel/main.py:285:    validation_alias: str | None = None,
+sqlmodel/main.py:315:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:316:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+sqlmodel/main.py:321:# Include sa_column, don't include
+sqlmodel/main.py:329:# sa_column_args
+sqlmodel/main.py:330:# sa_column_kwargs
+sqlmodel/main.py:337:    validation_alias: str | None = None,
+sqlmodel/main.py:360:    sa_column: Column[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:370:    validation_alias: str | None = None,
+sqlmodel/main.py:400:    sa_column: Column | UndefinedType = Undefined,
+sqlmodel/main.py:401:    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+sqlmodel/main.py:402:    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+sqlmodel/main.py:407:    schema_validation_alias = current_schema_extra.pop("validation_alias", None)
+sqlmodel/main.py:439:        "sa_column": sa_column,
+sqlmodel/main.py:440:        "sa_column_args": sa_column_args,
+sqlmodel/main.py:441:        "sa_column_kwargs": sa_column_kwargs,
+sqlmodel/main.py:446:    field_info_kwargs["validation_alias"] = (
+sqlmodel/main.py:447:        validation_alias or schema_validation_alias or alias
+sqlmodel/main.py:453:    field_info = FieldInfo(
+sqlmodel/main.py:458:    field_metadata = FieldInfoMetadata(
+sqlmodel/main.py:466:        sa_column=sa_column,
+sqlmodel/main.py:467:        sa_column_args=sa_column_args,
+sqlmodel/main.py:468:        sa_column_kwargs=sa_column_kwargs,
+sqlmodel/main.py:470:    if hasattr(field_info, "metadata"):
+sqlmodel/main.py:471:        field_info.metadata.append(field_metadata)
+sqlmodel/main.py:476:def Relationship(
+sqlmodel/main.py:488:def Relationship(
+sqlmodel/main.py:494:    sa_relationship: RelationshipProperty[Any] | None = None,
+sqlmodel/main.py:498:def Relationship(
+sqlmodel/main.py:504:    sa_relationship: RelationshipProperty[Any] | None = None,
+sqlmodel/main.py:508:    relationship_info = RelationshipInfo(
+sqlmodel/main.py:520:@__dataclass_transform__(kw_only_default=True, field_descriptors=(Field, FieldInfo))
+sqlmodel/main.py:521:class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+sqlmodel/main.py:522:    __sqlmodel_relationships__: dict[str, RelationshipInfo]
+sqlmodel/main.py:523:    model_config: SQLModelConfig
+sqlmodel/main.py:524:    model_fields: ClassVar[dict[str, FieldInfo]]
+sqlmodel/main.py:547:        relationships: dict[str, RelationshipInfo] = {}
+sqlmodel/main.py:553:            if isinstance(v, RelationshipInfo):
+sqlmodel/main.py:582:            "SQLModel", super().__new__(cls, name, bases, dict_used, **config_kwargs)
+sqlmodel/main.py:603:            for k, v in get_model_fields(new_cls).items():
+sqlmodel/main.py:609:            # that's very specific about SQLModel, so let's have another config that
+sqlmodel/main.py:622:            setattr(new_cls, "metadata", config_registry.metadata)  # noqa: B010
+sqlmodel/main.py:631:        # this allows FastAPI cloning a SQLModel for the response_model without
+sqlmodel/main.py:683:            ModelMetaclass.__init__(cls, classname, bases, dict_, **kw)
+sqlmodel/main.py:693:    metadata = get_field_metadata(field)
+sqlmodel/main.py:710:        max_length = getattr(metadata, "max_length", None)
+sqlmodel/main.py:732:            precision=getattr(metadata, "max_digits", None),
+sqlmodel/main.py:733:            scale=getattr(metadata, "decimal_places", None),
+sqlmodel/main.py:740:def get_column_from_field(field: Any) -> Column:
+sqlmodel/main.py:742:    sa_column = _get_sqlmodel_field_value(field_info, "sa_column", Undefined)
+sqlmodel/main.py:743:    if isinstance(sa_column, Column):
+sqlmodel/main.py:744:        return sa_column
+sqlmodel/main.py:788:    sa_column_args = _get_sqlmodel_field_value(field_info, "sa_column_args", Undefined)
+sqlmodel/main.py:789:    if sa_column_args is not Undefined:
+sqlmodel/main.py:790:        args.extend(list(cast(Sequence[Any], sa_column_args)))
+sqlmodel/main.py:791:    sa_column_kwargs = _get_sqlmodel_field_value(
+sqlmodel/main.py:792:        field_info, "sa_column_kwargs", Undefined
+sqlmodel/main.py:794:    if sa_column_kwargs is not Undefined:
+sqlmodel/main.py:795:        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+sqlmodel/main.py:796:    return Column(sa_type, *args, **kwargs)
+sqlmodel/main.py:801:_TSQLModel = TypeVar("_TSQLModel", bound="SQLModel")
+sqlmodel/main.py:804:class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+sqlmodel/main.py:808:    __sqlmodel_relationships__: ClassVar[builtins.dict[str, RelationshipProperty[Any]]]
+sqlmodel/main.py:810:    metadata: ClassVar[MetaData]
+sqlmodel/main.py:812:    model_config = SQLModelConfig(from_attributes=True)
+sqlmodel/main.py:836:        # when calling Model.model_validate(), as the validation is done outside
+sqlmodel/main.py:839:        # a new instance, which should have validation and all the default logic.
+sqlmodel/main.py:841:        # executing the rest, and support things like Model.model_validate(), we
+sqlmodel/main.py:854:            # Set in Pydantic model to trigger possible validation changes, only for
+sqlmodel/main.py:872:    def model_validate(  # ty: ignore[invalid-method-override]
+sqlmodel/main.py:873:        cls: type[_TSQLModel],
+sqlmodel/main.py:880:    ) -> _TSQLModel:
+sqlmodel/main.py:881:        return sqlmodel_validate(
+sqlmodel/main.py:931:        🚨 `obj.dict()` was deprecated in SQLModel 0.0.14, you should
+sqlmodel/main.py:957:        🚨 `obj.from_orm(data)` was deprecated in SQLModel 0.0.14, you should
+sqlmodel/main.py:958:        instead use `obj.model_validate(data)`.
+sqlmodel/main.py:962:        cls: type[_TSQLModel],
+sqlmodel/main.py:965:    ) -> _TSQLModel:
+sqlmodel/main.py:966:        return cls.model_validate(obj, update=update)
+sqlmodel/main.py:971:        🚨 `obj.parse_obj(data)` was deprecated in SQLModel 0.0.14, you should
+sqlmodel/main.py:972:        instead use `obj.model_validate(data)`.
+sqlmodel/main.py:976:        cls: type[_TSQLModel],
+sqlmodel/main.py:979:    ) -> _TSQLModel:
+sqlmodel/main.py:980:        return cls.model_validate(obj, update=update)
+sqlmodel/main.py:983:        self: _TSQLModel,
+sqlmodel/main.py:987:    ) -> _TSQLModel:
+sqlmodel/main.py:991:                if key in get_model_fields(self):
+sqlmodel/main.py:994:            for key in get_model_fields(obj):
+sqlmodel/main.py:1001:                if remaining_key in get_model_fields(self):
+sqlmodel/main.py:1006:                f"is not a dict or SQLModel or Pydantic model: {obj}"
+tests/test_tutorial/test_fastapi/test_app_testing/test_tutorial001_tests005.py:19:    # Trigger side effects of registering table models in SQLModel
+tests/test_tutorial/test_fastapi/test_app_testing/test_tutorial001_tests001.py:27:    # Trigger side effects of registering table models in SQLModel
+tests/test_tutorial/test_fastapi/test_app_testing/test_tutorial001_tests004.py:27:    # Trigger side effects of registering table models in SQLModel
+tests/test_tutorial/test_fastapi/test_app_testing/test_tutorial001_tests003.py:27:    # Trigger side effects of registering table models in SQLModel
+tests/test_tutorial/test_fastapi/test_app_testing/test_tutorial001_tests006.py:22:    # Trigger side effects of registering table models in SQLModel
+tests/test_tutorial/test_fastapi/test_app_testing/test_tutorial001_tests002.py:27:    # Trigger side effects of registering table models in SQLModel
+
+codex
+The repo-level search found the key implementation in `sqlmodel/main.py`; I’m checking ancestor instructions and then reading that source around field construction, metaclass wiring, and validation.
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '100,180p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   100	    return lambda a: a
+   101	
+   102	
+   103	class FieldInfo(PydanticFieldInfo):  # ty: ignore[subclass-of-final-class]
+   104	    # mypy - ignore that PydanticFieldInfo is @final
+   105	    def __init__(self, default: Any = Undefined, **kwargs: Any) -> None:
+   106	        primary_key = kwargs.pop("primary_key", False)
+   107	        nullable = kwargs.pop("nullable", Undefined)
+   108	        foreign_key = kwargs.pop("foreign_key", Undefined)
+   109	        ondelete = kwargs.pop("ondelete", Undefined)
+   110	        unique = kwargs.pop("unique", False)
+   111	        index = kwargs.pop("index", Undefined)
+   112	        sa_type = kwargs.pop("sa_type", Undefined)
+   113	        sa_column = kwargs.pop("sa_column", Undefined)
+   114	        sa_column_args = kwargs.pop("sa_column_args", Undefined)
+   115	        sa_column_kwargs = kwargs.pop("sa_column_kwargs", Undefined)
+   116	        if sa_column is not Undefined:
+   117	            if sa_column_args is not Undefined:
+   118	                raise RuntimeError(
+   119	                    "Passing sa_column_args is not supported when "
+   120	                    "also passing a sa_column"
+   121	                )
+   122	            if sa_column_kwargs is not Undefined:
+   123	                raise RuntimeError(
+   124	                    "Passing sa_column_kwargs is not supported when "
+   125	                    "also passing a sa_column"
+   126	                )
+   127	            if primary_key is not Undefined:
+   128	                raise RuntimeError(
+   129	                    "Passing primary_key is not supported when also passing a sa_column"
+   130	                )
+   131	            if nullable is not Undefined:
+   132	                raise RuntimeError(
+   133	                    "Passing nullable is not supported when also passing a sa_column"
+   134	                )
+   135	            if foreign_key is not Undefined:
+   136	                raise RuntimeError(
+   137	                    "Passing foreign_key is not supported when also passing a sa_column"
+   138	                )
+   139	            if ondelete is not Undefined:
+   140	                raise RuntimeError(
+   141	                    "Passing ondelete is not supported when also passing a sa_column"
+   142	                )
+   143	            if unique is not Undefined:
+   144	                raise RuntimeError(
+   145	                    "Passing unique is not supported when also passing a sa_column"
+   146	                )
+   147	            if index is not Undefined:
+   148	                raise RuntimeError(
+   149	                    "Passing index is not supported when also passing a sa_column"
+   150	                )
+   151	            if sa_type is not Undefined:
+   152	                raise RuntimeError(
+   153	                    "Passing sa_type is not supported when also passing a sa_column"
+   154	                )
+   155	        if ondelete is not Undefined:
+   156	            if foreign_key is Undefined:
+   157	                raise RuntimeError("ondelete can only be used with foreign_key")
+   158	        super().__init__(default=default, **kwargs)
+   159	        self.primary_key = primary_key
+   160	        self.nullable = nullable
+   161	        self.foreign_key = foreign_key
+   162	        self.ondelete = ondelete
+   163	        self.unique = unique
+   164	        self.index = index
+   165	        self.sa_type = sa_type
+   166	        self.sa_column = sa_column
+   167	        self.sa_column_args = sa_column_args
+   168	        self.sa_column_kwargs = sa_column_kwargs
+   169	
+   170	
+   171	class RelationshipInfo(Representation):
+   172	    def __init__(
+   173	        self,
+   174	        *,
+   175	        back_populates: str | None = None,
+   176	        cascade_delete: bool | None = False,
+   177	        passive_deletes: bool | Literal["all"] | None = False,
+   178	        link_model: Any | None = None,
+   179	        sa_relationship: RelationshipProperty | None = None,
+   180	        sa_relationship_args: Sequence[Any] | None = None,
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '204,235p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   204	class FieldInfoMetadata:
+   205	    primary_key: bool | UndefinedType = Undefined
+   206	    nullable: bool | UndefinedType = Undefined
+   207	    foreign_key: Any = Undefined
+   208	    ondelete: OnDeleteType | UndefinedType = Undefined
+   209	    unique: bool | UndefinedType = Undefined
+   210	    index: bool | UndefinedType = Undefined
+   211	    sa_type: type[Any] | UndefinedType = Undefined
+   212	    sa_column: Column[Any] | UndefinedType = Undefined
+   213	    sa_column_args: Sequence[Any] | UndefinedType = Undefined
+   214	    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined
+   215	
+   216	
+   217	def _get_sqlmodel_field_metadata(field_info: Any) -> FieldInfoMetadata | None:
+   218	    metadata_items = getattr(field_info, "metadata", None)
+   219	    if metadata_items:
+   220	        for meta in metadata_items:
+   221	            if isinstance(meta, FieldInfoMetadata):
+   222	                return meta
+   223	    return None
+   224	
+   225	
+   226	def _get_sqlmodel_field_value(
+   227	    field_info: Any, attribute: str, default: Any = Undefined
+   228	) -> Any:
+   229	    metadata = _get_sqlmodel_field_metadata(field_info)
+   230	    if metadata is not None and hasattr(metadata, attribute):
+   231	        return getattr(metadata, attribute)
+   232	    return getattr(field_info, attribute, default)
+   233	
+   234	
+   235	# include sa_type, sa_column_args, sa_column_kwargs
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '400,475p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   400	    sa_column: Column | UndefinedType = Undefined,
+   401	    sa_column_args: Sequence[Any] | UndefinedType = Undefined,
+   402	    sa_column_kwargs: Mapping[str, Any] | UndefinedType = Undefined,
+   403	    schema_extra: dict[str, Any] | None = None,
+   404	) -> Any:
+   405	    current_schema_extra = schema_extra or {}
+   406	    # Extract possible alias settings from schema_extra so we can control precedence
+   407	    schema_validation_alias = current_schema_extra.pop("validation_alias", None)
+   408	    schema_serialization_alias = current_schema_extra.pop("serialization_alias", None)
+   409	    field_info_kwargs = {
+   410	        "alias": alias,
+   411	        "title": title,
+   412	        "description": description,
+   413	        "exclude": exclude,
+   414	        "include": include,
+   415	        "const": const,
+   416	        "gt": gt,
+   417	        "ge": ge,
+   418	        "lt": lt,
+   419	        "le": le,
+   420	        "multiple_of": multiple_of,
+   421	        "max_digits": max_digits,
+   422	        "decimal_places": decimal_places,
+   423	        "min_items": min_items,
+   424	        "max_items": max_items,
+   425	        "unique_items": unique_items,
+   426	        "min_length": min_length,
+   427	        "max_length": max_length,
+   428	        "allow_mutation": allow_mutation,
+   429	        "regex": regex,
+   430	        "discriminator": discriminator,
+   431	        "repr": repr,
+   432	        "primary_key": primary_key,
+   433	        "foreign_key": foreign_key,
+   434	        "ondelete": ondelete,
+   435	        "unique": unique,
+   436	        "nullable": nullable,
+   437	        "index": index,
+   438	        "sa_type": sa_type,
+   439	        "sa_column": sa_column,
+   440	        "sa_column_args": sa_column_args,
+   441	        "sa_column_kwargs": sa_column_kwargs,
+   442	        **current_schema_extra,
+   443	    }
+   444	
+   445	    # explicit params > schema_extra > alias propagation
+   446	    field_info_kwargs["validation_alias"] = (
+   447	        validation_alias or schema_validation_alias or alias
+   448	    )
+   449	    field_info_kwargs["serialization_alias"] = (
+   450	        serialization_alias or schema_serialization_alias or alias
+   451	    )
+   452	
+   453	    field_info = FieldInfo(
+   454	        default,
+   455	        default_factory=default_factory,
+   456	        **field_info_kwargs,
+   457	    )
+   458	    field_metadata = FieldInfoMetadata(
+   459	        primary_key=primary_key,
+   460	        nullable=nullable,
+   461	        foreign_key=foreign_key,
+   462	        ondelete=ondelete,
+   463	        unique=unique,
+   464	        index=index,
+   465	        sa_type=sa_type,
+   466	        sa_column=sa_column,
+   467	        sa_column_args=sa_column_args,
+   468	        sa_column_kwargs=sa_column_kwargs,
+   469	    )
+   470	    if hasattr(field_info, "metadata"):
+   471	        field_info.metadata.append(field_metadata)
+   472	    return field_info
+   473	
+   474	
+   475	@overload
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '520,625p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   520	@__dataclass_transform__(kw_only_default=True, field_descriptors=(Field, FieldInfo))
+   521	class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+   522	    __sqlmodel_relationships__: dict[str, RelationshipInfo]
+   523	    model_config: SQLModelConfig
+   524	    model_fields: ClassVar[dict[str, FieldInfo]]
+   525	
+   526	    # Replicate SQLAlchemy
+   527	    def __setattr__(cls, name: str, value: Any) -> None:  # ty: ignore[invalid-method-override]
+   528	        if is_table_model_class(cls):
+   529	            DeclarativeMeta.__setattr__(cls, name, value)
+   530	        else:
+   531	            super().__setattr__(name, value)
+   532	
+   533	    def __delattr__(cls, name: str) -> None:  # ty: ignore[invalid-method-override]
+   534	        if is_table_model_class(cls):
+   535	            DeclarativeMeta.__delattr__(cls, name)
+   536	        else:
+   537	            super().__delattr__(name)
+   538	
+   539	    # From Pydantic
+   540	    def __new__(
+   541	        cls,
+   542	        name: str,
+   543	        bases: tuple[type[Any], ...],
+   544	        class_dict: dict[str, Any],
+   545	        **kwargs: Any,
+   546	    ) -> Any:
+   547	        relationships: dict[str, RelationshipInfo] = {}
+   548	        dict_for_pydantic = {}
+   549	        original_annotations = get_annotations(class_dict)
+   550	        pydantic_annotations = {}
+   551	        relationship_annotations = {}
+   552	        for k, v in class_dict.items():
+   553	            if isinstance(v, RelationshipInfo):
+   554	                relationships[k] = v
+   555	            else:
+   556	                dict_for_pydantic[k] = v
+   557	        for k, v in original_annotations.items():
+   558	            if k in relationships:
+   559	                relationship_annotations[k] = v
+   560	            else:
+   561	                pydantic_annotations[k] = v
+   562	        dict_used = {
+   563	            **dict_for_pydantic,
+   564	            "__weakref__": None,
+   565	            "__sqlmodel_relationships__": relationships,
+   566	            "__annotations__": pydantic_annotations,
+   567	        }
+   568	        # Duplicate logic from Pydantic to filter config kwargs because if they are
+   569	        # passed directly including the registry Pydantic will pass them over to the
+   570	        # superclass causing an error
+   571	        allowed_config_kwargs: set[str] = {
+   572	            key
+   573	            for key in dir(BaseConfig)
+   574	            if not (
+   575	                key.startswith("__") and key.endswith("__")
+   576	            )  # skip dunder methods and attributes
+   577	        }
+   578	        config_kwargs = {
+   579	            key: kwargs[key] for key in kwargs.keys() & allowed_config_kwargs
+   580	        }
+   581	        new_cls = cast(
+   582	            "SQLModel", super().__new__(cls, name, bases, dict_used, **config_kwargs)
+   583	        )
+   584	        new_cls.__annotations__ = {
+   585	            **relationship_annotations,
+   586	            **pydantic_annotations,
+   587	            **new_cls.__annotations__,
+   588	        }
+   589	
+   590	        def get_config(name: str) -> Any:
+   591	            config_class_value = new_cls.model_config.get(name, Undefined)
+   592	            if config_class_value is not Undefined:
+   593	                return config_class_value
+   594	            kwarg_value = kwargs.get(name, Undefined)
+   595	            if kwarg_value is not Undefined:
+   596	                return kwarg_value
+   597	            return Undefined
+   598	
+   599	        config_table = get_config("table")
+   600	        if config_table is True:
+   601	            # If it was passed by kwargs, ensure it's also set in config
+   602	            new_cls.model_config["table"] = config_table
+   603	            for k, v in get_model_fields(new_cls).items():
+   604	                col = get_column_from_field(v)
+   605	                setattr(new_cls, k, col)
+   606	            # Set a config flag to tell FastAPI that this should be read with a field
+   607	            # in orm_mode instead of preemptively converting it to a dict.
+   608	            # This could be done by reading new_cls.model_config['table'] in FastAPI, but
+   609	            # that's very specific about SQLModel, so let's have another config that
+   610	            # other future tools based on Pydantic can use.
+   611	            new_cls.model_config["read_from_attributes"] = True  # ty: ignore[invalid-key]
+   612	            # For compatibility with older versions
+   613	            # TODO: remove this in the future
+   614	            new_cls.model_config["read_with_orm_mode"] = True  # ty: ignore[invalid-key]
+   615	
+   616	        config_registry = get_config("registry")
+   617	        if config_registry is not Undefined:
+   618	            config_registry = cast(registry, config_registry)
+   619	            # If it was passed by kwargs, ensure it's also set in config
+   620	            new_cls.model_config["registry"] = config_table
+   621	            setattr(new_cls, "_sa_registry", config_registry)  # noqa: B010
+   622	            setattr(new_cls, "metadata", config_registry.metadata)  # noqa: B010
+   623	            setattr(new_cls, "__abstract__", True)  # noqa: B010
+   624	        return new_cls
+   625	
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '740,801p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   740	def get_column_from_field(field: Any) -> Column:
+   741	    field_info = field
+   742	    sa_column = _get_sqlmodel_field_value(field_info, "sa_column", Undefined)
+   743	    if isinstance(sa_column, Column):
+   744	        return sa_column
+   745	    sa_type = get_sqlalchemy_type(field)
+   746	    primary_key = _get_sqlmodel_field_value(field_info, "primary_key", Undefined)
+   747	    if primary_key is Undefined:
+   748	        primary_key = False
+   749	    index = _get_sqlmodel_field_value(field_info, "index", Undefined)
+   750	    if index is Undefined:
+   751	        index = False
+   752	    nullable = not primary_key and is_field_noneable(field)
+   753	    # Override derived nullability if the nullable property is set explicitly
+   754	    # on the field
+   755	    field_nullable = _get_sqlmodel_field_value(field_info, "nullable", Undefined)
+   756	    if field_nullable is not Undefined:
+   757	        assert not isinstance(field_nullable, UndefinedType)
+   758	        nullable = field_nullable
+   759	    args = []
+   760	    foreign_key = _get_sqlmodel_field_value(field_info, "foreign_key", Undefined)
+   761	    if foreign_key is Undefined:
+   762	        foreign_key = None
+   763	    unique = _get_sqlmodel_field_value(field_info, "unique", Undefined)
+   764	    if unique is Undefined:
+   765	        unique = False
+   766	    if foreign_key:
+   767	        ondelete_value = _get_sqlmodel_field_value(field_info, "ondelete", Undefined)
+   768	        if ondelete_value is Undefined:
+   769	            ondelete_value = None
+   770	        if ondelete_value == "SET NULL" and not nullable:
+   771	            raise RuntimeError('ondelete="SET NULL" requires nullable=True')
+   772	        assert isinstance(foreign_key, str)
+   773	        assert isinstance(ondelete_value, (str, type(None)))  # for typing
+   774	        args.append(ForeignKey(foreign_key, ondelete=ondelete_value))
+   775	    kwargs: dict[str, Any] = {
+   776	        "primary_key": primary_key,
+   777	        "nullable": nullable,
+   778	        "index": index,
+   779	        "unique": unique,
+   780	    }
+   781	    sa_default = Undefined
+   782	    if field_info.default_factory:
+   783	        sa_default = field_info.default_factory
+   784	    elif field_info.default is not Undefined:
+   785	        sa_default = field_info.default
+   786	    if sa_default is not Undefined:
+   787	        kwargs["default"] = sa_default
+   788	    sa_column_args = _get_sqlmodel_field_value(field_info, "sa_column_args", Undefined)
+   789	    if sa_column_args is not Undefined:
+   790	        args.extend(list(cast(Sequence[Any], sa_column_args)))
+   791	    sa_column_kwargs = _get_sqlmodel_field_value(
+   792	        field_info, "sa_column_kwargs", Undefined
+   793	    )
+   794	    if sa_column_kwargs is not Undefined:
+   795	        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+   796	    return Column(sa_type, *args, **kwargs)
+   797	
+   798	
+   799	default_registry = registry()
+   800	
+   801	_TSQLModel = TypeVar("_TSQLModel", bound="SQLModel")
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+codex
+The mechanism is in one file: `Field()` produces a Pydantic field carrying SQLAlchemy extras, and the mixed metaclass later turns those Pydantic fields into SQLAlchemy `Column` objects for table models. I’m reading the validation path now so the reconciliation answer covers both class creation and instance validation.
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '804,890p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   804	class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+   805	    # SQLAlchemy needs to set weakref(s), Pydantic will set the other slots values
+   806	    __slots__ = ("__weakref__",)
+   807	    __tablename__: ClassVar[str | Callable[..., str]]
+   808	    __sqlmodel_relationships__: ClassVar[builtins.dict[str, RelationshipProperty[Any]]]
+   809	    __name__: ClassVar[str]
+   810	    metadata: ClassVar[MetaData]
+   811	    __allow_unmapped__ = True  # https://docs.sqlalchemy.org/en/20/changelog/migration_20.html#migration-20-step-six
+   812	    model_config = SQLModelConfig(from_attributes=True)
+   813	
+   814	    # Typing spec says `__new__` returning `Any` overrides normal constructor
+   815	    # behavior, but a missing annotation does not:
+   816	    def __new__(cls, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+   817	        new_object = super().__new__(cls)
+   818	        # SQLAlchemy doesn't call __init__ on the base class when querying from DB
+   819	        # Ref: https://docs.sqlalchemy.org/en/14/orm/constructors.html
+   820	        # Set __fields_set__ here, that would have been set when calling __init__
+   821	        # in the Pydantic model so that when SQLAlchemy sets attributes that are
+   822	        # added (e.g. when querying from DB) to the __fields_set__, this already exists
+   823	        init_pydantic_private_attrs(new_object)
+   824	        return new_object
+   825	
+   826	    def __init__(__pydantic_self__, **data: Any) -> None:
+   827	        # Uses something other than `self` the first arg to allow "self" as a
+   828	        # settable attribute
+   829	
+   830	        # SQLAlchemy does very dark black magic and modifies the __init__ method in
+   831	        # sqlalchemy.orm.instrumentation._generate_init()
+   832	        # so, to make SQLAlchemy work, it's needed to explicitly call __init__ to
+   833	        # trigger all the SQLAlchemy logic, it doesn't work using cls.__new__, setting
+   834	        # attributes obj.__dict__, etc. The __init__ method has to be called. But
+   835	        # there are cases where calling all the default logic is not ideal, e.g.
+   836	        # when calling Model.model_validate(), as the validation is done outside
+   837	        # of instance creation.
+   838	        # At the same time, __init__ is what users would normally call, by creating
+   839	        # a new instance, which should have validation and all the default logic.
+   840	        # So, to be able to set up the internal SQLAlchemy logic alone without
+   841	        # executing the rest, and support things like Model.model_validate(), we
+   842	        # use a contextvar to know if we should execute everything.
+   843	        if finish_init.get():
+   844	            sqlmodel_init(self=__pydantic_self__, data=data)
+   845	
+   846	    def __setattr__(self, name: str, value: Any) -> None:
+   847	        if name in {"_sa_instance_state"}:
+   848	            self.__dict__[name] = value
+   849	            return
+   850	        else:
+   851	            # Set in SQLAlchemy, before Pydantic to trigger events and updates
+   852	            if is_table_model_class(self.__class__) and is_instrumented(self, name):
+   853	                set_attribute(self, name, value)
+   854	            # Set in Pydantic model to trigger possible validation changes, only for
+   855	            # non relationship values
+   856	            if name not in self.__sqlmodel_relationships__:
+   857	                super().__setattr__(name, value)
+   858	
+   859	    def __repr_args__(self) -> Sequence[tuple[str | None, Any]]:
+   860	        # Don't show SQLAlchemy private attributes
+   861	        return [
+   862	            (k, v)
+   863	            for k, v in super().__repr_args__()
+   864	            if not (isinstance(k, str) and k.startswith("_sa_"))
+   865	        ]
+   866	
+   867	    @declared_attr  # type: ignore
+   868	    def __tablename__(cls) -> str:
+   869	        return cls.__name__.lower()
+   870	
+   871	    @classmethod
+   872	    def model_validate(  # ty: ignore[invalid-method-override]
+   873	        cls: type[_TSQLModel],
+   874	        obj: Any,
+   875	        *,
+   876	        strict: bool | None = None,
+   877	        from_attributes: bool | None = None,
+   878	        context: builtins.dict[str, Any] | None = None,
+   879	        update: builtins.dict[str, Any] | None = None,
+   880	    ) -> _TSQLModel:
+   881	        return sqlmodel_validate(
+   882	            cls=cls,
+   883	            obj=obj,
+   884	            strict=strict,
+   885	            from_attributes=from_attributes,
+   886	            context=context,
+   887	            update=update,
+   888	        )
+   889	
+   890	    def model_dump(
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '210,275p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   210	    self_instance: _TSQLModel,
+   211	    values: dict[str, Any],
+   212	    _fields_set: set[str] | None = None,
+   213	) -> _TSQLModel:
+   214	    # Copy from Pydantic's BaseModel.construct()
+   215	    # Ref: https://github.com/pydantic/pydantic/blob/v2.5.2/pydantic/main.py#L198
+   216	    # Modified to not include everything, only the model fields, and to
+   217	    # set relationships
+   218	    # SQLModel override to get class SQLAlchemy __dict__ attributes and
+   219	    # set them back in after creating the object
+   220	    # new_obj = cls.__new__(cls)
+   221	    cls = type(self_instance)
+   222	    old_dict = self_instance.__dict__.copy()
+   223	    # End SQLModel override
+   224	
+   225	    fields_values: dict[str, Any] = {}
+   226	    defaults: dict[
+   227	        str, Any
+   228	    ] = {}  # keeping this separate from `fields_values` helps us compute `_fields_set`
+   229	    for name, field in cls.model_fields.items():
+   230	        if field.alias and field.alias in values:
+   231	            fields_values[name] = values.pop(field.alias)
+   232	        elif name in values:
+   233	            fields_values[name] = values.pop(name)
+   234	        elif not field.is_required():
+   235	            defaults[name] = field.get_default(call_default_factory=True)
+   236	    if _fields_set is None:
+   237	        _fields_set = set(fields_values.keys())
+   238	    fields_values.update(defaults)
+   239	
+   240	    _extra: dict[str, Any] | None = None
+   241	    if cls.model_config.get("extra") == "allow":
+   242	        _extra = {}
+   243	        for k, v in values.items():
+   244	            _extra[k] = v
+   245	    # SQLModel override, do not include everything, only the model fields
+   246	    # else:
+   247	    #     fields_values.update(values)
+   248	    # End SQLModel override
+   249	    # SQLModel override
+   250	    # Do not set __dict__, instead use setattr to trigger SQLAlchemy
+   251	    # object.__setattr__(new_obj, "__dict__", fields_values)
+   252	    # instrumentation
+   253	    for key, value in {**old_dict, **fields_values}.items():
+   254	        setattr(self_instance, key, value)
+   255	    # End SQLModel override
+   256	    object.__setattr__(self_instance, "__pydantic_fields_set__", _fields_set)
+   257	    if not cls.__pydantic_root_model__:
+   258	        object.__setattr__(self_instance, "__pydantic_extra__", _extra)
+   259	
+   260	    if cls.__pydantic_post_init__:
+   261	        self_instance.model_post_init(None)
+   262	    elif not cls.__pydantic_root_model__:
+   263	        # Note: if there are any private attributes, cls.__pydantic_post_init__ would exist
+   264	        # Since it doesn't, that means that `__pydantic_private__` should be set to None
+   265	        object.__setattr__(self_instance, "__pydantic_private__", None)
+   266	    # SQLModel override, set relationships
+   267	    # Get and set any relationship objects
+   268	    for key in self_instance.__sqlmodel_relationships__:
+   269	        value = values.get(key, Undefined)
+   270	        if value is not Undefined:
+   271	            setattr(self_instance, key, value)
+   272	    # End SQLModel override
+   273	    return self_instance
+   274	
+   275	
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '276,337p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   276	def sqlmodel_validate(
+   277	    cls: type[_TSQLModel],
+   278	    obj: Any,
+   279	    *,
+   280	    strict: bool | None = None,
+   281	    from_attributes: bool | None = None,
+   282	    context: dict[str, Any] | None = None,
+   283	    update: dict[str, Any] | None = None,
+   284	) -> _TSQLModel:
+   285	    if not is_table_model_class(cls):
+   286	        new_obj: _TSQLModel = cls.__new__(cls)
+   287	    else:
+   288	        # If table, create the new instance normally to make SQLAlchemy create
+   289	        # the _sa_instance_state attribute
+   290	        # The wrapper of this function should use with _partial_init()
+   291	        with partial_init():
+   292	            new_obj = cls()
+   293	    # SQLModel Override to get class SQLAlchemy __dict__ attributes and
+   294	    # set them back in after creating the object
+   295	    old_dict = new_obj.__dict__.copy()
+   296	    use_obj = obj
+   297	    if isinstance(obj, dict) and update:
+   298	        use_obj = {**obj, **update}
+   299	    elif update:
+   300	        use_obj = ObjectWithUpdateWrapper(obj=obj, update=update)
+   301	    cls.__pydantic_validator__.validate_python(
+   302	        use_obj,
+   303	        strict=strict,
+   304	        from_attributes=from_attributes,
+   305	        context=context,
+   306	        self_instance=new_obj,
+   307	    )
+   308	    # Capture fields set to restore it later
+   309	    fields_set = new_obj.__pydantic_fields_set__.copy()
+   310	    if not is_table_model_class(cls):
+   311	        # If not table, normal Pydantic code, set __dict__
+   312	        new_obj.__dict__ = {**old_dict, **new_obj.__dict__}
+   313	    else:
+   314	        # Do not set __dict__, instead use setattr to trigger SQLAlchemy
+   315	        # instrumentation
+   316	        for key, value in {**old_dict, **new_obj.__dict__}.items():
+   317	            setattr(new_obj, key, value)
+   318	    # Restore fields set
+   319	    object.__setattr__(new_obj, "__pydantic_fields_set__", fields_set)
+   320	    # Get and set any relationship objects
+   321	    if is_table_model_class(cls):
+   322	        for key in new_obj.__sqlmodel_relationships__:
+   323	            value = getattr(use_obj, key, Undefined)
+   324	            if value is not Undefined:
+   325	                setattr(new_obj, key, value)
+   326	    return new_obj
+   327	
+   328	
+   329	def sqlmodel_init(*, self: "SQLModel", data: dict[str, Any]) -> None:
+   330	    old_dict = self.__dict__.copy()
+   331	    if not is_table_model_class(self.__class__):
+   332	        self.__pydantic_validator__.validate_python(
+   333	            data,
+   334	            self_instance=self,
+   335	        )
+   336	    else:
+   337	        sqlmodel_table_construct(
+
+exec
+/bin/zsh -lc "nl -ba tests/test_field_sa_column.py | sed -n '1,135p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	from typing import Annotated
+     2	
+     3	import pytest
+     4	from sqlalchemy import Column, Integer, String
+     5	from sqlmodel import Field, SQLModel
+     6	
+     7	
+     8	def test_sa_column_takes_precedence() -> None:
+     9	    class Item(SQLModel, table=True):
+    10	        id: int | None = Field(
+    11	            default=None,
+    12	            sa_column=Column(String, primary_key=True, nullable=False),
+    13	        )
+    14	
+    15	    # It would have been nullable with no sa_column
+    16	    assert Item.id.nullable is False  # type: ignore
+    17	    assert isinstance(Item.id.type, String)  # type: ignore
+    18	
+    19	
+    20	def test_sa_column_with_annotated_metadata() -> None:
+    21	    class Item(SQLModel, table=True):
+    22	        id: Annotated[int | None, "meta"] = Field(
+    23	            default=None,
+    24	            sa_column=Column(String, primary_key=True, nullable=False),
+    25	        )
+    26	
+    27	    assert Item.id.nullable is False  # type: ignore
+    28	    assert isinstance(Item.id.type, String)  # type: ignore
+    29	
+    30	
+    31	def test_sa_column_no_sa_args() -> None:
+    32	    with pytest.raises(RuntimeError):
+    33	
+    34	        class Item(SQLModel, table=True):
+    35	            id: int | None = Field(
+    36	                default=None,
+    37	                sa_column_args=[Integer],
+    38	                sa_column=Column(Integer, primary_key=True),
+    39	            )
+    40	
+    41	
+    42	def test_sa_column_no_sa_kargs() -> None:
+    43	    with pytest.raises(RuntimeError):
+    44	
+    45	        class Item(SQLModel, table=True):
+    46	            id: int | None = Field(
+    47	                default=None,
+    48	                sa_column_kwargs={"primary_key": True},
+    49	                sa_column=Column(Integer, primary_key=True),
+    50	            )
+    51	
+    52	
+    53	def test_sa_column_no_type() -> None:
+    54	    with pytest.raises(RuntimeError):
+    55	
+    56	        class Item(SQLModel, table=True):
+    57	            id: int | None = Field(
+    58	                default=None,
+    59	                sa_type=Integer,
+    60	                sa_column=Column(Integer, primary_key=True),
+    61	            )
+    62	
+    63	
+    64	def test_sa_column_no_primary_key() -> None:
+    65	    with pytest.raises(RuntimeError):
+    66	
+    67	        class Item(SQLModel, table=True):
+    68	            id: int | None = Field(
+    69	                default=None,
+    70	                primary_key=True,
+    71	                sa_column=Column(Integer, primary_key=True),
+    72	            )
+    73	
+    74	
+    75	def test_sa_column_no_nullable() -> None:
+    76	    with pytest.raises(RuntimeError):
+    77	
+    78	        class Item(SQLModel, table=True):
+    79	            id: int | None = Field(
+    80	                default=None,
+    81	                nullable=True,
+    82	                sa_column=Column(Integer, primary_key=True),
+    83	            )
+    84	
+    85	
+    86	def test_sa_column_no_foreign_key() -> None:
+    87	    with pytest.raises(RuntimeError):
+    88	
+    89	        class Team(SQLModel, table=True):
+    90	            id: int | None = Field(default=None, primary_key=True)
+    91	            name: str
+    92	
+    93	        class Hero(SQLModel, table=True):
+    94	            id: int | None = Field(default=None, primary_key=True)
+    95	            team_id: int | None = Field(
+    96	                default=None,
+    97	                foreign_key="team.id",
+    98	                sa_column=Column(Integer, primary_key=True),
+    99	            )
+   100	
+   101	
+   102	def test_sa_column_no_unique() -> None:
+   103	    with pytest.raises(RuntimeError):
+   104	
+   105	        class Item(SQLModel, table=True):
+   106	            id: int | None = Field(
+   107	                default=None,
+   108	                unique=True,
+   109	                sa_column=Column(Integer, primary_key=True),
+   110	            )
+   111	
+   112	
+   113	def test_sa_column_no_index() -> None:
+   114	    with pytest.raises(RuntimeError):
+   115	
+   116	        class Item(SQLModel, table=True):
+   117	            id: int | None = Field(
+   118	                default=None,
+   119	                index=True,
+   120	                sa_column=Column(Integer, primary_key=True),
+   121	            )
+   122	
+   123	
+   124	def test_sa_column_no_ondelete() -> None:
+   125	    with pytest.raises(RuntimeError):
+   126	
+   127	        class Item(SQLModel, table=True):
+   128	            id: int | None = Field(
+   129	                default=None,
+   130	                sa_column=Column(Integer, primary_key=True),
+   131	                ondelete="CASCADE",
+   132	            )
+
+exec
+/bin/zsh -lc "nl -ba tests/test_main.py | sed -n '150,180p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   150	        with Session(engine) as session:
+   151	            perm3 = UserPermission(user_id=1, resource_id=1, permission="admin")
+   152	            session.add(perm3)
+   153	            session.commit()
+   154	
+   155	
+   156	def test_composite_primary_key_and_validator(clear_sqlmodel):
+   157	    from pydantic import AfterValidator
+   158	
+   159	    def validate_resource_id(value: int) -> int:
+   160	        if value < 1:
+   161	            raise ValueError("Resource ID must be positive")
+   162	        return value
+   163	
+   164	    class UserPermission(SQLModel, table=True):
+   165	        user_id: int = Field(primary_key=True)
+   166	        resource_id: Annotated[int, AfterValidator(validate_resource_id)] = Field(
+   167	            primary_key=True
+   168	        )
+   169	        permission: str
+   170	
+   171	    engine = create_engine("sqlite://")
+   172	    SQLModel.metadata.create_all(engine)
+   173	
+   174	    pk_column_names = {column.name for column in UserPermission.__table__.primary_key}
+   175	    assert pk_column_names == {"user_id", "resource_id"}
+   176	
+   177	    with Session(engine) as session:
+   178	        perm1 = UserPermission(user_id=1, resource_id=1, permission="read")
+   179	        perm2 = UserPermission(user_id=1, resource_id=2, permission="write")
+   180	        session.add(perm1)
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '329,365p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   329	def sqlmodel_init(*, self: "SQLModel", data: dict[str, Any]) -> None:
+   330	    old_dict = self.__dict__.copy()
+   331	    if not is_table_model_class(self.__class__):
+   332	        self.__pydantic_validator__.validate_python(
+   333	            data,
+   334	            self_instance=self,
+   335	        )
+   336	    else:
+   337	        sqlmodel_table_construct(
+   338	            self_instance=self,
+   339	            values=data,
+   340	        )
+   341	    object.__setattr__(
+   342	        self,
+   343	        "__dict__",
+   344	        {**old_dict, **self.__dict__},
+   345	    )
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '70,95p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    70	
+    71	@contextmanager
+    72	def partial_init() -> Generator[None, None, None]:
+    73	    token = finish_init.set(False)
+    74	    yield
+    75	    finish_init.reset(token)
+    76	
+    77	
+    78	class SQLModelConfig(BaseConfig, total=False):
+    79	    table: bool | None
+    80	    registry: Any | None
+    81	
+    82	
+    83	def get_model_fields(model: InstanceOrType[BaseModel]) -> dict[str, "FieldInfo"]:
+    84	    # TODO: refactor the usage of this function to always pass the class
+    85	    # not the instance, and then remove this extra check
+    86	    # this is for compatibility with Pydantic v3
+    87	    if isinstance(model, type):
+    88	        use_model = model
+    89	    else:
+    90	        use_model = model.__class__
+    91	    return use_model.model_fields
+    92	
+    93	
+    94	def init_pydantic_private_attrs(new_object: InstanceOrType["SQLModel"]) -> None:
+    95	    object.__setattr__(new_object, "__pydantic_fields_set__", set())
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '680,739p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   680	            # Tag: 1.4.36
+   681	            DeclarativeMeta.__init__(cls, classname, bases, dict_, **kw)
+   682	        else:
+   683	            ModelMetaclass.__init__(cls, classname, bases, dict_, **kw)
+   684	
+   685	
+   686	def get_sqlalchemy_type(field: Any) -> Any:
+   687	    field_info = field
+   688	    sa_type = _get_sqlmodel_field_value(field_info, "sa_type", Undefined)  # noqa: B009
+   689	    if sa_type is not Undefined:
+   690	        return sa_type
+   691	
+   692	    type_ = get_sa_type_from_field(field)
+   693	    metadata = get_field_metadata(field)
+   694	
+   695	    # Check enums first as an enum can also be a str, needed by Pydantic/FastAPI
+   696	    if issubclass(type_, Enum):
+   697	        return sa_Enum(type_)
+   698	    if issubclass(
+   699	        type_,
+   700	        (
+   701	            str,
+   702	            ipaddress.IPv4Address,
+   703	            ipaddress.IPv4Network,
+   704	            ipaddress.IPv6Address,
+   705	            ipaddress.IPv6Network,
+   706	            Path,
+   707	            EmailStr,
+   708	        ),
+   709	    ):
+   710	        max_length = getattr(metadata, "max_length", None)
+   711	        if max_length:
+   712	            return AutoString(length=max_length)
+   713	        return AutoString
+   714	    if issubclass(type_, float):
+   715	        return Float
+   716	    if issubclass(type_, bool):
+   717	        return Boolean
+   718	    if issubclass(type_, int):
+   719	        return Integer
+   720	    if issubclass(type_, datetime):
+   721	        return DateTime
+   722	    if issubclass(type_, date):
+   723	        return Date
+   724	    if issubclass(type_, timedelta):
+   725	        return Interval
+   726	    if issubclass(type_, time):
+   727	        return Time
+   728	    if issubclass(type_, bytes):
+   729	        return LargeBinary
+   730	    if issubclass(type_, Decimal):
+   731	        return Numeric(
+   732	            precision=getattr(metadata, "max_digits", None),
+   733	            scale=getattr(metadata, "decimal_places", None),
+   734	        )
+   735	    if issubclass(type_, uuid.UUID):
+   736	        return Uuid
+   737	    raise ValueError(f"{type_} has no matching SQLAlchemy type")
+   738	
+   739	
+
+exec
+/bin/zsh -lc 'rg -n "def is_table_model_class|is_table_model_class" sqlmodel/_compat.py sqlmodel/main.py' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+sqlmodel/_compat.py:115:def is_table_model_class(cls: type[Any]) -> bool:
+sqlmodel/_compat.py:285:    if not is_table_model_class(cls):
+sqlmodel/_compat.py:310:    if not is_table_model_class(cls):
+sqlmodel/_compat.py:321:    if is_table_model_class(cls):
+sqlmodel/_compat.py:331:    if not is_table_model_class(self.__class__):
+sqlmodel/main.py:70:    is_table_model_class,
+sqlmodel/main.py:528:        if is_table_model_class(cls):
+sqlmodel/main.py:534:        if is_table_model_class(cls):
+sqlmodel/main.py:634:        base_is_table = any(is_table_model_class(base) for base in bases)
+sqlmodel/main.py:635:        if is_table_model_class(cls) and not base_is_table:
+sqlmodel/main.py:852:            if is_table_model_class(self.__class__) and is_instrumented(self, name):
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '108,123p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   108	        )
+   109	
+   110	        if annotate := get_annotate_from_class_namespace(class_dict):
+   111	            raw_annotations = call_annotate_function(annotate, format=Format.FORWARDREF)
+   112	    return raw_annotations
+   113	
+   114	
+   115	def is_table_model_class(cls: type[Any]) -> bool:
+   116	    config = getattr(cls, "model_config", {})
+   117	    if config:
+   118	        return config.get("table", False) or False
+   119	    return False
+   120	
+   121	
+   122	def get_relationship_to(
+   123	    name: str,
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '626,684p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   626	    # Override SQLAlchemy, allow both SQLAlchemy and plain Pydantic models
+   627	    def __init__(
+   628	        cls, classname: str, bases: tuple[type, ...], dict_: dict[str, Any], **kw: Any
+   629	    ) -> None:
+   630	        # Only one of the base classes (or the current one) should be a table model
+   631	        # this allows FastAPI cloning a SQLModel for the response_model without
+   632	        # trying to create a new SQLAlchemy, for a new table, with the same name, that
+   633	        # triggers an error
+   634	        base_is_table = any(is_table_model_class(base) for base in bases)
+   635	        if is_table_model_class(cls) and not base_is_table:
+   636	            for rel_name, rel_info in cls.__sqlmodel_relationships__.items():
+   637	                if rel_info.sa_relationship:
+   638	                    # There's a SQLAlchemy relationship declared, that takes precedence
+   639	                    # over anything else, use that and continue with the next attribute
+   640	                    setattr(cls, rel_name, rel_info.sa_relationship)  # Fix #315
+   641	                    continue
+   642	                raw_ann = cls.__annotations__[rel_name]
+   643	                origin: Any = get_origin(raw_ann)
+   644	                if origin is Mapped:
+   645	                    ann = raw_ann.__args__[0]
+   646	                else:
+   647	                    ann = raw_ann
+   648	                    # Plain forward references, for models not yet defined, are not
+   649	                    # handled well by SQLAlchemy without Mapped, so, wrap the
+   650	                    # annotations in Mapped here
+   651	                    cls.__annotations__[rel_name] = Mapped[ann]
+   652	                relationship_to = get_relationship_to(
+   653	                    name=rel_name, rel_info=rel_info, annotation=ann
+   654	                )
+   655	                rel_kwargs: dict[str, Any] = {}
+   656	                if rel_info.back_populates:
+   657	                    rel_kwargs["back_populates"] = rel_info.back_populates
+   658	                if rel_info.cascade_delete:
+   659	                    rel_kwargs["cascade"] = "all, delete-orphan"
+   660	                if rel_info.passive_deletes:
+   661	                    rel_kwargs["passive_deletes"] = rel_info.passive_deletes
+   662	                if rel_info.link_model:
+   663	                    ins = inspect(rel_info.link_model)
+   664	                    local_table = getattr(ins, "local_table")  # noqa: B009
+   665	                    if local_table is None:
+   666	                        raise RuntimeError(
+   667	                            "Couldn't find the secondary table for "
+   668	                            f"model {rel_info.link_model}"
+   669	                        )
+   670	                    rel_kwargs["secondary"] = local_table
+   671	                rel_args: list[Any] = []
+   672	                if rel_info.sa_relationship_args:
+   673	                    rel_args.extend(rel_info.sa_relationship_args)
+   674	                if rel_info.sa_relationship_kwargs:
+   675	                    rel_kwargs.update(rel_info.sa_relationship_kwargs)
+   676	                rel_value = relationship(relationship_to, *rel_args, **rel_kwargs)
+   677	                setattr(cls, rel_name, rel_value)  # Fix #315
+   678	            # SQLAlchemy no longer uses dict_
+   679	            # Ref: https://github.com/sqlalchemy/sqlalchemy/commit/428ea01f00a9cc7f85e435018565eb6da7af1b77
+   680	            # Tag: 1.4.36
+   681	            DeclarativeMeta.__init__(cls, classname, bases, dict_, **kw)
+   682	        else:
+   683	            ModelMetaclass.__init__(cls, classname, bases, dict_, **kw)
+   684	
+
+exec
+/bin/zsh -lc "nl -ba tests/test_validation.py | sed -n '1,80p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	import pytest
+     2	from pydantic.error_wrappers import ValidationError
+     3	from sqlmodel import SQLModel
+     4	
+     5	
+     6	def test_validation_pydantic_v2(clear_sqlmodel):
+     7	    """Test validation of implicit and explicit None values.
+     8	
+     9	    # For consistency with pydantic, validators are not to be called on
+    10	    # arguments that are not explicitly provided.
+    11	
+    12	    https://github.com/tiangolo/sqlmodel/issues/230
+    13	    https://github.com/samuelcolvin/pydantic/issues/1223
+    14	
+    15	    """
+    16	    from pydantic import field_validator
+    17	
+    18	    class Hero(SQLModel):
+    19	        name: str | None = None
+    20	        secret_name: str | None = None
+    21	        age: int | None = None
+    22	
+    23	        @field_validator("name", "secret_name", "age")
+    24	        def reject_none(cls, v):
+    25	            assert v is not None
+    26	            return v
+    27	
+    28	    Hero.model_validate({"age": 25})
+    29	
+    30	    with pytest.raises(ValidationError):
+    31	        Hero.model_validate({"name": None, "age": 25})
+
+exec
+/bin/zsh -lc "nl -ba tests/test_field_sa_args_kwargs.py | sed -n '1,45p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	from sqlalchemy import ForeignKey
+     2	from sqlmodel import Field, SQLModel, create_engine
+     3	
+     4	
+     5	def test_sa_column_args(clear_sqlmodel, caplog) -> None:
+     6	    class Team(SQLModel, table=True):
+     7	        id: int | None = Field(default=None, primary_key=True)
+     8	        name: str
+     9	
+    10	    class Hero(SQLModel, table=True):
+    11	        id: int | None = Field(default=None, primary_key=True)
+    12	        team_id: int | None = Field(
+    13	            default=None,
+    14	            sa_column_args=[ForeignKey("team.id")],
+    15	        )
+    16	
+    17	    engine = create_engine("sqlite://", echo=True)
+    18	    SQLModel.metadata.create_all(engine)
+    19	    create_table_log = [
+    20	        message for message in caplog.messages if "CREATE TABLE hero" in message
+    21	    ][0]
+    22	    assert "FOREIGN KEY(team_id) REFERENCES team (id)" in create_table_log
+    23	
+    24	
+    25	def test_sa_column_kargs(clear_sqlmodel, caplog) -> None:
+    26	    class Item(SQLModel, table=True):
+    27	        id: int | None = Field(
+    28	            default=None,
+    29	            sa_column_kwargs={"primary_key": True},
+    30	        )
+    31	
+    32	    engine = create_engine("sqlite://", echo=True)
+    33	    SQLModel.metadata.create_all(engine)
+    34	    create_table_log = [
+    35	        message for message in caplog.messages if "CREATE TABLE item" in message
+    36	    ][0]
+    37	    assert "PRIMARY KEY (id)" in create_table_log
+
+exec
+/bin/zsh -lc "rg -n \"AfterValidator|field_validator|model_validate|ValidationError|validator\\(\" tests sqlmodel -g '*.py'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+tests/test_instance_no_args.py:2:from pydantic import ValidationError
+tests/test_instance_no_args.py:32:    with pytest.raises(ValidationError):
+tests/test_pydantic/test_field.py:5:from pydantic import ValidationError
+tests/test_pydantic/test_field.py:16:    with pytest.raises(ValidationError):
+tests/test_pydantic/test_field.py:18:    with pytest.raises(ValidationError):
+tests/test_pydantic/test_field.py:20:    with pytest.raises(ValidationError):
+tests/test_pydantic/test_field.py:46:    with pytest.raises(ValidationError):
+sqlmodel/main.py:72:    sqlmodel_validate,
+sqlmodel/main.py:836:        # when calling Model.model_validate(), as the validation is done outside
+sqlmodel/main.py:841:        # executing the rest, and support things like Model.model_validate(), we
+sqlmodel/main.py:872:    def model_validate(  # ty: ignore[invalid-method-override]
+sqlmodel/main.py:881:        return sqlmodel_validate(
+sqlmodel/main.py:958:        instead use `obj.model_validate(data)`.
+sqlmodel/main.py:966:        return cls.model_validate(obj, update=update)
+sqlmodel/main.py:972:        instead use `obj.model_validate(data)`.
+sqlmodel/main.py:980:        return cls.model_validate(obj, update=update)
+sqlmodel/_compat.py:276:def sqlmodel_validate(
+tests/test_validation.py:2:from pydantic.error_wrappers import ValidationError
+tests/test_validation.py:16:    from pydantic import field_validator
+tests/test_validation.py:23:        @field_validator("name", "secret_name", "age")
+tests/test_validation.py:28:    Hero.model_validate({"age": 25})
+tests/test_validation.py:30:    with pytest.raises(ValidationError):
+tests/test_validation.py:31:        Hero.model_validate({"name": None, "age": 25})
+tests/test_aliases.py:2:from pydantic import BaseModel, ValidationError
+tests/test_aliases.py:30:    with pytest.raises(ValidationError):
+tests/test_aliases.py:128:    m = M.model_validate({"f_alias": "asd"})
+tests/test_aliases.py:147:    m = M.model_validate({"fullName": "A", "v_name": "B"})
+tests/test_aliases.py:167:    m = M.model_validate({"gen_f": "ok"})
+tests/test_aliases.py:178:    m = M.model_validate({"custom": "ok"})
+tests/test_main.py:156:def test_composite_primary_key_and_validator(clear_sqlmodel):
+tests/test_main.py:157:    from pydantic import AfterValidator
+tests/test_main.py:166:        resource_id: Annotated[int, AfterValidator(validate_resource_id)] = Field(
+tests/test_main.py:192:    from pydantic import AfterValidator
+tests/test_main.py:205:        team_id: Annotated[int, AfterValidator(ensure_positive)] = Field(
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:127:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:163:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:199:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:227:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:271:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:282:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:283:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:290:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:340:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_session_with_dependency/test_tutorial001.py:341:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:102:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:113:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:114:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:121:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:143:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_response_model/test_tutorial001.py:144:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:108:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:119:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:120:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:127:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:149:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_simple_hero_api/test_tutorial001.py:150:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:111:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:147:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:158:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:159:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:166:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:198:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_read_one/test_tutorial001.py:199:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:132:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:168:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:204:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:215:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:216:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:223:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:255:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_limit_and_offset/test_tutorial001.py:256:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:128:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:139:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:140:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:147:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:179:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:180:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:128:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:139:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:140:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:147:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:179:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:180:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:132:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:168:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:204:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:248:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:259:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:260:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:267:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:317:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_update/test_tutorial001.py:318:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:125:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:161:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:197:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:225:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:269:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:280:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:281:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:288:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:338:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_delete/test_tutorial001.py:339:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:175:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:211:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:247:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:275:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:319:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:374:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:410:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:446:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:474:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:518:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:529:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:530:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:537:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:676:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_relationships/test_tutorial001.py:677:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:160:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:196:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:232:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:260:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:304:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:359:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:395:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:431:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:459:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:503:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:514:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:515:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:522:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:617:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_teams/test_tutorial001.py:618:                        "title": "ValidationError",
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:195:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:231:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:267:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:311:                                            "$ref": "#/components/schemas/HTTPValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:322:                    "HTTPValidationError": {
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:323:                        "title": "HTTPValidationError",
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:330:                                    "$ref": "#/components/schemas/ValidationError"
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:385:                    "ValidationError": {
+tests/test_tutorial/test_fastapi/test_update/test_tutorial002.py:386:                        "title": "ValidationError",
+
+exec
+/bin/zsh -lc "nl -ba tests/test_nullable.py | sed -n '1,125p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	import pytest
+     2	from sqlalchemy.exc import IntegrityError
+     3	from sqlmodel import Field, Session, SQLModel, create_engine
+     4	
+     5	
+     6	def test_nullable_fields(clear_sqlmodel, caplog):
+     7	    class Hero(SQLModel, table=True):
+     8	        primary_key: int | None = Field(
+     9	            default=None,
+    10	            primary_key=True,
+    11	        )
+    12	        required_value: str
+    13	        optional_default_ellipsis: str | None = Field(default=...)
+    14	        optional_default_none: str | None = Field(default=None)
+    15	        optional_non_nullable: str | None = Field(
+    16	            nullable=False,
+    17	        )
+    18	        optional_nullable: str | None = Field(
+    19	            nullable=True,
+    20	        )
+    21	        optional_default_ellipses_non_nullable: str | None = Field(
+    22	            default=...,
+    23	            nullable=False,
+    24	        )
+    25	        optional_default_ellipses_nullable: str | None = Field(
+    26	            default=...,
+    27	            nullable=True,
+    28	        )
+    29	        optional_default_none_non_nullable: str | None = Field(
+    30	            default=None,
+    31	            nullable=False,
+    32	        )
+    33	        optional_default_none_nullable: str | None = Field(
+    34	            default=None,
+    35	            nullable=True,
+    36	        )
+    37	        default_ellipses_non_nullable: str = Field(default=..., nullable=False)
+    38	        optional_default_str: str | None = "default"
+    39	        optional_default_str_non_nullable: str | None = Field(
+    40	            default="default", nullable=False
+    41	        )
+    42	        optional_default_str_nullable: str | None = Field(
+    43	            default="default", nullable=True
+    44	        )
+    45	        str_default_str: str = "default"
+    46	        str_default_str_non_nullable: str = Field(default="default", nullable=False)
+    47	        str_default_str_nullable: str = Field(default="default", nullable=True)
+    48	        str_default_ellipsis_non_nullable: str = Field(default=..., nullable=False)
+    49	        str_default_ellipsis_nullable: str = Field(default=..., nullable=True)
+    50	
+    51	    engine = create_engine("sqlite://", echo=True)
+    52	    SQLModel.metadata.create_all(engine)
+    53	
+    54	    create_table_log = [
+    55	        message for message in caplog.messages if "CREATE TABLE hero" in message
+    56	    ][0]
+    57	    assert "primary_key INTEGER NOT NULL," in create_table_log
+    58	    assert "required_value VARCHAR NOT NULL," in create_table_log
+    59	    assert "optional_default_ellipsis VARCHAR," in create_table_log
+    60	    assert "optional_default_none VARCHAR," in create_table_log
+    61	    assert "optional_non_nullable VARCHAR NOT NULL," in create_table_log
+    62	    assert "optional_nullable VARCHAR," in create_table_log
+    63	    assert (
+    64	        "optional_default_ellipses_non_nullable VARCHAR NOT NULL," in create_table_log
+    65	    )
+    66	    assert "optional_default_ellipses_nullable VARCHAR," in create_table_log
+    67	    assert "optional_default_none_non_nullable VARCHAR NOT NULL," in create_table_log
+    68	    assert "optional_default_none_nullable VARCHAR," in create_table_log
+    69	    assert "default_ellipses_non_nullable VARCHAR NOT NULL," in create_table_log
+    70	    assert "optional_default_str VARCHAR," in create_table_log
+    71	    assert "optional_default_str_non_nullable VARCHAR NOT NULL," in create_table_log
+    72	    assert "optional_default_str_nullable VARCHAR," in create_table_log
+    73	    assert "str_default_str VARCHAR NOT NULL," in create_table_log
+    74	    assert "str_default_str_non_nullable VARCHAR NOT NULL," in create_table_log
+    75	    assert "str_default_str_nullable VARCHAR," in create_table_log
+    76	    assert "str_default_ellipsis_non_nullable VARCHAR NOT NULL," in create_table_log
+    77	    assert "str_default_ellipsis_nullable VARCHAR," in create_table_log
+    78	
+    79	
+    80	# Test for regression in https://github.com/tiangolo/sqlmodel/issues/420
+    81	def test_non_nullable_optional_field_with_no_default_set(clear_sqlmodel, caplog):
+    82	    class Hero(SQLModel, table=True):
+    83	        primary_key: int | None = Field(
+    84	            default=None,
+    85	            primary_key=True,
+    86	        )
+    87	
+    88	        optional_non_nullable_no_default: str | None = Field(nullable=False)
+    89	
+    90	    engine = create_engine("sqlite://", echo=True)
+    91	    SQLModel.metadata.create_all(engine)
+    92	
+    93	    create_table_log = [
+    94	        message for message in caplog.messages if "CREATE TABLE hero" in message
+    95	    ][0]
+    96	    assert "primary_key INTEGER NOT NULL," in create_table_log
+    97	    assert "optional_non_nullable_no_default VARCHAR NOT NULL," in create_table_log
+    98	
+    99	    # We can create a hero with `None` set for the optional non-nullable field
+   100	    hero = Hero(primary_key=123, optional_non_nullable_no_default=None)
+   101	    # But we cannot commit it.
+   102	    with Session(engine) as session:
+   103	        session.add(hero)
+   104	        with pytest.raises(IntegrityError):
+   105	            session.commit()
+   106	
+   107	
+   108	def test_nullable_primary_key(clear_sqlmodel, caplog):
+   109	    # Probably the weirdest corner case, it shouldn't happen anywhere, but let's test it
+   110	    class Hero(SQLModel, table=True):
+   111	        nullable_integer_primary_key: int | None = Field(
+   112	            default=None,
+   113	            primary_key=True,
+   114	            nullable=True,
+   115	        )
+   116	
+   117	    engine = create_engine("sqlite://", echo=True)
+   118	    SQLModel.metadata.create_all(engine)
+   119	
+   120	    create_table_log = [
+   121	        message for message in caplog.messages if "CREATE TABLE hero" in message
+   122	    ][0]
+   123	    assert "nullable_integer_primary_key INTEGER," in create_table_log
+
+codex
+Answer: SQLModel fuses both layers by making `FieldInfo` a Pydantic field that also stores SQLAlchemy extras: it pops `primary_key`/`nullable`/`foreign_key`/`sa_column*`, calls Pydantic `super().__init__`, then keeps those values on the field. `Field()` passes validation/schema kwargs plus SQL column kwargs into that object, then appends `FieldInfoMetadata` so SQLModel can recover column metadata later. The bridge is `SQLModelMetaclass(ModelMetaclass, DeclarativeMeta)` backing `SQLModel(BaseModel, ...)`; for `table=True`, it walks Pydantic `model_fields`, converts each to `Column`, and assigns it back to the class. `get_column_from_field` honors explicit `sa_column`, otherwise derives SQL type/nullability/default/FK/index/unique from the Pydantic field metadata. Runtime validation remains Pydantic through `__pydantic_validator__.validate_python`, while table assignment also triggers SQLAlchemy instrumentation.
+Citations: sqlmodel/main.py:103, sqlmodel/main.py:105, sqlmodel/main.py:158, sqlmodel/main.py:166, sqlmodel/main.py:409, sqlmodel/main.py:432, sqlmodel/main.py:453, sqlmodel/main.py:458, sqlmodel/main.py:470, sqlmodel/main.py:521, sqlmodel/main.py:603, sqlmodel/main.py:604, sqlmodel/main.py:605, sqlmodel/main.py:740, sqlmodel/main.py:742, sqlmodel/main.py:796, sqlmodel/main.py:804, sqlmodel/_compat.py:301, sqlmodel/main.py:852
+Confidence: High
+tokens used
+70,598
+Answer: SQLModel fuses both layers by making `FieldInfo` a Pydantic field that also stores SQLAlchemy extras: it pops `primary_key`/`nullable`/`foreign_key`/`sa_column*`, calls Pydantic `super().__init__`, then keeps those values on the field. `Field()` passes validation/schema kwargs plus SQL column kwargs into that object, then appends `FieldInfoMetadata` so SQLModel can recover column metadata later. The bridge is `SQLModelMetaclass(ModelMetaclass, DeclarativeMeta)` backing `SQLModel(BaseModel, ...)`; for `table=True`, it walks Pydantic `model_fields`, converts each to `Column`, and assigns it back to the class. `get_column_from_field` honors explicit `sa_column`, otherwise derives SQL type/nullability/default/FK/index/unique from the Pydantic field metadata. Runtime validation remains Pydantic through `__pydantic_validator__.validate_python`, while table assignment also triggers SQLAlchemy instrumentation.
+Citations: sqlmodel/main.py:103, sqlmodel/main.py:105, sqlmodel/main.py:158, sqlmodel/main.py:166, sqlmodel/main.py:409, sqlmodel/main.py:432, sqlmodel/main.py:453, sqlmodel/main.py:458, sqlmodel/main.py:470, sqlmodel/main.py:521, sqlmodel/main.py:603, sqlmodel/main.py:604, sqlmodel/main.py:605, sqlmodel/main.py:740, sqlmodel/main.py:742, sqlmodel/main.py:796, sqlmodel/main.py:804, sqlmodel/_compat.py:301, sqlmodel/main.py:852
+Confidence: High

@@ -1,0 +1,1001 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/sqlmodel
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe6b-5e03-7d20-a11e-fafc6c6112a3
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+When a user defines a SQLModel class with `table=True`, what mechanism causes a SQLAlchemy mapper to be registered? Trace metaclass behavior.
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll inspect the repo instructions first, then trace the SQLModel metaclass path around `table=True` and SQLAlchemy registration points.
+exec
+/bin/zsh -lc "pwd && rg --files -g 'AGENTS.md' -g '"'!**/.git/**'"'" in /tmp/ag-bench/sqlmodel
+ exited 1 in 0ms:
+/private/tmp/ag-bench/sqlmodel
+
+exec
+/bin/zsh -lc 'rg -n "table=True|SQLModelMetaclass|__new__|DeclarativeMeta|registry|mapper|mapped|__init__" -S .' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+./sqlmodel/default.py:12:    def __init__(self, value: Any):
+./README.md:111:class Hero(SQLModel, table=True):
+./README.md:154:class Hero(SQLModel, table=True):
+./README.md:188:class Hero(SQLModel, table=True):
+./sqlmodel/main.py:44:    registry,
+./sqlmodel/main.py:48:from sqlalchemy.orm.decl_api import DeclarativeMeta
+./sqlmodel/main.py:105:    def __init__(self, default: Any = Undefined, **kwargs: Any) -> None:
+./sqlmodel/main.py:158:        super().__init__(default=default, **kwargs)
+./sqlmodel/main.py:172:    def __init__(
+./sqlmodel/main.py:521:class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+./sqlmodel/main.py:529:            DeclarativeMeta.__setattr__(cls, name, value)
+./sqlmodel/main.py:535:            DeclarativeMeta.__delattr__(cls, name)
+./sqlmodel/main.py:540:    def __new__(
+./sqlmodel/main.py:569:        # passed directly including the registry Pydantic will pass them over to the
+./sqlmodel/main.py:582:            "SQLModel", super().__new__(cls, name, bases, dict_used, **config_kwargs)
+./sqlmodel/main.py:616:        config_registry = get_config("registry")
+./sqlmodel/main.py:617:        if config_registry is not Undefined:
+./sqlmodel/main.py:618:            config_registry = cast(registry, config_registry)
+./sqlmodel/main.py:620:            new_cls.model_config["registry"] = config_table
+./sqlmodel/main.py:621:            setattr(new_cls, "_sa_registry", config_registry)  # noqa: B010
+./sqlmodel/main.py:622:            setattr(new_cls, "metadata", config_registry.metadata)  # noqa: B010
+./sqlmodel/main.py:627:    def __init__(
+./sqlmodel/main.py:681:            DeclarativeMeta.__init__(cls, classname, bases, dict_, **kw)
+./sqlmodel/main.py:683:            ModelMetaclass.__init__(cls, classname, bases, dict_, **kw)
+./sqlmodel/main.py:799:default_registry = registry()
+./sqlmodel/main.py:804:class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+./sqlmodel/main.py:811:    __allow_unmapped__ = True  # https://docs.sqlalchemy.org/en/20/changelog/migration_20.html#migration-20-step-six
+./sqlmodel/main.py:814:    # Typing spec says `__new__` returning `Any` overrides normal constructor
+./sqlmodel/main.py:816:    def __new__(cls, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+./sqlmodel/main.py:817:        new_object = super().__new__(cls)
+./sqlmodel/main.py:818:        # SQLAlchemy doesn't call __init__ on the base class when querying from DB
+./sqlmodel/main.py:820:        # Set __fields_set__ here, that would have been set when calling __init__
+./sqlmodel/main.py:826:    def __init__(__pydantic_self__, **data: Any) -> None:
+./sqlmodel/main.py:830:        # SQLAlchemy does very dark black magic and modifies the __init__ method in
+./sqlmodel/main.py:832:        # so, to make SQLAlchemy work, it's needed to explicitly call __init__ to
+./sqlmodel/main.py:833:        # trigger all the SQLAlchemy logic, it doesn't work using cls.__new__, setting
+./sqlmodel/main.py:834:        # attributes obj.__dict__, etc. The __init__ method has to be called. But
+./sqlmodel/main.py:838:        # At the same time, __init__ is what users would normally call, by creating
+./pyproject.toml:92:version = { source = "file", path = "sqlmodel/__init__.py" }
+./pyproject.toml:146:# "__init__.py" = ["F401"]
+./sqlmodel/_compat.py:80:    registry: Any | None
+./sqlmodel/_compat.py:220:    # new_obj = cls.__new__(cls)
+./sqlmodel/_compat.py:286:        new_obj: _TSQLModel = cls.__new__(cls)
+./docs_src/tutorial/indexes/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/delete/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/indexes/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs/index.md:124:class Hero(SQLModel, table=True):
+./docs/index.md:167:class Hero(SQLModel, table=True):
+./docs/index.md:201:class Hero(SQLModel, table=True):
+./docs_src/tutorial/delete/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:4:class HeroTeamLink(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:13:class Team(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial003_py310.py:21:class Hero(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:4:class HeroTeamLink(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:9:class Team(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial002_py310.py:17:class Hero(SQLModel, table=True):
+./docs/db-to-code.md:282:![Squares to Triangles Mapper](img/db-to-code/mapper.drawio.svg)
+./docs_src/tutorial/update/tutorial003_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:4:class HeroTeamLink(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:9:class Team(SQLModel, table=True):
+./docs_src/tutorial/many_to_many/tutorial001_py310.py:17:class Hero(SQLModel, table=True):
+./uv.lock:8:source = { registry = "https://pypi.org/simple" }
+./uv.lock:17:source = { registry = "https://pypi.org/simple" }
+./uv.lock:26:source = { registry = "https://pypi.org/simple" }
+./uv.lock:40:source = { registry = "https://pypi.org/simple" }
+./uv.lock:49:source = { registry = "https://pypi.org/simple" }
+./uv.lock:63:source = { registry = "https://pypi.org/simple" }
+./uv.lock:107:source = { registry = "https://pypi.org/simple" }
+./uv.lock:119:source = { registry = "https://pypi.org/simple" }
+./uv.lock:135:source = { registry = "https://pypi.org/simple" }
+./uv.lock:144:source = { registry = "https://pypi.org/simple" }
+./uv.lock:226:source = { registry = "https://pypi.org/simple" }
+./uv.lock:315:source = { registry = "https://pypi.org/simple" }
+./uv.lock:327:source = { registry = "https://pypi.org/simple" }
+./uv.lock:336:source = { registry = "https://pypi.org/simple" }
+./uv.lock:440:source = { registry = "https://pypi.org/simple" }
+./uv.lock:505:source = { registry = "https://pypi.org/simple" }
+./uv.lock:518:source = { registry = "https://pypi.org/simple" }
+./uv.lock:527:source = { registry = "https://pypi.org/simple" }
+./uv.lock:536:source = { registry = "https://pypi.org/simple" }
+./uv.lock:545:source = { registry = "https://pypi.org/simple" }
+./uv.lock:557:source = { registry = "https://pypi.org/simple" }
+./uv.lock:573:source = { registry = "https://pypi.org/simple" }
+./uv.lock:585:source = { registry = "https://pypi.org/simple" }
+./uv.lock:634:source = { registry = "https://pypi.org/simple" }
+./uv.lock:647:source = { registry = "https://pypi.org/simple" }
+./uv.lock:659:source = { registry = "https://pypi.org/simple" }
+./uv.lock:668:source = { registry = "https://pypi.org/simple" }
+./uv.lock:677:source = { registry = "https://pypi.org/simple" }
+./uv.lock:686:source = { registry = "https://pypi.org/simple" }
+./uv.lock:699:source = { registry = "https://pypi.org/simple" }
+./uv.lock:714:source = { registry = "https://pypi.org/simple" }
+./uv.lock:723:source = { registry = "https://pypi.org/simple" }
+./uv.lock:732:source = { registry = "https://pypi.org/simple" }
+./uv.lock:744:source = { registry = "https://pypi.org/simple" }
+./uv.lock:753:source = { registry = "https://pypi.org/simple" }
+./uv.lock:765:source = { registry = "https://pypi.org/simple" }
+./uv.lock:777:source = { registry = "https://pypi.org/simple" }
+./uv.lock:862:source = { registry = "https://pypi.org/simple" }
+./uv.lock:871:source = { registry = "https://pypi.org/simple" }
+./uv.lock:885:source = { registry = "https://pypi.org/simple" }
+./uv.lock:894:source = { registry = "https://pypi.org/simple" }
+./uv.lock:918:source = { registry = "https://pypi.org/simple" }
+./uv.lock:932:source = { registry = "https://pypi.org/simple" }
+./uv.lock:946:source = { registry = "https://pypi.org/simple" }
+./uv.lock:967:source = { registry = "https://pypi.org/simple" }
+./uv.lock:989:source = { registry = "https://pypi.org/simple" }
+./uv.lock:998:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1010:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1032:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1047:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1056:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1065:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1074:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1083:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1181:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1190:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1199:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1223:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1232:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1247:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1365:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1379:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1395:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1404:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1418:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1431:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1468:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1486:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1498:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1507:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1546:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1610:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1622:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1631:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1646:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1659:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1684:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1693:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1702:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1715:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1913:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1926:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1938:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1947:source = { registry = "https://pypi.org/simple" }
+./uv.lock:1959:source = { registry = "https://pypi.org/simple" }
+./uv.lock:2008:source = { registry = "https://pypi.org/simple" }
+./uv.lock:2032:source = { registry = "https://pypi.org/simple" }
+./uv.lock:2047:source = { registry = "https://pypi.org/simple" }
+./uv.lock:2056:source = { registry = "https://pypi.org/simple" }
+./uv.lock:2068:source = { registry = "https://pypi.org/simple" }
+./uv.lock:2077:source = { registry = "https://pypi.org/simple" }
+./uv.lock:2109:source = { registry = "https://pypi.org/simple" }
+./docs_src/tutorial/update/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial009_py310.py:4:class Hero(SQLModel, table=True):
+./scripts/docs.py:291:        if py_file.name == "__init__.py":
+./scripts/docs.py:304:        if py_file.name == "__init__.py":
+./scripts/docs.py:368:    # Clean up directories that are empty or only contain __init__.py / __pycache__
+./scripts/docs.py:375:            if f.name != "__pycache__" and f.name != "__init__.py"
+./docs_src/tutorial/update/tutorial004_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/insert/tutorial003_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial008_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/insert/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/create_db_and_table/tutorial003_py310.py:4:class Hero(SQLModel, table=True):  # (3)!
+./docs/tutorial/create-db-and-table.md:48:We use the config `table=True` to tell **SQLModel** that this is a **table model**, it represents a table.
+./docs/tutorial/create-db-and-table.md:52:It's also possible to have models without `table=True`, those would be only **data models**, without a table in the database, they would not be **table models**.
+./docs/tutorial/create-db-and-table.md:54:Those **data models** will be **very useful later**, but for now, we'll just keep adding the `table=True` configuration.
+./docs_src/tutorial/create_db_and_table/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial003_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/insert/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:203:class Hero(SQLModel, table=True):
+./docs/tutorial/relationship-attributes/cascade-delete-relationships.md:212:class Team(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/create_db_and_table/annotations/en/tutorial003.md:5:    And also mark this class as a **table model** with `table=True`.
+./docs_src/tutorial/create_db_and_table/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/update/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/automatic_id_none_refresh/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial004_py310.py:4:class Hero(SQLModel, table=True):
+./docs/release-notes.md:42:* 🐛 Fix type annotation in `SQLModel.__new__`, avoid explicitly returning `Any`. PR [#1846](https://github.com/fastapi/sqlmodel/pull/1846) by [@carljm](https://github.com/carljm).
+./docs/release-notes.md:726:* 🐛 Fix allowing using a `ForeignKey` directly, remove repeated column construction from `SQLModelMetaclass.__init__` and upgrade minimum SQLAlchemy to `>=1.4.36`. PR [#443](https://github.com/tiangolo/sqlmodel/pull/443) by [@daniil-berg](https://github.com/daniil-berg).
+./docs/release-notes.md:881:class Hero(SQLModel, table=True):
+./docs/release-notes.md:893:class Hero(SQLModel, table=True):
+./docs/release-notes.md:903:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial003_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial003_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/code_structure/tutorial002_py310/hero_model.py:9:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial002_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial002_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial004_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial004_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/code_structure/tutorial002_py310/team_model.py:9:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial005_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial005_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/select/tutorial001_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/create_tables/tutorial001_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/code_structure/tutorial001_py310/models.py:12:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial005_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/delete/tutorial001_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/automatic_id_none_refresh/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/create_and_update_relationships/tutorial001_py310.py:12:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial009_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/update/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/update/tutorial001_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial008_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/connect/insert/tutorial001_py310.py:10:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial003_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial007_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial002_py310.py:12:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial006_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial004_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/select/tutorial003_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/one/tutorial005_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial006b_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/read_relationships/tutorial001_py310.py:12:class Hero(SQLModel, table=True):
+./docs_src/tutorial/offset_and_limit/tutorial003_py310.py:4:class Hero(SQLModel, table=True):
+./docs/tutorial/code-structure.md:45:    ├── __init__.py
+./docs/tutorial/code-structure.md:57:And we also have an empty `__init__.py` file to make this project a "**Python package**" (a collection of Python modules). This way we can use **relative imports** in the `app.py` file/module, like:
+./docs/tutorial/code-structure.md:64:We can use these relative imports because, for example, in the file `app.py` (the `app` module) Python knows that it is **part of our Python package** because it is in the same directory as the file `__init__.py`. And all the Python files on the same directory are part of the same Python package too.
+./docs/tutorial/code-structure.md:159:    ├── __init__.py
+./docs_src/tutorial/select/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/select/tutorial002_py310.py:4:class Hero(SQLModel, table=True):  # (2)!
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:4:class Weapon(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:11:class Power(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:19:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial003_py310.py:27:class Hero(SQLModel, table=True):
+./docs_src/tutorial/offset_and_limit/tutorial002_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/offset_and_limit/tutorial004_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/select/tutorial004_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial002_py310.py:12:class Hero(SQLModel, table=True):
+./docs_src/tutorial/offset_and_limit/tutorial001_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/back_populates/tutorial001_py310.py:12:class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:10:class Team(TeamBase, table=True):
+./docs_src/tutorial/fastapi/relationships/tutorial001_py310.py:38:class Hero(HeroBase, table=True):
+./docs_src/tutorial/fastapi/multiple_models/tutorial002_py310.py:11:class Hero(HeroBase, table=True):
+./docs_src/tutorial/fastapi/multiple_models/tutorial001_py310.py:5:class Hero(SQLModel, table=True):
+./tests/test_instance_no_args.py:7:    class Item(SQLModel, table=True):
+./docs_src/tutorial/fastapi/delete/tutorial001_py310.py:11:class Hero(HeroBase, table=True):
+./docs_src/tutorial/where/tutorial007_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial011_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/where/tutorial006_py310.py:4:class Hero(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/define_relationship_attributes/tutorial001_py310.py:12:class Hero(SQLModel, table=True):
+./tests/test_annotated_uuid.py:9:    class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/app_testing/tutorial001_py310/main.py:11:class Hero(HeroBase, table=True):
+./tests/test_update.py:5:    class Organization(SQLModel, table=True):
+./docs_src/tutorial/fastapi/response_model/tutorial001_py310.py:5:class Hero(SQLModel, table=True):
+./tests/test_missing_type.py:18:        class Item(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial003_py310.py:12:class Hero(SQLModel, table=True):
+./tests/test_field_sa_args_kwargs.py:6:    class Team(SQLModel, table=True):
+./tests/test_field_sa_args_kwargs.py:10:    class Hero(SQLModel, table=True):
+./tests/test_field_sa_args_kwargs.py:26:    class Item(SQLModel, table=True):
+./tests/test_main.py:10:    class Hero(SQLModel, table=True):
+./tests/test_main.py:40:    class Hero(SQLModel, table=True):
+./tests/test_main.py:72:    class Hero(SQLModel, table=True):
+./tests/test_main.py:99:    class Team(SQLModel, table=True):
+./tests/test_main.py:106:    class Hero(SQLModel, table=True):
+./tests/test_main.py:131:    class UserPermission(SQLModel, table=True):
+./tests/test_main.py:164:    class UserPermission(SQLModel, table=True):
+./tests/test_main.py:199:    class Team(SQLModel, table=True):
+./tests/test_main.py:203:    class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/update/tutorial002_py310.py:11:class Hero(HeroBase, table=True):
+./tests/test_enums_models.py:22:class FlatModel(SQLModel, table=True):
+./tests/test_enums_models.py:27:class InheritModel(BaseModel, table=True):
+./tests/test_ondelete_raises.py:10:        class Team(SQLModel, table=True):
+./tests/test_ondelete_raises.py:17:        class Hero(SQLModel, table=True):
+./tests/test_ondelete_raises.py:32:        class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial002_py310.py:12:class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/update/tutorial001_py310.py:11:class Hero(HeroBase, table=True):
+./tests/test_field_sa_column.py:9:    class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:21:    class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:34:        class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:45:        class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:56:        class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:67:        class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:78:        class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:89:        class Team(SQLModel, table=True):
+./tests/test_field_sa_column.py:93:        class Hero(SQLModel, table=True):
+./tests/test_field_sa_column.py:105:        class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:116:        class Item(SQLModel, table=True):
+./tests/test_field_sa_column.py:127:        class Item(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial004_py310.py:12:class Hero(SQLModel, table=True):
+./tests/test_field_sa_relationship.py:9:        class Team(SQLModel, table=True):
+./tests/test_field_sa_relationship.py:20:        class Hero(SQLModel, table=True):
+./tests/test_field_sa_relationship.py:33:        class Team(SQLModel, table=True):
+./tests/test_field_sa_relationship.py:44:        class Hero(SQLModel, table=True):
+./docs/tutorial/fastapi/tests.md:28:    ├── __init__.py
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial005_py310.py:12:class Hero(SQLModel, table=True):
+./tests/test_query.py:6:    class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/session_with_dependency/tutorial001_py310.py:11:class Hero(HeroBase, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:4:class Team(SQLModel, table=True):
+./docs_src/tutorial/relationship_attributes/cascade_delete_relationships/tutorial001_py310.py:12:class Hero(SQLModel, table=True):
+./docs_src/advanced/uuid/tutorial002_py310.py:6:class Hero(SQLModel, table=True):
+./tests/test_nullable.py:7:    class Hero(SQLModel, table=True):
+./tests/test_nullable.py:82:    class Hero(SQLModel, table=True):
+./tests/test_nullable.py:110:    class Hero(SQLModel, table=True):
+./docs_src/advanced/uuid/tutorial001_py310.py:6:class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:10:class Team(TeamBase, table=True):
+./docs_src/tutorial/fastapi/teams/tutorial001_py310.py:37:class Hero(HeroBase, table=True):
+./docs_src/advanced/decimal/tutorial001_py310.py:6:class Hero(SQLModel, table=True):
+./tests/test_select_typing.py:6:    class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/simple_hero_api/tutorial001_py310.py:5:class Hero(SQLModel, table=True):
+./docs_src/tutorial/fastapi/limit_and_offset/tutorial001_py310.py:11:class Hero(HeroBase, table=True):
+./tests/test_future_annotations.py:9:    class Hero(SQLModel, table=True):
+./tests/test_future_annotations.py:37:    class Team(SQLModel, table=True):
+./tests/test_future_annotations.py:41:    class Player(SQLModel, table=True):
+./docs_src/tutorial/fastapi/read_one/tutorial001_py310.py:11:class Hero(HeroBase, table=True):
+./tests/test_sqlalchemy_type_errors.py:10:        class Hero(SQLModel, table=True):
+./tests/test_sqlalchemy_type_errors.py:18:        class Hero(SQLModel, table=True):
+./tests/test_sqlalchemy_type_errors.py:26:        class Hero(SQLModel, table=True):
+./tests/conftest.py:12:from sqlmodel.main import default_registry
+./tests/conftest.py:22:    # Clear the Models associated with the registry, to avoid warnings
+./tests/conftest.py:23:    default_registry.dispose()
+./tests/conftest.py:26:    default_registry.dispose()
+
+codex
+The relevant path is concentrated in `sqlmodel/main.py`: `SQLModelMetaclass` sits between Pydantic’s model metaclass and SQLAlchemy’s `DeclarativeMeta`, then branches on `table`. I’m reading the exact constructor lines so the final answer can cite the metaclass handoff rather than infer from docs.
+exec
+/bin/zsh -lc 'ls /AGENTS.md /tmp/AGENTS.md /tmp/ag-bench/AGENTS.md /tmp/ag-bench/sqlmodel/AGENTS.md 2>/dev/null' in /tmp/ag-bench/sqlmodel
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '35,60p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    35	    Interval,
+    36	    Numeric,
+    37	    inspect,
+    38	)
+    39	from sqlalchemy import Enum as sa_Enum
+    40	from sqlalchemy.orm import (
+    41	    Mapped,
+    42	    RelationshipProperty,
+    43	    declared_attr,
+    44	    registry,
+    45	    relationship,
+    46	)
+    47	from sqlalchemy.orm.attributes import set_attribute
+    48	from sqlalchemy.orm.decl_api import DeclarativeMeta
+    49	from sqlalchemy.orm.instrumentation import is_instrumented
+    50	from sqlalchemy.sql.schema import MetaData
+    51	from sqlalchemy.sql.sqltypes import LargeBinary, Time, Uuid
+    52	from typing_extensions import deprecated
+    53	
+    54	from ._compat import (
+    55	    PYDANTIC_MINOR_VERSION,
+    56	    BaseConfig,
+    57	    ModelMetaclass,
+    58	    Representation,
+    59	    SQLModelConfig,
+    60	    Undefined,
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '515,690p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   515	        sa_relationship_kwargs=sa_relationship_kwargs,
+   516	    )
+   517	    return relationship_info
+   518	
+   519	
+   520	@__dataclass_transform__(kw_only_default=True, field_descriptors=(Field, FieldInfo))
+   521	class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+   522	    __sqlmodel_relationships__: dict[str, RelationshipInfo]
+   523	    model_config: SQLModelConfig
+   524	    model_fields: ClassVar[dict[str, FieldInfo]]
+   525	
+   526	    # Replicate SQLAlchemy
+   527	    def __setattr__(cls, name: str, value: Any) -> None:  # ty: ignore[invalid-method-override]
+   528	        if is_table_model_class(cls):
+   529	            DeclarativeMeta.__setattr__(cls, name, value)
+   530	        else:
+   531	            super().__setattr__(name, value)
+   532	
+   533	    def __delattr__(cls, name: str) -> None:  # ty: ignore[invalid-method-override]
+   534	        if is_table_model_class(cls):
+   535	            DeclarativeMeta.__delattr__(cls, name)
+   536	        else:
+   537	            super().__delattr__(name)
+   538	
+   539	    # From Pydantic
+   540	    def __new__(
+   541	        cls,
+   542	        name: str,
+   543	        bases: tuple[type[Any], ...],
+   544	        class_dict: dict[str, Any],
+   545	        **kwargs: Any,
+   546	    ) -> Any:
+   547	        relationships: dict[str, RelationshipInfo] = {}
+   548	        dict_for_pydantic = {}
+   549	        original_annotations = get_annotations(class_dict)
+   550	        pydantic_annotations = {}
+   551	        relationship_annotations = {}
+   552	        for k, v in class_dict.items():
+   553	            if isinstance(v, RelationshipInfo):
+   554	                relationships[k] = v
+   555	            else:
+   556	                dict_for_pydantic[k] = v
+   557	        for k, v in original_annotations.items():
+   558	            if k in relationships:
+   559	                relationship_annotations[k] = v
+   560	            else:
+   561	                pydantic_annotations[k] = v
+   562	        dict_used = {
+   563	            **dict_for_pydantic,
+   564	            "__weakref__": None,
+   565	            "__sqlmodel_relationships__": relationships,
+   566	            "__annotations__": pydantic_annotations,
+   567	        }
+   568	        # Duplicate logic from Pydantic to filter config kwargs because if they are
+   569	        # passed directly including the registry Pydantic will pass them over to the
+   570	        # superclass causing an error
+   571	        allowed_config_kwargs: set[str] = {
+   572	            key
+   573	            for key in dir(BaseConfig)
+   574	            if not (
+   575	                key.startswith("__") and key.endswith("__")
+   576	            )  # skip dunder methods and attributes
+   577	        }
+   578	        config_kwargs = {
+   579	            key: kwargs[key] for key in kwargs.keys() & allowed_config_kwargs
+   580	        }
+   581	        new_cls = cast(
+   582	            "SQLModel", super().__new__(cls, name, bases, dict_used, **config_kwargs)
+   583	        )
+   584	        new_cls.__annotations__ = {
+   585	            **relationship_annotations,
+   586	            **pydantic_annotations,
+   587	            **new_cls.__annotations__,
+   588	        }
+   589	
+   590	        def get_config(name: str) -> Any:
+   591	            config_class_value = new_cls.model_config.get(name, Undefined)
+   592	            if config_class_value is not Undefined:
+   593	                return config_class_value
+   594	            kwarg_value = kwargs.get(name, Undefined)
+   595	            if kwarg_value is not Undefined:
+   596	                return kwarg_value
+   597	            return Undefined
+   598	
+   599	        config_table = get_config("table")
+   600	        if config_table is True:
+   601	            # If it was passed by kwargs, ensure it's also set in config
+   602	            new_cls.model_config["table"] = config_table
+   603	            for k, v in get_model_fields(new_cls).items():
+   604	                col = get_column_from_field(v)
+   605	                setattr(new_cls, k, col)
+   606	            # Set a config flag to tell FastAPI that this should be read with a field
+   607	            # in orm_mode instead of preemptively converting it to a dict.
+   608	            # This could be done by reading new_cls.model_config['table'] in FastAPI, but
+   609	            # that's very specific about SQLModel, so let's have another config that
+   610	            # other future tools based on Pydantic can use.
+   611	            new_cls.model_config["read_from_attributes"] = True  # ty: ignore[invalid-key]
+   612	            # For compatibility with older versions
+   613	            # TODO: remove this in the future
+   614	            new_cls.model_config["read_with_orm_mode"] = True  # ty: ignore[invalid-key]
+   615	
+   616	        config_registry = get_config("registry")
+   617	        if config_registry is not Undefined:
+   618	            config_registry = cast(registry, config_registry)
+   619	            # If it was passed by kwargs, ensure it's also set in config
+   620	            new_cls.model_config["registry"] = config_table
+   621	            setattr(new_cls, "_sa_registry", config_registry)  # noqa: B010
+   622	            setattr(new_cls, "metadata", config_registry.metadata)  # noqa: B010
+   623	            setattr(new_cls, "__abstract__", True)  # noqa: B010
+   624	        return new_cls
+   625	
+   626	    # Override SQLAlchemy, allow both SQLAlchemy and plain Pydantic models
+   627	    def __init__(
+   628	        cls, classname: str, bases: tuple[type, ...], dict_: dict[str, Any], **kw: Any
+   629	    ) -> None:
+   630	        # Only one of the base classes (or the current one) should be a table model
+   631	        # this allows FastAPI cloning a SQLModel for the response_model without
+   632	        # trying to create a new SQLAlchemy, for a new table, with the same name, that
+   633	        # triggers an error
+   634	        base_is_table = any(is_table_model_class(base) for base in bases)
+   635	        if is_table_model_class(cls) and not base_is_table:
+   636	            for rel_name, rel_info in cls.__sqlmodel_relationships__.items():
+   637	                if rel_info.sa_relationship:
+   638	                    # There's a SQLAlchemy relationship declared, that takes precedence
+   639	                    # over anything else, use that and continue with the next attribute
+   640	                    setattr(cls, rel_name, rel_info.sa_relationship)  # Fix #315
+   641	                    continue
+   642	                raw_ann = cls.__annotations__[rel_name]
+   643	                origin: Any = get_origin(raw_ann)
+   644	                if origin is Mapped:
+   645	                    ann = raw_ann.__args__[0]
+   646	                else:
+   647	                    ann = raw_ann
+   648	                    # Plain forward references, for models not yet defined, are not
+   649	                    # handled well by SQLAlchemy without Mapped, so, wrap the
+   650	                    # annotations in Mapped here
+   651	                    cls.__annotations__[rel_name] = Mapped[ann]
+   652	                relationship_to = get_relationship_to(
+   653	                    name=rel_name, rel_info=rel_info, annotation=ann
+   654	                )
+   655	                rel_kwargs: dict[str, Any] = {}
+   656	                if rel_info.back_populates:
+   657	                    rel_kwargs["back_populates"] = rel_info.back_populates
+   658	                if rel_info.cascade_delete:
+   659	                    rel_kwargs["cascade"] = "all, delete-orphan"
+   660	                if rel_info.passive_deletes:
+   661	                    rel_kwargs["passive_deletes"] = rel_info.passive_deletes
+   662	                if rel_info.link_model:
+   663	                    ins = inspect(rel_info.link_model)
+   664	                    local_table = getattr(ins, "local_table")  # noqa: B009
+   665	                    if local_table is None:
+   666	                        raise RuntimeError(
+   667	                            "Couldn't find the secondary table for "
+   668	                            f"model {rel_info.link_model}"
+   669	                        )
+   670	                    rel_kwargs["secondary"] = local_table
+   671	                rel_args: list[Any] = []
+   672	                if rel_info.sa_relationship_args:
+   673	                    rel_args.extend(rel_info.sa_relationship_args)
+   674	                if rel_info.sa_relationship_kwargs:
+   675	                    rel_kwargs.update(rel_info.sa_relationship_kwargs)
+   676	                rel_value = relationship(relationship_to, *rel_args, **rel_kwargs)
+   677	                setattr(cls, rel_name, rel_value)  # Fix #315
+   678	            # SQLAlchemy no longer uses dict_
+   679	            # Ref: https://github.com/sqlalchemy/sqlalchemy/commit/428ea01f00a9cc7f85e435018565eb6da7af1b77
+   680	            # Tag: 1.4.36
+   681	            DeclarativeMeta.__init__(cls, classname, bases, dict_, **kw)
+   682	        else:
+   683	            ModelMetaclass.__init__(cls, classname, bases, dict_, **kw)
+   684	
+   685	
+   686	def get_sqlalchemy_type(field: Any) -> Any:
+   687	    field_info = field
+   688	    sa_type = _get_sqlmodel_field_value(field_info, "sa_type", Undefined)  # noqa: B009
+   689	    if sa_type is not Undefined:
+   690	        return sa_type
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '790,815p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   790	        args.extend(list(cast(Sequence[Any], sa_column_args)))
+   791	    sa_column_kwargs = _get_sqlmodel_field_value(
+   792	        field_info, "sa_column_kwargs", Undefined
+   793	    )
+   794	    if sa_column_kwargs is not Undefined:
+   795	        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+   796	    return Column(sa_type, *args, **kwargs)
+   797	
+   798	
+   799	default_registry = registry()
+   800	
+   801	_TSQLModel = TypeVar("_TSQLModel", bound="SQLModel")
+   802	
+   803	
+   804	class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+   805	    # SQLAlchemy needs to set weakref(s), Pydantic will set the other slots values
+   806	    __slots__ = ("__weakref__",)
+   807	    __tablename__: ClassVar[str | Callable[..., str]]
+   808	    __sqlmodel_relationships__: ClassVar[builtins.dict[str, RelationshipProperty[Any]]]
+   809	    __name__: ClassVar[str]
+   810	    metadata: ClassVar[MetaData]
+   811	    __allow_unmapped__ = True  # https://docs.sqlalchemy.org/en/20/changelog/migration_20.html#migration-20-step-six
+   812	    model_config = SQLModelConfig(from_attributes=True)
+   813	
+   814	    # Typing spec says `__new__` returning `Any` overrides normal constructor
+   815	    # behavior, but a missing annotation does not:
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '735,800p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   735	    if issubclass(type_, uuid.UUID):
+   736	        return Uuid
+   737	    raise ValueError(f"{type_} has no matching SQLAlchemy type")
+   738	
+   739	
+   740	def get_column_from_field(field: Any) -> Column:
+   741	    field_info = field
+   742	    sa_column = _get_sqlmodel_field_value(field_info, "sa_column", Undefined)
+   743	    if isinstance(sa_column, Column):
+   744	        return sa_column
+   745	    sa_type = get_sqlalchemy_type(field)
+   746	    primary_key = _get_sqlmodel_field_value(field_info, "primary_key", Undefined)
+   747	    if primary_key is Undefined:
+   748	        primary_key = False
+   749	    index = _get_sqlmodel_field_value(field_info, "index", Undefined)
+   750	    if index is Undefined:
+   751	        index = False
+   752	    nullable = not primary_key and is_field_noneable(field)
+   753	    # Override derived nullability if the nullable property is set explicitly
+   754	    # on the field
+   755	    field_nullable = _get_sqlmodel_field_value(field_info, "nullable", Undefined)
+   756	    if field_nullable is not Undefined:
+   757	        assert not isinstance(field_nullable, UndefinedType)
+   758	        nullable = field_nullable
+   759	    args = []
+   760	    foreign_key = _get_sqlmodel_field_value(field_info, "foreign_key", Undefined)
+   761	    if foreign_key is Undefined:
+   762	        foreign_key = None
+   763	    unique = _get_sqlmodel_field_value(field_info, "unique", Undefined)
+   764	    if unique is Undefined:
+   765	        unique = False
+   766	    if foreign_key:
+   767	        ondelete_value = _get_sqlmodel_field_value(field_info, "ondelete", Undefined)
+   768	        if ondelete_value is Undefined:
+   769	            ondelete_value = None
+   770	        if ondelete_value == "SET NULL" and not nullable:
+   771	            raise RuntimeError('ondelete="SET NULL" requires nullable=True')
+   772	        assert isinstance(foreign_key, str)
+   773	        assert isinstance(ondelete_value, (str, type(None)))  # for typing
+   774	        args.append(ForeignKey(foreign_key, ondelete=ondelete_value))
+   775	    kwargs: dict[str, Any] = {
+   776	        "primary_key": primary_key,
+   777	        "nullable": nullable,
+   778	        "index": index,
+   779	        "unique": unique,
+   780	    }
+   781	    sa_default = Undefined
+   782	    if field_info.default_factory:
+   783	        sa_default = field_info.default_factory
+   784	    elif field_info.default is not Undefined:
+   785	        sa_default = field_info.default
+   786	    if sa_default is not Undefined:
+   787	        kwargs["default"] = sa_default
+   788	    sa_column_args = _get_sqlmodel_field_value(field_info, "sa_column_args", Undefined)
+   789	    if sa_column_args is not Undefined:
+   790	        args.extend(list(cast(Sequence[Any], sa_column_args)))
+   791	    sa_column_kwargs = _get_sqlmodel_field_value(
+   792	        field_info, "sa_column_kwargs", Undefined
+   793	    )
+   794	    if sa_column_kwargs is not Undefined:
+   795	        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+   796	    return Column(sa_type, *args, **kwargs)
+   797	
+   798	
+   799	default_registry = registry()
+   800	
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '100,140p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   100	def get_annotations(class_dict: dict[str, Any]) -> dict[str, Any]:
+   101	    raw_annotations: dict[str, Any] = class_dict.get("__annotations__", {})
+   102	    if sys.version_info >= (3, 14) and "__annotations__" not in class_dict:
+   103	        # See https://github.com/pydantic/pydantic/pull/11991
+   104	        from annotationlib import (
+   105	            Format,
+   106	            call_annotate_function,
+   107	            get_annotate_from_class_namespace,
+   108	        )
+   109	
+   110	        if annotate := get_annotate_from_class_namespace(class_dict):
+   111	            raw_annotations = call_annotate_function(annotate, format=Format.FORWARDREF)
+   112	    return raw_annotations
+   113	
+   114	
+   115	def is_table_model_class(cls: type[Any]) -> bool:
+   116	    config = getattr(cls, "model_config", {})
+   117	    if config:
+   118	        return config.get("table", False) or False
+   119	    return False
+   120	
+   121	
+   122	def get_relationship_to(
+   123	    name: str,
+   124	    rel_info: "RelationshipInfo",
+   125	    annotation: Any,
+   126	) -> Any:
+   127	    origin = get_origin(annotation)
+   128	    use_annotation = annotation
+   129	    # Direct relationships (e.g. 'Team' or Team) have None as an origin
+   130	    if origin is None:
+   131	        if isinstance(use_annotation, ForwardRef):
+   132	            use_annotation = use_annotation.__forward_arg__
+   133	        else:
+   134	            return use_annotation
+   135	    # If Union (e.g. Optional), get the real field
+   136	    elif _is_union_type(origin):
+   137	        use_annotation = get_args(annotation)
+   138	        if len(use_annotation) > 2:
+   139	            raise ValueError("Cannot have a (non-optional) union as a SQLAlchemy field")
+   140	        arg1, arg2 = use_annotation
+
+exec
+/bin/zsh -lc 'rg -n "def is_table_model_class|is_table_model_class" sqlmodel -S' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+sqlmodel/_compat.py:115:def is_table_model_class(cls: type[Any]) -> bool:
+sqlmodel/_compat.py:285:    if not is_table_model_class(cls):
+sqlmodel/_compat.py:310:    if not is_table_model_class(cls):
+sqlmodel/_compat.py:321:    if is_table_model_class(cls):
+sqlmodel/_compat.py:331:    if not is_table_model_class(self.__class__):
+sqlmodel/main.py:70:    is_table_model_class,
+sqlmodel/main.py:528:        if is_table_model_class(cls):
+sqlmodel/main.py:534:        if is_table_model_class(cls):
+sqlmodel/main.py:634:        base_is_table = any(is_table_model_class(base) for base in bases)
+sqlmodel/main.py:635:        if is_table_model_class(cls) and not base_is_table:
+sqlmodel/main.py:852:            if is_table_model_class(self.__class__) and is_instrumented(self, name):
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '400,440p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+codex
+The registration is not a direct `mapper(...)` call in SQLModel. The code prepares a normal SQLAlchemy declarative class, then deliberately lets `DeclarativeMeta.__init__` do SQLAlchemy’s mapping work.
+exec
+/bin/zsh -lc "rg -n \"class SQLModelMetaclass|def __new__|config_table|setattr\\(new_cls, k, col\\)|def __init__|DeclarativeMeta.__init__|default_registry|class SQLModel\\(\" sqlmodel/main.py" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+105:    def __init__(self, default: Any = Undefined, **kwargs: Any) -> None:
+172:    def __init__(
+521:class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+540:    def __new__(
+599:        config_table = get_config("table")
+600:        if config_table is True:
+602:            new_cls.model_config["table"] = config_table
+605:                setattr(new_cls, k, col)
+620:            new_cls.model_config["registry"] = config_table
+627:    def __init__(
+681:            DeclarativeMeta.__init__(cls, classname, bases, dict_, **kw)
+799:default_registry = registry()
+804:class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+816:    def __new__(cls, *args: Any, **kwargs: Any):  # type: ignore[no-untyped-def]
+826:    def __init__(__pydantic_self__, **data: Any) -> None:
+
+exec
+/bin/zsh -lc 'python -c "import inspect, sqlalchemy.orm.decl_api as d; print(inspect.getsourcefile(d.DeclarativeMeta)); print(inspect.getsourcelines(d.DeclarativeMeta)[1])"' in /tmp/ag-bench/sqlmodel
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+exec
+/bin/zsh -lc "python -c \"import inspect, sqlalchemy.orm.decl_base as b; print('_as_declarative', inspect.getsourcefile(b._as_declarative), inspect.getsourcelines(b._as_declarative)[1]); print('_MapperConfig.setup_mapping', inspect.getsourcefile(b._MapperConfig.setup_mapping), inspect.getsourcelines(b._MapperConfig.setup_mapping)[1])\"" in /tmp/ag-bench/sqlmodel
+ exited 127 in 0ms:
+zsh:1: command not found: python
+
+exec
+/bin/zsh -lc 'python3 -c "import inspect, sqlalchemy.orm.decl_api as d; print(inspect.getsourcefile(d.DeclarativeMeta)); print(inspect.getsourcelines(d.DeclarativeMeta)[1])"' in /tmp/ag-bench/sqlmodel
+exec
+/bin/zsh -lc "python3 -c \"import inspect, sqlalchemy.orm.decl_base as b; print('_as_declarative', inspect.getsourcefile(b._as_declarative), inspect.getsourcelines(b._as_declarative)[1]); print('_MapperConfig.setup_mapping', inspect.getsourcefile(b._MapperConfig.setup_mapping), inspect.getsourcelines(b._MapperConfig.setup_mapping)[1])\"" in /tmp/ag-bench/sqlmodel
+ exited 1 in 0ms:
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import inspect, sqlalchemy.orm.decl_api as d; print(inspect.getsourcefile(d.DeclarativeMeta)); print(inspect.getsourcelines(d.DeclarativeMeta)[1])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'sqlalchemy'
+
+ exited 1 in 0ms:
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import inspect, sqlalchemy.orm.decl_base as b; print('_as_declarative', inspect.getsourcefile(b._as_declarative), inspect.getsourcelines(b._as_declarative)[1]); print('_MapperConfig.setup_mapping', inspect.getsourcefile(b._MapperConfig.setup_mapping), inspect.getsourcelines(b._MapperConfig.setup_mapping)[1])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'sqlalchemy'
+
+exec
+/bin/zsh -lc "nl -ba tests/conftest.py | sed -n '1,35p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	import shutil
+     2	import subprocess
+     3	from collections.abc import Callable, Generator
+     4	from dataclasses import dataclass, field
+     5	from pathlib import Path
+     6	from typing import Any
+     7	from unittest.mock import patch
+     8	
+     9	import pytest
+    10	from pydantic import BaseModel
+    11	from sqlmodel import SQLModel
+    12	from sqlmodel.main import default_registry
+    13	
+    14	top_level_path = Path(__file__).resolve().parent.parent
+    15	docs_src_path = top_level_path / "docs_src"
+    16	
+    17	
+    18	@pytest.fixture(autouse=True)
+    19	def clear_sqlmodel() -> Any:
+    20	    # Clear the tables in the metadata for the default base model
+    21	    SQLModel.metadata.clear()
+    22	    # Clear the Models associated with the registry, to avoid warnings
+    23	    default_registry.dispose()
+    24	    yield
+    25	    SQLModel.metadata.clear()
+    26	    default_registry.dispose()
+    27	
+    28	
+    29	@pytest.fixture()
+    30	def cov_tmp_path(tmp_path: Path) -> Generator[Path, None, None]:
+    31	    yield tmp_path
+    32	    for coverage_path in tmp_path.glob(".coverage*"):
+    33	        coverage_destiny_path = top_level_path / "coverage" / coverage_path.name
+    34	        shutil.copy(coverage_path, coverage_destiny_path)
+    35	
+
+exec
+/bin/zsh -lc "nl -ba tests/test_main.py | sed -n '1,55p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	from typing import Annotated
+     2	
+     3	import pytest
+     4	from sqlalchemy.exc import IntegrityError
+     5	from sqlalchemy.orm import RelationshipProperty
+     6	from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+     7	
+     8	
+     9	def test_should_allow_duplicate_row_if_unique_constraint_is_not_passed(clear_sqlmodel):
+    10	    class Hero(SQLModel, table=True):
+    11	        id: int | None = Field(default=None, primary_key=True)
+    12	        name: str
+    13	        secret_name: str
+    14	        age: int | None = None
+    15	
+    16	    hero_1 = Hero(name="Deadpond", secret_name="Dive Wilson")
+    17	    hero_2 = Hero(name="Deadpond", secret_name="Dive Wilson")
+    18	
+    19	    engine = create_engine("sqlite://")
+    20	
+    21	    SQLModel.metadata.create_all(engine)
+    22	
+    23	    with Session(engine) as session:
+    24	        session.add(hero_1)
+    25	        session.commit()
+    26	        session.refresh(hero_1)
+    27	
+    28	    with Session(engine) as session:
+    29	        session.add(hero_2)
+    30	        session.commit()
+    31	        session.refresh(hero_2)
+    32	
+    33	    with Session(engine) as session:
+    34	        heroes = session.exec(select(Hero)).all()
+    35	        assert len(heroes) == 2
+    36	        assert heroes[0].name == heroes[1].name
+    37	
+    38	
+    39	def test_should_allow_duplicate_row_if_unique_constraint_is_false(clear_sqlmodel):
+    40	    class Hero(SQLModel, table=True):
+    41	        id: int | None = Field(default=None, primary_key=True)
+    42	        name: str
+    43	        secret_name: str = Field(unique=False)
+    44	        age: int | None = None
+    45	
+    46	    hero_1 = Hero(name="Deadpond", secret_name="Dive Wilson")
+    47	    hero_2 = Hero(name="Deadpond", secret_name="Dive Wilson")
+    48	
+    49	    engine = create_engine("sqlite://")
+    50	
+    51	    SQLModel.metadata.create_all(engine)
+    52	
+    53	    with Session(engine) as session:
+    54	        session.add(hero_1)
+    55	        session.commit()
+
+exec
+/bin/zsh -lc "rg -n \"inspect\\(|__mapper__|mapper|metadata\\.create_all|create_all|table=True\" tests/test_main.py tests/conftest.py tests -S" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+tests/test_main.py:10:    class Hero(SQLModel, table=True):
+tests/test_main.py:21:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:40:    class Hero(SQLModel, table=True):
+tests/test_main.py:51:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:72:    class Hero(SQLModel, table=True):
+tests/test_main.py:83:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:99:    class Team(SQLModel, table=True):
+tests/test_main.py:106:    class Hero(SQLModel, table=True):
+tests/test_main.py:119:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:131:    class UserPermission(SQLModel, table=True):
+tests/test_main.py:137:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:164:    class UserPermission(SQLModel, table=True):
+tests/test_main.py:172:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:199:    class Team(SQLModel, table=True):
+tests/test_main.py:203:    class Hero(SQLModel, table=True):
+tests/test_main.py:212:    SQLModel.metadata.create_all(engine)
+tests/test_instance_no_args.py:7:    class Item(SQLModel, table=True):
+tests/test_instance_no_args.py:13:    SQLModel.metadata.create_all(engine)
+tests/test_update.py:5:    class Organization(SQLModel, table=True):
+tests/test_query.py:6:    class Hero(SQLModel, table=True):
+tests/test_query.py:16:    SQLModel.metadata.create_all(engine)
+tests/test_annotated_uuid.py:9:    class Hero(SQLModel, table=True):
+tests/test_annotated_uuid.py:14:    SQLModel.metadata.create_all(engine)
+tests/test_missing_type.py:18:        class Item(SQLModel, table=True):
+tests/test_main.py:10:    class Hero(SQLModel, table=True):
+tests/test_main.py:21:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:40:    class Hero(SQLModel, table=True):
+tests/test_main.py:51:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:72:    class Hero(SQLModel, table=True):
+tests/test_main.py:83:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:99:    class Team(SQLModel, table=True):
+tests/test_main.py:106:    class Hero(SQLModel, table=True):
+tests/test_main.py:119:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:131:    class UserPermission(SQLModel, table=True):
+tests/test_main.py:137:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:164:    class UserPermission(SQLModel, table=True):
+tests/test_main.py:172:    SQLModel.metadata.create_all(engine)
+tests/test_main.py:199:    class Team(SQLModel, table=True):
+tests/test_main.py:203:    class Hero(SQLModel, table=True):
+tests/test_main.py:212:    SQLModel.metadata.create_all(engine)
+tests/test_enums_models.py:22:class FlatModel(SQLModel, table=True):
+tests/test_enums_models.py:27:class InheritModel(BaseModel, table=True):
+tests/test_field_sa_column.py:9:    class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:21:    class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:34:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:45:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:56:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:67:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:78:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:89:        class Team(SQLModel, table=True):
+tests/test_field_sa_column.py:93:        class Hero(SQLModel, table=True):
+tests/test_field_sa_column.py:105:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:116:        class Item(SQLModel, table=True):
+tests/test_field_sa_column.py:127:        class Item(SQLModel, table=True):
+tests/test_field_sa_relationship.py:9:        class Team(SQLModel, table=True):
+tests/test_field_sa_relationship.py:20:        class Hero(SQLModel, table=True):
+tests/test_field_sa_relationship.py:33:        class Team(SQLModel, table=True):
+tests/test_field_sa_relationship.py:44:        class Hero(SQLModel, table=True):
+tests/test_nullable.py:7:    class Hero(SQLModel, table=True):
+tests/test_nullable.py:52:    SQLModel.metadata.create_all(engine)
+tests/test_nullable.py:82:    class Hero(SQLModel, table=True):
+tests/test_nullable.py:91:    SQLModel.metadata.create_all(engine)
+tests/test_nullable.py:110:    class Hero(SQLModel, table=True):
+tests/test_nullable.py:118:    SQLModel.metadata.create_all(engine)
+tests/test_select_typing.py:6:    class Hero(SQLModel, table=True):
+tests/test_select_typing.py:17:    SQLModel.metadata.create_all(engine)
+tests/test_tutorial/test_create_db_and_table/test_tutorial003.py:27:    insp: Inspector = inspect(module.engine)
+tests/test_sqlalchemy_type_errors.py:10:        class Hero(SQLModel, table=True):
+tests/test_sqlalchemy_type_errors.py:18:        class Hero(SQLModel, table=True):
+tests/test_sqlalchemy_type_errors.py:26:        class Hero(SQLModel, table=True):
+tests/test_future_annotations.py:9:    class Hero(SQLModel, table=True):
+tests/test_future_annotations.py:18:    SQLModel.metadata.create_all(engine)
+tests/test_future_annotations.py:37:    class Team(SQLModel, table=True):
+tests/test_future_annotations.py:41:    class Player(SQLModel, table=True):
+tests/test_future_annotations.py:47:    SQLModel.metadata.create_all(engine)
+tests/test_tutorial/test_create_db_and_table/test_tutorial002.py:27:    insp: Inspector = inspect(module.engine)
+tests/test_ondelete_raises.py:10:        class Team(SQLModel, table=True):
+tests/test_ondelete_raises.py:17:        class Hero(SQLModel, table=True):
+tests/test_ondelete_raises.py:32:        class Team(SQLModel, table=True):
+tests/test_enums.py:40:    SQLModel.metadata.create_all(bind=postgres_engine, checkfirst=False)
+tests/test_enums.py:50:    SQLModel.metadata.create_all(bind=sqlite_engine, checkfirst=False)
+tests/test_field_sa_args_kwargs.py:6:    class Team(SQLModel, table=True):
+tests/test_field_sa_args_kwargs.py:10:    class Hero(SQLModel, table=True):
+tests/test_field_sa_args_kwargs.py:18:    SQLModel.metadata.create_all(engine)
+tests/test_field_sa_args_kwargs.py:26:    class Item(SQLModel, table=True):
+tests/test_field_sa_args_kwargs.py:33:    SQLModel.metadata.create_all(engine)
+tests/test_tutorial/test_indexes/test_tutorial001.py:31:    insp: Inspector = inspect(mod.engine)
+tests/test_tutorial/test_indexes/test_tutorial002.py:32:    insp: Inspector = inspect(mod.engine)
+tests/test_tutorial/test_relationship_attributes/test_back_populates/test_tutorial003.py:27:    insp: Inspector = inspect(mod.engine)
+tests/test_tutorial/test_connect/test_create_connected_tables/test_tutorial001.py:27:    insp: Inspector = inspect(module.engine)
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial001.py:221:    insp: Inspector = inspect(module.engine)
+tests/test_tutorial/test_fastapi/test_multiple_models/test_tutorial002.py:221:    insp: Inspector = inspect(module.engine)
+
+codex
+Answer: `SQLModel` uses `SQLModelMetaclass`, which inherits SQLAlchemy `DeclarativeMeta`.
+`table=True` is read in `__new__`; when `"config_table is True"`, fields are converted into `Column` attributes via `"setattr(new_cls, k, col)"`.
+The mapper is registered later, in metaclass `__init__`, not by an explicit `mapper()` call in SQLModel.
+There, `is_table_model_class(cls)` checks `model_config["table"]`; if no base is already a table model, SQLModel calls `"DeclarativeMeta.__init__"`.
+That delegates class initialization to SQLAlchemy’s declarative metaclass, which performs the mapper registration using the inherited registry/metadata.
+Citations: sqlmodel/main.py:521, sqlmodel/main.py:599, sqlmodel/main.py:600, sqlmodel/main.py:603, sqlmodel/main.py:605, sqlmodel/_compat.py:115, sqlmodel/_compat.py:118, sqlmodel/main.py:634, sqlmodel/main.py:635, sqlmodel/main.py:681, sqlmodel/main.py:799, sqlmodel/main.py:804
+Confidence: High
+tokens used
+55,379
+Answer: `SQLModel` uses `SQLModelMetaclass`, which inherits SQLAlchemy `DeclarativeMeta`.
+`table=True` is read in `__new__`; when `"config_table is True"`, fields are converted into `Column` attributes via `"setattr(new_cls, k, col)"`.
+The mapper is registered later, in metaclass `__init__`, not by an explicit `mapper()` call in SQLModel.
+There, `is_table_model_class(cls)` checks `model_config["table"]`; if no base is already a table model, SQLModel calls `"DeclarativeMeta.__init__"`.
+That delegates class initialization to SQLAlchemy’s declarative metaclass, which performs the mapper registration using the inherited registry/metadata.
+Citations: sqlmodel/main.py:521, sqlmodel/main.py:599, sqlmodel/main.py:600, sqlmodel/main.py:603, sqlmodel/main.py:605, sqlmodel/_compat.py:115, sqlmodel/_compat.py:118, sqlmodel/main.py:634, sqlmodel/main.py:635, sqlmodel/main.py:681, sqlmodel/main.py:799, sqlmodel/main.py:804
+Confidence: High

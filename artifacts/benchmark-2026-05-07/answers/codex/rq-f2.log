@@ -1,0 +1,451 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/requests
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe5c-39af-7f23-bc9d-fe3144f423a0
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+What function or method handles redirect resolution in `requests`, and what is the maximum default redirect limit?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+2026-05-06T17:35:54.534051Z ERROR rmcp::transport::worker: worker quit with fatal: Transport channel closed, when Client(HttpRequest(HttpRequest("http/request failed: error sending request for url (https://chatgpt.com/backend-api/wham/apps)")))
+codex
+I’ll inspect the repository guidance first, then search the `requests` implementation for redirect handling and redirect defaults.
+exec
+/bin/zsh -lc "rg --files -g 'AGENTS.md' -g '"'!*.pyc'"'" in /tmp/ag-bench/requests
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc 'rg -n "redirect|Redirect|DEFAULT_REDIRECT|TooManyRedirects|max_redirects|resolve_redirects" .' in /tmp/ag-bench/requests
+ succeeded in 0ms:
+./docs/api.rst:34:.. autoexception:: requests.TooManyRedirects
+./docs/api.rst:58:   :exclude-members: is_permanent_redirect
+./docs/api.rst:166:  maximum number of redirects. The verbosity option should be handled by
+./src/requests/sessions.py:34:    TooManyRedirects,
+./src/requests/sessions.py:40:    DEFAULT_REDIRECT_LIMIT,
+./src/requests/sessions.py:127:class SessionRedirectMixin:
+./src/requests/sessions.py:128:    max_redirects: int
+./src/requests/sessions.py:134:    def get_redirect_target(self, resp: Response) -> str | None:
+./src/requests/sessions.py:135:        """Receives a Response. Returns a redirect URI or ``None``"""
+./src/requests/sessions.py:136:        # Due to the nature of how requests processes redirects this method will
+./src/requests/sessions.py:138:        # on each subsequent redirect response (if any).
+./src/requests/sessions.py:140:        # to cache the redirect location onto the response object as a private
+./src/requests/sessions.py:142:        if resp.is_redirect:
+./src/requests/sessions.py:155:        """Decide whether Authorization header should be removed when redirecting"""
+./src/requests/sessions.py:160:        # Special case: allow http -> https redirect when using the standard
+./src/requests/sessions.py:163:        # that allowed any redirects on the same host.
+./src/requests/sessions.py:186:    def resolve_redirects(
+./src/requests/sessions.py:202:        url = self.get_redirect_target(resp)
+./src/requests/sessions.py:207:            # Update history and keep track of redirects.
+./src/requests/sessions.py:216:            if len(resp.history) >= self.max_redirects:
+./src/requests/sessions.py:217:                raise TooManyRedirects(
+./src/requests/sessions.py:218:                    f"Exceeded {self.max_redirects} redirects.", response=resp
+./src/requests/sessions.py:224:            # Handle redirection without scheme (see: RFC 1808 Section 4)
+./src/requests/sessions.py:251:                codes.temporary_redirect,
+./src/requests/sessions.py:252:                codes.permanent_redirect,
+./src/requests/sessions.py:299:                    allow_redirects=False,
+./src/requests/sessions.py:305:                # extract redirect url, if any, for the next loop
+./src/requests/sessions.py:306:                url = self.get_redirect_target(resp)
+./src/requests/sessions.py:312:        """When being redirected we may want to strip authentication from the
+./src/requests/sessions.py:325:            # If we get redirected to a new host, we should strip out any
+./src/requests/sessions.py:340:        environment variables. If we are redirected to a URL covered by
+./src/requests/sessions.py:343:        redirect).
+./src/requests/sessions.py:373:        """When being redirected we may want to change the method of the request
+./src/requests/sessions.py:395:class Session(SessionRedirectMixin):
+./src/requests/sessions.py:422:    max_redirects: int
+./src/requests/sessions.py:439:        "max_redirects",
+./src/requests/sessions.py:484:        #: Maximum number of redirects allowed. If the request exceeds this
+./src/requests/sessions.py:485:        #: limit, a :class:`TooManyRedirects` exception is raised.
+./src/requests/sessions.py:486:        #: This defaults to requests.models.DEFAULT_REDIRECT_LIMIT, which is
+./src/requests/sessions.py:488:        self.max_redirects = DEFAULT_REDIRECT_LIMIT
+./src/requests/sessions.py:568:        allow_redirects: bool = True,
+./src/requests/sessions.py:599:        :param allow_redirects: (optional) Set to True by default.
+./src/requests/sessions.py:600:        :type allow_redirects: bool
+./src/requests/sessions.py:648:            "allow_redirects": allow_redirects,
+./src/requests/sessions.py:663:        kwargs.setdefault("allow_redirects", True)
+./src/requests/sessions.py:674:        kwargs.setdefault("allow_redirects", True)
+./src/requests/sessions.py:685:        kwargs.setdefault("allow_redirects", False)
+./src/requests/sessions.py:765:        # Set up variables needed for resolve_redirects and dispatching of hooks
+./src/requests/sessions.py:766:        allow_redirects = kwargs.pop("allow_redirects", True)
+./src/requests/sessions.py:794:        # Resolve redirects if allowed.
+./src/requests/sessions.py:795:        if allow_redirects:
+./src/requests/sessions.py:796:            # Redirect resolving generator.
+./src/requests/sessions.py:797:            gen = self.resolve_redirects(r, request, **kwargs)
+./src/requests/sessions.py:810:        # If redirects aren't being followed, store the response on the Request for Response.next().
+./src/requests/sessions.py:811:        if not allow_redirects:
+./src/requests/sessions.py:814:                    self.resolve_redirects(r, request, yield_requests=True, **kwargs)
+./src/requests/adapters.py:703:                redirect=False,
+./src/requests/status_codes.py:9:    >>> requests.codes['temporary_redirect']
+./src/requests/status_codes.py:40:    # Redirection.
+./src/requests/status_codes.py:48:    307: ("temporary_redirect", "temporary_moved", "temporary"),
+./src/requests/status_codes.py:50:        "permanent_redirect",
+./src/requests/models.py:95:#: processable redirect.
+./src/requests/models.py:100:    codes.temporary_redirect,  # 307
+./src/requests/models.py:101:    codes.permanent_redirect,  # 308
+./src/requests/models.py:104:DEFAULT_REDIRECT_LIMIT: int = 30
+./src/requests/models.py:612:                # of a redirect.
+./src/requests/models.py:788:        #: the history of the Request. Any redirect responses will end
+./src/requests/models.py:875:    def is_redirect(self) -> bool:
+./src/requests/models.py:876:        """True if this Response is a well-formed HTTP redirect that could have
+./src/requests/models.py:877:        been processed automatically (by :meth:`Session.resolve_redirects`).
+./src/requests/models.py:882:    def is_permanent_redirect(self) -> bool:
+./src/requests/models.py:883:        """True if this Response one of the permanent versions of redirect."""
+./src/requests/models.py:886:            codes.permanent_redirect,
+./src/requests/models.py:891:        """Returns a PreparedRequest for the next request in a redirect chain, if there is one."""
+./src/requests/__init__.py:181:    TooManyRedirects,
+./src/requests/__init__.py:200:    "TooManyRedirects",
+./src/requests/utils.py:1139:    so it can be read again on redirect.
+./src/requests/utils.py:1150:                "An error occurred when rewinding request body for redirect."
+./src/requests/utils.py:1153:        raise UnrewindableBodyError("Unable to rewind request body for redirect.")
+./src/requests/exceptions.py:106:class TooManyRedirects(RequestException):
+./src/requests/exceptions.py:107:    """Too many redirects."""
+./src/requests/auth.py:268:    def handle_redirect(self, r: Response, **kwargs: Any) -> None:
+./src/requests/auth.py:269:        """Reset num_401_calls counter on redirects."""
+./src/requests/auth.py:270:        if r.is_redirect:
+./src/requests/auth.py:340:        r.register_hook("response", self.handle_redirect)
+./tests/test_lowlevel.py:127:def test_digestauth_401_count_reset_on_redirect():
+./tests/test_lowlevel.py:129:    followed by a 302 redirect to another digest auth prompt.
+./tests/test_lowlevel.py:158:        # Verify we receive an Authorization header in response, then redirect.
+./tests/test_lowlevel.py:163:        # Verify Authorization isn't sent to the redirected host,
+./tests/test_lowlevel.py:187:        # Verify redirect happened as we expected.
+./tests/test_lowlevel.py:308:def test_redirect_rfc1808_to_non_ascii_location():
+./tests/test_lowlevel.py:311:    redirect_request = []  # stores the second request to the server
+./tests/test_lowlevel.py:313:    def redirect_resp_handler(sock):
+./tests/test_lowlevel.py:324:        redirect_request.append(consume_socket_content(sock, timeout=0.5))
+./tests/test_lowlevel.py:328:    server = Server(redirect_resp_handler, wait_to_close_event=close_server)
+./tests/test_lowlevel.py:332:        r = requests.get(url=url, allow_redirects=True)
+./tests/test_lowlevel.py:336:        assert redirect_request[0].startswith(b'GET /' + expected_path + b' HTTP/1.1')
+./tests/test_lowlevel.py:364:def test_fragment_update_on_redirect():
+./src/requests/cookies.py:92:            "Cookie headers should be added with add_unredirected_header()"
+./src/requests/cookies.py:95:    def add_unredirected_header(self, name: str, value: str) -> None:
+./HISTORY.md:174:  following HTTPS redirects.
+./HISTORY.md:180:  In cases where Requests receives a redirect response, it previously reattached
+./HISTORY.md:405:- Redirect resolution should now only occur when
+./HISTORY.md:406:  `allow_redirects` is True. (#5492)
+./HISTORY.md:452:  redirects using default ports (http/80, https/443).
+./HISTORY.md:461:-   Fixed exception leak where certain redirect urls would raise
+./HISTORY.md:463:-   Requests removes Authorization header from requests redirected
+./HISTORY.md:493:-   Fragments are now properly maintained across redirects. (RFC7231
+./HISTORY.md:612:-   Removal of the 301 redirect cache. This improves thread-safety.
+./HISTORY.md:679:    `PreparedResponse` from a redirect chain (when
+./HISTORY.md:680:    `allow_redirects=False`).
+./HISTORY.md:716:-   The behavior of `SessionRedirectMixin` was slightly altered.
+./HISTORY.md:717:    `resolve_redirects` will now detect a redirect by calling
+./HISTORY.md:718:    `get_redirect_target(response)` instead of directly querying
+./HISTORY.md:719:    `Response.is_redirect` and `Response.headers['location']`. Advanced
+./HISTORY.md:720:    users will be able to process malformed redirects more easily.
+./HISTORY.md:733:    redirects. Fewer `UnicodeDecodeErrors` are encountered on Python 2,
+./HISTORY.md:849:    request is redirected with a 307 or 308 status code, Requests will
+./HISTORY.md:878:    block when following a redirect that transforms the verb from
+./HISTORY.md:936:-   Don't use redirect\_cache if allow\_redirects=False
+./HISTORY.md:1072:-   Resolve redirects now receives and forwards all of the original
+./HISTORY.md:1086:-   CVE-2015-2296: Fix handling of cookies on redirect. Previously a
+./HISTORY.md:1088:    redirected URL exposing requests users to session fixation attacks
+./HISTORY.md:1132:-   Attempt to quote parts of the URL on redirect if unquoting and then
+./HISTORY.md:1189:-   Cap redirect\_cache size to prevent memory abuse (\#2299)
+./HISTORY.md:1190:-   Fix HTTPDigestAuth handling of redirects after authenticating
+./HISTORY.md:1234:-   Correct redirection introduction
+./HISTORY.md:1248:-   Bugfix for responses that attempt to redirect to themselves forever
+./HISTORY.md:1273:-   New `Response` property `is_redirect`, which is true when the
+./HISTORY.md:1274:    library could have processed this response as a redirection (whether
+./HISTORY.md:1287:    redirect. Fix CVE-2014-1829 and CVE-2014-1830 respectively.
+./HISTORY.md:1288:-   Authorization is re-evaluated each redirect.
+./HISTORY.md:1289:-   On redirect, pass url as native strings.
+./HISTORY.md:1324:-   Ensure that cookies are persisted over redirect.
+./HISTORY.md:1337:-   Match the HTTPbis recommendation for HTTP 301 redirects.
+./HISTORY.md:1366:-   Fixed: Correctly lowercase a redirect scheme.
+./HISTORY.md:1414:-   Improved redirect behaviour.
+./HISTORY.md:1438:-   301 and 302 redirects now change the verb to GET for all verbs, not
+./HISTORY.md:1481:-   Assume servers persist redirect params
+./HISTORY.md:1629:-   Fix POST redirects containing files.
+./HISTORY.md:1649:-   Infinite digest auth redirect fix.
+./HISTORY.md:1654:-   Upload data on redirects.
+./HISTORY.md:1659:-   POST redirects now break RFC to do what browsers do: Follow up with
+./HISTORY.md:1661:-   New `strict_mode` configuration to disable new redirect behavior.
+./HISTORY.md:1705:-   HEAD requests don't follow redirects anymore.
+./HISTORY.md:1854:-   Redirection auth handling.
+./HISTORY.md:1915:-   GET/HEAD obeys allow\_redirects=False.
+./HISTORY.md:1921:-   Set a maximum number of redirects (`settings.max_redirects`)
+./HISTORY.md:1923:-   Support for protocol-less redirects.
+./HISTORY.md:1937:-   Relative redirect support
+./HISTORY.md:1960:-   Redirect Fixes
+./HISTORY.md:1970:-   Improved Redirection Handling
+./HISTORY.md:1971:-   New 'allow\_redirects' param for following non-GET/HEAD Redirects
+./HISTORY.md:1977:-   Response.history: list of redirected responses
+./HISTORY.md:2054:-   Added Request.url attribute for context and redirects
+./src/requests/api.py:48:    :param allow_redirects: (optional) Boolean. Enable/disable GET/OPTIONS/POST/PUT/PATCH/DELETE/HEAD redirection. Defaults to ``True``.
+./src/requests/api.py:49:    :type allow_redirects: bool
+./src/requests/api.py:107:        `allow_redirects` is not provided, it will be set to `False` (as
+./src/requests/api.py:113:    kwargs.setdefault("allow_redirects", False)
+./src/requests/_types.py:151:        allow_redirects: bool
+./tests/test_utils.py:485:            # Ensure we handle unquoted percent signs in redirects
+./tests/test_requests.py:48:    TooManyRedirects,
+./tests/test_requests.py:54:from requests.sessions import SessionRedirectMixin
+./tests/test_requests.py:215:        r = requests.get(httpbin("redirect", "1"))
+./tests/test_requests.py:218:        assert r.history[0].is_redirect
+./tests/test_requests.py:220:    def test_redirect_history_no_self_reference(self, httpbin):
+./tests/test_requests.py:221:        r = requests.get(httpbin("redirect", "3"))
+./tests/test_requests.py:230:            httpbin("redirect-to"),
+./tests/test_requests.py:236:        assert r.history[0].is_redirect
+./tests/test_requests.py:242:            httpbin("redirect-to"),
+./tests/test_requests.py:248:        assert r.history[0].is_redirect
+./tests/test_requests.py:253:            requests.get(httpbin("relative-redirect", "50"))
+./tests/test_requests.py:254:        except TooManyRedirects as e:
+./tests/test_requests.py:255:            url = httpbin("relative-redirect", "20")
+./tests/test_requests.py:260:            pytest.fail("Expected redirect to raise TooManyRedirects but it did not")
+./tests/test_requests.py:264:        s.max_redirects = 5
+./tests/test_requests.py:266:            s.get(httpbin("relative-redirect", "50"))
+./tests/test_requests.py:267:        except TooManyRedirects as e:
+./tests/test_requests.py:268:            url = httpbin("relative-redirect", "45")
+./tests/test_requests.py:274:                "Expected custom max number of redirects to be respected but was not"
+./tests/test_requests.py:282:        assert r.history[0].is_redirect
+./tests/test_requests.py:285:        r = requests.head(httpbin("status", "301"), allow_redirects=True)
+./tests/test_requests.py:290:        assert r.history[0].is_redirect
+./tests/test_requests.py:297:        assert r.history[0].is_redirect
+./tests/test_requests.py:300:        r = requests.head(httpbin("status", "302"), allow_redirects=True)
+./tests/test_requests.py:304:        assert r.history[0].is_redirect
+./tests/test_requests.py:311:        assert r.history[0].is_redirect
+./tests/test_requests.py:314:        r = requests.head(httpbin("status", "303"), allow_redirects=True)
+./tests/test_requests.py:318:        assert r.history[0].is_redirect
+./tests/test_requests.py:320:    def test_header_and_body_removal_on_redirect(self, httpbin):
+./tests/test_requests.py:327:        # Mimic a redirect response
+./tests/test_requests.py:331:        # Run request through resolve_redirects
+./tests/test_requests.py:332:        next_resp = next(ses.resolve_redirects(resp, prep))
+./tests/test_requests.py:337:    def test_transfer_enc_removal_on_redirect(self, httpbin):
+./tests/test_requests.py:350:        # Mimic a redirect response
+./tests/test_requests.py:354:        # Run request through resolve_redirect
+./tests/test_requests.py:355:        next_resp = next(ses.resolve_redirects(resp, prep))
+./tests/test_requests.py:360:    def test_fragment_maintained_on_redirect(self, httpbin):
+./tests/test_requests.py:362:        r = requests.get(httpbin("redirect-to?url=get") + fragment)
+./tests/test_requests.py:365:        assert r.history[0].request.url == httpbin("redirect-to?url=get") + fragment
+./tests/test_requests.py:390:    def test_cookie_sent_on_redirect(self, httpbin):
+./tests/test_requests.py:393:        r = s.get(httpbin("redirect/1"))  # redirects to httpbin('get')
+./tests/test_requests.py:413:        r = s.get(httpbin("redirect/1"), cookies={"foo": "bar"})
+./tests/test_requests.py:450:    def test_cookielib_cookiejar_on_redirect(self, httpbin):
+./tests/test_requests.py:451:        """Tests resolve_redirect doesn't fail when merging cookies
+./tests/test_requests.py:464:        # Send request and simulate redirect
+./tests/test_requests.py:468:        redirects = s.resolve_redirects(resp, prep_req)
+./tests/test_requests.py:469:        resp = next(redirects)
+./tests/test_requests.py:483:        resp = requests.get(httpbin("redirect/3"))
+./tests/test_requests.py:489:        """Show that even with redirects, Response.history is always a list."""
+./tests/test_requests.py:492:        resp = requests.get(httpbin("redirect/1"))
+./tests/test_requests.py:632:    def test_respect_proxy_env_on_send_with_redirects(self, httpbin):
+./tests/test_requests.py:636:                url = httpbin("redirect/1")
+./tests/test_requests.py:966:    def test_pyopenssl_redirect(self, httpbin_secure, httpbin_ca_bundle):
+./tests/test_requests.py:1241:            allow_redirects=False,
+./tests/test_requests.py:1614:    def test_uppercase_scheme_redirect(self, httpbin):
+./tests/test_requests.py:1617:        r = requests.get(httpbin("redirect-to"), params={"url": url})
+./tests/test_requests.py:1899:            httpbin_secure("redirect-to"),
+./tests/test_requests.py:1907:    def test_auth_is_retained_for_redirect_on_host(self, httpbin):
+./tests/test_requests.py:1908:        r = requests.get(httpbin("redirect/1"), auth=("user", "pass"))
+./tests/test_requests.py:1962:    def test_manual_redirect_with_partial_body_read(self, httpbin):
+./tests/test_requests.py:1964:        r1 = s.get(httpbin("redirect/2"), allow_redirects=False, stream=True)
+./tests/test_requests.py:1965:        assert r1.is_redirect
+./tests/test_requests.py:1966:        rg = s.resolve_redirects(r1, r1.request, stream=True)
+./tests/test_requests.py:1969:        # then follow the redirect
+./tests/test_requests.py:1972:        assert r2.is_redirect
+./tests/test_requests.py:1975:        # then follow the redirect
+./tests/test_requests.py:1979:        assert not r3.is_redirect
+./tests/test_requests.py:2076:    def _patch_adapter_gzipped_redirect(self, session, url):
+./tests/test_requests.py:2090:    def test_redirect_with_wrong_gzipped_header(self, httpbin):
+./tests/test_requests.py:2092:        url = httpbin("redirect/1")
+./tests/test_requests.py:2093:        self._patch_adapter_gzipped_redirect(s, url)
+./tests/test_requests.py:2113:        r = requests.get(httpbin("redirect/5"))
+./tests/test_requests.py:2245:    def test_custom_redirect_mixin(self, httpbin):
+./tests/test_requests.py:2246:        """Tests a custom mixin to overwrite ``get_redirect_target``.
+./tests/test_requests.py:2249:        malformed redirect responses.
+./tests/test_requests.py:2251:        1. original request receives a proper response: 302 redirect
+./tests/test_requests.py:2252:        2. following the redirect, a malformed response is given:
+./tests/test_requests.py:2255:        3. the custom session catches the edge case and follows the redirect
+./tests/test_requests.py:2259:        url_redirect_malformed = httpbin("response-headers?%s" % querystring_malformed)
+./tests/test_requests.py:2260:        querystring_redirect = urlencode({"url": url_redirect_malformed})
+./tests/test_requests.py:2261:        url_redirect = httpbin("redirect-to?%s" % querystring_redirect)
+./tests/test_requests.py:2263:            url_redirect,
+./tests/test_requests.py:2264:            url_redirect_malformed,
+./tests/test_requests.py:2268:        class CustomRedirectSession(requests.Session):
+./tests/test_requests.py:2269:            def get_redirect_target(self, resp):
+./tests/test_requests.py:2271:                if resp.is_redirect:
+./tests/test_requests.py:2279:        session = CustomRedirectSession()
+./tests/test_requests.py:2284:        assert r.history[0].is_redirect
+./tests/test_requests.py:2286:        assert not r.history[1].is_redirect
+./tests/test_requests.py:2567:class RedirectSession(SessionRedirectMixin):
+./tests/test_requests.py:2568:    def __init__(self, order_of_redirects):
+./tests/test_requests.py:2569:        self.redirects = order_of_redirects
+./tests/test_requests.py:2571:        self.max_redirects = 30
+./tests/test_requests.py:2585:            r.status_code = int(self.redirects.pop(0))
+./tests/test_requests.py:2609:    session = RedirectSession([303, 307])
+./tests/test_requests.py:2614:    redirect_generator = session.resolve_redirects(r0, prep)
+./tests/test_requests.py:2620:        "allow_redirects": False,
+./tests/test_requests.py:2623:    for response in redirect_generator:
+./tests/test_requests.py:2779:    def test_redirecting_to_bad_url(self, httpbin, url, exception):
+./tests/test_requests.py:2781:            requests.get(httpbin("redirect-to"), params={"url": url})
+./docs/user/quickstart.rst:226:* Authorization headers will be removed if you get redirected off-host.
+./docs/user/quickstart.rst:480:Redirection and History
+./docs/user/quickstart.rst:483:By default Requests will perform location redirection for all verbs except
+./docs/user/quickstart.rst:486:We can use the ``history`` property of the Response object to track redirection.
+./docs/user/quickstart.rst:493:For example, GitHub redirects all HTTP requests to HTTPS::
+./docs/user/quickstart.rst:508:redirection handling with the ``allow_redirects`` parameter::
+./docs/user/quickstart.rst:510:    >>> r = requests.get('http://github.com/', allow_redirects=False)
+./docs/user/quickstart.rst:518:If you're using HEAD, you can enable redirection as well::
+./docs/user/quickstart.rst:520:    >>> r = requests.head('http://github.com/', allow_redirects=True)
+./docs/user/quickstart.rst:565:If a request exceeds the configured number of maximum redirections, a
+./docs/user/quickstart.rst:566::exc:`~requests.exceptions.TooManyRedirects` exception is raised.
+
+codex
+I found the redirect symbols in `src/requests/sessions.py` and the default constant in `src/requests/models.py`; I’m checking parent `AGENTS.md` files and exact line context before answering.
+exec
+/bin/zsh -lc "nl -ba src/requests/sessions.py | sed -n '180,225p;480,490p;760,802p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+   180	        ):
+   181	            return False
+   182	
+   183	        # Standard case: root URI must match
+   184	        return changed_port or changed_scheme
+   185	
+   186	    def resolve_redirects(
+   187	        self,
+   188	        resp: Response,
+   189	        req: PreparedRequest,
+   190	        stream: bool = False,
+   191	        timeout: _t.TimeoutType = None,
+   192	        verify: _t.VerifyType = True,
+   193	        cert: _t.CertType = None,
+   194	        proxies: dict[str, str] | None = None,
+   195	        yield_requests: bool = False,
+   196	        **adapter_kwargs: Any,
+   197	    ) -> Generator[Response, None, None]:
+   198	        """Receives a Response. Returns a generator of Responses or Requests."""
+   199	
+   200	        hist: list[Response] = []  # keep track of history
+   201	
+   202	        url = self.get_redirect_target(resp)
+   203	        previous_fragment = urlparse(req.url).fragment
+   204	        while url:
+   205	            prepared_request = req.copy()
+   206	
+   207	            # Update history and keep track of redirects.
+   208	            resp.history = hist[:]
+   209	            hist.append(resp)
+   210	
+   211	            try:
+   212	                resp.content  # Consume socket so it can be released
+   213	            except (ChunkedEncodingError, ContentDecodingError, RuntimeError):
+   214	                resp.raw.read(decode_content=False)
+   215	
+   216	            if len(resp.history) >= self.max_redirects:
+   217	                raise TooManyRedirects(
+   218	                    f"Exceeded {self.max_redirects} redirects.", response=resp
+   219	                )
+   220	
+   221	            # Release the connection back into the pool.
+   222	            resp.close()
+   223	
+   224	            # Handle redirection without scheme (see: RFC 1808 Section 4)
+   225	            if url.startswith("//"):
+   480	        #: SSL client certificate default, if String, path to ssl client
+   481	        #: cert file (.pem). If Tuple, ('cert', 'key') pair.
+   482	        self.cert = None
+   483	
+   484	        #: Maximum number of redirects allowed. If the request exceeds this
+   485	        #: limit, a :class:`TooManyRedirects` exception is raised.
+   486	        #: This defaults to requests.models.DEFAULT_REDIRECT_LIMIT, which is
+   487	        #: 30.
+   488	        self.max_redirects = DEFAULT_REDIRECT_LIMIT
+   489	
+   490	        #: Trust environment settings for proxy configuration, default
+   760	        if isinstance(request, Request):
+   761	            raise ValueError("You can only send PreparedRequests.")
+   762	
+   763	        assert _is_prepared(request)
+   764	
+   765	        # Set up variables needed for resolve_redirects and dispatching of hooks
+   766	        allow_redirects = kwargs.pop("allow_redirects", True)
+   767	        stream = kwargs.get("stream")
+   768	        hooks = request.hooks
+   769	
+   770	        # Get the appropriate adapter to use
+   771	        adapter = self.get_adapter(url=request.url)
+   772	
+   773	        # Start time (approximately) of the request
+   774	        start = preferred_clock()
+   775	
+   776	        # Send the request
+   777	        r = adapter.send(request, **kwargs)
+   778	
+   779	        # Total elapsed time of the request (approximately)
+   780	        elapsed = preferred_clock() - start
+   781	        r.elapsed = timedelta(seconds=elapsed)
+   782	
+   783	        # Response manipulation hooks
+   784	        r = dispatch_hook("response", hooks, r, **kwargs)
+   785	
+   786	        # Persist cookies
+   787	        if r.history:
+   788	            # If the hooks create history then we want those cookies too
+   789	            for resp in r.history:
+   790	                extract_cookies_to_jar(self.cookies, resp.request, resp.raw)
+   791	
+   792	        extract_cookies_to_jar(self.cookies, request, r.raw)
+   793	
+   794	        # Resolve redirects if allowed.
+   795	        if allow_redirects:
+   796	            # Redirect resolving generator.
+   797	            gen = self.resolve_redirects(r, request, **kwargs)
+   798	            history = [resp for resp in gen]
+   799	        else:
+   800	            history = []
+   801	
+   802	        # Shuffle things around if there's history.
+
+exec
+/bin/zsh -lc "nl -ba src/requests/models.py | sed -n '88,106p'" in /tmp/ag-bench/requests
+ succeeded in 0ms:
+    88	    from typing_extensions import Self
+    89	
+    90	    from . import _types as _t
+    91	    from .adapters import HTTPAdapter
+    92	    from .cookies import RequestsCookieJar
+    93	
+    94	#: The set of HTTP status codes that indicate an automatically
+    95	#: processable redirect.
+    96	REDIRECT_STATI: Final[tuple[int, ...]] = (  # type: ignore[assignment]
+    97	    codes.moved,  # 301
+    98	    codes.found,  # 302
+    99	    codes.other,  # 303
+   100	    codes.temporary_redirect,  # 307
+   101	    codes.permanent_redirect,  # 308
+   102	)
+   103	
+   104	DEFAULT_REDIRECT_LIMIT: int = 30
+   105	CONTENT_CHUNK_SIZE: int = 10 * 1024
+   106	ITER_CHUNK_SIZE: int = 512
+
+exec
+/bin/zsh -lc 'find .. -name AGENTS.md -print' in /tmp/ag-bench/requests
+ succeeded in 0ms:
+codex
+Answer: Redirect resolution is handled by `SessionRedirectMixin.resolve_redirects(...)`.
+It is called by `Session.send` when redirects are allowed.
+The default maximum is 30 redirects: `DEFAULT_REDIRECT_LIMIT: int = 30`.
+`Session.__init__` assigns it to `self.max_redirects`, and the resolver raises `TooManyRedirects` at the limit.
+Citations: src/requests/sessions.py:186, src/requests/sessions.py:794, src/requests/sessions.py:797, src/requests/sessions.py:216, src/requests/sessions.py:488, src/requests/models.py:104
+Confidence: High
+tokens used
+37,280
+Answer: Redirect resolution is handled by `SessionRedirectMixin.resolve_redirects(...)`.
+It is called by `Session.send` when redirects are allowed.
+The default maximum is 30 redirects: `DEFAULT_REDIRECT_LIMIT: int = 30`.
+`Session.__init__` assigns it to `self.max_redirects`, and the resolver raises `TooManyRedirects` at the limit.
+Citations: src/requests/sessions.py:186, src/requests/sessions.py:794, src/requests/sessions.py:797, src/requests/sessions.py:216, src/requests/sessions.py:488, src/requests/models.py:104
+Confidence: High

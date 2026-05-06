@@ -1,0 +1,37 @@
+[ag] refresh fastapi
+[ag] refresh fastapi done in 337s rc=1
+[ag] refresh requests
+[ag] refresh requests done in 155s rc=0
+[ag] refresh sqlmodel
+[ag] refresh sqlmodel done in 561s rc=2
+[ag] ask fa-f1 -> fastapi
+[ag] ask fa-f1 done in 31s rc=0
+[ag] ask fa-f2 -> fastapi
+[ag] ask fa-f2 done in 15s rc=0
+[ag] ask fa-d1 -> fastapi
+[ag] ask fa-d1 done in 18s rc=0
+[ag] ask fa-d2 -> fastapi
+[ag] ask fa-d2 done in 15s rc=0
+[ag] ask fa-x1 -> fastapi
+[ag] ask fa-x1 done in 34s rc=0
+[ag] ask rq-f1 -> requests
+[ag] ask rq-f1 done in 25s rc=0
+[ag] ask rq-f2 -> requests
+[ag] ask rq-f2 done in 18s rc=0
+[ag] ask rq-d1 -> requests
+[ag] ask rq-d1 done in 22s rc=0
+[ag] ask rq-d2 -> requests
+[ag] ask rq-d2 done in 16s rc=0
+[ag] ask rq-x1 -> requests
+[ag] ask rq-x1 done in 21s rc=0
+[ag] ask sm-f1 -> sqlmodel
+[ag] ask sm-f1 done in 19s rc=0
+[ag] ask sm-f2 -> sqlmodel
+[ag] ask sm-f2 done in 21s rc=0
+[ag] ask sm-d1 -> sqlmodel
+[ag] ask sm-d1 done in 31s rc=0
+[ag] ask sm-d2 -> sqlmodel
+[ag] ask sm-d2 done in 25s rc=0
+[ag] ask sm-x1 -> sqlmodel
+[ag] ask sm-x1 done in 20s rc=0
+[ag] all done

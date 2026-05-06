@@ -1,0 +1,343 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /tmp/ag-bench/sqlmodel
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019dfe64-60b4-7ea2-a0e8-e4d301bc4c75
+--------
+user
+You are answering a research question about the codebase at the current working directory. Be concrete: cite specific file paths and line numbers. Use grep/find/read tools. Question:
+
+Where is the `SQLModel` base class defined and which two parent classes does it combine?
+
+Answer in 5-15 lines using this format:
+Answer: ...
+Citations: file_path:line, file_path:line, ...
+Confidence: High/Med/Low
+
+Quote ONLY short snippets (<15 words).
+codex
+I’ll read the repo guidance first, then locate the class definition and its inheritance line.
+exec
+/bin/zsh -lc "rg --files -g AGENTS.md -g '"'!.*'"'" in /tmp/ag-bench/sqlmodel
+ exited 1 in 0ms:
+exec
+/bin/zsh -lc "rg -n \"class SQLModel|SQLModel\\(\"" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+tests/test_aliases.py:15:class SQLModelUser(SQLModel):
+tests/test_aliases.py:24:class SQLModelUserWithConfig(SQLModelUser):
+tests/test_aliases.py:100:class SQLModelUserV2(SQLModel):
+sqlmodel/_compat.py:78:class SQLModelConfig(BaseConfig, total=False):
+sqlmodel/main.py:521:class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+sqlmodel/main.py:804:class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+
+codex
+The class is in `sqlmodel/main.py`; I’m checking scoped AGENTS instructions before reading the relevant lines.
+exec
+/bin/zsh -lc 'find /tmp/ag-bench/sqlmodel -name AGENTS.md -print' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+exec
+/bin/zsh -lc 'find /tmp/ag-bench -maxdepth 2 -name AGENTS.md -print' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+exec
+/bin/zsh -lc 'find /tmp -maxdepth 2 -name AGENTS.md -print' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '790,815p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   790	        args.extend(list(cast(Sequence[Any], sa_column_args)))
+   791	    sa_column_kwargs = _get_sqlmodel_field_value(
+   792	        field_info, "sa_column_kwargs", Undefined
+   793	    )
+   794	    if sa_column_kwargs is not Undefined:
+   795	        kwargs.update(cast(dict[Any, Any], sa_column_kwargs))
+   796	    return Column(sa_type, *args, **kwargs)
+   797	
+   798	
+   799	default_registry = registry()
+   800	
+   801	_TSQLModel = TypeVar("_TSQLModel", bound="SQLModel")
+   802	
+   803	
+   804	class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+   805	    # SQLAlchemy needs to set weakref(s), Pydantic will set the other slots values
+   806	    __slots__ = ("__weakref__",)
+   807	    __tablename__: ClassVar[str | Callable[..., str]]
+   808	    __sqlmodel_relationships__: ClassVar[builtins.dict[str, RelationshipProperty[Any]]]
+   809	    __name__: ClassVar[str]
+   810	    metadata: ClassVar[MetaData]
+   811	    __allow_unmapped__ = True  # https://docs.sqlalchemy.org/en/20/changelog/migration_20.html#migration-20-step-six
+   812	    model_config = SQLModelConfig(from_attributes=True)
+   813	
+   814	    # Typing spec says `__new__` returning `Any` overrides normal constructor
+   815	    # behavior, but a missing annotation does not:
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '500,530p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+   500	    back_populates: str | None = None,
+   501	    cascade_delete: bool | None = False,
+   502	    passive_deletes: bool | Literal["all"] | None = False,
+   503	    link_model: Any | None = None,
+   504	    sa_relationship: RelationshipProperty[Any] | None = None,
+   505	    sa_relationship_args: Sequence[Any] | None = None,
+   506	    sa_relationship_kwargs: Mapping[str, Any] | None = None,
+   507	) -> Any:
+   508	    relationship_info = RelationshipInfo(
+   509	        back_populates=back_populates,
+   510	        cascade_delete=cascade_delete,
+   511	        passive_deletes=passive_deletes,
+   512	        link_model=link_model,
+   513	        sa_relationship=sa_relationship,
+   514	        sa_relationship_args=sa_relationship_args,
+   515	        sa_relationship_kwargs=sa_relationship_kwargs,
+   516	    )
+   517	    return relationship_info
+   518	
+   519	
+   520	@__dataclass_transform__(kw_only_default=True, field_descriptors=(Field, FieldInfo))
+   521	class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+   522	    __sqlmodel_relationships__: dict[str, RelationshipInfo]
+   523	    model_config: SQLModelConfig
+   524	    model_fields: ClassVar[dict[str, FieldInfo]]
+   525	
+   526	    # Replicate SQLAlchemy
+   527	    def __setattr__(cls, name: str, value: Any) -> None:  # ty: ignore[invalid-method-override]
+   528	        if is_table_model_class(cls):
+   529	            DeclarativeMeta.__setattr__(cls, name, value)
+   530	        else:
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '1,45p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	from __future__ import annotations
+     2	
+     3	import builtins
+     4	import ipaddress
+     5	import uuid
+     6	from collections.abc import Callable, Mapping, Sequence, Set
+     7	from dataclasses import dataclass
+     8	from datetime import date, datetime, time, timedelta
+     9	from decimal import Decimal
+    10	from enum import Enum
+    11	from pathlib import Path
+    12	from typing import (
+    13	    TYPE_CHECKING,
+    14	    Any,
+    15	    ClassVar,
+    16	    Literal,
+    17	    TypeAlias,
+    18	    TypeVar,
+    19	    Union,
+    20	    cast,
+    21	    get_origin,
+    22	    overload,
+    23	)
+    24	
+    25	from pydantic import BaseModel, EmailStr
+    26	from pydantic.fields import FieldInfo as PydanticFieldInfo
+    27	from sqlalchemy import (
+    28	    Boolean,
+    29	    Column,
+    30	    Date,
+    31	    DateTime,
+    32	    Float,
+    33	    ForeignKey,
+    34	    Integer,
+    35	    Interval,
+    36	    Numeric,
+    37	    inspect,
+    38	)
+    39	from sqlalchemy import Enum as sa_Enum
+    40	from sqlalchemy.orm import (
+    41	    Mapped,
+    42	    RelationshipProperty,
+    43	    declared_attr,
+    44	    registry,
+    45	    relationship,
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '40,60p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    40	from sqlalchemy.orm import (
+    41	    Mapped,
+    42	    RelationshipProperty,
+    43	    declared_attr,
+    44	    registry,
+    45	    relationship,
+    46	)
+    47	from sqlalchemy.orm.attributes import set_attribute
+    48	from sqlalchemy.orm.decl_api import DeclarativeMeta
+    49	from sqlalchemy.orm.instrumentation import is_instrumented
+    50	from sqlalchemy.sql.schema import MetaData
+    51	from sqlalchemy.sql.sqltypes import LargeBinary, Time, Uuid
+    52	from typing_extensions import deprecated
+    53	
+    54	from ._compat import (
+    55	    PYDANTIC_MINOR_VERSION,
+    56	    BaseConfig,
+    57	    ModelMetaclass,
+    58	    Representation,
+    59	    SQLModelConfig,
+    60	    Undefined,
+
+exec
+/bin/zsh -lc 'rg -n "ModelMetaclass|DeclarativeMeta" sqlmodel/main.py' in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+48:from sqlalchemy.orm.decl_api import DeclarativeMeta
+57:    ModelMetaclass,
+77:    from pydantic._internal._model_construction import ModelMetaclass as ModelMetaclass
+521:class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta):
+529:            DeclarativeMeta.__setattr__(cls, name, value)
+535:            DeclarativeMeta.__delattr__(cls, name)
+681:            DeclarativeMeta.__init__(cls, classname, bases, dict_, **kw)
+683:            ModelMetaclass.__init__(cls, classname, bases, dict_, **kw)
+804:class SQLModel(BaseModel, metaclass=SQLModelMetaclass, registry=default_registry):
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/main.py | sed -n '54,61p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    54	from ._compat import (
+    55	    PYDANTIC_MINOR_VERSION,
+    56	    BaseConfig,
+    57	    ModelMetaclass,
+    58	    Representation,
+    59	    SQLModelConfig,
+    60	    Undefined,
+    61	    UndefinedType,
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '70,82p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+    70	
+    71	@contextmanager
+    72	def partial_init() -> Generator[None, None, None]:
+    73	    token = finish_init.set(False)
+    74	    yield
+    75	    finish_init.reset(token)
+    76	
+    77	
+    78	class SQLModelConfig(BaseConfig, total=False):
+    79	    table: bool | None
+    80	    registry: Any | None
+    81	
+    82	
+
+exec
+/bin/zsh -lc "nl -ba sqlmodel/_compat.py | sed -n '1,95p'" in /tmp/ag-bench/sqlmodel
+ succeeded in 0ms:
+     1	import sys
+     2	import types
+     3	from collections.abc import Generator
+     4	from contextlib import contextmanager
+     5	from contextvars import ContextVar
+     6	from dataclasses import dataclass
+     7	from typing import (
+     8	    TYPE_CHECKING,
+     9	    Annotated,
+    10	    Any,
+    11	    ForwardRef,
+    12	    TypeAlias,
+    13	    TypeVar,
+    14	    Union,
+    15	    get_args,
+    16	    get_origin,
+    17	)
+    18	
+    19	from annotated_types import MaxLen
+    20	from pydantic import VERSION as P_VERSION
+    21	from pydantic import BaseModel
+    22	from pydantic import ConfigDict as ConfigDict
+    23	from pydantic._internal._fields import PydanticMetadata
+    24	from pydantic._internal._model_construction import ModelMetaclass as ModelMetaclass
+    25	from pydantic._internal._repr import Representation as Representation
+    26	from pydantic.fields import FieldInfo
+    27	from pydantic_core import PydanticUndefined as Undefined
+    28	from pydantic_core import PydanticUndefinedType as PydanticUndefinedType
+    29	
+    30	BaseConfig = ConfigDict
+    31	UndefinedType = PydanticUndefinedType
+    32	PYDANTIC_MINOR_VERSION = tuple(int(i) for i in P_VERSION.split(".")[:2])
+    33	
+    34	
+    35	if TYPE_CHECKING:
+    36	    from .main import RelationshipInfo, SQLModel
+    37	
+    38	UnionType = getattr(types, "UnionType", Union)
+    39	NoneType = type(None)
+    40	T = TypeVar("T")
+    41	InstanceOrType: TypeAlias = T | type[T]
+    42	_TSQLModel = TypeVar("_TSQLModel", bound="SQLModel")
+    43	
+    44	
+    45	class FakeMetadata:
+    46	    max_length: int | None = None
+    47	    max_digits: int | None = None
+    48	    decimal_places: int | None = None
+    49	
+    50	
+    51	@dataclass
+    52	class ObjectWithUpdateWrapper:
+    53	    obj: Any
+    54	    update: dict[str, Any]
+    55	
+    56	    def __getattribute__(self, __name: str) -> Any:
+    57	        update = super().__getattribute__("update")
+    58	        obj = super().__getattribute__("obj")
+    59	        if __name in update:
+    60	            return update[__name]
+    61	        return getattr(obj, __name)
+    62	
+    63	
+    64	def _is_union_type(t: Any) -> bool:
+    65	    return t is UnionType or t is Union
+    66	
+    67	
+    68	finish_init: ContextVar[bool] = ContextVar("finish_init", default=True)
+    69	
+    70	
+    71	@contextmanager
+    72	def partial_init() -> Generator[None, None, None]:
+    73	    token = finish_init.set(False)
+    74	    yield
+    75	    finish_init.reset(token)
+    76	
+    77	
+    78	class SQLModelConfig(BaseConfig, total=False):
+    79	    table: bool | None
+    80	    registry: Any | None
+    81	
+    82	
+    83	def get_model_fields(model: InstanceOrType[BaseModel]) -> dict[str, "FieldInfo"]:
+    84	    # TODO: refactor the usage of this function to always pass the class
+    85	    # not the instance, and then remove this extra check
+    86	    # this is for compatibility with Pydantic v3
+    87	    if isinstance(model, type):
+    88	        use_model = model
+    89	    else:
+    90	        use_model = model.__class__
+    91	    return use_model.model_fields
+    92	
+    93	
+    94	def init_pydantic_private_attrs(new_object: InstanceOrType["SQLModel"]) -> None:
+    95	    object.__setattr__(new_object, "__pydantic_fields_set__", set())
+
+codex
+Answer: `SQLModel` is defined in `sqlmodel/main.py` at line 804.
+It directly subclasses Pydantic `BaseModel`.
+Its metaclass, `SQLModelMetaclass`, combines `ModelMetaclass` and `DeclarativeMeta`.
+Short snippets: `class SQLModel(BaseModel` and `class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta)`.
+Citations: `sqlmodel/main.py:804`, `sqlmodel/main.py:521`, `sqlmodel/_compat.py:24`, `sqlmodel/main.py:48`
+Confidence: High
+tokens used
+34,603
+Answer: `SQLModel` is defined in `sqlmodel/main.py` at line 804.
+It directly subclasses Pydantic `BaseModel`.
+Its metaclass, `SQLModelMetaclass`, combines `ModelMetaclass` and `DeclarativeMeta`.
+Short snippets: `class SQLModel(BaseModel` and `class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta)`.
+Citations: `sqlmodel/main.py:804`, `sqlmodel/main.py:521`, `sqlmodel/_compat.py:24`, `sqlmodel/main.py:48`
+Confidence: High
