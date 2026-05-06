@@ -10,16 +10,28 @@ function safeStr(v) {
 
 /**
  * LuxeMaurice-only property detail (Phase 2C). Props must be server-built — do not trust client-supplied listing fields.
- * @param {{ property: { ref: string, title: string, location: string, property_type: string, status: string | null, price_display: string, discovery_source: 'curated' | 'feed', summary_text: string, highlights: string[] } }} props
+ * @param {{ property: { ref: string, title: string, location: string, property_type: string, status: string | null, price_display: string, discovery_source: 'curated' | 'manual_curated' | 'feed', summary_text: string, highlights: string[], hero_image?: string | null } }} props
  */
 export default function LuxeMauricePropertyDetailPage({ property }) {
   const p = property || {};
   const ref = safeStr(p.ref);
   const isFeed = p.discovery_source === 'feed';
+  const isManual = p.discovery_source === 'manual_curated';
   const conciergeHref = `/concierge?intent=property&property=${encodeURIComponent(ref)}`;
   const pageTitle = ref ? `${safeStr(p.title)} · Luxurious Mauritius` : 'Property · Luxurious Mauritius';
 
-  const heroBorder = isFeed ? `1px dashed ${T.border}` : `1px solid ${T.goldDeep}`;
+  const heroImg = (() => {
+    const s = p.hero_image != null ? String(p.hero_image).trim() : '';
+    if (!s.startsWith('/')) return null;
+    if (s.includes('..') || s.includes('//')) return null;
+    return s;
+  })();
+
+  const heroBorder = isFeed
+    ? `1px dashed ${T.border}`
+    : isManual
+      ? `2px solid ${T.goldDeep}`
+      : `1px solid ${T.goldDeep}`;
   const heroBg = isFeed ? T.white : T.sand;
 
   return (
@@ -61,6 +73,8 @@ export default function LuxeMauricePropertyDetailPage({ property }) {
         </Link>
         {isFeed ? (
           <span style={{ fontSize: 11, color: T.inkMuted, fontWeight: 650 }}>Explore · market preview</span>
+        ) : isManual ? (
+          <span style={{ fontSize: 11, color: T.goldDeep, fontWeight: 750 }}>Manual · operator curated</span>
         ) : (
           <span style={{ fontSize: 11, color: T.goldDeep, fontWeight: 750 }}>Featured · developer-led</span>
         )}
@@ -74,8 +88,14 @@ export default function LuxeMauricePropertyDetailPage({ property }) {
             background: heroBg,
             padding: '28px 26px 30px',
             boxShadow: isFeed ? 'none' : '0 12px 40px rgba(28,25,23,0.06)',
+            overflow: 'hidden',
           }}
         >
+          {heroImg ? (
+            <div style={{ margin: '-28px -26px 18px', height: 200, background: T.placeholder }}>
+              <img src={heroImg} alt="" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : null}
           <p
             style={{
               margin: '0 0 8px',

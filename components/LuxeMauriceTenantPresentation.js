@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import Head from 'next/head';
 
 import { LUXE_MAURICE_BRAND_TOKENS as T } from '../lib/client/luxe-maurice-brand-theme.js';
+import { safeLuxSameOriginPublicImagePath } from '../lib/client/luxe-maurice-property-resolve.js';
 
 function safeStr(v) {
   return v != null ? String(v).trim() : '';
@@ -332,6 +333,7 @@ export default function LuxeMauriceTenantPresentation({ site }) {
                 visibleStaged.map((p) => {
                   const href = `/concierge?intent=property&property=${encodeURIComponent(p.slug)}`;
                   const detailHref = `/property/${encodeURIComponent(p.slug)}`;
+                  const heroPath = safeLuxSameOriginPublicImagePath(p?.images?.hero);
                   return (
                     <article
                       key={p.slug}
@@ -346,16 +348,41 @@ export default function LuxeMauriceTenantPresentation({ site }) {
                       <div
                         style={{
                           height: 168,
-                          background: T.placeholder,
+                          background: heroPath ? T.white : T.placeholder,
                           borderBottom: `1px solid ${T.border}`,
                         }}
-                      />
+                      >
+                        {heroPath ? (
+                          <img
+                            src={heroPath}
+                            alt=""
+                            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : null}
+                      </div>
                       <div style={{ padding: '18px 18px 22px' }}>
                         <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.inkMuted }}>
                           {safeStr(p.region)} · {safeStr(p.property_type)}
                         </div>
+                        {String(p.source || '') === 'manual_curated' ? (
+                          <div
+                            style={{
+                              marginTop: 6,
+                              fontSize: 10,
+                              letterSpacing: '0.08em',
+                              textTransform: 'uppercase',
+                              color: T.goldDeep,
+                              fontWeight: 750,
+                            }}
+                          >
+                            Manual curated
+                          </div>
+                        ) : null}
                         <div style={{ marginTop: 8, fontSize: 17, fontWeight: 750, color: T.ink }}>{safeStr(p.title)}</div>
                         <div style={{ marginTop: 8, fontSize: 12, fontWeight: 650, color: T.goldDeep }}>{safeStr(p.status)}</div>
+                        {p.price_range != null && String(p.price_range).trim() ? (
+                          <div style={{ marginTop: 8, fontSize: 14, fontWeight: 650, color: T.ink }}>{safeStr(p.price_range)}</div>
+                        ) : null}
                         {p.teaser ? (
                           <p style={{ marginTop: 10, fontSize: 14, lineHeight: 1.55, color: T.inkMuted }}>{safeStr(p.teaser)}</p>
                         ) : null}

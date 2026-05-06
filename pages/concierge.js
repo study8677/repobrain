@@ -154,7 +154,12 @@ export default function ConciergePage() {
               marginBottom: 22,
               padding: 16,
               borderRadius: T.radiusMd,
-              border: `1px solid ${propertyInterest.discovery_source === 'feed' ? T.border : T.goldDeep}`,
+              border:
+                propertyInterest.discovery_source === 'feed'
+                  ? `1px dashed ${T.border}`
+                  : propertyInterest.discovery_source === 'manual_curated'
+                    ? `2px solid ${T.goldDeep}`
+                    : `1px solid ${T.goldDeep}`,
               background: T.sand,
               color: T.ink,
               fontSize: 15,
@@ -165,6 +170,8 @@ export default function ConciergePage() {
               Property interest
               {propertyInterest.discovery_source === 'feed' ? (
                 <span style={{ color: T.inkMuted, fontWeight: 700 }}> · Explore listing (feed preview)</span>
+              ) : propertyInterest.discovery_source === 'manual_curated' ? (
+                <span style={{ color: T.inkMuted, fontWeight: 700 }}> · Manual curated listing</span>
               ) : (
                 <span style={{ color: T.inkMuted, fontWeight: 700 }}> · Featured (developer-led)</span>
               )}

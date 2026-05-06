@@ -18,6 +18,7 @@ It classifies the current LuxeMaurice work correctly as **Phase 0** and defines 
 - **LuxeMaurice-only presentation**: when `tenant_id === 'luxe-maurice'`, SSR sets `client_ui.lux_acquisition` and the UI uses **`components/LuxeMauriceTenantPresentation.js`** (island / developer-led brand). Other tenants keep the generic `TenantSite` layout.
 - **Current lead capture path**: `/concierge` (posts to `concierge-lead-create` and creates a lead).
 - **Phase 1 → Phase 2 handoff (ticket `cmo8mjijk0000jl04l1jz0v6d` only):** after client approval is recorded, operators run `scripts/lux-ticket-phase2-initiate.mjs` (see script header). That persists **`console_json.lux_programme`** (phase statuses, first-slice scope, `operator_next_action`) and appends description notes. **Phase 2 first-slice acceptance** lives in **`docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`**. **Phase 2B hybrid:** curated cards remain primary; **Explore more properties** adds a feed-shaped mock layer (`lxf-*` ids) with the same concierge handoff — replace `feed_properties` at the adapter when IDX is chosen (see acceptance doc).
+- **Phase 2D manual curated:** operator-managed listings **without IDX** — intake, schema, and audit-friendly `manual_curated` source in leads/`/change`; see **`docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`**.
 
 ## Non‑negotiable rules (ticket truth)
 
@@ -66,7 +67,7 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
   - IDX provider integration **or** staged listings-first (explicit decision)
   - Search/filter and property detail experience
   - Compliance requirements (licensing, disclaimers, data usage) captured
-- **First slice + hybrid + detail pages (LuxeMaurice, before full IDX):** listing cards on `lux.corpflowai.com`, **minimal** filter/grouping on **featured curated** inventory, plus a distinct **Explore more properties** band for feed-style previews (mock until provider wired). **`/property/<ref>`** detail pages (curated + feed) link to `/concierge` with the same property ref. Enquiry CTA per property to `/concierge` with **property context** in the lead. See **`docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`**.
+- **First slice + hybrid + detail pages (LuxeMaurice, before full IDX):** listing cards on `lux.corpflowai.com`, **minimal** filter/grouping on **featured curated** inventory, plus a distinct **Explore more properties** band for feed-style previews (mock until provider wired). **`/property/<ref>`** detail pages (curated + feed) link to `/concierge` with the same property ref. Enquiry CTA per property to `/concierge` with **property context** in the lead. See **`docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`**. **Manual curated workflow (no IDX):** **`docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`**.
 - **Owner**: Implementer + operator (vendor coordination)
 - **Production verification**: discovery works on production URL; data freshness expectations documented
 - **Operator next action**: define how discovery feeds CRM/operator workflow (Phase 3); until then, follow `lux_programme.operator_next_action` on the ticket when set
@@ -122,4 +123,5 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - Core/tenant boundaries: `docs/CORE/TENANT_BOUNDARIES_AND_ADMIN_RULES.md`
 - Lux v1 acceptance checklist (Phase 0/early site checks): `docs/lux-v1-acceptance.md`
 - Phase 2 first-slice acceptance (ticket `cmo8mjijk0000jl04l1jz0v6d`): `docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`
+- Phase 2D manual property workflow: `docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`
 

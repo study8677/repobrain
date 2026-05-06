@@ -625,7 +625,9 @@ export default function ChangeConsolePage() {
                           Source:{' '}
                           {String(lead.property_interest.discovery_source || '') === 'feed'
                             ? 'Explore (feed preview)'
-                            : 'Featured (curated)'}
+                            : String(lead.property_interest.discovery_source || '') === 'manual_curated'
+                              ? 'Manual (curated)'
+                              : 'Featured (curated)'}
                         </span>
                         {lead.property_interest.price_range ? (
                           <span style={{ display: 'block', marginTop: 2, color: '#a3e635', fontSize: 10 }}>

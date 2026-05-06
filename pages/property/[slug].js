@@ -101,6 +101,7 @@ export async function getServerSideProps({ req, params }) {
           discovery_source: resolved.discovery_source,
           summary_text: resolved.summary_text,
           highlights: Array.isArray(resolved.highlights) ? resolved.highlights : [],
+          hero_image: resolved.hero_image != null ? String(resolved.hero_image) : null,
         },
       },
     };
