@@ -1,25 +1,63 @@
-SQLModel handles Pydantic field validation with SQLAlchemy column metadata in a single model class by integrating the two systems. Here's how it works:
+SQLModel does this by layering Pydantic’s field system and SQLAlchemy’s declarative mapping into the same class creation flow in `sqlmodel/main.py`.
 
-1. **Model Definition with SQLAlchemy**: When defining a model using SQLModel, SQLAlchemy's column metadata (such as `sqlalchemy_column_metadata`) is directly linked to Pydantic field annotations. For example, in a model class:
+Key pieces:
 
-```python
-from sqlmodel import Column, create_engine, and as_sql_model
+- `Field()` in `sqlmodel/main.py` returns a Pydantic `FieldInfo`, but SQLModel extends it with SQLAlchemy-specific arguments like:
+  - `primary_key`
+  - `foreign_key`
+  - `nullable`
+  - `index`
+  - `unique`
+  - `sa_type`
+  - `sa_column`
+  - `sa_column_args`
+  - `sa_column_kwargs`
 
-engine = create_engine("sqlite:///mydb.db")
+  This happens in:
+  - `sqlmodel/main.py` → `Field(...)`
+  - it constructs and returns `FieldInfo(...)`
 
-# Define fields with SQLAlchemy metadata
-model_class = as_sql_model(
-    columns=[
-        Column("id", type_=int, primary_key=True),
-        Column("name", type_=str, unique=True),
-        # ... SQLAlchemy column metadata for other fields
-    ],
-    engine=engine
-)
-```
+- `FieldInfo` in `sqlmodel/main.py` subclasses Pydantic’s field info and stores the SQLAlchemy metadata alongside normal validation metadata. Its `__init__` extracts and validates SQLAlchemy-specific options such as `primary_key`, `nullable`, `foreign_key`, `ondelete`, `unique`, `index`, `sa_type`, `sa_column`, `sa_column_args`, `sa_column_kwargs`.
 
-2. **Pydantic Field Validation**: Pydantic field validation is enforced by specifying types (e.g., `Field(default_factory=datetime.now)`) and ensuring that SQLAlchemy columns match these types. This prevents invalid data from being stored in the database.
+  Relevant source:
+  - `sqlmodel/main.py` → `class FieldInfo(PydanticFieldInfo)`
 
-3. **Validation Enforcement**: SQLAlchemy’s metadata ensures that database columns align with Pydantic field types. If inconsistencies arise, SQLModel automatically reconciles them, preventing invalid values.
+- During model class creation, the metaclass merges both systems:
+  - `SQLModelMetaclass` inherits from both `ModelMetaclass` (Pydantic) and `DeclarativeMeta` (SQLAlchemy)
+  - in `__new__`, it separates relationship attributes from normal Pydantic fields, builds the class via Pydantic, and then later SQLAlchemy mapping is applied for table models.
 
-**Citation**: The Field function in SQLModel includes parameters for SQLAlchemy column metadata, which directly ties to Pydantic field annotations, ensuring both validation and mapping are enforced in a single model class.
+  Relevant source:
+  - `sqlmodel/main.py` → `class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta)`
+  - `sqlmodel/main.py` → `SQLModelMetaclass.__new__`
+
+- For table models, SQLModel converts each Pydantic field into a SQLAlchemy `Column`:
+  - `get_column_from_field(field)` reads the `FieldInfo`
+  - determines SQL type via `get_sqlalchemy_type(field)`
+  - builds a `Column(...)` using both validation-derived information and SQLAlchemy metadata from `FieldInfo`
+
+  Relevant source:
+  - `sqlmodel/main.py` → `get_sqlalchemy_type(field)`
+  - `sqlmodel/main.py` → `get_column_from_field(field)`
+
+- The actual reconciliation happens in the metaclass when `table=True` is set:
+  - it iterates over model fields
+  - calls `get_column_from_field(v)`
+  - sets each resulting `Column` back on the class with `setattr(new_cls, k, col)`
+
+  Relevant source:
+  - `sqlmodel/main.py` → inside `SQLModelMetaclass.__new__`, in the `config_table is True` branch
+
+- Type/validation metadata comes from Pydantic-side field definitions and annotations; SQLAlchemy column type is inferred from that via:
+  - `get_sa_type_from_field(field)`
+  - `get_sqlalchemy_type(field)`
+
+So, in one sentence: SQLModel stores SQLAlchemy column options inside its custom `FieldInfo`, lets Pydantic build and validate fields normally, and then in `SQLModelMetaclass.__new__` turns those same fields into SQLAlchemy `Column` objects with `get_column_from_field()` for `table=True` models.
+
+Most relevant source locations:
+- `sqlmodel/main.py`:
+  - `class FieldInfo(PydanticFieldInfo)`
+  - `def Field(...)`
+  - `class SQLModelMetaclass(ModelMetaclass, DeclarativeMeta)`
+  - `def get_sa_type_from_field(...)`
+  - `def get_sqlalchemy_type(...)`
+  - `def get_column_from_field(...)`

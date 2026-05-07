@@ -1,1 +1,1 @@
-The file and class implementing FastAPI's automatic OpenAPI schema generation from the provided knowledge are none. The knowledge does not mention any file or class related to FastAPI schema generation.
+`fastapi/applications.py` implements it in the `FastAPI` class. The entry method is `openapi()`.

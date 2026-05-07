@@ -1,9 +1,7 @@
-The `Session` class is defined in `src/requests/sessions.py`, and it uses the default HTTP adapter set in the tests (e.g., `HTTPAdapter()` with specific prefixes for endpoints). 
+`Session` is defined in `src/requests/sessions.py` as the `Session` class.
 
-**Answer**:  
-The `Session` class is defined in `src/requests/sessions.py`, and it mounts by default using the default HTTP adapter as specified in the tests.  
+By default, in `Session.__init__`, it mounts `HTTPAdapter()` for both:
+- `"https://"`
+- `"http://"`
 
-**Cite**:  
-- File: `src/requests/sessions.py:901` for the `session()` function.  
-- File: `src/requests/sessions.py:881` for the `mount()` method.  
-- Test cases use `HTTPAdapter()` with parameters like "http://git" or similar.
+So the default adapter is `requests.adapters.HTTPAdapter`, mounted on both HTTP and HTTPS prefixes.
