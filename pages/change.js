@@ -97,6 +97,20 @@ function formatExistingRequestText(ticketLike) {
   return 'No description has been saved on this request yet. Add your wording above.';
 }
 
+function formatUsd(val) {
+  const n = typeof val === 'number' ? val : Number(val);
+  if (!Number.isFinite(n)) return null;
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+}
+
+function formatHoursBand(low, high) {
+  const lo = typeof low === 'number' ? low : Number(low);
+  const hi = typeof high === 'number' ? high : Number(high);
+  if (Number.isFinite(lo) && Number.isFinite(hi) && lo > 0 && hi > 0) return `${lo} – ${hi} hrs`;
+  if (Number.isFinite(lo) && lo > 0) return `${lo}+ hrs`;
+  return null;
+}
+
 export default function ChangeConsolePage() {
   const [locale, setLocale] = useState('en');
   const [uiContext, setUiContext] = useState(null);
@@ -128,6 +142,9 @@ export default function ChangeConsolePage() {
   const [leadPatchStatus, setLeadPatchStatus] = useState('');
   const [requestDraft, setRequestDraft] = useState('');
   const [intakeNotice, setIntakeNotice] = useState('');
+  const [forceRefine, setForceRefine] = useState(false);
+  const [estimateStatus, setEstimateStatus] = useState('');
+  const [estimateBusy, setEstimateBusy] = useState(false);
 
   useEffect(() => {
     try {
@@ -392,6 +409,8 @@ export default function ChangeConsolePage() {
   async function onSelectTicket(id) {
     setError('');
     setIntakeNotice('');
+    setEstimateStatus('');
+    setForceRefine(false);
     setClientDecisionLink('');
     setClientDecisionExpiresAt('');
     setClientDecisionStatus('');
@@ -431,6 +450,65 @@ export default function ChangeConsolePage() {
       await loadTicketById(tid);
       setIntakeNotice('Saved. Your wording is stored on this ticket for the team to review.');
       window.setTimeout(() => setIntakeNotice(''), 5000);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function requestEstimate() {
+    const tid = String(selectedTicketId || '').trim();
+    if (!tid) {
+      setError('Select a ticket first.');
+      return;
+    }
+    const desc = String(ticket?.description || requestDraft || '').trim();
+    if (!desc) {
+      setError('A short description is required before we can estimate.');
+      return;
+    }
+    setEstimateBusy(true);
+    setError('');
+    setEstimateStatus('');
+    try {
+      const r = await fetch('/api/cmp/router?action=costing-preview', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: tid, description: desc, locale }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+      setEstimateStatus('Estimate saved.');
+      await loadTicketById(tid);
+      window.setTimeout(() => setEstimateStatus(''), 5000);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setEstimateBusy(false);
+    }
+  }
+
+  async function proceedAfterEstimate() {
+    const tid = String(selectedTicketId || '').trim();
+    if (!tid) {
+      setError('Select a ticket first.');
+      return;
+    }
+    const desc = String(ticket?.description || requestDraft || '').trim();
+    setBusy(true);
+    setError('');
+    try {
+      const r = await fetch('/api/cmp/router?action=approve-build', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: tid, description: desc, locale }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+      await loadTicketById(tid);
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
@@ -480,6 +558,19 @@ export default function ChangeConsolePage() {
 
   const wf = ticket?.ticket_progress?.client_view?.workflow_state || '';
   const needClientDecision = String(wf || '').trim() === 'awaiting_client_programme_decisions';
+  const wfLabel = ticket ? workflowLabel(String(wf || '')) : '—';
+  const wfKey = String(wf || '').trim().toLowerCase();
+  const isReadyForEstimate = wfKey === 'ready_for_estimate';
+  const cv = ticket?.ticket_progress?.client_view && typeof ticket.ticket_progress.client_view === 'object'
+    ? ticket.ticket_progress.client_view
+    : {};
+  const hasEstimate = Boolean(
+    cv?.last_estimate_at ||
+      cv?.actual_cost_to_client_usd != null ||
+      cv?.market_reference_usd != null ||
+      cv?.effort_hours_low != null ||
+      cv?.effort_hours_high != null
+  );
 
   const approvedBuild =
     String(ticket?.status || '').trim().toLowerCase() === 'approved' &&
@@ -495,9 +586,8 @@ export default function ChangeConsolePage() {
     String(selectedTicketId || '').trim() === LUX_PHASE1_REVIEW_TICKET_ID && approvedBuild && luxPhase1ReviewDone;
 
   const showIntakeSkin = Boolean(selectedTicketId && ticket && computeIsIntakeUx(ticket));
-  const workflowStageLabel = ticket
-    ? workflowLabel(String(ticket?.ticket_progress?.client_view?.workflow_state || ''))
-    : '—';
+  const showIntakeSurface = showIntakeSkin || forceRefine;
+  const workflowStageLabel = ticket ? wfLabel : '—';
 
   const page = {
     fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif',
@@ -513,6 +603,38 @@ export default function ChangeConsolePage() {
     background: 'rgba(2,6,23,0.55)',
     padding: 16,
   };
+
+  const subtleCard = {
+    border: '1px solid rgba(148,163,184,0.18)',
+    borderRadius: 16,
+    background: 'rgba(2,6,23,0.45)',
+    padding: 16,
+  };
+
+  const dollarsOur = cv?.actual_cost_to_client_usd ?? cv?.display_amount_usd ?? null;
+  const dollarsMarket = cv?.market_reference_usd ?? cv?.full_market_value_usd ?? null;
+  const hoursBand = formatHoursBand(cv?.effort_hours_low, cv?.effort_hours_high);
+  const ourUsd = formatUsd(dollarsOur);
+  const marketUsd = formatUsd(dollarsMarket);
+
+  const isTenantClient =
+    session.logged_in === true && String(session.level || '').toLowerCase() === 'tenant' && !!session.tenant_id;
+  const billingExempt = uiContext?.billing_exempt === true;
+  const creditBal = typeof uiContext?.token_credit_balance_usd === 'number' ? uiContext.token_credit_balance_usd : null;
+  const budgetAvailable = isTenantClient && !billingExempt && creditBal != null && creditBal > 0;
+  const budgetUnknown = isTenantClient && !billingExempt && creditBal == null;
+  const clientTypeLabel = !isTenantClient
+    ? 'Provider / internal'
+    : billingExempt
+      ? 'Non-billing / partner'
+      : budgetAvailable
+        ? 'Standard Billing Client'
+        : 'Billing Client';
+
+  const canProceed = Boolean(
+    session.logged_in === true &&
+      (String(session.level || '').toLowerCase() === 'admin' || uiContext?.show_approve_build === true),
+  );
 
   return (
     <div style={{ ...page, background: '#020617', minHeight: '100vh' }}>
@@ -854,8 +976,10 @@ export default function ChangeConsolePage() {
                 </div>
                 <div style={{ marginTop: 6, color: '#94a3b8' }}>
                   Next:{' '}
-                  {showIntakeSkin
+                  {showIntakeSurface
                     ? 'Next step: Add or refine your request, then continue.'
+                    : isReadyForEstimate
+                      ? 'Get Estimate.'
                     : String(ticket?.ticket_progress?.client_view?.workflow_next_action || '—')}
                 </div>
                 {ticket?.lux_programme_summary?.phase_2_status ? (
@@ -871,9 +995,230 @@ export default function ChangeConsolePage() {
             </div>
           </div>
 
-          {session.logged_in ? (
+          {session.logged_in && isReadyForEstimate && !showIntakeSurface ? (
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div style={subtleCard}>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                    ESTIMATE
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
+                    Ready to request an estimate for this change.
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => void requestEstimate()}
+                      disabled={estimateBusy || busy}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 12,
+                        border: '1px solid rgba(56,189,248,0.35)',
+                        background: estimateBusy || busy ? 'rgba(148,163,184,0.18)' : 'rgba(56,189,248,0.14)',
+                        color: estimateBusy || busy ? '#94a3b8' : '#e0f2fe',
+                        fontWeight: 900,
+                        fontSize: 12,
+                        cursor: estimateBusy || busy ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      Get Estimate
+                    </button>
+                    {estimateStatus ? (
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#86efac' }}>{estimateStatus}</div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div style={subtleCard}>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                    BUDGET & BILLING
+                  </div>
+                  <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 999,
+                        marginTop: 4,
+                        background: budgetAvailable ? '#22c55e' : budgetUnknown ? '#f59e0b' : '#64748b',
+                        boxShadow: budgetAvailable ? '0 0 10px rgba(34,197,94,0.35)' : 'none',
+                      }}
+                    />
+                    <div style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.45 }}>
+                      <div style={{ fontWeight: 900, color: budgetAvailable ? '#86efac' : budgetUnknown ? '#fcd34d' : '#cbd5e1' }}>
+                        {budgetAvailable
+                          ? 'Budget is available'
+                          : budgetUnknown
+                            ? 'Budget check not available yet'
+                            : billingExempt && isTenantClient
+                              ? 'Not a billing client'
+                              : 'Not a billing client'}
+                      </div>
+                      <div style={{ marginTop: 6, color: '#94a3b8' }}>
+                        {budgetAvailable
+                          ? 'Sufficient budget is available for this change.'
+                          : budgetUnknown
+                            ? 'Budget tracking is not connected for this client yet.'
+                            : 'Budget tracking is not available.'}
+                      </div>
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8' }}>
+                        Client type:{' '}
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            marginLeft: 6,
+                            padding: '3px 10px',
+                            borderRadius: 999,
+                            border: '1px solid rgba(148,163,184,0.22)',
+                            background: 'rgba(15,23,42,0.35)',
+                            color: '#e2e8f0',
+                            fontWeight: 800,
+                          }}
+                        >
+                          {clientTypeLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={subtleCard}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                  ESTIMATE SUMMARY
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
+                  Based on analysis of this change request.
+                </div>
+
+                {hasEstimate ? (
+                  <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        border: '1px solid rgba(56,189,248,0.22)',
+                        background: 'rgba(56,189,248,0.06)',
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, fontWeight: 900, color: '#93c5fd', letterSpacing: '0.08em' }}>
+                        TYPICAL MARKET ESTIMATE
+                      </div>
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8' }}>Estimated Man-Hours</div>
+                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 950, color: '#bfdbfe' }}>
+                        {hoursBand || 'Not available yet'}
+                      </div>
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8' }}>Estimated Cost</div>
+                      <div style={{ marginTop: 6, fontSize: 16, fontWeight: 950, color: '#93c5fd' }}>
+                        {marketUsd || 'Not available yet'}
+                      </div>
+                      {!marketUsd ? (
+                        <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8' }}>
+                          Market comparison can be added later.
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div
+                      style={{
+                        borderRadius: 14,
+                        border: '1px solid rgba(34,197,94,0.22)',
+                        background: 'rgba(34,197,94,0.06)',
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, fontWeight: 900, color: '#86efac', letterSpacing: '0.08em' }}>
+                        OUR ESTIMATE
+                      </div>
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8' }}>Estimated Man-Hours</div>
+                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 950, color: '#bbf7d0' }}>
+                        {hoursBand || 'Not available yet'}
+                      </div>
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8' }}>Estimated Cost</div>
+                      <div style={{ marginTop: 6, fontSize: 16, fontWeight: 950, color: '#86efac' }}>
+                        {ourUsd || 'Not available yet'}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 14, fontSize: 12, color: '#94a3b8' }}>Estimate not generated yet.</div>
+                )}
+
+                <div
+                  style={{
+                    marginTop: 14,
+                    borderRadius: 12,
+                    border: '1px solid rgba(148,163,184,0.14)',
+                    background: 'rgba(15,23,42,0.35)',
+                    padding: 10,
+                    fontSize: 11,
+                    color: '#94a3b8',
+                  }}
+                >
+                  Estimates are preliminary and may change after clarification or scope adjustments.
+                </div>
+              </div>
+
+              <div style={subtleCard}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                  NEXT ACTIONS
+                </div>
+                <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+                  {hasEstimate ? (
+                    <button
+                      type="button"
+                      disabled={busy || !canProceed}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 12,
+                        border: '1px solid rgba(34,197,94,0.35)',
+                        background: busy || !canProceed ? 'rgba(148,163,184,0.18)' : 'rgba(34,197,94,0.14)',
+                        color: busy || !canProceed ? '#94a3b8' : '#dcfce7',
+                        textAlign: 'left',
+                        cursor: busy || !canProceed ? 'not-allowed' : 'pointer',
+                      }}
+                      onClick={() => void proceedAfterEstimate()}
+                    >
+                      <div style={{ fontWeight: 900 }}>Proceed</div>
+                      <div style={{ marginTop: 4, fontSize: 11, color: busy || !canProceed ? '#94a3b8' : '#bbf7d0' }}>
+                        Start the work on this change
+                      </div>
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(56,189,248,0.22)',
+                      background: 'rgba(56,189,248,0.06)',
+                      color: '#e0f2fe',
+                      textAlign: 'left',
+                      cursor: busy ? 'not-allowed' : 'pointer',
+                    }}
+                    onClick={() => setForceRefine(true)}
+                  >
+                    <div style={{ fontWeight: 900 }}>Change Request</div>
+                    <div style={{ marginTop: 4, fontSize: 11, color: '#94a3b8' }}>Modify the overall change</div>
+                  </button>
+                  {!hasEstimate ? (
+                    <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.45 }}>
+                      Accepting an estimate becomes available after you’ve generated one.
+                    </div>
+                  ) : !canProceed ? (
+                    <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.45 }}>
+                      Proceeding isn’t available for this session yet.
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {session.logged_in && (!isReadyForEstimate || showIntakeSurface) ? (
             <div style={card}>
-              {session.logged_in && (!selectedTicketId || showIntakeSkin) ? (
+              {session.logged_in && (!selectedTicketId || showIntakeSurface) ? (
                 <div
                   style={{
                     marginBottom: 14,
@@ -890,16 +1235,16 @@ export default function ChangeConsolePage() {
                 </div>
               ) : null}
               <div style={{ fontSize: showIntakeSkin ? 11 : 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 8 }}>
-                {showIntakeSkin ? 'Your request' : 'Describe the change'}
+                {showIntakeSurface ? 'Your request' : 'Describe the change'}
               </div>
               <textarea
                 value={requestDraft}
                 onChange={(e) => setRequestDraft(e.target.value)}
                 placeholder="Describe what you want changed in plain language…"
-                rows={showIntakeSkin ? 8 : 5}
+                rows={showIntakeSurface ? 8 : 5}
                 style={{
                   width: '100%',
-                  minHeight: showIntakeSkin ? 220 : 140,
+                  minHeight: showIntakeSurface ? 220 : 140,
                   padding: '12px 14px',
                   borderRadius: 14,
                   border: '1px solid rgba(51,65,85,0.65)',
@@ -911,7 +1256,7 @@ export default function ChangeConsolePage() {
                   boxSizing: 'border-box',
                 }}
               />
-              {showIntakeSkin ? (
+              {showIntakeSurface ? (
                 <>
                   <div style={{ marginTop: 14, fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>
                     Existing request
@@ -974,7 +1319,7 @@ export default function ChangeConsolePage() {
             </div>
           ) : null}
 
-          {!showIntakeSkin ? (
+          {!showIntakeSurface && !isReadyForEstimate ? (
             <div style={card}>
               <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
                 TICKET SNAPSHOT
@@ -1012,7 +1357,7 @@ export default function ChangeConsolePage() {
             </div>
           ) : null}
 
-          {!showIntakeSkin ? (
+          {!showIntakeSurface && !isReadyForEstimate ? (
           <div style={card}>
             <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
               LEADS
