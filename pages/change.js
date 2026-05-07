@@ -215,7 +215,13 @@ export default function ChangeConsolePage() {
     if (!luxLeadCrmEnabled) return [];
     const r = await fetch('/api/cmp/router?action=lux-client-requests-list&limit=25', { credentials: 'include' });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+    if (!r.ok) {
+      const msg = String(j?.error || j?.detail || j?.hint || '').trim();
+      if (r.status === 403 && msg.toLowerCase().includes('dormant gate')) {
+        throw new Error('Your session expired. Please refresh and log in again.');
+      }
+      throw new Error(msg || `http_${r.status}`);
+    }
     const rows = Array.isArray(j.requests) ? j.requests : [];
     setLuxRequests(rows);
     return rows;
@@ -223,6 +229,7 @@ export default function ChangeConsolePage() {
 
   async function submitLuxRequest() {
     if (!luxLeadCrmEnabled) return;
+    if (luxReqBusy) return;
     setLuxReqBusy(true);
     setLuxReqStatus('');
     try {
@@ -250,8 +257,14 @@ export default function ChangeConsolePage() {
         body: JSON.stringify(body),
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
-      setLuxReqStatus('Request submitted.');
+      if (!r.ok) {
+        const msg = String(j?.error || j?.detail || j?.hint || '').trim();
+        if (r.status === 403 && msg.toLowerCase().includes('dormant gate')) {
+          throw new Error('Your session expired. Please refresh and log in again.');
+        }
+        throw new Error(msg || `http_${r.status}`);
+      }
+      setLuxReqStatus('Request created successfully.');
       setLuxReqTitle('');
       setLuxReqDesc('');
       setLuxReqPropertyRef('');
@@ -2121,6 +2134,22 @@ export default function ChangeConsolePage() {
                 </button>
               </div>
               {luxReqStatus ? <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>{luxReqStatus}</div> : null}
+              {String(luxReqStatus || '').toLowerCase().includes('successfully') ? (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(34,197,94,0.35)',
+                    background: 'rgba(34,197,94,0.10)',
+                    color: '#dcfce7',
+                    fontSize: 12,
+                    fontWeight: 750,
+                  }}
+                >
+                  Request created successfully.
+                </div>
+              ) : null}
 
               <div style={{ marginTop: 16, borderTop: '1px solid rgba(148,163,184,0.18)', paddingTop: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>

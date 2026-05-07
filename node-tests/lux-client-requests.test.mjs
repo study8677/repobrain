@@ -74,3 +74,12 @@ test('safeLuxRelatedRequestShape is minimal and safe', () => {
   assert.equal(s.property_reference, 'lm-x');
 });
 
+test('Dormant gate allowlist includes Lux request actions (smoke)', async () => {
+  // This is an extremely lightweight guardrail: it fails if someone removes the allowlist entries.
+  const fs = await import('node:fs/promises');
+  const p = new URL('../lib/cmp/router.js', import.meta.url);
+  const s = await fs.readFile(p, 'utf8');
+  assert.ok(s.includes("'lux-client-request-create'"));
+  assert.ok(s.includes("'lux-client-requests-list'"));
+});
+
