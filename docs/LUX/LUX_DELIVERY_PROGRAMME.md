@@ -76,6 +76,7 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 
 - **Client-visible outcome**: the business can respond reliably; no “lost lead” path.
 - **Scope**:
+  - **First slice (LuxeMaurice):** concierge lead stages + internal notes + follow-up status in `/change` — **`docs/LUX/LUX_PHASE3_FIRST_CRM_SLICE.md`** (no assignment / SLA / external CRM in that slice).
   - Lead triage, assignment, follow-up status
   - Handoff from web enquiries into operator queue (source-of-truth decision)
   - Internal SLA and escalation
@@ -124,4 +125,5 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - Lux v1 acceptance checklist (Phase 0/early site checks): `docs/lux-v1-acceptance.md`
 - Phase 2 first-slice acceptance (ticket `cmo8mjijk0000jl04l1jz0v6d`): `docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`
 - Phase 2D manual property workflow: `docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`
+- Phase 3 first CRM slice (LuxeMaurice `/change` leads): `docs/LUX/LUX_PHASE3_FIRST_CRM_SLICE.md`
 

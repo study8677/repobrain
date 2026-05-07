@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LUX_PHASE1_REVIEW_TICKET_ID } from '../lib/cmp/_lib/client-decisions-client.js';
+import {
+  LUX_LEAD_CRM_STAGES,
+  luxLeadCrmStageLabel,
+} from '../lib/cmp/_lib/lux-lead-operator-workflow.js';
 
 // Non-canonical route – /change is served via public/change.html
 function normalizeLocale(raw) {
@@ -52,6 +56,12 @@ export default function ChangeConsolePage() {
   const [clientDecisionExpiresAt, setClientDecisionExpiresAt] = useState('');
   const [clientDecisionStatus, setClientDecisionStatus] = useState('');
   const [leads, setLeads] = useState([]);
+  const [selectedLeadId, setSelectedLeadId] = useState('');
+  const [leadPatchBusy, setLeadPatchBusy] = useState(false);
+  const [leadStageDraft, setLeadStageDraft] = useState('new');
+  const [leadFollowDraft, setLeadFollowDraft] = useState('');
+  const [leadNoteDraft, setLeadNoteDraft] = useState('');
+  const [leadPatchStatus, setLeadPatchStatus] = useState('');
 
   useEffect(() => {
     try {
@@ -106,6 +116,79 @@ export default function ChangeConsolePage() {
     const rows = Array.isArray(j.leads) ? j.leads : [];
     setLeads(rows);
     return rows;
+  }
+
+  const luxLeadCrmEnabled = useMemo(() => {
+    return (
+      session.logged_in === true &&
+      String(session.level || '').toLowerCase() === 'tenant' &&
+      String(session.tenant_id || '').trim() === 'luxe-maurice'
+    );
+  }, [session.logged_in, session.level, session.tenant_id]);
+
+  const selectedLead = useMemo(
+    () => leads.find((x) => String(x.id || '') === String(selectedLeadId || '')) || null,
+    [leads, selectedLeadId],
+  );
+
+  useEffect(() => {
+    if (!luxLeadCrmEnabled || !selectedLead?.operator_workflow) return;
+    const ow = selectedLead.operator_workflow;
+    setLeadStageDraft(String(ow.stage || 'new'));
+    setLeadFollowDraft(ow.follow_up_status != null ? String(ow.follow_up_status) : '');
+    setLeadNoteDraft('');
+  }, [luxLeadCrmEnabled, selectedLeadId, selectedLead?.operator_workflow?.stage, selectedLead?.operator_workflow?.follow_up_status]);
+
+  function intentLabel(intentVal) {
+    const i = String(intentVal || '').trim();
+    if (i === 'lux_property_enquiry') return 'Property enquiry';
+    if (i === 'ai_concierge_lite') return 'Concierge (general)';
+    return i || '—';
+  }
+
+  function discoveryLabel(ds) {
+    if (String(ds || '') === 'feed') return 'Explore (feed preview)';
+    if (String(ds || '') === 'manual_curated') return 'Manual (curated)';
+    if (String(ds || '') === 'curated') return 'Featured (curated)';
+    return ds ? String(ds) : '—';
+  }
+
+  async function applyLuxLeadOperatorPatch() {
+    const id = String(selectedLeadId || '').trim();
+    if (!id || !luxLeadCrmEnabled) return;
+    setLeadPatchBusy(true);
+    setLeadPatchStatus('');
+    try {
+      const ow = selectedLead?.operator_workflow;
+      const curStage = ow ? String(ow.stage || 'new') : 'new';
+      const curFollow = ow?.follow_up_status != null ? String(ow.follow_up_status) : '';
+      const stageChanged = String(leadStageDraft || '') !== curStage;
+      const followChanged = String(leadFollowDraft || '') !== curFollow;
+      const noteTrim = String(leadNoteDraft || '').trim();
+      const body = { lead_id: id };
+      if (stageChanged) body.stage = leadStageDraft;
+      if (followChanged) body.follow_up_status = leadFollowDraft;
+      if (noteTrim) body.note = noteTrim;
+      if (!body.stage && body.follow_up_status === undefined && !body.note) {
+        setLeadPatchStatus('Nothing to save.');
+        return;
+      }
+      const r = await fetch('/api/cmp/router?action=concierge-lead-operator-patch', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+      setLeadPatchStatus('Saved.');
+      setLeadNoteDraft('');
+      await loadLeads();
+    } catch (e) {
+      setLeadPatchStatus(String(e?.message || e));
+    } finally {
+      setLeadPatchBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -602,52 +685,211 @@ export default function ChangeConsolePage() {
           </div>
 
           <div style={card}>
-            <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>LEADS</div>
+            <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+              LEADS
+              {luxLeadCrmEnabled ? (
+                <span style={{ marginLeft: 8, fontWeight: 700, color: '#67e8f9', letterSpacing: '0.04em' }}>
+                  · LuxeMaurice CRM (concierge)
+                </span>
+              ) : null}
+            </div>
             <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
               {leads.length ? (
-                leads.map((lead) => (
-                  <div
-                    key={String(lead.id || '')}
-                    style={{
-                      border: '1px solid rgba(148,163,184,0.18)',
-                      borderRadius: 12,
-                      background: 'rgba(2,6,23,0.45)',
-                      padding: 10,
-                    }}
-                  >
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#e2e8f0' }}>{String(lead.name || 'Lead')}</div>
-                    <div style={{ marginTop: 4, fontSize: 12, color: '#94a3b8' }}>{String(lead.contact || '—')}</div>
-                    {lead.property_interest && lead.property_interest.title ? (
-                      <div style={{ marginTop: 6, fontSize: 11, color: '#bef264', lineHeight: 1.35 }}>
-                        Property interest: {String(lead.property_interest.title)}
-                        {lead.property_interest.slug ? ` · ref ${String(lead.property_interest.slug)}` : ''}
-                        <span style={{ display: 'block', marginTop: 4, color: '#86efac', fontSize: 10 }}>
-                          Source:{' '}
-                          {String(lead.property_interest.discovery_source || '') === 'feed'
-                            ? 'Explore (feed preview)'
-                            : String(lead.property_interest.discovery_source || '') === 'manual_curated'
-                              ? 'Manual (curated)'
-                              : 'Featured (curated)'}
-                        </span>
-                        {lead.property_interest.price_range ? (
-                          <span style={{ display: 'block', marginTop: 2, color: '#a3e635', fontSize: 10 }}>
-                            Range: {String(lead.property_interest.price_range)}
+                leads.map((lead) => {
+                  const lid = String(lead.id || '');
+                  const activeLux = luxLeadCrmEnabled && lid && lid === selectedLeadId;
+                  const ow = lead.operator_workflow;
+                  return (
+                    <button
+                      key={lid}
+                      type="button"
+                      onClick={() => {
+                        if (luxLeadCrmEnabled) setSelectedLeadId(lid);
+                      }}
+                      style={{
+                        textAlign: 'left',
+                        cursor: luxLeadCrmEnabled ? 'pointer' : 'default',
+                        border:
+                          activeLux && luxLeadCrmEnabled
+                            ? '1px solid rgba(103,232,249,0.45)'
+                            : '1px solid rgba(148,163,184,0.18)',
+                        borderRadius: 12,
+                        background: activeLux && luxLeadCrmEnabled ? 'rgba(103,232,249,0.07)' : 'rgba(2,6,23,0.45)',
+                        padding: 10,
+                        color: 'inherit',
+                        font: 'inherit',
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#e2e8f0' }}>{String(lead.name || 'Lead')}</div>
+                      <div style={{ marginTop: 4, fontSize: 12, color: '#94a3b8' }}>{String(lead.contact || '—')}</div>
+                      <div style={{ marginTop: 6, fontSize: 10, color: '#64748b' }}>
+                        Intent: <span style={{ color: '#94a3b8' }}>{intentLabel(lead.intent)}</span>
+                        {lead.created_at ? (
+                          <span style={{ display: 'block', marginTop: 2 }}>
+                            Created: {new Date(lead.created_at).toLocaleString()}
+                          </span>
+                        ) : null}
+                        {lead.updated_at ? (
+                          <span style={{ display: 'block', marginTop: 2 }}>
+                            Updated: {new Date(lead.updated_at).toLocaleString()}
                           </span>
                         ) : null}
                       </div>
-                    ) : lead.listing ? (
-                      <div style={{ marginTop: 6, fontSize: 11, color: '#bef264' }}>Listing ref: {String(lead.listing)}</div>
-                    ) : null}
-                    {lead.intent === 'lux_property_enquiry' ? (
-                      <div style={{ marginTop: 2, fontSize: 10, color: '#64748b' }}>Intent: property enquiry</div>
-                    ) : null}
-                    <div style={{ marginTop: 6, fontSize: 12, color: '#cbd5e1', lineHeight: 1.4 }}>{String(lead.message || '—')}</div>
-                  </div>
-                ))
+                      {luxLeadCrmEnabled && ow ? (
+                        <div style={{ marginTop: 8, fontSize: 11, color: '#a5f3fc', fontWeight: 750 }}>
+                          Stage: {String(ow.stage_label || luxLeadCrmStageLabel(ow.stage))}
+                          {ow.follow_up_status ? (
+                            <span style={{ display: 'block', marginTop: 4, fontWeight: 600, color: '#94a3b8' }}>
+                              Follow-up: {String(ow.follow_up_status)}
+                            </span>
+                          ) : null}
+                          {ow.latest_note?.text ? (
+                            <span style={{ display: 'block', marginTop: 4, fontWeight: 600, color: '#cbd5e1' }}>
+                              Latest note: {String(ow.latest_note.text).slice(0, 160)}
+                              {String(ow.latest_note.text).length > 160 ? '…' : ''}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {lead.property_interest && lead.property_interest.title ? (
+                        <div style={{ marginTop: 6, fontSize: 11, color: '#bef264', lineHeight: 1.35 }}>
+                          Property: {String(lead.property_interest.title)}
+                          {lead.property_interest.slug ? ` · ref ${String(lead.property_interest.slug)}` : ''}
+                          <span style={{ display: 'block', marginTop: 4, color: '#86efac', fontSize: 10 }}>
+                            Discovery: {discoveryLabel(lead.property_interest.discovery_source)}
+                          </span>
+                          {lead.property_interest.price_range ? (
+                            <span style={{ display: 'block', marginTop: 2, color: '#a3e635', fontSize: 10 }}>
+                              Range: {String(lead.property_interest.price_range)}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : lead.listing ? (
+                        <div style={{ marginTop: 6, fontSize: 11, color: '#bef264' }}>Listing ref: {String(lead.listing)}</div>
+                      ) : null}
+                      <div style={{ marginTop: 8, fontSize: 11, color: '#64748b', lineHeight: 1.35 }}>
+                        Client message
+                      </div>
+                      <div style={{ marginTop: 4, fontSize: 12, color: '#cbd5e1', lineHeight: 1.4 }}>{String(lead.message || '—')}</div>
+                    </button>
+                  );
+                })
               ) : (
                 <div style={{ fontSize: 12, color: '#94a3b8' }}>No leads yet.</div>
               )}
             </div>
+
+            {luxLeadCrmEnabled && selectedLeadId && selectedLead ? (
+              <div
+                style={{
+                  marginTop: 14,
+                  paddingTop: 14,
+                  borderTop: '1px solid rgba(148,163,184,0.18)',
+                  display: 'grid',
+                  gap: 10,
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#67e8f9', letterSpacing: '0.06em' }}>
+                  OPERATOR ACTIONS — internal only (not visible on concierge)
+                </div>
+                <label style={{ fontSize: 11, color: '#94a3b8', display: 'grid', gap: 6 }}>
+                  Stage
+                  <select
+                    value={leadStageDraft}
+                    onChange={(e) => setLeadStageDraft(e.target.value)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(2,6,23,0.65)',
+                      color: '#e2e8f0',
+                      fontSize: 13,
+                    }}
+                  >
+                    {LUX_LEAD_CRM_STAGES.map((s) => (
+                      <option key={s} value={s}>
+                        {luxLeadCrmStageLabel(s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ fontSize: 11, color: '#94a3b8', display: 'grid', gap: 6 }}>
+                  Follow-up status
+                  <input
+                    value={leadFollowDraft}
+                    onChange={(e) => setLeadFollowDraft(e.target.value)}
+                    placeholder="e.g. Awaiting reply — Mon"
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(2,6,23,0.65)',
+                      color: '#e2e8f0',
+                      fontSize: 13,
+                    }}
+                  />
+                </label>
+                <label style={{ fontSize: 11, color: '#94a3b8', display: 'grid', gap: 6 }}>
+                  Add internal note (appends)
+                  <textarea
+                    value={leadNoteDraft}
+                    onChange={(e) => setLeadNoteDraft(e.target.value)}
+                    rows={3}
+                    placeholder="Visible only to operators on /change — not sent to the client."
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(2,6,23,0.65)',
+                      color: '#e2e8f0',
+                      fontSize: 13,
+                      resize: 'vertical',
+                    }}
+                  />
+                </label>
+                {selectedLead.operator_workflow?.internal_notes?.length ? (
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                    <div style={{ fontWeight: 800, color: '#cbd5e1', marginBottom: 6 }}>Recent notes</div>
+                    <div style={{ display: 'grid', gap: 8, maxHeight: 180, overflowY: 'auto' }}>
+                      {[...(selectedLead.operator_workflow.internal_notes || [])].reverse().map((n, idx) => (
+                        <div
+                          key={`${n.at}-${idx}`}
+                          style={{
+                            padding: 8,
+                            borderRadius: 10,
+                            border: '1px solid rgba(148,163,184,0.15)',
+                            background: 'rgba(15,23,42,0.45)',
+                          }}
+                        >
+                          <div style={{ fontSize: 10, color: '#64748b' }}>{n.at ? new Date(n.at).toLocaleString() : ''}</div>
+                          <div style={{ marginTop: 4, color: '#e2e8f0', whiteSpace: 'pre-wrap' }}>{String(n.text || '')}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={leadPatchBusy}
+                  onClick={() => applyLuxLeadOperatorPatch()}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(103,232,249,0.35)',
+                    background: 'rgba(103,232,249,0.12)',
+                    color: '#ecfeff',
+                    fontWeight: 850,
+                    fontSize: 13,
+                    cursor: leadPatchBusy ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {leadPatchBusy ? 'Saving…' : 'Save updates'}
+                </button>
+                {leadPatchStatus ? (
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{leadPatchStatus}</div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
