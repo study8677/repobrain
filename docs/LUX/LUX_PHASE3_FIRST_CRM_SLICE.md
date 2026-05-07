@@ -21,24 +21,32 @@
 - `/concierge` does **not** fetch operator workflow or internal notes.
 - `concierge-lead-create` response does **not** include `qualification_json`.
 
-## Production verification (recorded)
+## Production verification (recorded 2026-05-07)
 
-**Ticket:** Programme umbrella stays **open**; append this block to the CMP ticket description **optionally** (operator paste).
+**Ticket `cmo8mjijk0000jl04l1jz0v6d`:** **open** — Phase 3 first CRM slice shipped; **not** closed on this record. Optional: paste this subsection into the ticket description (operator).
 
-**Merged to main:** (filled after deploy — see PR).  
-**GitHub Production deployment:** (id + SHA — correlate with Vercel Production Ready).
+**Merged to main:** PR https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/143 — squash commit `74b8b6a42197b5df277c26f8f252997892d4dcc8`.
 
-### Automated / API checks
+**GitHub Production deployment:** id `4602574610` → SHA `74b8b6a42197b5df277c26f8f252997892d4dcc8` (match Vercel Production **Ready** for that commit).
 
-- New Lux lead via `concierge-lead-create` → list shows `operator_workflow.stage === 'new'` when queried with appropriate host context.
-- `concierge-lead-operator-patch` without valid tenant session → **403** (Dormant Gate / scope).
-- Public concierge HTML → must **not** contain `lux_operator_workflow`, `internal_notes`, or `concierge-lead-operator-patch` payloads.
+### Automated / API checks (production)
 
-### Manual (operator browser)
+| Check | Result |
+|-------|--------|
+| `POST …/concierge-lead-operator-patch` **without** tenant session cookie | **403** — dormant gate / auth |
+| `GET https://lux.corpflowai.com/concierge` HTML contains `lux_operator_workflow` / `internal_notes` / `concierge-lead-operator-patch` | **No** (all false) |
+| `POST concierge-lead-create` (general enquiry) then `GET concierge-leads-list` on `lux.corpflowai.com` | New lead `cmouqn8ao0000ju04qn75vpzc` has `operator_workflow.stage` = **`new`**, `stage_label` = **New** |
 
-1. Log in at `https://lux.corpflowai.com/change` as Lux tenant operator.  
-2. Open a lead → set stage **Qualified**, add internal note, set follow-up status → **Save** → **Refresh** → confirm persistence.  
-3. Submit a new lead from `/concierge` → confirm defaults to **New** in `/change`.  
+### Manual (operator browser) — stage / note / follow-up persistence
+
+**Not executed in CI** (requires Lux tenant operator cookie). Operators should:
+
+1. Log in at `https://lux.corpflowai.com/change`.  
+2. Select a lead → **Qualified**, internal note, follow-up text → **Save** → **Refresh** → confirm all three persist in UI and in `concierge-leads-list` JSON (`stage`, `latest_note`, `follow_up_status`).
+
+### Other tenants
+
+- CRM PATCH handler returns **403** unless scope is tenant **`luxe-maurice`** with Lux host context; non-Lux `/change` UX unchanged aside from standard lead list fields.
 
 ### Other tenants
 
