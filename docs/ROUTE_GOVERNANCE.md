@@ -5,7 +5,7 @@ This document defines canonical route ownership and production expectations with
 ## Canonical routes
 
 - `/change` is the canonical operator UI route in production.
-- `/change` is served by Vercel rewrite to `public/change.html`.
+- `/change` is implemented by the Next.js page **`pages/change.js`** on all hosts (Core and tenant). No Vercel rewrite is required.
 
 ## Experimental routes
 
@@ -14,8 +14,7 @@ This document defines canonical route ownership and production expectations with
 
 ## Legacy/non-canonical files
 
-- `pages/change.js` is non-canonical for production routing.
-- Keep it as legacy/reference only unless route ownership is formally changed.
+- **`public/change.html`** is a legacy static variant of the Change Console. Prefer **`pages/change.js`** for routing and UX evolution so `/change` stays a single implementation.
 
 ## Tenant-local service routes
 

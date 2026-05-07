@@ -6,7 +6,6 @@ import {
   luxLeadCrmStageLabel,
 } from '../lib/cmp/_lib/lux-lead-operator-workflow.js';
 
-// Non-canonical route – /change is served via public/change.html
 function normalizeLocale(raw) {
   const s = String(raw || '').trim().toLowerCase().replace(/_/g, '-');
   if (!s) return 'en';
@@ -49,6 +48,55 @@ function pillStyle(active) {
   };
 }
 
+/** Mirrors `public/change.html` workflow labels for Intake detection. */
+function workflowLabel(state) {
+  const s = String(state || '').trim().toLowerCase();
+  const map = {
+    intake: 'Intake',
+    refining: 'Refining',
+    ready_for_estimate: 'Ready for estimate',
+    estimated: 'Estimated',
+    approved_for_build: 'Approved for build',
+    building: 'Building',
+    preview_ready: 'Preview ready',
+    in_review: 'In review',
+    changes_requested: 'Changes requested',
+    client_approved: 'Client approved',
+    publishing: 'Publishing',
+    published: 'Published',
+    closed: 'Closed',
+    not_delivered: 'NOT DELIVERED',
+  };
+  return map[s] || (s ? s : '—');
+}
+
+function computeIsIntakeUx(ticketLike) {
+  const m = ticketLike && typeof ticketLike === 'object' ? ticketLike : {};
+  const tp = m.ticket_progress && typeof m.ticket_progress === 'object' ? m.ticket_progress : null;
+  const cv = tp && tp.client_view && typeof tp.client_view === 'object' ? tp.client_view : {};
+  const wfRaw = cv.workflow_state != null ? String(cv.workflow_state).trim() : '';
+  const wf = wfRaw.toLowerCase();
+  const st = String((tp && tp.status) || m.status || '').trim().toLowerCase();
+  if (st === 'closed') return false;
+  const label = workflowLabel(wfRaw);
+  if (label === 'Intake') return true;
+  if (!wf && (st === 'open' || st === 'created' || !st)) return true;
+  return false;
+}
+
+function formatExistingRequestText(ticketLike) {
+  const m = ticketLike && typeof ticketLike === 'object' ? ticketLike : {};
+  const d = m.description != null ? String(m.description).trim() : '';
+  if (d) return d;
+  const bs = m.brief_structured && typeof m.brief_structured === 'object' ? m.brief_structured : null;
+  if (bs && typeof bs.summary === 'string' && bs.summary.trim()) return String(bs.summary).trim();
+  const tp = m.ticket_progress && typeof m.ticket_progress === 'object' ? m.ticket_progress : null;
+  const cv = tp && tp.client_view && typeof tp.client_view === 'object' ? tp.client_view : {};
+  const pm = typeof cv.progress_message === 'string' ? cv.progress_message.trim() : '';
+  if (pm) return pm;
+  return 'No description has been saved on this request yet. Add your wording above.';
+}
+
 export default function ChangeConsolePage() {
   const [locale, setLocale] = useState('en');
   const [uiContext, setUiContext] = useState(null);
@@ -78,6 +126,8 @@ export default function ChangeConsolePage() {
   const [crmFilterProperty, setCrmFilterProperty] = useState('');
   const [crmFilterHealth, setCrmFilterHealth] = useState('all');
   const [leadPatchStatus, setLeadPatchStatus] = useState('');
+  const [requestDraft, setRequestDraft] = useState('');
+  const [intakeNotice, setIntakeNotice] = useState('');
 
   useEffect(() => {
     try {
@@ -297,14 +347,21 @@ export default function ChangeConsolePage() {
       try {
         const ctx = await refreshUiContext();
         if (cancelled) return;
-        const isTenant =
-          ctx?.session?.logged_in === true &&
+        const loggedIn = ctx?.session?.logged_in === true;
+        const isLuxTenant =
+          loggedIn &&
           String(ctx?.session?.level || '').toLowerCase() === 'tenant' &&
-          String(ctx?.tenant_id || '').trim();
-        if (!isTenant) return;
+          String(ctx?.session?.tenant_id || '').trim() === 'luxe-maurice';
+        const isTenantScoped =
+          loggedIn &&
+          String(ctx?.session?.level || '').toLowerCase() === 'tenant' &&
+          String(ctx?.session?.tenant_id || '').trim().length > 0;
+        const shouldLoadQueue = loggedIn && (ctx?.surface === 'core' || isTenantScoped);
+        if (!shouldLoadQueue) return;
 
         const rows = await loadQueue();
-        await loadLeads();
+        if (cancelled) return;
+        if (isLuxTenant) await loadLeads();
         if (cancelled) return;
         const first = rows[0]?.ticket_id ? String(rows[0].ticket_id) : '';
         if (first) {
@@ -321,8 +378,20 @@ export default function ChangeConsolePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!selectedTicketId) {
+      setRequestDraft('');
+      return;
+    }
+    if (!ticket) return;
+    if (String(ticket.ticket_id || '').trim() !== selectedTicketId) return;
+    const d = ticket.description != null ? String(ticket.description) : '';
+    setRequestDraft(d);
+  }, [selectedTicketId, ticket]);
+
   async function onSelectTicket(id) {
     setError('');
+    setIntakeNotice('');
     setClientDecisionLink('');
     setClientDecisionExpiresAt('');
     setClientDecisionStatus('');
@@ -333,6 +402,39 @@ export default function ChangeConsolePage() {
       await loadTicketById(tid);
     } catch (e) {
       setError(String(e?.message || e));
+    }
+  }
+
+  async function saveIntakeContinue() {
+    const tid = String(selectedTicketId || '').trim();
+    if (!tid) {
+      setError('Select a ticket first.');
+      return;
+    }
+    const msg = String(requestDraft || '').trim();
+    if (!msg) {
+      setError('Add a short description of your request first.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setIntakeNotice('');
+    try {
+      const r = await fetch('/api/cmp/router?action=change-chat', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_id: tid, message: msg, locale }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || j.detail || j.hint || `http_${r.status}`);
+      await loadTicketById(tid);
+      setIntakeNotice('Saved. Your wording is stored on this ticket for the team to review.');
+      window.setTimeout(() => setIntakeNotice(''), 5000);
+    } catch (e) {
+      setError(String(e?.message || e));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -392,6 +494,11 @@ export default function ChangeConsolePage() {
   const showLuxPhase1ReviewComplete =
     String(selectedTicketId || '').trim() === LUX_PHASE1_REVIEW_TICKET_ID && approvedBuild && luxPhase1ReviewDone;
 
+  const showIntakeSkin = Boolean(selectedTicketId && ticket && computeIsIntakeUx(ticket));
+  const workflowStageLabel = ticket
+    ? workflowLabel(String(ticket?.ticket_progress?.client_view?.workflow_state || ''))
+    : '—';
+
   const page = {
     fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif',
     padding: 24,
@@ -428,9 +535,13 @@ export default function ChangeConsolePage() {
                 setBusy(true);
                 setError('');
                 try {
-                  await refreshUiContext();
+                  const ctx = await refreshUiContext();
                   const rows = await loadQueue();
-                  await loadLeads();
+                  const isLuxTenant =
+                    ctx?.session?.logged_in === true &&
+                    String(ctx?.session?.level || '').toLowerCase() === 'tenant' &&
+                    String(ctx?.session?.tenant_id || '').trim() === 'luxe-maurice';
+                  if (isLuxTenant) await loadLeads();
                   const first = rows[0]?.ticket_id ? String(rows[0].ticket_id) : '';
                   if (!selectedTicketId && first) await onSelectTicket(first);
                 } catch (e) {
@@ -527,17 +638,25 @@ export default function ChangeConsolePage() {
                 <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
                   STAGE
                 </div>
-                <div style={{ marginTop: 6, fontSize: 13, color: '#e2e8f0' }}>
-                  {selectedTicketId ? (
-                    <span>
-                      Ticket{' '}
-                      <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
-                        {selectedTicketId}
-                      </span>
-                    </span>
-                  ) : (
-                    'Select a ticket'
-                  )}
+                <div style={{ marginTop: 6, fontSize: 13, color: '#e2e8f0', lineHeight: 1.45 }}>
+                  <div style={{ fontWeight: 800 }}>
+                    Stage:{' '}
+                    {selectedTicketId
+                      ? workflowStageLabel !== '—'
+                        ? workflowStageLabel
+                        : 'Intake'
+                      : '—'}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      fontSize: 12,
+                      color: '#94a3b8',
+                    }}
+                  >
+                    Ticket: {selectedTicketId || '—'}
+                  </div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -730,9 +849,14 @@ export default function ChangeConsolePage() {
               ) : null}
 
               <div style={{ marginTop: 14, color: '#cbd5e1', fontSize: 13, lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 900, color: '#e2e8f0' }}>{stage}</div>
+                <div style={{ fontWeight: 900, color: '#e2e8f0' }}>
+                  {selectedTicketId && ticket ? workflowStageLabel : stage}
+                </div>
                 <div style={{ marginTop: 6, color: '#94a3b8' }}>
-                  Next: {String(ticket?.ticket_progress?.client_view?.workflow_next_action || '—')}
+                  Next:{' '}
+                  {showIntakeSkin
+                    ? 'Next step: Add or refine your request, then continue.'
+                    : String(ticket?.ticket_progress?.client_view?.workflow_next_action || '—')}
                 </div>
                 {ticket?.lux_programme_summary?.phase_2_status ? (
                   <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8', lineHeight: 1.45 }}>
@@ -747,42 +871,148 @@ export default function ChangeConsolePage() {
             </div>
           </div>
 
-          <div style={card}>
-            <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
-              TICKET SNAPSHOT
-            </div>
-            <div style={{ marginTop: 10 }}>
-              <pre
+          {session.logged_in ? (
+            <div style={card}>
+              {session.logged_in && (!selectedTicketId || showIntakeSkin) ? (
+                <div
+                  style={{
+                    marginBottom: 14,
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(56,189,248,0.22)',
+                    background: 'rgba(14,165,233,0.06)',
+                    fontSize: 13,
+                    color: '#e2e8f0',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  This is where you describe your request. The clearer this is, the faster we can help you.
+                </div>
+              ) : null}
+              <div style={{ fontSize: showIntakeSkin ? 11 : 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 8 }}>
+                {showIntakeSkin ? 'Your request' : 'Describe the change'}
+              </div>
+              <textarea
+                value={requestDraft}
+                onChange={(e) => setRequestDraft(e.target.value)}
+                placeholder="Describe what you want changed in plain language…"
+                rows={showIntakeSkin ? 8 : 5}
                 style={{
-                  margin: 0,
-                  padding: 12,
+                  width: '100%',
+                  minHeight: showIntakeSkin ? 220 : 140,
+                  padding: '12px 14px',
                   borderRadius: 14,
-                  border: '1px solid rgba(148,163,184,0.18)',
-                  background: 'rgba(2,6,23,0.45)',
-                  overflowX: 'auto',
-                  fontSize: 12,
-                  color: '#e2e8f0',
+                  border: '1px solid rgba(51,65,85,0.65)',
+                  background: 'rgba(2,6,23,0.72)',
+                  color: '#f1f5f9',
+                  fontSize: 13,
+                  lineHeight: 1.45,
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
                 }}
-              >
-                {JSON.stringify(
-                  ticket
-                    ? {
-                        ticket_id: selectedTicketId,
-                        status: ticket.status,
-                        stage: ticket.stage,
-                        workflow_state: ticket?.ticket_progress?.client_view?.workflow_state,
-                        client_decisions_summary: ticket.client_decisions_summary || null,
-                        lux_programme_summary: ticket.lux_programme_summary || null,
-                        operator_signal: ticket.operator_signal || null,
-                      }
-                    : { hint: session.logged_in ? 'Select a ticket to load.' : 'Log in to load tickets.' },
-                  null,
-                  2,
-                )}
-              </pre>
+              />
+              {showIntakeSkin ? (
+                <>
+                  <div style={{ marginTop: 14, fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>
+                    Existing request
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: '12px 14px',
+                      borderRadius: 14,
+                      border: '1px solid rgba(51,65,85,0.65)',
+                      background: 'rgba(2,6,23,0.55)',
+                      fontSize: 13,
+                      color: '#e2e8f0',
+                      lineHeight: 1.5,
+                      whiteSpace: 'pre-wrap',
+                      minHeight: '4.5rem',
+                    }}
+                  >
+                    {ticket ? formatExistingRequestText(ticket) : '—'}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 14,
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(52,211,153,0.22)',
+                      background: 'rgba(6,78,59,0.15)',
+                      fontSize: 13,
+                      color: '#e2e8f0',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    You are ready to continue when your request clearly explains what you want changed and what
+                    outcome you expect.
+                  </div>
+                  <div style={{ marginTop: 14 }}>
+                    <button
+                      type="button"
+                      onClick={() => void saveIntakeContinue()}
+                      disabled={busy}
+                      style={{
+                        padding: '12px 18px',
+                        borderRadius: 12,
+                        border: 'none',
+                        background: busy ? '#64748b' : '#38bdf8',
+                        color: '#020617',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        cursor: busy ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      Save and continue
+                    </button>
+                  </div>
+                </>
+              ) : null}
+              {intakeNotice ? (
+                <div style={{ marginTop: 12, fontSize: 12, color: '#86efac' }}>{intakeNotice}</div>
+              ) : null}
             </div>
-          </div>
+          ) : null}
 
+          {!showIntakeSkin ? (
+            <div style={card}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                TICKET SNAPSHOT
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: 12,
+                    borderRadius: 14,
+                    border: '1px solid rgba(148,163,184,0.18)',
+                    background: 'rgba(2,6,23,0.45)',
+                    overflowX: 'auto',
+                    fontSize: 12,
+                    color: '#e2e8f0',
+                  }}
+                >
+                  {JSON.stringify(
+                    ticket
+                      ? {
+                          ticket_id: selectedTicketId,
+                          status: ticket.status,
+                          stage: ticket.stage,
+                          workflow_state: ticket?.ticket_progress?.client_view?.workflow_state,
+                          client_decisions_summary: ticket.client_decisions_summary || null,
+                          lux_programme_summary: ticket.lux_programme_summary || null,
+                          operator_signal: ticket.operator_signal || null,
+                        }
+                      : { hint: session.logged_in ? 'Select a ticket to load.' : 'Log in to load tickets.' },
+                    null,
+                    2,
+                  )}
+                </pre>
+              </div>
+            </div>
+          ) : null}
+
+          {!showIntakeSkin ? (
           <div style={card}>
             <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
               LEADS
@@ -1318,6 +1548,7 @@ export default function ChangeConsolePage() {
               </div>
             ) : null}
           </div>
+          ) : null}
         </div>
       </div>
 
