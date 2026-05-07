@@ -1436,6 +1436,7 @@ export default function ChangeConsolePage() {
                           status: ticket.status,
                           stage: ticket.stage,
                           workflow_state: ticket?.ticket_progress?.client_view?.workflow_state,
+                              description_preview: ticket.description ? String(ticket.description).slice(0, 500) : null,
                           client_decisions_summary: ticket.client_decisions_summary || null,
                           lux_programme_summary: ticket.lux_programme_summary || null,
                           operator_signal: ticket.operator_signal || null,

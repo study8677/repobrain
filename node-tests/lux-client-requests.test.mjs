@@ -51,6 +51,8 @@ test('buildLuxClientRequestConsoleJson sets awaiting_operator_review and parent 
   });
   assert.equal(cj.parent_programme_ticket, LUX_PARENT_PROGRAMME_TICKET_ID);
   assert.equal(cj.client_view.workflow_state, 'awaiting_operator_review');
+  assert.equal(cj.lux_request_meta.title, 't');
+  assert.equal(cj.lux_request_meta.description_preview, 'd');
 });
 
 test('safeLuxRelatedRequestShape is minimal and safe', () => {
@@ -58,6 +60,7 @@ test('safeLuxRelatedRequestShape is minimal and safe', () => {
     id: 'tid1',
     createdAt: new Date('2026-05-07T00:00:00.000Z'),
     title: 'Update homepage wording',
+    description: 'Client requested copy adjustment for production readiness.',
     status: 'Open',
     stage: 'Intake',
     consoleJson: {
@@ -72,6 +75,7 @@ test('safeLuxRelatedRequestShape is minimal and safe', () => {
   assert.equal(s.request_type, 'website_refinement');
   assert.equal(s.workflow_state, 'awaiting_operator_review');
   assert.equal(s.property_reference, 'lm-x');
+  assert.ok(String(s.description_preview || '').includes('copy adjustment'));
 });
 
 test('Dormant gate allowlist includes Lux request actions (smoke)', async () => {
