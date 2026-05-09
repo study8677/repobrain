@@ -217,3 +217,25 @@ Delivery Reality Audit:
 - Client-facing flow usable: YES (operator-only flow on /change)
 - Final verdict: COMPLETE
 ```
+
+## Delivery Reality Audit (Phase 4C.2)
+
+```text
+Delivery Reality Audit:
+- Local fix exists: YES
+- Merged to main: YES (PR #158, merge commit 7b8247325afc40e6cfb6cbc2c787f4e6e3fe91d0)
+- Production deployment ID: GitHub deployment 4630215289 (Vercel target_url https://corpflow-ai-command-center-d667rj7je-corpflowai.vercel.app)
+- Commit deployed: 7b8247325afc40e6cfb6cbc2c787f4e6e3fe91d0
+- Live URLs tested:
+  - https://lux.corpflowai.com (public)
+  - https://lux.corpflowai.com/concierge (public)
+  - https://lux.corpflowai.com/property/lm-phase2d-manual-demo (public)
+  - https://lux.corpflowai.com/change (authenticated)
+- Expected vs actual result:
+  - Operator login works on Lux host.
+  - Phase 4C.2 smoke created a new Lux request ticket, uploaded image+video, reviewed/rejected, then linked the reviewed image to lm-phase2d-manual-demo (hero) and confirmed persistence, then unlinked and confirmed removal.
+  - Attempting to link non-reviewed media is rejected server-side; link controls only appear for reviewed attachments in /change.
+  - Public surfaces contained no attachment metadata, review metadata, or property_links content.
+- Client-facing flow usable: YES (operator-only flow on /change)
+- Final verdict: COMPLETE
+```
