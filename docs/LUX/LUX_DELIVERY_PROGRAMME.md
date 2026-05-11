@@ -133,10 +133,16 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 
 ### Phase 4D.1 — Multi-image property gallery (governed public)
 
-- **Purpose**: extend Phase 4C.3’s single-hero publish path to **multiple published gallery images** per property, with explicit operator controls (`gallery_order`, optional `is_gallery_cover`, `public_caption`, `public_alt_text`) on **`intended_slot === gallery`** links only. **Reference / card / detail** slots remain non-public in this phase.
+- **Purpose**: extend Phase 4C.3’s single-hero publish path to **multiple published gallery images** per property, with explicit operator controls (`gallery_order`, optional `is_gallery_cover`, `public_caption`, `public_alt_text`) on **`intended_slot === gallery`** links only. **Reference / detail** slots remain off public composition in this phase; **`card`** is public in **Phase 4D.2** (homepage cards).
 - **Rule**: same publish gate as 4C.3 (**reviewed + linked + image + explicit publish**); no video on public routes; no auto-publish; Lux host + `luxe-maurice` context on **`GET /api/lux/property-media`** and **`GET /api/lux/property-media-list`**. List JSON exposes **only** safe display fields (no operator audit, no raw storage paths, no `lux_request_meta`).
 - **Persistence**: additional fields on the same `property_links[]` rows for gallery slot (`gallery_order`, `is_gallery_cover`); at most one **published** gallery cover per property **per ticket** when operators set cover (other published gallery covers on that ticket are cleared).
 - **Surface**: `/change` gallery publish panel; **`/property/[slug]`** renders hero + optional **Gallery** grid. See **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**.
+
+### Phase 4D.2 — Homepage / property card image (`intended_slot === card`)
+
+- **Purpose**: use **explicitly published** **`card`**-slot **images** on LuxeMaurice **homepage** listing cards (staged + resolved feed ids), with **unchanged** fallback to staged `images.hero` or placeholders when no published card exists.
+- **Rule**: same publish gate as 4C.3 (**reviewed + linked + image + explicit publish**); **`GET /api/lux/property-media?...&slot=card`**; no video; no auto-publish; composition only in **`LuxeMauriceTenantPresentation`** + SSR in **`pages/index.js`** (`luxe-maurice` only).
+- **Surface**: `/change` uses existing slot allowlist + publish controls for **`card`**; no media-library UX.
 
 ### Phase 5 — Production reality gate and client handoff
 
@@ -171,4 +177,5 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - Phase 3 CRM first slice + 3A.5 (LuxeMaurice): `docs/LUX/LUX_PHASE3_FIRST_CRM_SLICE.md`
 - Phase 4C / 4C.1 / 4C.2 / 4C.3 attachments + publish gate: `docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`
 - Phase 4D.1 gallery + media governance: `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
+- Phase 4D.2 homepage card slot: `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
 

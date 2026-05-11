@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import Head from 'next/head';
 
 import { LUXE_MAURICE_BRAND_TOKENS as T } from '../lib/client/luxe-maurice-brand-theme.js';
-import { safeLuxSameOriginPublicImagePath } from '../lib/client/luxe-maurice-property-resolve.js';
+import { resolveLuxPropertyRef, safeLuxSameOriginPublicImagePath } from '../lib/client/luxe-maurice-property-resolve.js';
 
 function safeStr(v) {
   return v != null ? String(v).trim() : '';
@@ -44,6 +44,10 @@ export default function LuxeMauriceTenantPresentation({ site }) {
   const items = Array.isArray(services.items) ? services.items : [];
   const staged = Array.isArray(s.staged_properties) ? s.staged_properties : [];
   const feedList = Array.isArray(s.feed_properties) ? s.feed_properties : [];
+  const cardMediaObj =
+    s.lux_published_card_media && typeof s.lux_published_card_media === 'object' && !Array.isArray(s.lux_published_card_media)
+      ? s.lux_published_card_media
+      : {};
   const [listFilter, setListFilter] = useState('all');
   const visibleStaged = useMemo(() => {
     if (!staged.length) return [];
@@ -333,7 +337,13 @@ export default function LuxeMauriceTenantPresentation({ site }) {
                 visibleStaged.map((p) => {
                   const href = `/concierge?intent=property&property=${encodeURIComponent(p.slug)}`;
                   const detailHref = `/property/${encodeURIComponent(p.slug)}`;
-                  const heroPath = safeLuxSameOriginPublicImagePath(p?.images?.hero);
+                  const refKey = safeStr(p.slug).toLowerCase();
+                  const pubCard = cardMediaObj[refKey];
+                  const cardSrc = pubCard && typeof pubCard.src === 'string' ? pubCard.src.trim() : '';
+                  const staticHero = safeLuxSameOriginPublicImagePath(p?.images?.hero);
+                  const heroPath = cardSrc || staticHero;
+                  const cardAlt = pubCard && typeof pubCard.alt === 'string' ? pubCard.alt.trim() : '';
+                  const imgAlt = cardAlt || safeStr(p.title) || 'Property';
                   return (
                     <article
                       key={p.slug}
@@ -355,7 +365,7 @@ export default function LuxeMauriceTenantPresentation({ site }) {
                         {heroPath ? (
                           <img
                             src={heroPath}
-                            alt=""
+                            alt={imgAlt}
                             style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         ) : null}
@@ -502,6 +512,12 @@ export default function LuxeMauriceTenantPresentation({ site }) {
                 if (!id) return null;
                 const href = `/concierge?intent=property&property=${encodeURIComponent(id)}`;
                 const detailHref = `/property/${encodeURIComponent(id)}`;
+                const resolvedFeed = resolveLuxPropertyRef(id);
+                const feedRefKey = resolvedFeed ? String(resolvedFeed.ref).toLowerCase() : '';
+                const pubCardFeed = feedRefKey ? cardMediaObj[feedRefKey] : null;
+                const cardFeedSrc = pubCardFeed && typeof pubCardFeed.src === 'string' ? pubCardFeed.src.trim() : '';
+                const cardFeedAlt =
+                  (pubCardFeed && typeof pubCardFeed.alt === 'string' ? pubCardFeed.alt.trim() : '') || safeStr(p.title) || 'Property';
                 return (
                   <article
                     key={id}
@@ -516,10 +532,19 @@ export default function LuxeMauriceTenantPresentation({ site }) {
                     <div
                       style={{
                         height: 120,
-                        background: `linear-gradient(135deg, ${T.sand}, ${T.placeholder})`,
+                        background: cardFeedSrc ? T.white : `linear-gradient(135deg, ${T.sand}, ${T.placeholder})`,
                         borderBottom: `1px solid ${T.border}`,
                       }}
-                    />
+                    >
+                      {cardFeedSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={cardFeedSrc}
+                          alt={cardFeedAlt}
+                          style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : null}
+                    </div>
                     <div style={{ padding: '16px 16px 20px' }}>
                       <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.inkMuted }}>
                         Feed preview · {safeStr(p.location)}

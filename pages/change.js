@@ -2144,8 +2144,14 @@ export default function ChangeConsolePage() {
                                     }}
                                   >
                                     <div style={{ fontSize: 10, fontWeight: 800, color: '#a5b4fc', letterSpacing: '0.04em' }}>
-                                      Phase 4C.3 / 4D.1 · public slot (Lux host only)
+                                      Phase 4C.3 / 4D.1 / 4D.2 · public slot (Lux host only)
                                     </div>
+                                    {String(slot).toLowerCase() === 'card' ? (
+                                      <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.45 }}>
+                                        Card = homepage / property listing image when published (falls back to staged hero if
+                                        absent).
+                                      </div>
+                                    ) : null}
                                     {String(slot).toLowerCase() === 'gallery' ? (
                                       <>
                                         <label style={{ fontSize: 10, color: '#94a3b8', display: 'grid', gap: 4 }}>

@@ -2,7 +2,7 @@
 
 **Authoritative programme ticket:** `cmo8mjijk0000jl04l1jz0v6d` (not closed by media phases).
 
-This document describes **how media becomes public** on `lux.corpflowai.com` after Phase 4C.x / **4D.1**, and the **hard boundaries** before CDN, transforms, DAM, automation, or social surfaces exist.
+This document describes **how media becomes public** on `lux.corpflowai.com` after Phase 4C.x / **4D.1** / **4D.2**, and the **hard boundaries** before CDN, transforms, DAM, automation, or social surfaces exist.
 
 ## Lifecycles (strict order)
 
@@ -15,18 +15,20 @@ This document describes **how media becomes public** on `lux.corpflowai.com` aft
 
 ## Slot semantics
 
-| Slot        | Public in Phase 4D.1 | Notes |
-|------------|----------------------|--------|
+| Slot        | Public (current) | Notes |
+|------------|------------------|--------|
 | `hero`     | Yes (single preferred) | Bounded scan picks most recent published hero for `/property/[slug]`. |
 | `gallery`  | Yes (multi-image grid) | `gallery_order` (optional 0–9999) and `is_gallery_cover` (max one published cover per property **on the same ticket** when set). |
-| `card` / `detail` | No | Metadata only for future work. |
-| `reference`| No | Operator reference only; never listed on public property page or `property-media-list`. |
+| `card`     | Yes (homepage / listing cards) | Phase **4D.2**: one published card image per resolved property ref (same gate as hero); SSR composes `lux.corpflowai.com/` property cards; falls back to staged `images.hero` or placeholder when absent. **No video.** |
+| `detail`   | No | Reserved; not composed on public homepage or property detail in this phase. |
+| `reference`| No | Operator reference only; not composed on public cards, property page list, or `property-media-list`. |
 
 ## Public surfaces (current)
 
 - **`GET /api/lux/property-media?property=&attachment=&slot=`** — Lux host + `luxe-maurice` context; **published + reviewed + image** + matching link; **404** otherwise; conservative cache; **no** raw storage path in response.
-- **`GET /api/lux/property-media-list?property=`** — Same host gate; JSON list of **safe** entries (`slot`, `src`, `public_caption`, `public_alt_text`, `gallery_order`, `is_gallery_cover`) for **hero + gallery** only. **No** operator audit fields, **no** `lux_request_meta`, **no** private download URLs.
-- **`/property/[slug]`** — Renders published **hero** (if any) and a **Gallery** grid for published **gallery** slot images with public caption/alt only.
+- **`GET /api/lux/property-media-list?property=`** — Same host gate; JSON list of **safe** entries (`slot`, `src`, `public_caption`, `public_alt_text`, `gallery_order`, `is_gallery_cover`) for **hero + card + gallery**. **No** operator audit fields, **no** `lux_request_meta`, **no** private download URLs.
+- **`/` (LuxeMaurice acquisition)** — Property cards use **published `card`** image when present (`collectPublishedLuxCardMediaByPropertyRefs`); otherwise same-origin staged hero path or neutral placeholder. Feed cards use the same rule when the feed id resolves.
+- **`/property/[slug]`** — Renders published **hero** (if any) and a **Gallery** grid for published **gallery** slot images with public caption/alt only (card slot is for listing/home cards, not detail layout in this phase).
 
 ## Private vs public guarantees
 

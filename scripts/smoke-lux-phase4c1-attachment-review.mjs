@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Phase 4C.1 + 4C.3 live verification — Lux operator media review + property publish round-trip.
+ * Phase 4C.1 + 4C.3 + 4D.1 + 4D.2 live verification — Lux operator media review + property publish + gallery + homepage card.
  *
  * Targets either a Vercel preview (Protection Bypass required) or production.
  * Strictly read/write to a SINGLE Lux client-request ticket created at the start
@@ -587,6 +587,51 @@ async function main() {
 
   await removePropertyLink(ticketId, galA, 'lm-phase2d-manual-demo', 'gallery');
   await removePropertyLink(ticketId, galB, 'lm-phase2d-manual-demo', 'gallery');
+
+  // Phase 4D.2 — homepage property card uses published card-slot media (manual demo listing).
+  const cardImg = await uploadAttachment(ticketId, {
+    fileName: 'phase4d2-card.png',
+    contentType: 'image/png',
+    dataB64: PNG_BASE64,
+    intendedUse: 'property_hero',
+    notes: 'Smoke card slot for homepage',
+  });
+  await setReview(ticketId, cardImg, 'reviewed', 'Smoke: card image reviewed.');
+  await setPropertyLink(ticketId, cardImg, 'lm-phase2d-manual-demo', 'card', 'Smoke: card slot for homepage card.');
+  const cardAltProbe = 'Smoke4D2CardAltUnique9271';
+  await publishProperty(ticketId, cardImg, 'lm-phase2d-manual-demo', 'card', null, cardAltProbe);
+  const cardBytes = await getPropertyMedia('lm-phase2d-manual-demo', cardImg, 'card');
+  if (cardBytes.status !== 200) fail(`card property-media expected 200, got ${cardBytes.status}`);
+  ok('property-media serves published card PNG');
+
+  const listCardCheck = await getPropertyMediaList('lm-phase2d-manual-demo');
+  if (listCardCheck.status !== 200 || !listCardCheck.json?.ok) {
+    fail(`property-media-list for card smoke expected 200 ok, got ${listCardCheck.status}`);
+  }
+  const cardListItem = (listCardCheck.json.items || []).find((x) => x && x.slot === 'card');
+  if (!cardListItem || !String(cardListItem.src || '').includes('slot=card')) {
+    fail('property-media-list missing published card entry');
+  }
+  ok('property-media-list includes card slot');
+
+  const home1 = await http('GET', `/?_cb=${encodeURIComponent(String(Date.now()))}`);
+  if (home1.status !== 200) fail(`GET / for card smoke expected 200, got ${home1.status}`);
+  const homeBody1 = home1.text || '';
+  if (!homeBody1.includes('/api/lux/property-media')) fail('homepage missing property-media URL');
+  if (!homeBody1.includes('slot=card')) fail('homepage missing card-slot property-media URL');
+  if (!homeBody1.includes(cardAltProbe)) fail('homepage missing card image alt text');
+  ok('homepage shows published card media for lm-phase2d-manual-demo');
+
+  await unpublishProperty(ticketId, cardImg, 'lm-phase2d-manual-demo', 'card');
+  const cardAfterUnpub = await getPropertyMedia('lm-phase2d-manual-demo', cardImg, 'card');
+  if (cardAfterUnpub.status !== 404) fail(`card property-media after unpublish expected 404, got ${cardAfterUnpub.status}`);
+  const home2 = await http('GET', `/?_cb=${encodeURIComponent(`${Date.now()}_h2`)}`);
+  if (home2.status !== 200) fail(`GET / after card unpublish expected 200, got ${home2.status}`);
+  const homeBody2 = home2.text || '';
+  if (homeBody2.includes(cardAltProbe)) fail('homepage still contained card alt after unpublish');
+  ok('homepage card slot cleared after unpublish (fallback)');
+
+  await removePropertyLink(ticketId, cardImg, 'lm-phase2d-manual-demo', 'card');
 
   await removePropertyLink(ticketId, imgId, 'lm-phase2d-manual-demo', 'hero');
   list = await listAttachments(ticketId);
