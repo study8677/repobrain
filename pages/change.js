@@ -186,6 +186,8 @@ export default function ChangeConsolePage() {
   const [attachmentPublishBusyKey, setAttachmentPublishBusyKey] = useState('');
   const [attachmentPublishCaptionDrafts, setAttachmentPublishCaptionDrafts] = useState({});
   const [attachmentPublishAltDrafts, setAttachmentPublishAltDrafts] = useState({});
+  const [attachmentGalleryOrderDrafts, setAttachmentGalleryOrderDrafts] = useState({});
+  const [attachmentGalleryCoverDrafts, setAttachmentGalleryCoverDrafts] = useState({});
 
   const showChangeLayoutFixture =
     process.env.NODE_ENV === 'development' && router.isReady && String(router.query.changeLayoutFixture || '') === '1';
@@ -448,18 +450,28 @@ export default function ChangeConsolePage() {
     try {
       const capDraft = attachmentPublishCaptionDrafts[pubKey];
       const altDraft = attachmentPublishAltDrafts[pubKey];
+      const slotLower = String(slot).toLowerCase();
+      const publishBody = {
+        ticket_id: tid,
+        attachment_id: aid,
+        property_slug: slug,
+        intended_slot: slot,
+        public_caption: capDraft != null ? String(capDraft) : null,
+        public_alt_text: altDraft != null ? String(altDraft) : null,
+      };
+      if (slotLower === 'gallery') {
+        const ord = attachmentGalleryOrderDrafts[pubKey];
+        if (ord != null && String(ord).trim() !== '') {
+          const n = Number.parseInt(String(ord).trim(), 10);
+          if (Number.isFinite(n)) publishBody.gallery_order = n;
+        }
+        publishBody.is_gallery_cover = attachmentGalleryCoverDrafts[pubKey] === true;
+      }
       const r = await fetch('/api/cmp/router?action=lux-attachment-property-publish', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticket_id: tid,
-          attachment_id: aid,
-          property_slug: slug,
-          intended_slot: slot,
-          public_caption: capDraft != null ? String(capDraft) : null,
-          public_alt_text: altDraft != null ? String(altDraft) : null,
-        }),
+        body: JSON.stringify(publishBody),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -2132,8 +2144,56 @@ export default function ChangeConsolePage() {
                                     }}
                                   >
                                     <div style={{ fontSize: 10, fontWeight: 800, color: '#a5b4fc', letterSpacing: '0.04em' }}>
-                                      Phase 4C.3 · public slot (Lux host only)
+                                      Phase 4C.3 / 4D.1 · public slot (Lux host only)
                                     </div>
+                                    {String(slot).toLowerCase() === 'gallery' ? (
+                                      <>
+                                        <label style={{ fontSize: 10, color: '#94a3b8', display: 'grid', gap: 4 }}>
+                                          Gallery order (optional, 0–9999)
+                                          <input
+                                            type="number"
+                                            min={0}
+                                            max={9999}
+                                            value={
+                                              attachmentGalleryOrderDrafts[attachmentPublishDraftKey(aid, slug, slot)] ??
+                                              (pl?.gallery_order != null ? String(pl.gallery_order) : '')
+                                            }
+                                            onChange={(e) =>
+                                              setAttachmentGalleryOrderDrafts((prev) => ({
+                                                ...prev,
+                                                [attachmentPublishDraftKey(aid, slug, slot)]: e.target.value,
+                                              }))
+                                            }
+                                            style={{
+                                              padding: '8px 10px',
+                                              borderRadius: 10,
+                                              border: '1px solid rgba(148,163,184,0.25)',
+                                              background: 'rgba(2,6,23,0.65)',
+                                              color: '#e2e8f0',
+                                              fontSize: 12,
+                                              maxWidth: 140,
+                                            }}
+                                          />
+                                        </label>
+                                        <label style={{ fontSize: 11, color: '#cbd5e1', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                          <input
+                                            type="checkbox"
+                                            checked={
+                                              (attachmentGalleryCoverDrafts[attachmentPublishDraftKey(aid, slug, slot)] !== undefined
+                                                ? attachmentGalleryCoverDrafts[attachmentPublishDraftKey(aid, slug, slot)]
+                                                : pl?.is_gallery_cover === true) === true
+                                            }
+                                            onChange={(e) =>
+                                              setAttachmentGalleryCoverDrafts((prev) => ({
+                                                ...prev,
+                                                [attachmentPublishDraftKey(aid, slug, slot)]: e.target.checked,
+                                              }))
+                                            }
+                                          />
+                                          Gallery cover (first in grid on the public page)
+                                        </label>
+                                      </>
+                                    ) : null}
                                     <div style={{ fontSize: 11, color: '#cbd5e1' }}>
                                       Publish status:{' '}
                                       <span style={{ fontWeight: 800 }}>

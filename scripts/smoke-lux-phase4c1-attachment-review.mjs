@@ -323,16 +323,21 @@ async function setPropertyLink(ticketId, attachmentId, propertySlug, intendedSlo
   return r.json.attachment;
 }
 
-async function publishProperty(ticketId, attachmentId, propertySlug, intendedSlot, publicCaption, publicAlt) {
+async function publishProperty(ticketId, attachmentId, propertySlug, intendedSlot, publicCaption, publicAlt, opts) {
+  const body = {
+    ticket_id: ticketId,
+    attachment_id: attachmentId,
+    property_slug: propertySlug,
+    intended_slot: intendedSlot,
+    public_caption: publicCaption ?? null,
+    public_alt_text: publicAlt ?? null,
+  };
+  if (opts && typeof opts === 'object') {
+    if (opts.gallery_order != null) body.gallery_order = opts.gallery_order;
+    if (opts.is_gallery_cover === true) body.is_gallery_cover = true;
+  }
   const r = await http('POST', '/api/cmp/router?action=lux-attachment-property-publish', {
-    body: {
-      ticket_id: ticketId,
-      attachment_id: attachmentId,
-      property_slug: propertySlug,
-      intended_slot: intendedSlot,
-      public_caption: publicCaption ?? null,
-      public_alt_text: publicAlt ?? null,
-    },
+    body,
   });
   if (r.status !== 200) {
     fail(
@@ -368,6 +373,14 @@ async function getPropertyMedia(propertySlug, attachmentId, slot) {
     `/api/lux/property-media?property=${encodeURIComponent(propertySlug)}&attachment=${encodeURIComponent(
       attachmentId,
     )}&slot=${encodeURIComponent(slot)}&_cb=${encodeURIComponent(cb)}`,
+  );
+}
+
+async function getPropertyMediaList(propertySlug) {
+  const cb = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  return await http(
+    'GET',
+    `/api/lux/property-media-list?property=${encodeURIComponent(propertySlug)}&_cb=${encodeURIComponent(cb)}`,
   );
 }
 
@@ -505,6 +518,75 @@ async function main() {
   ok('lux-attachment-property-publish rejects video with IMAGE_ONLY');
   await removePropertyLink(ticketId, vidId, 'lm-phase2d-manual-demo', 'gallery');
   await setReview(ticketId, vidId, 'rejected', 'Smoke: video is a placeholder, reject.');
+
+  // Phase 4D.1 — multi-image gallery (reviewed + linked + published, image-only).
+  const galA = await uploadAttachment(ticketId, {
+    fileName: 'phase4d1-gallery-a.png',
+    contentType: 'image/png',
+    dataB64: PNG_BASE64,
+    intendedUse: 'property_gallery',
+    notes: 'Smoke gallery A',
+  });
+  const galB = await uploadAttachment(ticketId, {
+    fileName: 'phase4d1-gallery-b.png',
+    contentType: 'image/png',
+    dataB64: PNG_BASE64,
+    intendedUse: 'property_gallery',
+    notes: 'Smoke gallery B',
+  });
+  await setReview(ticketId, galA, 'reviewed', 'Smoke: gallery A reviewed.');
+  await setReview(ticketId, galB, 'reviewed', 'Smoke: gallery B reviewed.');
+  await setPropertyLink(ticketId, galA, 'lm-phase2d-manual-demo', 'gallery', 'Smoke: gallery A slot.');
+  await setPropertyLink(ticketId, galB, 'lm-phase2d-manual-demo', 'gallery', 'Smoke: gallery B slot.');
+  const capA = 'Smoke Gal A caption';
+  const capB = 'Smoke Gal B caption';
+  await publishProperty(ticketId, galA, 'lm-phase2d-manual-demo', 'gallery', capA, 'Smoke Gal A alt', {
+    gallery_order: 20,
+    is_gallery_cover: true,
+  });
+  await publishProperty(ticketId, galB, 'lm-phase2d-manual-demo', 'gallery', capB, 'Smoke Gal B alt', {
+    gallery_order: 10,
+    is_gallery_cover: false,
+  });
+  const gA = await getPropertyMedia('lm-phase2d-manual-demo', galA, 'gallery');
+  const gB = await getPropertyMedia('lm-phase2d-manual-demo', galB, 'gallery');
+  if (gA.status !== 200 || gB.status !== 200) {
+    fail(`gallery property-media expected 200/200, got ${gA.status}/${gB.status}`);
+  }
+  ok('property-media serves both published gallery PNGs');
+
+  const listR = await getPropertyMediaList('lm-phase2d-manual-demo');
+  if (listR.status !== 200 || !listR.json?.ok) {
+    fail(`property-media-list expected 200 ok, got ${listR.status} ${JSON.stringify(listR.json).slice(0, 200)}`);
+  }
+  const listBody = JSON.stringify(listR.json);
+  const forbidden = ['lux_request_meta', 'review_note', 'reviewed_by', 'linked_by', 'published_by', '/api/change-attachment/'];
+  for (const term of forbidden) {
+    if (listBody.includes(term)) fail(`property-media-list leaked "${term}"`);
+  }
+  const galleryItems = (listR.json.items || []).filter((x) => x && x.slot === 'gallery');
+  if (galleryItems.length < 2) fail(`property-media-list expected >=2 gallery items, got ${galleryItems.length}`);
+  ok('property-media-list returns safe gallery entries (no private metadata)');
+
+  const propGal = await http('GET', '/property/lm-phase2d-manual-demo');
+  if (propGal.status !== 200) fail(`GET /property for gallery smoke expected 200, got ${propGal.status}`);
+  const propGalBody = propGal.text || JSON.stringify(propGal.json || {});
+  if (!propGalBody.includes('Gallery')) fail('property page missing Gallery section');
+  if (!propGalBody.includes(capA) || !propGalBody.includes(capB)) fail('property page missing gallery captions');
+  if (!propGalBody.includes('slot=gallery')) fail('property page missing gallery media URLs');
+  ok('property page renders published gallery grid with captions');
+
+  await unpublishProperty(ticketId, galA, 'lm-phase2d-manual-demo', 'gallery');
+  const gAun = await getPropertyMedia('lm-phase2d-manual-demo', galA, 'gallery');
+  if (gAun.status !== 404) fail(`gallery property-media after unpublish expected 404, got ${gAun.status}`);
+  const propGal2 = await http('GET', '/property/lm-phase2d-manual-demo');
+  const propGalBody2 = propGal2.text || JSON.stringify(propGal2.json || {});
+  if (propGalBody2.includes(capA)) fail('property page still showed unpublished gallery A caption');
+  if (!propGalBody2.includes(capB)) fail('property page should still show gallery B');
+  ok('unpublish removes one gallery image from public view; other remains');
+
+  await removePropertyLink(ticketId, galA, 'lm-phase2d-manual-demo', 'gallery');
+  await removePropertyLink(ticketId, galB, 'lm-phase2d-manual-demo', 'gallery');
 
   await removePropertyLink(ticketId, imgId, 'lm-phase2d-manual-demo', 'hero');
   list = await listAttachments(ticketId);

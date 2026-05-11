@@ -15,12 +15,15 @@ import {
   applyLuxAttachmentPropertyUnpublish,
   applyLuxAttachmentReview,
   buildLuxAttachmentEntry,
+  clearPublishedGalleryCoversForPropertyOnTicket,
   deriveMediaType,
   normalizeAttachmentIntendedUse,
   normalizeAttachmentNotes,
   normalizeAttachmentReviewStatus,
   normalizeLuxAttachmentLinkNote,
   normalizeLuxAttachmentPropertySlot,
+  normalizeLuxGalleryCover,
+  normalizeLuxGalleryOrder,
   normalizeReviewNote,
   readLuxAttachmentEntries,
   safeLuxAttachmentShape,
@@ -617,4 +620,170 @@ test('readLuxAttachmentEntries safely reads array; returns [] on missing', () =>
   const filtered = readLuxAttachmentEntries({ lux_request_meta: { attachments: list } });
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0].attachment_id, 'att_1');
+});
+
+test('normalizeLuxGalleryOrder accepts integers in range and rejects overflow', () => {
+  assert.equal(normalizeLuxGalleryOrder(0), 0);
+  assert.equal(normalizeLuxGalleryOrder('  42 '), 42);
+  assert.equal(normalizeLuxGalleryOrder(9999), 9999);
+  assert.equal(normalizeLuxGalleryOrder(10000), null);
+  assert.equal(normalizeLuxGalleryOrder(-1), null);
+  assert.equal(normalizeLuxGalleryOrder('x'), null);
+  assert.equal(normalizeLuxGalleryOrder(null), null);
+});
+
+test('normalizeLuxGalleryCover parses common truthy forms', () => {
+  assert.equal(normalizeLuxGalleryCover(true), true);
+  assert.equal(normalizeLuxGalleryCover(1), true);
+  assert.equal(normalizeLuxGalleryCover('true'), true);
+  assert.equal(normalizeLuxGalleryCover(false), false);
+  assert.equal(normalizeLuxGalleryCover(undefined), false);
+});
+
+test('clearPublishedGalleryCoversForPropertyOnTicket clears other published covers', () => {
+  const cj = {
+    lux_request_meta: {
+      attachments: [
+        {
+          attachment_id: 'a1',
+          review_status: 'reviewed',
+          property_links: [
+            {
+              property_slug: 'lm-x',
+              intended_slot: 'gallery',
+              publish_status: 'published',
+              is_gallery_cover: true,
+            },
+          ],
+        },
+        {
+          attachment_id: 'a2',
+          review_status: 'reviewed',
+          property_links: [
+            {
+              property_slug: 'lm-x',
+              intended_slot: 'gallery',
+              publish_status: 'published',
+              is_gallery_cover: false,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  clearPublishedGalleryCoversForPropertyOnTicket(cj, 'lm-x', 'a2');
+  assert.equal(cj.lux_request_meta.attachments[0].property_links[0].is_gallery_cover, false);
+  assert.equal(cj.lux_request_meta.attachments[1].property_links[0].is_gallery_cover, false);
+});
+
+test('applyLuxAttachmentPropertyPublish gallery sets order and cover; clears other published covers', () => {
+  const base = {
+    lux_request_meta: {
+      attachments: [
+        {
+          ...buildLuxAttachmentEntry({ attachment_id: 'g1', file_name: '1.jpg', content_type: 'image/jpeg', byte_size: 1 }),
+          review_status: 'reviewed',
+          property_links: [
+            {
+              property_slug: 'lm-phase2d-manual-demo',
+              property_title: 't',
+              intended_slot: 'gallery',
+              linked_at: 'x',
+              linked_by: 'y',
+              publish_status: 'published',
+              published_at: '2026-01-01T00:00:00.000Z',
+              published_by: 'first',
+              is_gallery_cover: true,
+              gallery_order: 1,
+            },
+          ],
+        },
+        {
+          ...buildLuxAttachmentEntry({ attachment_id: 'g2', file_name: '2.jpg', content_type: 'image/jpeg', byte_size: 1 }),
+          review_status: 'reviewed',
+          property_links: [
+            {
+              property_slug: 'lm-phase2d-manual-demo',
+              property_title: 't',
+              intended_slot: 'gallery',
+              linked_at: 'x',
+              linked_by: 'y',
+              publish_status: 'unpublished',
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const r = applyLuxAttachmentPropertyPublish(base, 'g2', {
+    property_slug: 'lm-phase2d-manual-demo',
+    intended_slot: 'gallery',
+    published_by: 'op',
+    gallery_order: 5,
+    is_gallery_cover: true,
+    public_caption: ' B ',
+    public_alt_text: ' alt2 ',
+  });
+  assert.equal(r.ok, true);
+  const att1 = r.consoleJson.lux_request_meta.attachments.find((a) => a.attachment_id === 'g1');
+  const att2 = r.consoleJson.lux_request_meta.attachments.find((a) => a.attachment_id === 'g2');
+  assert.equal(att1.property_links[0].is_gallery_cover, false);
+  assert.equal(att2.property_links[0].is_gallery_cover, true);
+  assert.equal(att2.property_links[0].gallery_order, 5);
+  assert.equal(att2.property_links[0].public_caption, 'B');
+});
+
+test('applyLuxAttachmentPropertyPublish hero does not write gallery_order onto link', () => {
+  const reviewed = {
+    lux_request_meta: {
+      attachments: [
+        {
+          ...buildLuxAttachmentEntry({ attachment_id: 'att_1', file_name: 'a.jpg', content_type: 'image/jpeg', byte_size: 1 }),
+          review_status: 'reviewed',
+          property_links: [
+            {
+              property_slug: 'lm-phase2d-manual-demo',
+              property_title: 't',
+              intended_slot: 'hero',
+              linked_at: 'x',
+              linked_by: 'y',
+              publish_status: 'unpublished',
+              gallery_order: null,
+              is_gallery_cover: false,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const r = applyLuxAttachmentPropertyPublish(reviewed, 'att_1', {
+    property_slug: 'lm-phase2d-manual-demo',
+    intended_slot: 'hero',
+    gallery_order: 99,
+    is_gallery_cover: true,
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.link.gallery_order, null);
+  assert.equal(r.link.is_gallery_cover, false);
+});
+
+test('safeLuxAttachmentShape maps gallery_order and is_gallery_cover on property_links', () => {
+  const dbRow = { id: 'att_x', file_name: 'x.jpg', content_type: 'image/jpeg', byte_size: 1 };
+  const meta = {
+    attachment_id: 'att_x',
+    review_status: 'reviewed',
+    property_links: [
+      {
+        property_slug: 'lm-phase2d-manual-demo',
+        property_title: 't',
+        intended_slot: 'gallery',
+        publish_status: 'published',
+        gallery_order: '3',
+        is_gallery_cover: true,
+      },
+    ],
+  };
+  const s = safeLuxAttachmentShape(dbRow, meta);
+  assert.equal(s.property_links[0].gallery_order, 3);
+  assert.equal(s.property_links[0].is_gallery_cover, true);
 });

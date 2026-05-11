@@ -10,7 +10,7 @@ function safeStr(v) {
 
 /**
  * LuxeMaurice-only property detail (Phase 2C). Props must be server-built — do not trust client-supplied listing fields.
- * @param {{ property: { ref: string, title: string, location: string, property_type: string, status: string | null, price_display: string, discovery_source: 'curated' | 'manual_curated' | 'feed', summary_text: string, highlights: string[], hero_image?: string | null, published_hero?: { src: string, alt: string, caption: string | null } | null } }} props
+ * @param {{ property: { ref: string, title: string, location: string, property_type: string, status: string | null, price_display: string, discovery_source: 'curated' | 'manual_curated' | 'feed', summary_text: string, highlights: string[], hero_image?: string | null, published_hero?: { src: string, alt: string, caption: string | null } | null, published_gallery?: { src: string, alt: string, caption: string | null, gallery_order?: number | null, is_gallery_cover?: boolean }[] } }} props
  */
 export default function LuxeMauricePropertyDetailPage({ property }) {
   const p = property || {};
@@ -21,6 +21,9 @@ export default function LuxeMauricePropertyDetailPage({ property }) {
   const pageTitle = ref ? `${safeStr(p.title)} · Luxurious Mauritius` : 'Property · Luxurious Mauritius';
 
   const publishedHero = p.published_hero && typeof p.published_hero === 'object' ? p.published_hero : null;
+  const publishedGallery = Array.isArray(p.published_gallery)
+    ? p.published_gallery.filter((g) => g && typeof g === 'object' && safeStr(g.src))
+    : [];
 
   const heroImg = (() => {
     if (publishedHero && publishedHero.src) {
@@ -103,6 +106,51 @@ export default function LuxeMauricePropertyDetailPage({ property }) {
           ) : null}
           {heroImg?.caption ? (
             <p style={{ margin: '-6px 0 14px', fontSize: 12, color: T.inkMuted, lineHeight: 1.5 }}>{heroImg.caption}</p>
+          ) : null}
+          {publishedGallery.length > 0 ? (
+            <section style={{ marginTop: 20 }}>
+              <h2
+                style={{
+                  margin: '0 0 12px',
+                  fontSize: 15,
+                  fontFamily: T.fontDisplay,
+                  color: T.ink,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Gallery
+              </h2>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: 12,
+                }}
+              >
+                {publishedGallery.map((g, gi) => (
+                  <figure key={gi} style={{ margin: 0 }}>
+                    <img
+                      src={safeStr(g.src)}
+                      alt={safeStr(g.alt)}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        height: 120,
+                        objectFit: 'cover',
+                        borderRadius: 10,
+                        border: `1px solid ${T.border}`,
+                      }}
+                    />
+                    {g.caption ? (
+                      <figcaption style={{ marginTop: 6, fontSize: 11, color: T.inkMuted, lineHeight: 1.45 }}>
+                        {safeStr(g.caption)}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                ))}
+              </div>
+            </section>
           ) : null}
           <p
             style={{

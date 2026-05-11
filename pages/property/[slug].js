@@ -2,6 +2,7 @@ import React from 'react';
 
 import LuxeMauricePropertyDetailPage from '../../components/LuxeMauricePropertyDetailPage.js';
 import { resolveLuxPropertyRef } from '../../lib/client/luxe-maurice-property-resolve.js';
+import { collectPublishedLuxPropertyMedia } from '../../lib/server/lux-published-property-media.js';
 import { PrismaClient } from '@prisma/client';
 import { verifyTenantPreviewToken } from '../../lib/server/tenant-preview-token.js';
 import { isGhostHost } from '../../lib/server/ghost-host.js';
@@ -86,61 +87,16 @@ export async function getServerSideProps({ req, params }) {
       return { notFound: true };
     }
 
-    // Phase 4C.3: best-effort pick most-recent published hero image (operator-published only).
-    // We intentionally scan a bounded number of recent Lux request tickets to avoid JSONB query complexity.
+    // Phase 4C.3 / 4D.1: published hero + gallery from recent Lux request tickets (bounded scan).
     let publishedHero = null;
+    let publishedGallery = [];
     try {
-      const recent = await prisma.cmpTicket.findMany({
-        where: { tenantId: 'luxe-maurice' },
-        orderBy: { createdAt: 'desc' },
-        take: 80,
-        select: { consoleJson: true },
-      });
-      /** @type {{ attachment_id: string, public_caption: string | null, public_alt_text: string | null }[]} */
-      const candidates = [];
-      for (const r of recent) {
-        const cj = r.consoleJson && typeof r.consoleJson === 'object' ? r.consoleJson : {};
-        const meta = cj.lux_request_meta && typeof cj.lux_request_meta === 'object' ? cj.lux_request_meta : null;
-        const list = meta && Array.isArray(meta.attachments) ? meta.attachments : [];
-        for (const a of list) {
-          if (!a || String(a.review_status || '').toLowerCase() !== 'reviewed') continue;
-          if (String(a.attachment_id || '').trim() === '') continue;
-          const links = Array.isArray(a.property_links) ? a.property_links : [];
-          const match = links.find(
-            (pl) =>
-              pl &&
-              String(pl.property_slug || '').toLowerCase() === String(resolved.ref).toLowerCase() &&
-              String(pl.intended_slot || '').toLowerCase() === 'hero' &&
-              String(pl.publish_status || '').toLowerCase() === 'published',
-          );
-          if (match) {
-            candidates.push({
-              attachment_id: String(a.attachment_id),
-              public_caption: match.public_caption != null ? String(match.public_caption).slice(0, 180) : null,
-              public_alt_text: match.public_alt_text != null ? String(match.public_alt_text).slice(0, 180) : null,
-            });
-          }
-        }
-      }
-      const first = candidates[0] || null;
-      if (first) {
-        const att = await prisma.cmpTicketAttachment.findUnique({
-          where: { id: first.attachment_id },
-          select: { id: true, tenantId: true, contentType: true },
-        });
-        if (att && String(att.tenantId || '').trim() === 'luxe-maurice' && String(att.contentType || '').toLowerCase().startsWith('image/')) {
-          publishedHero = {
-            src: `/api/lux/property-media?property=${encodeURIComponent(resolved.ref)}&attachment=${encodeURIComponent(
-              att.id,
-            )}&slot=hero`,
-            alt: first.public_alt_text || '',
-            caption: first.public_caption || null,
-          };
-        }
-      }
+      const pub = await collectPublishedLuxPropertyMedia(prisma, resolved.ref, { take: 80 });
+      publishedHero = pub.published_hero;
+      publishedGallery = Array.isArray(pub.published_gallery) ? pub.published_gallery : [];
     } catch {
-      // fail-soft: property page still loads without published hero.
       publishedHero = null;
+      publishedGallery = [];
     }
 
     const pr = resolved.price_range != null ? String(resolved.price_range).trim() : '';
@@ -160,6 +116,7 @@ export async function getServerSideProps({ req, params }) {
           highlights: Array.isArray(resolved.highlights) ? resolved.highlights : [],
           hero_image: resolved.hero_image != null ? String(resolved.hero_image) : null,
           published_hero: publishedHero,
+          published_gallery: publishedGallery,
         },
       },
     };

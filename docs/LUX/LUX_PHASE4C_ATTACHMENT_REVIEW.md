@@ -3,7 +3,7 @@
 **Authoritative ticket:** `cmo8mjijk0000jl04l1jz0v6d` (master programme).
 **Surface:** `https://lux.corpflowai.com/change` (Lux tenant session only).
 
-This document covers **Phase 4C** (binary upload to a Lux client-request ticket), **Phase 4C.1** (operator media review), **Phase 4C.2** (reviewed-only property linkage, metadata-only), and **Phase 4C.3** (operator-controlled **publish** of reviewed+linked **images** to a narrow public surface). Video and other media types stay private; there is still **no** auto-publish, **no** gallery/CDN pipeline, and **no** signed public download of raw bytes beyond the governed image route described below.
+This document covers **Phase 4C** (binary upload to a Lux client-request ticket), **Phase 4C.1** (operator media review), **Phase 4C.2** (reviewed-only property linkage, metadata-only), **Phase 4C.3** (operator-controlled **publish** of reviewed+linked **images** to a narrow public surface), and **Phase 4D.1** (governed **multi-image gallery** for `intended_slot === gallery` plus the existing **hero** path). Video and other media types stay private on public routes; there is still **no** auto-publish, **no** CDN/transform pipeline, and **no** signed public download of raw bytes beyond the governed **`/api/lux/property-media`** (and optional **`property-media-list`**) described below. End-to-end lifecycle and slot rules: **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**.
 
 ## Scope (intentional, narrow)
 
@@ -16,16 +16,17 @@ In scope:
 
 Not in scope (deferred):
 
-- **Galleries**, **CDN/transforms**, **image processing**, transcoding, or AI / automation around media.
-- **Auto-publish** on upload, review, or link (publish is always an explicit operator action in Phase 4C.3).
-- **Video** (or non-image MIME) on the public `property-media` route or as a published hero on `/property/[slug]`.
+- **CDN/transforms**, **image processing**, transcoding, or AI / automation around media.
+- **Auto-publish** on upload, review, or link (publish is always an explicit operator action).
+- **Video** (or non-image MIME) on the public `property-media` route or as published gallery/hero on `/property/[slug]`.
 - Cross-tenant exposure of attachment metadata or private download URLs on public pages.
 
-In scope for **Phase 4C.3** (narrow exception):
+In scope for **Phase 4C.3** + **Phase 4D.1** (narrow exceptions):
 
-- Operator CMP actions **`lux-attachment-property-publish`** / **`lux-attachment-property-unpublish`** (Lux tenant + Lux host + Dormant Gate), updating only the matching `property_links[]` row: `publish_status`, `published_*` / `unpublished_*`, `public_caption`, `public_alt_text` (trimmed/capped).
+- Operator CMP actions **`lux-attachment-property-publish`** / **`lux-attachment-property-unpublish`** (Lux tenant + Lux host + Dormant Gate), updating only the matching `property_links[]` row: `publish_status`, `published_*` / `unpublished_*`, `public_caption`, `public_alt_text` (trimmed/capped). For **`intended_slot === gallery`**, also `gallery_order` (optional capped integer) and `is_gallery_cover` (clears other published gallery covers for the same property on the **same ticket** when set).
 - Public **GET** ` /api/lux/property-media?property=<slug>&attachment=<id>&slot=<slot> ` on the Lux hostname only: serves bytes **only** when the link is **published**, the attachment is **reviewed**, MIME is **`image/*`**, and `(property, slot)` matches the link. Wrong property/slot/unpublished/non-image → **404**; invalid slot → **400**. Conservative cache headers; **no** raw storage path in the response.
-- **`/property/[slug]`** may show a **published hero** (`intended_slot === hero`, `publish_status === published`) using `public_caption` / `public_alt_text` and the public media URL; falls back to the static catalog hero when nothing qualifies.
+- Public **GET** `/api/lux/property-media-list?property=<slug>` (Lux host, `luxe-maurice`): JSON list of **published** **hero + gallery** image entries with **safe** fields only (`slot`, `src`, captions/alt, sort hints). No operator audit fields, no raw paths.
+- **`/property/[slug]`** may show a **published hero** (`intended_slot === hero`) and a **Gallery** section for **published gallery** slot images; falls back to the static catalog hero when no published hero qualifies; gallery section omitted when no published gallery images exist.
 
 ## Storage shape
 
@@ -78,9 +79,10 @@ The append is idempotent on `(attachment_id, review_status, at)` to avoid double
 | `GET  /api/change-attachment/list?ticket_id=...` | (list) | tenant or admin session | For Lux client-request tickets, returns the merged operator-safe shape (DB row + metadata). For other tenants, returns the prior basic shape. |
 | `GET  /api/change-attachment/download?id=...` | (download) | tenant or admin session | Unchanged. Streams bytes for the owning tenant only. |
 | `POST /api/cmp/router?action=lux-attachment-review-set` | `lux-attachment-review-set` | **Lux tenant + Lux host only** (`luxe-maurice` + `lux.corpflowai.com`) | Sets `review_status`, `review_note`, `reviewed_at`, `reviewed_by` on the matching attachment entry; appends a `lux_attachment_review` message. |
-| `POST /api/cmp/router?action=lux-attachment-property-publish` | `lux-attachment-property-publish` | **Lux tenant + Lux host only** | Publishes a **reviewed + linked + image** attachment for one `(property_slug, intended_slot)`; appends `lux_attachment_property_publish` (`message`: `media published`). |
+| `POST /api/cmp/router?action=lux-attachment-property-publish` | `lux-attachment-property-publish` | **Lux tenant + Lux host only** | Publishes a **reviewed + linked + image** attachment for one `(property_slug, intended_slot)`; for **`gallery`**, body may include **`gallery_order`**, **`is_gallery_cover`** (clears other published gallery covers on the ticket for that property). Appends `lux_attachment_property_publish` (`message`: `media published`). |
 | `POST /api/cmp/router?action=lux-attachment-property-unpublish` | `lux-attachment-property-unpublish` | **Lux tenant + Lux host only** | Sets `publish_status` back to `unpublished`; preserves link + review + caption/alt metadata; appends `media unpublished`. |
 | `GET /api/lux/property-media?...` | (public image bytes) | **Lux hostname + tenant host context `luxe-maurice` only** | Serves the image only when published+reviewed+linked slot matches; never exposes operator-only JSON. |
+| `GET /api/lux/property-media-list?property=...` | (public JSON list) | **Lux hostname + tenant host context `luxe-maurice` only** | Returns **published** **hero + gallery** image entries with **safe** display fields only (`slot`, `src`, captions/alt, sort hints); no attachment audit blob, no raw storage paths. |
 
 ### `lux-attachment-review-set` request body
 

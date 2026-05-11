@@ -108,7 +108,7 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 
 - **Purpose**: allow Lux operators (and authenticated Lux clients on `/change`) to attach images, video, or PDF to a Lux client-request ticket so the operator has the source material when scoping work.
 - **Surface**: `https://lux.corpflowai.com/change` for intake/review/link/publish controls. Bytes live in `cmp_ticket_attachments` (already deployed); per-attachment metadata lives in `console_json.lux_request_meta.attachments[]` (Phase 4C.1+).
-- **Scope exclusions**: no **galleries**, **CDN/transforms**, **auto-publish**, **video** on public routes, or automation/AI around media. A **narrow** Phase 4C.3 exception allows an operator to **publish** a reviewed+linked **image** to the public **`/api/lux/property-media`** route and optional **`/property/[slug]`** hero only — see **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`**.
+- **Scope exclusions**: no **CDN/transforms**, **auto-publish**, **video** on public property-media surfaces, or automation/AI around media. Governed **hero + multi-image gallery** publishing is **Phase 4D.1** (see **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`** + **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`**).
 
 ### Phase 4C.1 — Operator media review
 
@@ -130,6 +130,13 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - **Rule**: Lux tenant session + Lux host + Dormant Gate; ticket and attachment must be `luxe-maurice`; attachment must be **reviewed**, **image** MIME, tracked in `lux_request_meta.attachments[]`, with a matching **property link**; `property_slug` must resolve via `resolveLuxPropertyRef`; slot allowlist unchanged. No `tenant_id` from client; CMP JSON responses use **`safeLuxAttachmentShape`** only (no bytes).
 - **Persistence**: same `property_links[]` row — `publish_status`, `published_at` / `published_by`, `public_caption`, `public_alt_text`, and on unpublish `unpublished_at` / `unpublished_by` (prior publish audit + caption/alt preserved on the row).
 - **Surface**: `/change` per-link publish controls + `lux-attachment-property-publish` / `lux-attachment-property-unpublish` + `GET /api/lux/property-media`. See **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`**.
+
+### Phase 4D.1 — Multi-image property gallery (governed public)
+
+- **Purpose**: extend Phase 4C.3’s single-hero publish path to **multiple published gallery images** per property, with explicit operator controls (`gallery_order`, optional `is_gallery_cover`, `public_caption`, `public_alt_text`) on **`intended_slot === gallery`** links only. **Reference / card / detail** slots remain non-public in this phase.
+- **Rule**: same publish gate as 4C.3 (**reviewed + linked + image + explicit publish**); no video on public routes; no auto-publish; Lux host + `luxe-maurice` context on **`GET /api/lux/property-media`** and **`GET /api/lux/property-media-list`**. List JSON exposes **only** safe display fields (no operator audit, no raw storage paths, no `lux_request_meta`).
+- **Persistence**: additional fields on the same `property_links[]` rows for gallery slot (`gallery_order`, `is_gallery_cover`); at most one **published** gallery cover per property **per ticket** when operators set cover (other published gallery covers on that ticket are cleared).
+- **Surface**: `/change` gallery publish panel; **`/property/[slug]`** renders hero + optional **Gallery** grid. See **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**.
 
 ### Phase 5 — Production reality gate and client handoff
 
@@ -163,4 +170,5 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - Phase 2D manual property workflow: `docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`
 - Phase 3 CRM first slice + 3A.5 (LuxeMaurice): `docs/LUX/LUX_PHASE3_FIRST_CRM_SLICE.md`
 - Phase 4C / 4C.1 / 4C.2 / 4C.3 attachments + publish gate: `docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`
+- Phase 4D.1 gallery + media governance: `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
 
