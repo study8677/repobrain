@@ -323,3 +323,27 @@ Delivery Reality Audit:
 - Client-facing flow usable: YES (operator gallery publish + governed list + property gallery grid)
 - Final verdict: COMPLETE
 ```
+
+## Delivery Reality Audit (Phase 4D.2)
+
+```text
+Delivery Reality Audit:
+- Local fix exists: YES
+- Merged to main: YES — PR **#165** (squash merge commit `3e28a00b01ca9fc467f85b07a4af26185233281e`; cherry-picked from `4b00f89b` on clean branch `lux/phase-4d2-homepage-card`)
+- Production deployment ID: GitHub deployment **4644040270** (Vercel target_url `https://corpflow-ai-command-center-o7v5min9u-corpflowai.vercel.app`, state success)
+- Commit deployed (production): `3e28a00b01ca9fc467f85b07a4af26185233281e`
+- Live URLs tested:
+  - https://lux.corpflowai.com/change (authenticated)
+  - https://lux.corpflowai.com/ (homepage — published `card` image on `lm-phase2d-manual-demo` listing card when published)
+  - https://lux.corpflowai.com/api/lux/property-media (GET, `slot=card` gate)
+  - https://lux.corpflowai.com/api/lux/property-media-list?property=lm-phase2d-manual-demo (includes `slot=card` when published)
+  - https://lux.corpflowai.com/, /concierge, /property/lm-phase2d-manual-demo (public no-leak smoke)
+- Production smoke: `npm run smoke:lux-phase4c1 -- --target=production` (2026-05-11) — ALL CHECKS PASSED
+  - Homepage card publish proof: reviewed PNG linked as `card`, published; `property-media` **200** + `image/*` for `slot=card`; homepage HTML contained `slot=card` URL and alt probe **Smoke4D2CardAltUnique9271**
+  - Homepage fallback proof: after `lux-attachment-property-unpublish` on the card link, homepage HTML no longer contained alt probe; card `property-media` **404**
+  - `property-media-list` included `card` item while published; video gallery publish still **409 IMAGE_ONLY** (unchanged gate)
+  - Public no-leak: `/`, `/concierge`, `/property/lm-phase2d-manual-demo` smoke forbids `lux_request_meta`, `property_links`, `review_status`, `/api/change-attachment/`, etc. in HTML body — passed
+- Master programme ticket `cmo8mjijk0000jl04l1jz0v6d`: intentionally **not** closed by this phase
+- Client-facing flow usable: YES (homepage listing cards can use governed published card images)
+- Final verdict: COMPLETE
+```
