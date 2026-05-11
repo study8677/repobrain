@@ -22,6 +22,13 @@ import {
   activityKindLabel,
   luxLeadCrmStageLabel,
 } from '../lib/cmp/_lib/lux-lead-operator-workflow.js';
+import {
+  LUX_ATTACHMENT_OPERATOR_FILTER_IDS,
+  buildLuxAttachmentWhereUsedRows,
+  computeLuxAttachmentMediaSummary,
+  detectLuxOperatorTestMediaHint,
+  luxAttachmentMatchesOperatorFilter,
+} from '../lib/cmp/_lib/lux-request-attachments.js';
 
 function normalizeLocale(raw) {
   const s = String(raw || '').trim().toLowerCase().replace(/_/g, '-');
@@ -128,6 +135,30 @@ function formatHoursBand(low, high) {
   return null;
 }
 
+function luxOperatorAttachmentFilterLabel(id) {
+  const k = id != null ? String(id).trim().toLowerCase() : '';
+  const map = {
+    all: 'All',
+    pending_review: 'Pending review',
+    reviewed: 'Reviewed',
+    rejected: 'Rejected',
+    archived: 'Archived',
+    linked: 'Linked',
+    published: 'Published',
+    needs_action: 'Needs action',
+  };
+  return map[k] || k || 'All';
+}
+
+function luxPublishHistoryActionLabel(action) {
+  const a = action != null ? String(action).trim().toLowerCase() : '';
+  if (a === 'published') return 'Published';
+  if (a === 'unpublished') return 'Unpublished';
+  if (a === 'archived') return 'Archived';
+  if (a === 'restored') return 'Restored';
+  return action != null ? String(action) : '—';
+}
+
 export default function ChangeConsolePage() {
   const router = useRouter();
   const [locale, setLocale] = useState('en');
@@ -191,6 +222,17 @@ export default function ChangeConsolePage() {
   const [attachmentArchiveBusyId, setAttachmentArchiveBusyId] = useState('');
   const [attachmentRestoreBusyId, setAttachmentRestoreBusyId] = useState('');
   const [attachmentArchiveReasonDrafts, setAttachmentArchiveReasonDrafts] = useState({});
+  const [attachmentOperatorFilter, setAttachmentOperatorFilter] = useState('all');
+
+  const attachmentMediaSummary = useMemo(
+    () => computeLuxAttachmentMediaSummary(attachments),
+    [attachments],
+  );
+
+  const filteredAttachments = useMemo(
+    () => attachments.filter((a) => luxAttachmentMatchesOperatorFilter(a, attachmentOperatorFilter)),
+    [attachments, attachmentOperatorFilter],
+  );
 
   const showChangeLayoutFixture =
     process.env.NODE_ENV === 'development' && router.isReady && String(router.query.changeLayoutFixture || '') === '1';
@@ -876,6 +918,10 @@ export default function ChangeConsolePage() {
     if (attachmentsTicketId === tid) return;
     void loadAttachmentsForTicket(tid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTicketId]);
+
+  useEffect(() => {
+    setAttachmentOperatorFilter('all');
   }, [selectedTicketId]);
 
   async function onSelectTicket(id) {
@@ -2033,7 +2079,8 @@ export default function ChangeConsolePage() {
                 </span>
               </div>
               <div style={{ marginTop: 6, fontSize: 11, color: '#64748b' }}>
-                Private to this tenant · never published until reviewed.
+                Tenant-private until reviewed; public only after link + publish on an allowed slot (hero, gallery, or
+                card).
               </div>
               <div
                 style={{
@@ -2050,6 +2097,76 @@ export default function ChangeConsolePage() {
                 Phase 4D.3 · Replace media safely: upload a new attachment, mark it reviewed, link it to the property,
                 publish it, then archive the old attachment. You may set the archive reason to e.g.{' '}
                 <span style={{ color: '#e2e8f0' }}>replaced by &lt;attachment_id or filename&gt;</span>.
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                  gap: 8,
+                  fontSize: 11,
+                  color: '#cbd5e1',
+                }}
+              >
+                {[
+                  ['Total', attachmentMediaSummary.total],
+                  ['Pending review', attachmentMediaSummary.pending_review],
+                  ['Reviewed', attachmentMediaSummary.reviewed],
+                  ['Rejected', attachmentMediaSummary.rejected],
+                  ['Archived', attachmentMediaSummary.archived],
+                  ['Linked', attachmentMediaSummary.linked],
+                  ['Published', attachmentMediaSummary.published],
+                  ['Needs action', attachmentMediaSummary.needs_action],
+                ].map(([k, v]) => (
+                  <div
+                    key={k}
+                    style={{
+                      border: '1px solid rgba(148,163,184,0.18)',
+                      borderRadius: 10,
+                      padding: '8px 10px',
+                      background: 'rgba(2,6,23,0.40)',
+                      minWidth: 0,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.04em' }}>{k}</div>
+                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 900, color: '#e2e8f0' }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                  alignItems: 'center',
+                }}
+              >
+                <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  Show
+                  <select
+                    value={attachmentOperatorFilter}
+                    onChange={(e) => setAttachmentOperatorFilter(e.target.value)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(2,6,23,0.65)',
+                      color: '#e2e8f0',
+                      fontSize: 12,
+                      minWidth: 180,
+                    }}
+                  >
+                    {LUX_ATTACHMENT_OPERATOR_FILTER_IDS.map((fid) => (
+                      <option key={fid} value={fid}>
+                        {luxOperatorAttachmentFilterLabel(fid)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span style={{ fontSize: 11, color: '#64748b' }}>
+                  Phase 4D.4 · client-side filters only; does not change what is public.
+                </span>
               </div>
               {attachmentsBusy ? (
                 <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>Loading attachments…</div>
@@ -2071,12 +2188,17 @@ export default function ChangeConsolePage() {
                 </div>
               ) : null}
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-                {attachments.map((a) => {
+                {filteredAttachments.map((a) => {
                   const aid = String(a.attachment_id || a.id || '');
                   const isLuxMeta = a.attachment_id != null;
                   const status = String(a.review_status || (isLuxMeta ? 'pending_review' : '')).toLowerCase();
                   const life = String(a.lifecycle_status || 'active').toLowerCase();
                   const isArchived = life === 'archived';
+                  const whereUsedRows = buildLuxAttachmentWhereUsedRows(a);
+                  const showTestMediaHint = detectLuxOperatorTestMediaHint(a, {
+                    title: ticket?.title,
+                    description: ticket?.description,
+                  });
                   const statusBadge =
                     status === 'reviewed'
                       ? { bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.35)', color: '#dcfce7', label: 'Reviewed' }
@@ -2114,8 +2236,37 @@ export default function ChangeConsolePage() {
                           alignItems: 'baseline',
                         }}
                       >
-                        <div style={{ minWidth: 0, fontSize: 13, fontWeight: 800, color: '#e2e8f0', ...changeTextContainStyle() }}>
-                          {String(a.file_name || 'upload')}
+                        <div
+                          style={{
+                            minWidth: 0,
+                            fontSize: 13,
+                            fontWeight: 800,
+                            color: '#e2e8f0',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 8,
+                            alignItems: 'center',
+                            ...changeTextContainStyle(),
+                          }}
+                        >
+                          <span>{String(a.file_name || 'upload')}</span>
+                          {showTestMediaHint ? (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                padding: '3px 8px',
+                                borderRadius: 8,
+                                border: '1px solid rgba(251,191,36,0.45)',
+                                background: 'rgba(251,191,36,0.12)',
+                                color: '#fef9c3',
+                                flexShrink: 0,
+                              }}
+                              title="Heuristic match on filename, notes, or ticket text (smoke / phase / test markers). Does not delete or hide media."
+                            >
+                              Test media
+                            </span>
+                          ) : null}
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <span
@@ -2127,8 +2278,7 @@ export default function ChangeConsolePage() {
                               border: `1px solid ${statusBadge.border}`,
                               background: statusBadge.bg,
                               color: statusBadge.color,
-                              letterSpacing: '0.04em',
-                              textTransform: 'uppercase',
+                              letterSpacing: '0.02em',
                               flexShrink: 0,
                             }}
                           >
@@ -2144,8 +2294,7 @@ export default function ChangeConsolePage() {
                                 border: '1px solid rgba(244,63,94,0.45)',
                                 background: 'rgba(244,63,94,0.12)',
                                 color: '#fecdd3',
-                                letterSpacing: '0.04em',
-                                textTransform: 'uppercase',
+                                letterSpacing: '0.02em',
                                 flexShrink: 0,
                               }}
                             >
@@ -2171,7 +2320,7 @@ export default function ChangeConsolePage() {
                         {a.created_at ? <span>Added: {new Date(a.created_at).toLocaleString()}</span> : null}
                         {isLuxMeta ? (
                           <span style={{ fontWeight: 800, color: isArchived ? '#fecdd3' : '#cbd5e1' }}>
-                            Lifecycle: {life}
+                            Lifecycle: {isArchived ? 'Archived' : 'Active'}
                           </span>
                         ) : null}
                       </div>
@@ -2229,10 +2378,69 @@ export default function ChangeConsolePage() {
                         </div>
                       ) : null}
 
+                      {isLuxMeta ? (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            fontSize: 11,
+                            color: '#94a3b8',
+                            border: '1px solid rgba(148,163,184,0.15)',
+                            borderRadius: 10,
+                            padding: '8px 10px',
+                            background: 'rgba(15,23,42,0.35)',
+                          }}
+                        >
+                          <div style={{ fontWeight: 800, color: '#cbd5e1', letterSpacing: '0.04em', marginBottom: 6 }}>
+                            Where used
+                          </div>
+                          {whereUsedRows.length === 0 ? (
+                            <div style={{ color: '#64748b' }}>Not linked to any property.</div>
+                          ) : (
+                            <div style={{ display: 'grid', gap: 8 }}>
+                              {whereUsedRows.map((row, wri) => (
+                                <div
+                                  key={`${row.property_slug}:${row.intended_slot}:${wri}`}
+                                  style={{
+                                    border: '1px solid rgba(148,163,184,0.12)',
+                                    borderRadius: 8,
+                                    padding: '6px 8px',
+                                    fontSize: 11,
+                                    color: '#cbd5e1',
+                                    lineHeight: 1.45,
+                                    minWidth: 0,
+                                    ...changeTextContainStyle(),
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 800, color: '#e2e8f0' }}>
+                                    {row.property_slug}
+                                    {row.property_title ? (
+                                      <span style={{ fontWeight: 700, color: '#94a3b8' }}> · {row.property_title}</span>
+                                    ) : null}
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#64748b' }}>Slot:</span> {row.intended_slot}
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#64748b' }}>Publish:</span> {row.publish_label}
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#64748b' }}>Lifecycle:</span> {row.lifecycle_label}
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#64748b' }}>Visibility:</span>{' '}
+                                    {row.public_labels.join(' · ')}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+
                       {propertyLinks.length > 0 ? (
                         <div style={{ marginTop: 10, fontSize: 11, color: '#94a3b8', display: 'grid', gap: 6 }}>
                           <div style={{ fontWeight: 800, color: '#cbd5e1', letterSpacing: '0.04em' }}>
-                            Linked properties
+                            Linked properties (controls)
                           </div>
                           {propertyLinks.map((pl, idx) => {
                             const slug = String(pl?.property_slug || '');
@@ -2338,7 +2546,9 @@ export default function ChangeConsolePage() {
                                     <div style={{ fontSize: 11, color: '#cbd5e1' }}>
                                       Publish status:{' '}
                                       <span style={{ fontWeight: 800 }}>
-                                        {String(pl?.publish_status || 'unpublished')}
+                                        {String(pl?.publish_status || 'unpublished').toLowerCase() === 'published'
+                                          ? 'Published'
+                                          : 'Unpublished'}
                                       </span>
                                     </div>
                                     {pl?.published_at ? (
@@ -2359,7 +2569,7 @@ export default function ChangeConsolePage() {
                                         {pl.publish_history.slice(-5).map((h, hi) => (
                                           <div key={`${slug}:${slot}:hist:${hi}`} style={{ lineHeight: 1.35 }}>
                                             {h?.at ? `${new Date(String(h.at)).toLocaleString()} · ` : null}
-                                            {h?.action ? String(h.action) : '—'}
+                                            {h?.action ? luxPublishHistoryActionLabel(h.action) : '—'}
                                             {h?.actor ? ` · ${String(h.actor)}` : null}
                                             {h?.note ? (
                                               <span style={{ color: '#cbd5e1' }}>{` — ${String(h.note)}`}</span>
@@ -2787,6 +2997,34 @@ export default function ChangeConsolePage() {
                     </div>
                   );
                 })}
+              </div>
+              {attachments.length > 0 && filteredAttachments.length === 0 ? (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: '10px 12px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'rgba(15,23,42,0.45)',
+                    fontSize: 12,
+                    color: '#94a3b8',
+                  }}
+                >
+                  No attachments match this filter. Choose All or another filter to see items again.
+                </div>
+              ) : null}
+              <div
+                style={{
+                  marginTop: 12,
+                  fontSize: 11,
+                  color: '#64748b',
+                  lineHeight: 1.5,
+                  borderTop: '1px solid rgba(148,163,184,0.12)',
+                  paddingTop: 10,
+                }}
+              >
+                Phase 4D.4 · Cleanup: this console does not hard-delete bytes. Archive remains the safe operator action;
+                any future bulk delete needs an explicit Lux-scoped policy and engineering work (not in this phase).
               </div>
             </div>
           ) : null}

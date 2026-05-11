@@ -32,6 +32,15 @@ import {
   readLuxAttachmentEntries,
   safeLuxAttachmentShape,
   upsertLuxAttachmentEntry,
+  buildLuxAttachmentWhereUsedRows,
+  computeLuxAttachmentMediaSummary,
+  detectLuxOperatorTestMediaHint,
+  luxAttachmentArchivedWithPublishedHistory,
+  luxAttachmentEntryNeedsAction,
+  luxAttachmentHasAnyPublishedLink,
+  luxAttachmentMatchesOperatorFilter,
+  luxAttachmentPublishedImageMissingAlt,
+  luxLinkIsCurrentlyPublicOnLuxSite,
 } from '../lib/cmp/_lib/lux-request-attachments.js';
 
 test('LUX_ATTACHMENT_REVIEW_STATUSES is a frozen tri-state', () => {
@@ -972,4 +981,251 @@ test('safeLuxAttachmentShape maps gallery_order and is_gallery_cover on property
   const s = safeLuxAttachmentShape(dbRow, meta);
   assert.equal(s.property_links[0].gallery_order, 3);
   assert.equal(s.property_links[0].is_gallery_cover, true);
+});
+
+test('Phase 4D.4 · computeLuxAttachmentMediaSummary aggregates counts', () => {
+  const pending = {
+    attachment_id: 'a1',
+    review_status: 'pending_review',
+    lifecycle_status: 'active',
+    property_links: [],
+  };
+  const reviewedUnlinked = {
+    attachment_id: 'a2',
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+    property_links: [],
+  };
+  const linkedUnpub = {
+    attachment_id: 'a3',
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+    property_links: [
+      {
+        property_slug: 'p1',
+        intended_slot: 'hero',
+        publish_status: 'unpublished',
+        public_alt_text: 'ok',
+      },
+    ],
+  };
+  const published = {
+    attachment_id: 'a4',
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+    property_links: [
+      {
+        property_slug: 'p1',
+        intended_slot: 'hero',
+        publish_status: 'published',
+        public_alt_text: 'x',
+      },
+    ],
+  };
+  const rejected = { attachment_id: 'a5', review_status: 'rejected', lifecycle_status: 'active', property_links: [] };
+  const archived = {
+    attachment_id: 'a6',
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'archived',
+    property_links: [
+      {
+        property_slug: 'p1',
+        intended_slot: 'gallery',
+        publish_status: 'unpublished',
+        publish_history: [{ at: 't', action: 'published', actor: null, note: null }],
+      },
+    ],
+  };
+  const list = [pending, reviewedUnlinked, linkedUnpub, published, rejected, archived];
+  const s = computeLuxAttachmentMediaSummary(list);
+  assert.equal(s.total, 6);
+  assert.equal(s.pending_review, 1);
+  assert.equal(s.reviewed, 4);
+  assert.equal(s.rejected, 1);
+  assert.equal(s.archived, 1);
+  assert.equal(s.linked, 3);
+  assert.equal(s.published, 1);
+  assert.ok(s.needs_action >= 1);
+});
+
+test('Phase 4D.4 · luxAttachmentHasAnyPublishedLink ignores archived attachments', () => {
+  const activePub = {
+    attachment_id: 'x',
+    lifecycle_status: 'active',
+    property_links: [{ property_slug: 'p', intended_slot: 'hero', publish_status: 'published' }],
+  };
+  const archivedPub = {
+    attachment_id: 'y',
+    lifecycle_status: 'archived',
+    property_links: [{ property_slug: 'p', intended_slot: 'hero', publish_status: 'published' }],
+  };
+  assert.equal(luxAttachmentHasAnyPublishedLink(activePub), true);
+  assert.equal(luxAttachmentHasAnyPublishedLink(archivedPub), false);
+});
+
+test('Phase 4D.4 · luxAttachmentEntryNeedsAction covers review/link/publish/alt/history cases', () => {
+  assert.equal(
+    luxAttachmentEntryNeedsAction({
+      attachment_id: 'p',
+      review_status: 'pending_review',
+      lifecycle_status: 'active',
+      property_links: [],
+    }),
+    true,
+  );
+  assert.equal(
+    luxAttachmentEntryNeedsAction({
+      attachment_id: 'r',
+      review_status: 'rejected',
+      lifecycle_status: 'active',
+      property_links: [],
+    }),
+    false,
+  );
+  assert.equal(
+    luxAttachmentEntryNeedsAction({
+      attachment_id: 'rv',
+      review_status: 'reviewed',
+      media_type: 'image',
+      lifecycle_status: 'active',
+      property_links: [],
+    }),
+    true,
+  );
+  assert.equal(
+    luxAttachmentEntryNeedsAction({
+      attachment_id: 'rv2',
+      review_status: 'reviewed',
+      media_type: 'image',
+      lifecycle_status: 'active',
+      property_links: [
+        { property_slug: 'p', intended_slot: 'hero', publish_status: 'unpublished', public_alt_text: '' },
+      ],
+    }),
+    true,
+  );
+  assert.equal(
+    luxAttachmentEntryNeedsAction({
+      attachment_id: 'ok',
+      review_status: 'reviewed',
+      media_type: 'image',
+      lifecycle_status: 'active',
+      property_links: [
+        { property_slug: 'p', intended_slot: 'hero', publish_status: 'published', public_alt_text: 'alt' },
+      ],
+    }),
+    false,
+  );
+  assert.equal(
+    luxAttachmentPublishedImageMissingAlt({
+      attachment_id: 'badalt',
+      review_status: 'reviewed',
+      media_type: 'image',
+      lifecycle_status: 'active',
+      property_links: [
+        { property_slug: 'p', intended_slot: 'gallery', publish_status: 'published', public_alt_text: '  ' },
+      ],
+    }),
+    true,
+  );
+  const archivedHist = {
+    attachment_id: 'ah',
+    review_status: 'reviewed',
+    lifecycle_status: 'archived',
+    property_links: [
+      {
+        property_slug: 'p',
+        intended_slot: 'hero',
+        publish_status: 'unpublished',
+        publish_history: [{ at: '1', action: 'published', actor: null, note: null }],
+      },
+    ],
+  };
+  assert.equal(luxAttachmentArchivedWithPublishedHistory(archivedHist), true);
+  assert.equal(luxAttachmentEntryNeedsAction(archivedHist), true);
+});
+
+test('Phase 4D.4 · luxLinkIsCurrentlyPublicOnLuxSite gates archived, review, image, slot', () => {
+  const entry = {
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+  };
+  const linkPub = { property_slug: 'p', intended_slot: 'hero', publish_status: 'published' };
+  assert.equal(luxLinkIsCurrentlyPublicOnLuxSite(entry, linkPub), true);
+  assert.equal(luxLinkIsCurrentlyPublicOnLuxSite({ ...entry, lifecycle_status: 'archived' }, linkPub), false);
+  assert.equal(
+    luxLinkIsCurrentlyPublicOnLuxSite({ ...entry, review_status: 'pending_review' }, linkPub),
+    false,
+  );
+  assert.equal(
+    luxLinkIsCurrentlyPublicOnLuxSite({ ...entry, media_type: 'video' }, { ...linkPub, intended_slot: 'gallery' }),
+    false,
+  );
+  assert.equal(
+    luxLinkIsCurrentlyPublicOnLuxSite(entry, { ...linkPub, intended_slot: 'reference' }),
+    false,
+  );
+});
+
+test('Phase 4D.4 · buildLuxAttachmentWhereUsedRows returns safe row shape', () => {
+  const entry = {
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+    property_links: [
+      {
+        property_slug: 'lm-demo',
+        property_title: 'Demo',
+        intended_slot: 'card',
+        publish_status: 'published',
+        public_alt_text: 'a',
+      },
+    ],
+  };
+  const rows = buildLuxAttachmentWhereUsedRows(entry);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].property_slug, 'lm-demo');
+  assert.equal(rows[0].property_title, 'Demo');
+  assert.equal(rows[0].intended_slot, 'card');
+  assert.equal(rows[0].publish_label, 'Published');
+  assert.equal(rows[0].lifecycle_label, 'Active');
+  assert.equal(rows[0].currently_public, true);
+  assert.ok(Array.isArray(rows[0].public_labels));
+  assert.ok(rows[0].public_labels[0].includes('homepage'));
+});
+
+test('Phase 4D.4 · luxAttachmentMatchesOperatorFilter', () => {
+  const e = {
+    attachment_id: 'z',
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+    property_links: [
+      { property_slug: 'p', intended_slot: 'hero', publish_status: 'unpublished', public_alt_text: 'x' },
+    ],
+  };
+  assert.equal(luxAttachmentMatchesOperatorFilter(e, 'all'), true);
+  assert.equal(luxAttachmentMatchesOperatorFilter(e, 'linked'), true);
+  assert.equal(luxAttachmentMatchesOperatorFilter(e, 'published'), false);
+  assert.equal(luxAttachmentMatchesOperatorFilter(e, 'needs_action'), true);
+});
+
+test('Phase 4D.4 · detectLuxOperatorTestMediaHint', () => {
+  assert.equal(
+    detectLuxOperatorTestMediaHint({ file_name: 'smoke-hero.png', notes: '' }, { title: '', description: '' }),
+    true,
+  );
+  assert.equal(
+    detectLuxOperatorTestMediaHint({ file_name: 'clean.png', notes: '' }, { title: 'Phase4D4 check', description: '' }),
+    true,
+  );
+  assert.equal(
+    detectLuxOperatorTestMediaHint({ file_name: 'prod.jpg', notes: 'ok' }, { title: 'Lux', description: '' }),
+    false,
+  );
 });

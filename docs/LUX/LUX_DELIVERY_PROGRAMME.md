@@ -151,6 +151,12 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - **Persistence**: attachment-level `lifecycle_status`, `archived_*`, `restored_*`, `archive_reason`; link-level `publish_history` (never exposed on `property-media-list`); `lux_attachment_lifecycle` messages on the ticket.
 - **Surface**: `/change` Attachments panel shows lifecycle + history summary + **Archive** / **Restore**; **`lux-attachment-archive`** / **`lux-attachment-restore`**. See **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`** and **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**.
 
+### Phase 4D.4 — `/change` media operations polish (summary, filters, where-used)
+
+- **Purpose**: scale **operator usability** as attachment volume grows: at-a-glance counts, local list filters, per-link “where used” clarity, and consistent labels — **without** changing what can become public, **without** CDN/transforms/video publish/DAM/AI, and **without** touching **`/change-v2`**.
+- **Rule**: all logic for counts/filters/public-vs-private display is implemented as **pure helpers** in `lib/cmp/_lib/lux-request-attachments.js` (tests in `node-tests/lux-request-attachments.test.mjs`); UI in `pages/change.js` only **reads** attachment state already returned by list endpoints. **No** hard-delete; **archive** stays the safe cleanup action until a future Lux-scoped delete policy exists.
+- **Surface**: `/change` Attachments header region (summary + filter `<select>`) and per-card **Where used** + **Test media** hint. See **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`** and **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`**.
+
 ### Phase 5 — Production reality gate and client handoff
 
 - **Client-visible outcome**: the delivered system matches the programme claims; clients can use it.
@@ -185,4 +191,5 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - Phase 4C / 4C.1 / 4C.2 / 4C.3 attachments + publish gate: `docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`
 - Phase 4D.1 gallery + media governance: `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
 - Phase 4D.2 homepage card slot: `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
+- Phase 4D.4 `/change` operator media polish: `docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`, `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
 
