@@ -362,11 +362,12 @@ async function unpublishProperty(ticketId, attachmentId, propertySlug, intendedS
 }
 
 async function getPropertyMedia(propertySlug, attachmentId, slot) {
+  const cb = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
   return await http(
     'GET',
     `/api/lux/property-media?property=${encodeURIComponent(propertySlug)}&attachment=${encodeURIComponent(
       attachmentId,
-    )}&slot=${encodeURIComponent(slot)}`,
+    )}&slot=${encodeURIComponent(slot)}&_cb=${encodeURIComponent(cb)}`,
   );
 }
 
