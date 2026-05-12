@@ -427,11 +427,16 @@ Delivery Reality Audit:
 
 ```text
 Delivery Reality Audit:
-- Local fix exists: YES (`npm test` + `npm run build` on feature branch)
-- Merged to main: record PR + squash merge SHA after merge
-- Production deployment: record GitHub deployment id + Vercel target_url after merge
-- Operator verification: `/change` — **Test media** + **Cleanup candidate** badges (advisory); **Archive as smoke/test artifact** prefills standard archive reason via existing archive CMP path; public hero/gallery/card semantics unchanged
-- Smoke: `npm run smoke:lux-phase4c1 -- --target=production` — expect **ALL CHECKS PASSED**; script prints **ticket_id** + **attachment_ids** + cleanup recommendation; optional **`--archive-smoke-artifacts`** archives only ids created in that run (never deletes)
+- Local fix exists: YES (branch `lux/phase-4d5-cleanup-policy`, feature commit `c6c5dffd`)
+- Merged to main: YES — PR **#171** (squash merge commit `1a25d81b14e019d759277a41e9cb12c2c528e1a9`)
+- Production deployment ID: GitHub deployment **4660857263** (Vercel target_url `https://corpflow-ai-command-center-iegfgnqy9-corpflowai.vercel.app`, state **success**)
+- Commit deployed (production): `1a25d81b14e019d759277a41e9cb12c2c528e1a9`
+- Live verification:
+  - `npm run smoke:lux-phase4c1 -- --target=production` (2026-05-12) — **ALL CHECKS PASSED**; smoke prints **Phase 4D.5 smoke artifact summary** with `ticket_id`, `attachment_ids (5)`, and cleanup recommendation lines
+  - Optional `npm run smoke:lux-phase4c1 -- --target=production --archive-smoke-artifacts` (2026-05-12) — **ALL CHECKS PASSED**; five `4D5: archived smoke artifact …` lines (tracked active ids only; **never** deletes bytes)
+  - Production `https://lux.corpflowai.com/change` `_next/static` JS bundles contain **Test media**, **Cleanup candidate**, **Archive as smoke/test artifact**, and **Phase 4D.5** strings (bundle proof)
+  - Public no-leak: smoke checks on `/`, `/concierge`, `/property/lm-phase2d-manual-demo` — **passed**
 - Master programme ticket `cmo8mjijk0000jl04l1jz0v6d`: intentionally **not** closed by this phase
-- Final verdict: update to **COMPLETE** after production verification
+- Client-facing flow usable: YES (operator cleanup guidance; optional flag archives only smoke-run attachment ids)
+- Final verdict: COMPLETE
 ```
