@@ -2,7 +2,7 @@
 
 **Authoritative programme ticket:** `cmo8mjijk0000jl04l1jz0v6d` (not closed by media phases).
 
-This document describes **how media becomes public** on `lux.corpflowai.com` after Phase 4C.x / **4D.1** / **4D.2**, plus **Phase 4D.3** (operator **archive / restore** without deleting bytes), plus **Phase 4D.4** (operator-only **`/change`** summaries, filters, and “where used” copy — **no** new public fields or routes), and the **hard boundaries** before CDN, transforms, DAM, automation, or social surfaces exist.
+This document describes **how media becomes public** on `lux.corpflowai.com` after Phase 4C.x / **4D.1** / **4D.2**, plus **Phase 4D.3** (operator **archive / restore** without deleting bytes), plus **Phase 4D.4** (operator-only **`/change`** summaries, filters, and “where used” copy — **no** new public fields or routes), plus **Phase 4D.5** (operator **cleanup policy** for smoke/test artifacts: expanded hinting, **Cleanup candidate** advisory, optional one-click archive with a standard reason, smoke script summary + optional `--archive-smoke-artifacts` — **still no** hard-delete by default), and the **hard boundaries** before CDN, transforms, DAM, automation, or social surfaces exist.
 
 ## Lifecycles (strict order)
 
@@ -24,6 +24,18 @@ Pure **client-side** helpers in `lib/cmp/_lib/lux-request-attachments.js` drive:
 - A per-attachment **“Where used”** readout aligned with the same **public** gate as `property-media` (reviewed + image + published + non-archived + slot in `hero` \| `gallery` \| `card`), plus link publish state and lifecycle labels for operator clarity.
 
 **Explicit non-goals in 4D.4:** hard-delete of `cmp_ticket_attachments` bytes, CDN/transforms, new public JSON, weakening auth, or changing **`/change-v2`**. **Safe cleanup path remains archive** (and optional restore + deliberate republish); any future bulk delete requires a **Lux-scoped delete/archive policy** and separate engineering.
+
+## Phase 4D.5 — Smoke/test cleanup policy (archive-first; no default hard-delete)
+
+**Policy:** **Archive** is the only supported cleanup action in product today. **`lux-attachment-archive`** continues to unpublish all links first when needed (Phase 4D.3). **Hard-delete** of `cmp_ticket_attachments` bytes is **out of scope** until a separately governed, explicitly approved Lux workflow exists (audit, tenancy, retention, and rollback).
+
+**Identification (operator convenience, not security):** pure helpers in `lib/cmp/_lib/lux-request-attachments.js` scan attachment `file_name`, `notes`, and optional ticket strings (`title`, `description`, common email-shaped fields) for smoke/test markers (e.g. `smoke`, `verify`, `uat`, `phase4d*`, `example.invalid`, `fixture`, `e2e`). A **Cleanup candidate** badge means: matched test/smoke heuristics **and** the attachment is **not** currently public on Lux hero/gallery/card (same gate as `property-media`).
+
+**`/change`:** **Test media** + **Cleanup candidate** badges (advisory copy), optional **Archive as smoke/test artifact** button (prefills `LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT` into the existing archive action). No auto-archive, no bulk delete.
+
+**Smoke script:** `scripts/smoke-lux-phase4c1-attachment-review.mjs` prints `ticket_id` + tracked `attachment_ids` and a cleanup recommendation. Optional **`--archive-smoke-artifacts`** (default off) archives **only** attachments created in that run, still **never** deletes bytes.
+
+**Future hard-delete requirements (non-exhaustive):** explicit programme approval, Lux-only CMP action, tenancy + ticket ownership checks, dual control or operator role gate, retention logging, and coordination with any CDN/cache invalidation — none of which ship in 4D.5.
 
 **Per-link publish history (operator-only):** each `property_links[]` row may carry `publish_history[]` entries `{ at, action, actor, note }` for `published` | `unpublished` | `archived` | `restored` (capped server-side). This is **not** included in `property-media-list` or any public JSON.
 

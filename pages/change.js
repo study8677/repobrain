@@ -23,10 +23,12 @@ import {
   luxLeadCrmStageLabel,
 } from '../lib/cmp/_lib/lux-lead-operator-workflow.js';
 import {
+  LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT,
   LUX_ATTACHMENT_OPERATOR_FILTER_IDS,
   buildLuxAttachmentWhereUsedRows,
   computeLuxAttachmentMediaSummary,
   detectLuxOperatorTestMediaHint,
+  luxAttachmentCleanupCandidate,
   luxAttachmentMatchesOperatorFilter,
 } from '../lib/cmp/_lib/lux-request-attachments.js';
 
@@ -157,6 +159,24 @@ function luxPublishHistoryActionLabel(action) {
   if (a === 'archived') return 'Archived';
   if (a === 'restored') return 'Restored';
   return action != null ? String(action) : '—';
+}
+
+/** Phase 4D.5 — optional ticket fields for smoke/test hinting (client-only). */
+function luxTicketAttachmentHintContext(ticketLike) {
+  const t = ticketLike && typeof ticketLike === 'object' ? ticketLike : {};
+  return {
+    title: t.title,
+    description: t.description,
+    client_email: t.client_email != null ? t.client_email : t.clientEmail,
+    contact_email:
+      t.contact_email != null
+        ? t.contact_email
+        : t.contactEmail != null
+          ? t.contactEmail
+          : t.requester_email,
+    requester_email: t.requester_email,
+    email: t.email,
+  };
 }
 
 export default function ChangeConsolePage() {
@@ -571,14 +591,17 @@ export default function ChangeConsolePage() {
     }
   }
 
-  async function submitAttachmentArchive(attachmentId) {
+  async function submitAttachmentArchive(attachmentId, opts) {
     const tid = String(selectedTicketId || '').trim();
     const aid = String(attachmentId || '').trim();
     if (!tid || !aid) return;
     setAttachmentArchiveBusyId(aid);
     setAttachmentsError('');
     try {
-      const reasonRaw = (attachmentArchiveReasonDrafts && attachmentArchiveReasonDrafts[aid]) || '';
+      const override =
+        opts && typeof opts === 'object' && opts.archiveReason != null ? String(opts.archiveReason).trim() : '';
+      const fromDraft = (attachmentArchiveReasonDrafts && attachmentArchiveReasonDrafts[aid]) || '';
+      const reasonRaw = override || fromDraft;
       const r = await fetch('/api/cmp/router?action=lux-attachment-archive', {
         method: 'POST',
         credentials: 'include',
@@ -2195,10 +2218,9 @@ export default function ChangeConsolePage() {
                   const life = String(a.lifecycle_status || 'active').toLowerCase();
                   const isArchived = life === 'archived';
                   const whereUsedRows = buildLuxAttachmentWhereUsedRows(a);
-                  const showTestMediaHint = detectLuxOperatorTestMediaHint(a, {
-                    title: ticket?.title,
-                    description: ticket?.description,
-                  });
+                  const hintCtx = luxTicketAttachmentHintContext(ticket);
+                  const showTestMediaHint = detectLuxOperatorTestMediaHint(a, hintCtx);
+                  const showCleanupCandidate = luxAttachmentCleanupCandidate(a, hintCtx);
                   const statusBadge =
                     status === 'reviewed'
                       ? { bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.35)', color: '#dcfce7', label: 'Reviewed' }
@@ -2262,9 +2284,26 @@ export default function ChangeConsolePage() {
                                 color: '#fef9c3',
                                 flexShrink: 0,
                               }}
-                              title="Heuristic match on filename, notes, or ticket text (smoke / phase / test markers). Does not delete or hide media."
+                              title="Heuristic match on filename, notes, or ticket text (smoke / phase / test / verify / example.invalid patterns). Not a security label; does not delete or hide media."
                             >
                               Test media
+                            </span>
+                          ) : null}
+                          {showCleanupCandidate ? (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                padding: '3px 8px',
+                                borderRadius: 8,
+                                border: '1px solid rgba(148,163,184,0.45)',
+                                background: 'rgba(148,163,184,0.12)',
+                                color: '#e2e8f0',
+                                flexShrink: 0,
+                              }}
+                              title="Advisory only: test/smoke signals + not currently public on Lux hero/gallery/card. Archive is the safe cleanup step; no automatic delete."
+                            >
+                              Cleanup candidate
                             </span>
                           ) : null}
                         </div>
@@ -2303,6 +2342,12 @@ export default function ChangeConsolePage() {
                           ) : null}
                         </div>
                       </div>
+                      {isLuxMeta && (showTestMediaHint || showCleanupCandidate) ? (
+                        <div style={{ marginTop: 6, fontSize: 10, color: '#64748b', lineHeight: 1.45 }}>
+                          Phase 4D.5 · Badges are advisory only (not security). Hard delete is out of scope — use
+                          Archive when retiring smoke or QA fixtures.
+                        </div>
+                      ) : null}
                       <div
                         style={{
                           marginTop: 6,
@@ -2804,6 +2849,48 @@ export default function ChangeConsolePage() {
                               {isRestoreBusy ? 'Restoring…' : 'Restore'}
                             </button>
                           </div>
+                          {showTestMediaHint && !isArchived && !showCleanupCandidate ? (
+                            <div style={{ fontSize: 10, color: '#fbbf24', lineHeight: 1.45 }}>
+                              Phase 4D.5 · This attachment still matches public Lux slot heuristics (hero / gallery /
+                              card). Unpublish first, then archive when finished.
+                            </div>
+                          ) : null}
+                          {showTestMediaHint && !isArchived ? (
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 10,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <button
+                                type="button"
+                                disabled={isArchiveBusy || isRestoreBusy}
+                                onClick={() =>
+                                  void submitAttachmentArchive(aid, {
+                                    archiveReason: LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT,
+                                  })
+                                }
+                                style={{
+                                  padding: '8px 12px',
+                                  borderRadius: 10,
+                                  border: '1px solid rgba(251,191,36,0.45)',
+                                  background: 'rgba(251,191,36,0.10)',
+                                  color: '#fef9c3',
+                                  fontWeight: 800,
+                                  fontSize: 12,
+                                  cursor: isArchiveBusy || isRestoreBusy ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                {isArchiveBusy ? 'Archiving…' : 'Archive as smoke/test artifact'}
+                              </button>
+                              <span style={{ fontSize: 10, color: '#64748b', maxWidth: 420, lineHeight: 1.4 }}>
+                                Same as Archive with a prefilled reason; still runs the normal archive flow (unpublishes
+                                links first when needed).
+                              </span>
+                            </div>
+                          ) : null}
                           <label style={{ fontSize: 10, color: '#94a3b8', display: 'grid', gap: 4 }}>
                             Review note (optional)
                             <textarea
@@ -3023,8 +3110,10 @@ export default function ChangeConsolePage() {
                   paddingTop: 10,
                 }}
               >
-                Phase 4D.4 · Cleanup: this console does not hard-delete bytes. Archive remains the safe operator action;
-                any future bulk delete needs an explicit Lux-scoped policy and engineering work (not in this phase).
+                Phase 4D.4 / 4D.5 · Cleanup: this console does not hard-delete bytes. Archive remains the safe operator
+                action. Phase 4D.5 adds smoke/test hints and an optional one-click archive with a standard reason — no
+                auto-archive and no bulk delete. Any future hard-delete needs a separate Lux-scoped policy and explicit
+                approval.
               </div>
             </div>
           ) : null}

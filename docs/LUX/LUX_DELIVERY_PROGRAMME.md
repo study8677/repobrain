@@ -157,6 +157,12 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - **Rule**: all logic for counts/filters/public-vs-private display is implemented as **pure helpers** in `lib/cmp/_lib/lux-request-attachments.js` (tests in `node-tests/lux-request-attachments.test.mjs`); UI in `pages/change.js` only **reads** attachment state already returned by list endpoints. **No** hard-delete; **archive** stays the safe cleanup action until a future Lux-scoped delete policy exists.
 - **Surface**: `/change` Attachments header region (summary + filter `<select>`) and per-card **Where used** + **Test media** hint. See **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`** and **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`**.
 
+### Phase 4D.5 — Smoke/test cleanup policy (archive-first; smoke hygiene)
+
+- **Purpose**: formalize **smoke/test identification** and **operator-safe cleanup guidance** without hard-deleting bytes by default; optional convenience archive + smoke script artifact summary.
+- **Rule**: reuse **`lux-attachment-archive`** / restore semantics from 4D.3; expanded **`detectLuxOperatorTestMediaHint`** + **`luxAttachmentCleanupCandidate`** (not security); **`LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT`** for one-click smoke archive on `/change`. Smoke script **`--archive-smoke-artifacts`** default **off**; archives **only** attachment ids created in that run. **No** DAM/CDN/video/AI; **no** `/change-v2`.
+- **Surface**: `/change` badges + **Archive as smoke/test artifact**; `scripts/smoke-lux-phase4c1-attachment-review.mjs` summary + optional flag. See **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`** and **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`**.
+
 ### Phase 5 — Production reality gate and client handoff
 
 - **Client-visible outcome**: the delivered system matches the programme claims; clients can use it.
@@ -192,4 +198,5 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - Phase 4D.1 gallery + media governance: `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
 - Phase 4D.2 homepage card slot: `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
 - Phase 4D.4 `/change` operator media polish: `docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`, `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
+- Phase 4D.5 smoke/test cleanup policy: `docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`, `docs/LUX/LUX_MEDIA_GOVERNANCE.md`
 

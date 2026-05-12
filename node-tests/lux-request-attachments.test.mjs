@@ -36,11 +36,14 @@ import {
   computeLuxAttachmentMediaSummary,
   detectLuxOperatorTestMediaHint,
   luxAttachmentArchivedWithPublishedHistory,
+  luxAttachmentCleanupCandidate,
   luxAttachmentEntryNeedsAction,
+  luxAttachmentHasAnyCurrentlyPublicLink,
   luxAttachmentHasAnyPublishedLink,
   luxAttachmentMatchesOperatorFilter,
   luxAttachmentPublishedImageMissingAlt,
   luxLinkIsCurrentlyPublicOnLuxSite,
+  LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT,
 } from '../lib/cmp/_lib/lux-request-attachments.js';
 
 test('LUX_ATTACHMENT_REVIEW_STATUSES is a frozen tri-state', () => {
@@ -1228,4 +1231,57 @@ test('Phase 4D.4 · detectLuxOperatorTestMediaHint', () => {
     detectLuxOperatorTestMediaHint({ file_name: 'prod.jpg', notes: 'ok' }, { title: 'Lux', description: '' }),
     false,
   );
+});
+
+test('Phase 4D.5 · detectLuxOperatorTestMediaHint extended markers + ticket email', () => {
+  assert.equal(
+    detectLuxOperatorTestMediaHint(
+      { file_name: 'hero.png', notes: '' },
+      { title: '', description: '', email: 'ops@example.invalid' },
+    ),
+    true,
+  );
+  assert.equal(detectLuxOperatorTestMediaHint({ file_name: 'verify-shot.png', notes: '' }, {}), true);
+  assert.equal(
+    detectLuxOperatorTestMediaHint({ file_name: 'clean.png', notes: '' }, { title: 'UAT checklist', description: '' }),
+    true,
+  );
+});
+
+test('Phase 4D.5 · luxAttachmentHasAnyCurrentlyPublicLink + cleanup candidate', () => {
+  const pubEntry = {
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+    property_links: [{ property_slug: 'p', intended_slot: 'hero', publish_status: 'published', public_alt_text: 'x' }],
+  };
+  assert.equal(luxAttachmentHasAnyCurrentlyPublicLink(pubEntry), true);
+  assert.equal(luxAttachmentCleanupCandidate(pubEntry, { title: '[smoke] t' }), false);
+
+  const priv = {
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'active',
+    property_links: [
+      { property_slug: 'p', intended_slot: 'hero', publish_status: 'unpublished', public_alt_text: 'x' },
+    ],
+  };
+  assert.equal(luxAttachmentHasAnyCurrentlyPublicLink(priv), false);
+  assert.equal(luxAttachmentCleanupCandidate(priv, { title: 'smoke ticket' }), true);
+
+  const arch = {
+    review_status: 'reviewed',
+    media_type: 'image',
+    lifecycle_status: 'archived',
+    property_links: [
+      { property_slug: 'p', intended_slot: 'hero', publish_status: 'unpublished', public_alt_text: 'x' },
+    ],
+  };
+  assert.equal(luxAttachmentHasAnyCurrentlyPublicLink(arch), false);
+  assert.equal(luxAttachmentCleanupCandidate(arch, { title: 'phase4d5 smoke' }), true);
+});
+
+test('Phase 4D.5 · LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT', () => {
+  assert.ok(LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT.includes('smoke'));
+  assert.ok(LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT.includes('artifact'));
 });

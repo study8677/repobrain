@@ -3,7 +3,7 @@
 **Authoritative ticket:** `cmo8mjijk0000jl04l1jz0v6d` (master programme).
 **Surface:** `https://lux.corpflowai.com/change` (Lux tenant session only).
 
-This document covers **Phase 4C** (binary upload to a Lux client-request ticket), **Phase 4C.1** (operator media review), **Phase 4C.2** (reviewed-only property linkage, metadata-only), **Phase 4C.3** (operator-controlled **publish** of reviewed+linked **images** to a narrow public surface), **Phase 4D.1** (governed **multi-image gallery** for `intended_slot === gallery` plus the existing **hero** path), **Phase 4D.2** (**homepage / listing card** images for `intended_slot === card`), **Phase 4D.3** (**archive / restore** lifecycle: archive unpublishes all links; restore does not auto-republish; per-link **`publish_history`** for operator audit only), and **Phase 4D.4** (**`/change`** operator UX only: media summary counts, client-side filters, “where used” readout, clearer publish/public labels, optional **Test media** hint from filename/notes/ticket text — **no** new public semantics, **no** hard delete). Video and other media types stay private on public routes; there is still **no** auto-publish, **no** CDN/transform pipeline, and **no** signed public download of raw bytes beyond the governed **`/api/lux/property-media`** (and optional **`property-media-list`**) described below. End-to-end lifecycle and slot rules: **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**.
+This document covers **Phase 4C** (binary upload to a Lux client-request ticket), **Phase 4C.1** (operator media review), **Phase 4C.2** (reviewed-only property linkage, metadata-only), **Phase 4C.3** (operator-controlled **publish** of reviewed+linked **images** to a narrow public surface), **Phase 4D.1** (governed **multi-image gallery** for `intended_slot === gallery` plus the existing **hero** path), **Phase 4D.2** (**homepage / listing card** images for `intended_slot === card`), **Phase 4D.3** (**archive / restore** lifecycle: archive unpublishes all links; restore does not auto-republish; per-link **`publish_history`** for operator audit only), **Phase 4D.4** (**`/change`** operator UX only: media summary counts, client-side filters, “where used” readout, clearer publish/public labels, optional **Test media** hint from filename/notes/ticket text — **no** new public semantics, **no** hard delete), and **Phase 4D.5** (**cleanup policy** for smoke/test artifacts: expanded detection, **Cleanup candidate** advisory when not currently public on Lux surfaces, optional one-click archive with a standard reason, smoke script artifact summary + optional `--archive-smoke-artifacts` — **archive-first**, **no** default hard-delete). Video and other media types stay private on public routes; there is still **no** auto-publish, **no** CDN/transform pipeline, and **no** signed public download of raw bytes beyond the governed **`/api/lux/property-media`** (and optional **`property-media-list`**) described below. End-to-end lifecycle and slot rules: **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**.
 
 ## Scope (intentional, narrow)
 
@@ -42,6 +42,13 @@ In scope for **Phase 4D.4** (operator ergonomics only):
 - **“Where used”** — one block per attachment summarizing each `property_links[]` row: property slug/title, intended slot, publish label (Published / Unpublished), attachment lifecycle (Active / Archived), and **visibility** text derived from the same gate as public `property-media` (hero / gallery / card vs private slots or not-currently-public reasons).
 - **Copy** — consistent operator wording (e.g. Pending review, Published, Unpublished, Archived, Private, public-on-page strings). **Optional “Test media” badge** when filename, notes, or ticket title/description match known smoke/test substrings used in fixtures; never auto-deletes.
 - **Cleanup stance** — no operator hard-delete in this phase; **archive** remains the safe retirement path. Future delete tooling needs an explicit Lux policy + implementation.
+
+In scope for **Phase 4D.5** (cleanup policy + smoke hygiene; **no** DAM, **no** CDN, **no** hard-delete by default):
+
+- **Formal smoke/test detection** — extended substring markers on attachment + ticket context (see `detectLuxOperatorTestMediaHint` in `lux-request-attachments.js`); **not** a security classifier.
+- **`/change` indicators** — **Test media** + **Cleanup candidate** (test/smoke signals + **not** currently public on hero/gallery/card); advisory copy; **Archive as smoke/test artifact** uses existing **`lux-attachment-archive`** with prefilled `LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT`.
+- **Smoke script** — end-of-run **ticket_id** + **attachment_ids** summary, cleanup recommendation, optional **`--archive-smoke-artifacts`** to archive only ids created in that run (default **off**; never deletes).
+- **Bulk** — no multi-select bulk archive in product; document future work if operators need batch archive under stricter confirmation.
 
 ## Storage shape
 
@@ -414,4 +421,17 @@ Delivery Reality Audit:
 - Master programme ticket `cmo8mjijk0000jl04l1jz0v6d`: intentionally **not** closed by this phase
 - Client-facing flow usable: YES (operator-only `/change` ergonomics; **no** new public semantics)
 - Final verdict: COMPLETE
+```
+
+## Delivery Reality Audit (Phase 4D.5)
+
+```text
+Delivery Reality Audit:
+- Local fix exists: YES (`npm test` + `npm run build` on feature branch)
+- Merged to main: record PR + squash merge SHA after merge
+- Production deployment: record GitHub deployment id + Vercel target_url after merge
+- Operator verification: `/change` — **Test media** + **Cleanup candidate** badges (advisory); **Archive as smoke/test artifact** prefills standard archive reason via existing archive CMP path; public hero/gallery/card semantics unchanged
+- Smoke: `npm run smoke:lux-phase4c1 -- --target=production` — expect **ALL CHECKS PASSED**; script prints **ticket_id** + **attachment_ids** + cleanup recommendation; optional **`--archive-smoke-artifacts`** archives only ids created in that run (never deletes)
+- Master programme ticket `cmo8mjijk0000jl04l1jz0v6d`: intentionally **not** closed by this phase
+- Final verdict: update to **COMPLETE** after production verification
 ```

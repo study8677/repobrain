@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Phase 4C.1 + 4C.3 + 4D.1 + 4D.2 live verification — Lux operator media review + property publish + gallery + homepage card.
+ * Phase 4C.1 + 4C.3 + 4D.1 + 4D.2 + 4D.5 live verification — Lux operator media review + property publish + gallery +
+ * homepage card + optional smoke artifact archive.
  *
  * Targets either a Vercel preview (Protection Bypass required) or production.
  * Strictly read/write to a SINGLE Lux client-request ticket created at the start
@@ -24,6 +25,9 @@
  *   node scripts/smoke-lux-phase4c1-attachment-review.mjs --target=preview
  *   node scripts/smoke-lux-phase4c1-attachment-review.mjs --target=production
  *
+ * Optional (Phase 4D.5): after a successful run, archive only attachments created in that run (never deletes bytes):
+ *   node scripts/smoke-lux-phase4c1-attachment-review.mjs --target=production --archive-smoke-artifacts
+ *
  * Exits 0 only if every assertion passes.
  */
 
@@ -32,6 +36,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import dotenv from 'dotenv';
+
+import { LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT } from '../lib/cmp/_lib/lux-request-attachments.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +48,13 @@ dotenv.config({ path: path.join(REPO_ROOT, '.env') });
 
 const argv = process.argv.slice(2);
 const argTarget = (argv.find((x) => x.startsWith('--target=')) || '').slice('--target='.length);
+const archiveSmokeArtifacts = argv.includes('--archive-smoke-artifacts');
+const smokeArtifactAttachmentIds = [];
+
+function trackSmokeArtifact(id) {
+  const s = id != null ? String(id).trim() : '';
+  if (s) smokeArtifactAttachmentIds.push(s);
+}
 
 function fail(msg) {
   console.error(`FAIL: ${msg}`);
@@ -417,6 +430,26 @@ async function archiveLuxAttachment(ticketId, attachmentId, archiveReason) {
   return r.json.attachment;
 }
 
+async function archiveSmokeArtifactsFromRun(ticketId) {
+  if (!archiveSmokeArtifacts) return;
+  info('Phase 4D.5: --archive-smoke-artifacts — archiving tracked ids (active rows only; never delete).');
+  const reason = `${LUX_ATTACHMENT_ARCHIVE_REASON_SMOKE_DEFAULT} (smoke --archive-smoke-artifacts)`;
+  for (const aid of smokeArtifactAttachmentIds) {
+    const list = await listAttachments(ticketId);
+    const row = list.find((x) => x && x.attachment_id === aid);
+    if (!row) {
+      ok(`4D5: skip missing attachment ${aid}`);
+      continue;
+    }
+    if (String(row.lifecycle_status || '').toLowerCase() === 'archived') {
+      ok(`4D5: skip already archived ${aid}`);
+      continue;
+    }
+    await archiveLuxAttachment(ticketId, aid, reason);
+    ok(`4D5: archived smoke artifact ${aid}`);
+  }
+}
+
 async function restoreLuxAttachment(ticketId, attachmentId) {
   const r = await http('POST', '/api/cmp/router?action=lux-attachment-restore', {
     body: { ticket_id: ticketId, attachment_id: attachmentId },
@@ -439,6 +472,7 @@ async function main() {
     intendedUse: 'property_hero',
     notes: 'Smoke fixture: 1x1 transparent PNG',
   });
+  trackSmokeArtifact(imgId);
   const vidId = await uploadAttachment(ticketId, {
     fileName: 'phase4c1-smoke-clip.mp4',
     contentType: 'video/mp4',
@@ -446,6 +480,7 @@ async function main() {
     intendedUse: 'request_supporting',
     notes: 'Smoke fixture: minimal MP4 header',
   });
+  trackSmokeArtifact(vidId);
 
   let list = await listAttachments(ticketId);
   if (list.length !== 2) fail(`list expected 2 entries, got ${list.length}`);
@@ -553,6 +588,7 @@ async function main() {
     intendedUse: 'property_gallery',
     notes: 'Smoke gallery A',
   });
+  trackSmokeArtifact(galA);
   const galB = await uploadAttachment(ticketId, {
     fileName: 'phase4d1-gallery-b.png',
     contentType: 'image/png',
@@ -560,6 +596,7 @@ async function main() {
     intendedUse: 'property_gallery',
     notes: 'Smoke gallery B',
   });
+  trackSmokeArtifact(galB);
   await setReview(ticketId, galA, 'reviewed', 'Smoke: gallery A reviewed.');
   await setReview(ticketId, galB, 'reviewed', 'Smoke: gallery B reviewed.');
   await setPropertyLink(ticketId, galA, 'lm-phase2d-manual-demo', 'gallery', 'Smoke: gallery A slot.');
@@ -622,6 +659,7 @@ async function main() {
     intendedUse: 'property_hero',
     notes: 'Smoke card slot for homepage',
   });
+  trackSmokeArtifact(cardImg);
   await setReview(ticketId, cardImg, 'reviewed', 'Smoke: card image reviewed.');
   await setPropertyLink(ticketId, cardImg, 'lm-phase2d-manual-demo', 'card', 'Smoke: card slot for homepage card.');
   const cardAltProbe = 'Smoke4D2CardAltUnique9271';
@@ -740,6 +778,19 @@ async function main() {
   await publicSurfaceClean('/');
   await publicSurfaceClean('/concierge');
   await publicSurfaceClean('/property/lm-phase2d-manual-demo');
+
+  info('');
+  info('=== Phase 4D.5 smoke artifact summary ===');
+  info(`ticket_id: ${ticketId}`);
+  info(`attachment_ids (${smokeArtifactAttachmentIds.length}): ${smokeArtifactAttachmentIds.join(', ')}`);
+  info(
+    'Cleanup recommendation: from /change on this Lux host, Archive smoke attachments on this ticket when no longer needed (bytes are retained; no hard-delete in this phase).',
+  );
+  if (!archiveSmokeArtifacts) {
+    info('Optional: append --archive-smoke-artifacts to archive only the ids above (default off; still never deletes).');
+  }
+
+  await archiveSmokeArtifactsFromRun(ticketId);
 
   console.log(`\nALL CHECKS PASSED. ticket_id=${ticketId} (operator can leave open or close manually).`);
 }
