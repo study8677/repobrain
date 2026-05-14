@@ -186,7 +186,7 @@ def main() -> int:
 
         if pipx(["install", "--force", engine_dir]) == 0 and has("ag-mcp"):
             log("[antigravity] Installed/upgraded via pipx.")
-            log("[antigravity] Next: run /antigravity:setup, then /antigravity:ag-refresh.")
+            log("[antigravity] Next: run /antigravity:ag-setup, then /antigravity:ag-refresh.")
             log("[antigravity] If the MCP tool is not connected in this session, restart Claude Code once.")
             return 0
 
@@ -199,7 +199,7 @@ def main() -> int:
             prepend_path(ub)
         if has("ag-mcp"):
             log(f"[antigravity] Installed via pip --user. To persist on future shells, add this dir to PATH: {ub}")
-            log("[antigravity] Next: run /antigravity:setup, then /antigravity:ag-refresh.")
+            log("[antigravity] Next: run /antigravity:ag-setup, then /antigravity:ag-refresh.")
             log("[antigravity] If the MCP tool is not connected in this session, restart Claude Code once.")
             return 0
 

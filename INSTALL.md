@@ -5,7 +5,7 @@
 ```
 /plugin marketplace add study8677/antigravity-workspace-template
 /plugin install antigravity@antigravity
-/antigravity:setup
+/antigravity:ag-setup
 /antigravity:ag-refresh
 /antigravity:ag-ask "what does this project do?"
 ```
@@ -40,26 +40,36 @@ Then register and install the plugin:
 codex plugin marketplace add /absolute/path/to/antigravity-workspace-template
 ```
 
-Current Codex CLI builds register plugin marketplaces with `codex plugin marketplace add`.
-Use `ag-refresh --workspace <project>` and `ag-ask "question" --workspace <project>` for refresh/ask.
+Codex auto-discovers slash commands from the plugin's `commands/` directory (no manifest entry required), so the same four commands are available without the `antigravity:` prefix:
+
+```
+/ag-setup
+/ag-refresh
+/ag-ask "what does this project do?"
+/ag-init my-new-project
+```
+
+You can also keep using the raw CLI directly: `ag-refresh --workspace <project>` and `ag-ask "question" --workspace <project>`.
 If your Codex build supports MCP and you want tool-style integration, register
 `ag-mcp --workspace <project>` separately in your Codex MCP configuration.
 
 ## Verifying
 
 - **Claude Code**: `/antigravity:ag-ask "what does the engine do?"` should run `ag-ask` and print a routed answer.
-- **Codex CLI**: `ag-ask "what does the engine do?" --workspace <project>` should print a routed answer.
+- **Codex CLI**: `/ag-ask "what does the engine do?"` (or `ag-ask "..." --workspace <project>` from the shell) should print a routed answer.
 
-## Available slash commands (Claude Code)
+## Available slash commands
 
-Slash commands are namespaced by plugin name — type `/antigravity:` to discover them.
+Same four commands ship to both hosts. Claude Code namespaces them as `/antigravity:<name>`; Codex CLI surfaces them as bare `/<name>`.
 
-| Command | What it does |
-|---|---|
-| `/antigravity:setup` | **First-time setup** — interactive `.env` writer (LLM provider + key + model) |
-| `/antigravity:ag-refresh [quick]` | Rebuild / incrementally update the project knowledge base |
-| `/antigravity:ag-ask <question>` | Routed Q&A on the current codebase |
-| `/antigravity:ag-init <name>` | Scaffold a new multi-agent repo from this template |
+| Claude Code | Codex CLI | What it does |
+|---|---|---|
+| `/antigravity:ag-setup` | `/ag-setup` | **First-time setup** — interactive `.env` writer (LLM provider + key + model) |
+| `/antigravity:ag-refresh [quick]` | `/ag-refresh [quick]` | Rebuild / incrementally update the project knowledge base |
+| `/antigravity:ag-ask <question>` | `/ag-ask <question>` | Routed Q&A on the current codebase |
+| `/antigravity:ag-init <name>` | `/ag-init <name>` | Scaffold a new multi-agent repo from this template |
+
+The plugin also bundles the `agent-repo-init` skill (description-matched in either host), which is what `/ag-init` invokes under the hood.
 
 ## Optional MCP tools
 
@@ -94,11 +104,11 @@ The default slash commands do not require MCP. If you manually enabled `ag-mcp`,
 **Diagnostic log**
 `ag-mcp` writes startup and tool errors to `~/.claude/plugins/data/antigravity-antigravity/ag-mcp.log` unless Claude provides a plugin data directory.
 
-**Do I need `/antigravity:ag-init` before refresh?**
-No. `/antigravity:ag-refresh` initializes the current project's `.antigravity/` directory automatically. `/antigravity:ag-init` is for scaffolding a new repository from the Antigravity template.
+**Do I need `/ag-init` before refresh?**
+No. `/ag-refresh` initializes the current project's `.antigravity/` directory automatically. `/ag-init` is for scaffolding a new repository from the Antigravity template.
 
 **Hook timed out**
 Slow network during first install. Increase the `timeout` in `hooks/hooks.json` or run `pipx install <plugin-root>/engine` manually before restarting.
 
 **Codex CLI marketplace add fails or does not auto-load the plugin**
-Codex's marketplace/plugin workflow varies by CLI build. If `codex plugin marketplace add <path>` rejects the repo, or if your build only registers the marketplace without installing plugins, register the MCP server directly via your local Codex CLI MCP config and load skills from `<path>/skills/` manually.
+Codex's marketplace/plugin workflow varies by CLI build. If `codex plugin marketplace add <path>` rejects the repo, or if your build only registers the marketplace without installing plugins, register the MCP server directly via your local Codex CLI MCP config and load skills + commands from `<path>/skills/` and `<path>/commands/` manually.

@@ -108,8 +108,9 @@ def _format_tool_error(tool_name: str, exc: Exception) -> str:
     if "No LLM configured" in message:
         return (
             "Error: No LLM configured for this project. Run "
-            "`/antigravity:setup`, restart Claude Code once so ag-mcp reloads "
-            "the project environment, then rerun this command."
+            "`/antigravity:ag-setup` (Claude Code) or `/ag-setup` (Codex CLI), "
+            "restart the host once so ag-mcp reloads the project environment, "
+            "then rerun this command."
         )
     if "Project initialization failed" in message:
         return f"Error: {message}"

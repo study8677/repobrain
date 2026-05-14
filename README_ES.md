@@ -65,6 +65,79 @@ La arquitectura son **archivos + un motor Q&A en vivo**, no plugins. Portable en
 
 ---
 
+## Comandos Slash
+
+Los mismos cuatro comandos slash funcionan tanto en **Claude Code** como en **Codex CLI**. Claude los expone con el espacio de nombres `/antigravity:<nombre>`; Codex auto-descubre el directorio `commands/` y los presenta sin prefijo, como `/<nombre>`. Mismo flujo en ambos hosts — sin reaprender.
+
+| Claude Code | Codex CLI | Propósito |
+|---|---|---|
+| `/antigravity:ag-setup` | `/ag-setup` | Configuración inicial — elige proveedor LLM, escribe `.env` |
+| `/antigravity:ag-refresh [quick]` | `/ag-refresh [quick]` | Construye / refresca incrementalmente la base de conocimiento |
+| `/antigravity:ag-ask <pregunta>` | `/ag-ask <pregunta>` | Q&A enrutada sobre el código actual |
+| `/antigravity:ag-init <nombre>` | `/ag-init <nombre>` | Crea un nuevo repo multi-agente desde esta plantilla |
+
+Sesión típica inicial: **ag-setup → ag-refresh → ag-ask**. Detalles abajo.
+
+### `ag-setup` — configuración inicial
+
+Ejecútalo **una vez por proyecto**, justo después de instalar el plugin. Selector interactivo del proveedor LLM (OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA NIM / Ollama local / cualquier endpoint OpenAI-compatible), luego escribe `.env` en la raíz del proyecto con `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `AG_ASK_TIMEOUT_SECONDS`. También asegura que `.env` esté en `.gitignore`. Sáltatelo si ya tienes un `.env` funcional.
+
+```
+# Claude Code
+/antigravity:ag-setup
+
+# Codex CLI
+/ag-setup
+```
+
+### `ag-refresh` — construir / refrescar la base de conocimiento
+
+Despliega el clúster multi-agente para leer tu código: cada módulo obtiene su propio Agent que produce un documento de conocimiento en `.antigravity/agents/*.md`, más un `map.md` como índice de routing. Ejecútalo tras instalar, tras cambios de código significativos, o cuando `ag-ask` devuelva respuestas obsoletas. El primer refresh crea `.antigravity/` automáticamente — no hace falta un paso de init separado. Pasa `quick` para actualización incremental, `failed-only` para reintentar solo los módulos previamente fallidos.
+
+```
+# Claude Code
+/antigravity:ag-refresh
+/antigravity:ag-refresh quick
+
+# Codex CLI
+/ag-refresh
+/ag-refresh quick
+```
+
+Tiempo: pocos minutos en repos pequeños, más en repos grandes. Requiere `ag-setup` ya completado.
+
+### `ag-ask` — Q&A enrutada sobre el código
+
+**La razón principal por la que existe este plugin**. Enruta tu pregunta al ModuleAgent adecuado (y a GitAgent / GitNexus cuando aplica), y devuelve una respuesta fundamentada en el código real, con rutas de archivo y números de línea. Úsalo **antes** de hacer grep manual o leer archivos — es más rápido y más preciso. Buenas formas de pregunta: "¿dónde se define/maneja X?", "¿por qué se hizo Y de esta forma?", "¿cómo funciona el flujo de auth?", "¿qué depende del módulo Z?".
+
+```
+# Claude Code
+/antigravity:ag-ask "¿Cómo funciona la autenticación?"
+
+# Codex CLI
+/ag-ask "¿Cómo funciona la autenticación?"
+```
+
+Requiere una base de conocimiento — si ves "sin índice" o respuestas vacías, ejecuta `ag-refresh` primero.
+
+### `ag-init` — andamiar un nuevo repo multi-agente
+
+Crea un **nuevo** proyecto desde la plantilla Antigravity. Dos modos: `quick` (andamio rápido, copia limpia) y `full` (añade runtime profile, `.env`, archivo de misión, config de sandbox, `git init` opcional). Es para **empezar un repo nuevo** — **no** lo necesitas antes de `ag-refresh` en un proyecto existente.
+
+```
+# Claude Code
+/antigravity:ag-init my-agent
+/antigravity:ag-init my-agent full
+
+# Codex CLI
+/ag-init my-agent
+/ag-init my-agent full
+```
+
+> El plugin también incluye el skill `agent-repo-init` (es el backend que `ag-init` invoca — Codex / Claude también lo emparejan por descripción) y el servidor MCP opcional `ag-mcp` (`ask_project` + `refresh_project`) para integración tipo herramienta.
+
+---
+
 ## Inicio Rápido
 
 **Opción A — Instalación de una línea como plugin de Claude Code / Codex CLI (recomendado)**
@@ -72,19 +145,23 @@ La arquitectura son **archivos + un motor Q&A en vivo**, no plugins. Portable en
 # Claude Code (auto-instala el motor Python en la primera sesión vía SessionStart hook)
 /plugin marketplace add study8677/antigravity-workspace-template
 /plugin install antigravity@antigravity
-/antigravity:setup            # interactivo: elige proveedor LLM, pega API key, escribe .env
-/antigravity:ag-refresh       # el primer refresh crea .antigravity/ automáticamente
+/antigravity:ag-setup            # interactivo: elige proveedor LLM, pega API key, escribe .env
+/antigravity:ag-refresh          # el primer refresh crea .antigravity/ automáticamente
 /antigravity:ag-ask "¿Cómo funciona este proyecto?"
 
 # Codex CLI (instala el motor manualmente primero; los hooks de Codex aún no son soportados)
 pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
 codex plugin marketplace add study8677/antigravity-workspace-template
-codex plugin install antigravity
+/ag-setup                        # mismos comandos en Codex, sin el prefijo antigravity:
+/ag-refresh
+/ag-ask "¿Cómo funciona este proyecto?"
 ```
+
+Codex CLI auto-descubre los comandos slash desde el directorio `commands/` del plugin, así que los mismos cuatro comandos están disponibles sin el prefijo `antigravity:` (`/ag-setup`, `/ag-refresh`, `/ag-ask`, `/ag-init`). También puedes seguir usando el CLI directo (`ag-refresh --workspace .`, `ag-ask "..." --workspace .`).
 
 Si la sesión actual de Claude Code dice que la herramienta MCP de Antigravity no está conectada, reinicia Claude Code una vez y vuelve a ejecutar `/antigravity:ag-refresh`. Es un problema de carga de sesión, no de API key. Consulta [troubleshooting](docs/en/TROUBLESHOOTING.md).
 
-Después de instalar y configurar dispondrás de los comandos slash `/antigravity:ag-ask <pregunta>`, `/antigravity:ag-refresh`, `/antigravity:ag-init <nombre>`, y del servidor MCP `antigravity` (`ask_project` + `refresh_project`). Ver [INSTALL.md](INSTALL.md) para detalles de instalación y troubleshooting.
+Después de instalar y configurar dispondrás de los comandos slash `ag-ask <pregunta>`, `ag-refresh`, `ag-init <nombre>` en ambos hosts, y del servidor MCP `antigravity` (`ask_project` + `refresh_project`). Ver [INSTALL.md](INSTALL.md) para detalles de instalación y troubleshooting.
 
 **Opción B — Instalación manual: motor + CLI vía pip**
 ```bash

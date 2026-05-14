@@ -1,7 +1,7 @@
 {
   "name": "antigravity",
-  "version": "0.2.1",
-  "description": "Multi-agent knowledge hub plugin. Bundles CLI-backed ask/refresh slash commands and the agent-repo-init skill.",
+  "version": "0.2.2",
+  "description": "Multi-agent knowledge hub plugin. Bundles CLI-backed slash commands (ag-setup / ag-init / ag-refresh / ag-ask) plus the agent-repo-init skill. Works in both Claude Code and Codex CLI.",
   "author": {
     "name": "Antigravity Team",
     "email": "fanjingwen50@gmail.com"

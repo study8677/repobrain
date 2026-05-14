@@ -5,7 +5,7 @@
 ```bash
 /plugin marketplace add study8677/antigravity-workspace-template
 /plugin install antigravity@antigravity
-/antigravity:setup
+/antigravity:ag-setup
 /antigravity:ag-refresh
 /antigravity:ag-ask "How does this project work?"
 ```
@@ -27,7 +27,7 @@ Install it manually:
 pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
 ```
 
-This is not an API key failure. Do not rerun setup unless `/antigravity:setup` has never completed.
+This is not an API key failure. Do not rerun setup unless `/antigravity:ag-setup` has never completed.
 
 ## Missing LLM Configuration
 
@@ -37,7 +37,7 @@ Symptom:
 No LLM configured
 ```
 
-Run `/antigravity:setup` in the project root. It writes `.env` with the provider URL, API key, and model. Do not commit `.env`.
+Run `/antigravity:ag-setup` in the project root. It writes `.env` with the provider URL, API key, and model. Do not commit `.env`.
 
 ## Project Initialization
 
@@ -63,5 +63,5 @@ Use this checklist for behavior that requires a real Claude Code session:
 - Ask command: `/antigravity:ag-ask "How does this project work?"` runs `ag-ask` through Bash.
 - Missing CLI: `/antigravity:ag-refresh` tells the user to install the engine CLI, not to change API keys.
 - First refresh in a clean project: `.antigravity/manifest.json` and knowledge artifacts are created without running `/antigravity:ag-init`.
-- Missing LLM config: the tool points to `/antigravity:setup`.
+- Missing LLM config: the tool points to `/antigravity:ag-setup`.
 - Optional MCP startup failure: `ag-mcp.log` exists at the diagnostic path and contains no API key values.

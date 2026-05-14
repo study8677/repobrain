@@ -96,8 +96,9 @@ def test_no_llm_error_points_to_setup_and_restart(
         ),
     )
 
-    assert "/antigravity:setup" in text
-    assert "restart Claude Code" in text
+    assert "/antigravity:ag-setup" in text
+    assert "/ag-setup" in text
+    assert "restart the host" in text
     assert (tmp_path / "ag-mcp.log").exists()
 
 

@@ -65,6 +65,79 @@
 
 ---
 
+## 斜杠命令
+
+同一套四个斜杠命令同时支持 **Claude Code** 和 **Codex CLI**。Claude 使用 `/antigravity:<name>` 命名空间；Codex 自动发现 `commands/` 目录并暴露裸 `/<name>` 形式。两边一套流程，无需切换思路。
+
+| Claude Code | Codex CLI | 用途 |
+|---|---|---|
+| `/antigravity:ag-setup` | `/ag-setup` | 首次配置 —— 选择 LLM 提供商，写入 `.env` |
+| `/antigravity:ag-refresh [quick]` | `/ag-refresh [quick]` | 构建 / 增量刷新项目知识库 |
+| `/antigravity:ag-ask <问题>` | `/ag-ask <问题>` | 当前代码库的路由问答 |
+| `/antigravity:ag-init <名字>` | `/ag-init <名字>` | 基于本模板创建新的多智能体仓库 |
+
+典型首次会话：**ag-setup → ag-refresh → ag-ask**。详细说明见下。
+
+### `ag-setup` —— 首次配置
+
+每个项目跑**一次**，在安装插件后立即执行。交互式选择 LLM 提供商（OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA NIM / Ollama 本地 / 任意 OpenAI 兼容端点），然后在项目根目录写入 `.env`，包含 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`、`AG_ASK_TIMEOUT_SECONDS`，并把 `.env` 加入 `.gitignore`。如果已经有可用的 `.env` 可跳过。
+
+```
+# Claude Code
+/antigravity:ag-setup
+
+# Codex CLI
+/ag-setup
+```
+
+### `ag-refresh` —— 构建 / 刷新知识库
+
+部署多智能体集群阅读代码：每个模块由专属 Agent 生成知识文档（`.antigravity/agents/*.md`），并由 Map Agent 产出 `map.md` 路由索引。在安装后、重要代码改动后、或 `ag-ask` 出现陈旧答复时运行。首次 refresh 会自动创建 `.antigravity/` 目录，无需单独初始化。传 `quick` 做增量更新，传 `failed-only` 仅重跑上次失败的模块。
+
+```
+# Claude Code
+/antigravity:ag-refresh
+/antigravity:ag-refresh quick
+
+# Codex CLI
+/ag-refresh
+/ag-refresh quick
+```
+
+耗时：小仓库几分钟，大仓库更久。需要先完成 `ag-setup`。
+
+### `ag-ask` —— 路由问答
+
+**插件存在的主要原因**。把问题路由到合适的 ModuleAgent（必要时也调 GitAgent / GitNexus），返回有据可查的答案，附带文件路径和行号。**优先使用它**而非手动 grep / 读文件 —— 更快也更准。适合的问题形态：「X 在哪里定义/处理？」、「Y 为什么这样设计？」、「认证流程是怎样的？」、「哪些地方依赖模块 Z？」。
+
+```
+# Claude Code
+/antigravity:ag-ask "认证逻辑是怎么实现的？"
+
+# Codex CLI
+/ag-ask "认证逻辑是怎么实现的？"
+```
+
+需要已有知识库 —— 如果出现"无索引"或空答复，先跑 `ag-refresh`。
+
+### `ag-init` —— 新仓库脚手架
+
+基于 Antigravity 模板创建**新**项目。两种模式：`quick`（快速脚手架、干净副本）和 `full`（在 quick 基础上加运行时 profile、`.env`、mission 文件、沙箱配置、可选 `git init`）。用于**开新仓库** —— 在已有项目上跑 `ag-refresh` 之前**不需要**先执行它。
+
+```
+# Claude Code
+/antigravity:ag-init my-agent
+/antigravity:ag-init my-agent full
+
+# Codex CLI
+/ag-init my-agent
+/ag-init my-agent full
+```
+
+> 插件还附带 `agent-repo-init` skill（与 `ag-init` 共用同一份后端——Codex / Claude 也能按描述匹配触发）以及可选的 `ag-mcp` MCP 服务（`ask_project` + `refresh_project`）用于工具式集成。
+
+---
+
 ## 快速开始
 
 **方案 A —— Claude Code / Codex CLI 插件安装**
@@ -72,21 +145,21 @@
 # Claude Code（首次会话由 SessionStart hook 自动安装 Python 引擎 CLI）
 /plugin marketplace add study8677/antigravity-workspace-template
 /plugin install antigravity@antigravity
-/antigravity:setup            # 交互式：选 LLM 提供商、贴 API key，自动写 .env
-/antigravity:ag-refresh       # 直接运行 ag-refresh；首次 refresh 会自动创建 .antigravity/
+/antigravity:ag-setup            # 交互式：选 LLM 提供商、贴 API key，自动写 .env
+/antigravity:ag-refresh          # 直接运行 ag-refresh；首次 refresh 会自动创建 .antigravity/
 /antigravity:ag-ask "这个项目是怎么工作的？"  # 直接运行 ag-ask
 
 # Codex CLI（需手动先装引擎；Codex 暂不支持自动 hook）
 pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
 codex plugin marketplace add study8677/antigravity-workspace-template
-ag-refresh --workspace .
-ag-ask "这个项目是怎么工作的？"
+/ag-setup                        # Codex 内同样的命令，无 antigravity: 前缀
+/ag-refresh
+/ag-ask "这个项目是怎么工作的？"
 ```
 
-Codex CLI 当前通过 `codex plugin marketplace add` 注册插件市场。
-refresh/ask 默认直接使用上面的 CLI 命令。如果你的 Codex 版本支持 MCP，并且你需要工具式集成，再单独注册 `ag-mcp --workspace <project>`。
+Codex CLI 通过 `codex plugin marketplace add` 注册插件后，会自动从插件的 `commands/` 目录发现斜杠命令，因此同样四个命令在 Codex 内不带 `antigravity:` 前缀（`/ag-setup`、`/ag-refresh`、`/ag-ask`、`/ag-init`）。也可以继续用裸 CLI（`ag-refresh --workspace .`、`ag-ask "..." --workspace .`）。如果 Codex 版本支持 MCP 并希望工具式集成，再单独注册 `ag-mcp --workspace <project>`。
 
-安装并 setup 后即可使用 `/antigravity:ag-ask <问题>`、`/antigravity:ag-refresh`、`/antigravity:ag-init <名字>` 斜杠命令。MCP 仍可选，可通过 `ag-mcp` 暴露 `ask_project` + `refresh_project`；示例配置见 [docs/examples/antigravity.mcp.json](docs/examples/antigravity.mcp.json)。详见 [INSTALL.md](INSTALL.md)。
+安装并 setup 后，两个平台均提供 `ag-ask <问题>`、`ag-refresh`、`ag-init <名字>` 斜杠命令。MCP 仍可选，可通过 `ag-mcp` 暴露 `ask_project` + `refresh_project`；示例配置见 [docs/examples/antigravity.mcp.json](docs/examples/antigravity.mcp.json)。详见 [INSTALL.md](INSTALL.md)。
 
 **方案 B —— 手动安装：通过 pip 安装引擎 + CLI**
 ```bash

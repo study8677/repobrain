@@ -2,9 +2,9 @@
 description: First-time setup. Configure the LLM API key Antigravity uses to read and analyze your codebase. / 首次 setup，配置 Antigravity 分析代码所需的 LLM API key。
 ---
 
-You are running first-time setup for the Antigravity plugin. The user just installed the plugin and needs an LLM API key configured before `/antigravity:ag-refresh` and `/antigravity:ag-ask` will work. Goal: write a `.env` file at the current workspace root.
+You are running first-time setup for the Antigravity plugin. The user just installed the plugin and needs an LLM API key configured before the refresh and ask commands will work (`/antigravity:ag-refresh` and `/antigravity:ag-ask` in Claude Code; `/ag-refresh` and `/ag-ask` in Codex CLI). Goal: write a `.env` file at the current workspace root.
 
-你正在执行 Antigravity 插件的首次 setup。用户刚安装插件，需要先配置 LLM API key，`/antigravity:ag-refresh` 和 `/antigravity:ag-ask` 才能正常工作。目标是在当前工作区根目录写入 `.env` 文件。
+你正在执行 Antigravity 插件的首次 setup。用户刚安装插件，需要先配置 LLM API key，refresh / ask 命令才能正常工作（Claude Code 内为 `/antigravity:ag-refresh`、`/antigravity:ag-ask`；Codex CLI 内为 `/ag-refresh`、`/ag-ask`）。目标是在当前工作区根目录写入 `.env` 文件。
 
 ## Step 1 — Detect existing config / 步骤 1 —— 检测已有配置
 
@@ -71,18 +71,18 @@ Check `<workspace>/.gitignore`. If `.env` is not listed (and there is no globbin
 
 ## Step 6 — Tell the user next steps / 步骤 6 —— 告诉用户下一步
 
-Print exactly:
+Print exactly (use the Claude form `/antigravity:ag-*` if running in Claude Code; use the bare form `/ag-*` if running in Codex CLI):
 
-严格输出：
+严格输出（在 Claude Code 内使用 `/antigravity:ag-*` 形式；在 Codex CLI 内使用裸 `/ag-*` 形式）：
 
 ```
 ✅ Antigravity is configured for this project.
 ✅ Antigravity 已为当前项目配置完成。
 
 Next / 下一步:
-  1. /antigravity:ag-refresh        — build the knowledge base (one-time, a few minutes for small repos)
+  1. /ag-refresh        — build the knowledge base (one-time, a few minutes for small repos)
      构建知识库（一次性操作；小仓库通常需要几分钟）。
-  2. /antigravity:ag-ask <question> — ask anything about the codebase
+  2. /ag-ask <question> — ask anything about the codebase
      询问任何关于代码库的问题。
 ```
 
