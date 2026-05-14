@@ -189,7 +189,7 @@ Execute in order; each slice should be mergeable and testable.
 
 No **Done** claim unless **all** are true on **Production** (`lux.corpflowai.com`):
 
-- [ ] `GET https://lux.corpflowai.com/properties` → **200**, Lux-branded listing.  
+- [x] `GET https://lux.corpflowai.com/properties` → **200**, Lux-branded listing.  
 - [ ] At least **one** real **client-created** property visible (Postgres-backed).  
 - [ ] Property **detail** page → **200** with correct copy.  
 - [ ] At least one **image** visible from **governed** public URL path (published + reviewed per current rules).  
@@ -198,7 +198,7 @@ No **Done** claim unless **all** are true on **Production** (`lux.corpflowai.com
 - [ ] **Anton** and **Jan** can create/edit/publish-request **without** calling a developer for routine content.  
 - [ ] Record: **Vercel deployment id**, **commit SHA**, **live URLs** tested — see `.cursor/rules/delivery-reality.mdc`.
 
-**Slice A vs Reality Gate:** Shipping **read APIs + model** alone does **not** clear the **full** §8 programme gate (public `/properties`, detail UX, media, concierge). **Slice A** live verification is recorded in the **subsection below**.
+**Slice A vs Reality Gate:** Shipping **read APIs + model** alone does **not** clear the **full** §8 programme gate. **Slice A** live verification is recorded in the **subsection below**. **Slice B** (public **`/properties`**) is recorded under **Slice B** below; full §8 remains **PARTIAL** until editor, first real published listing, governed public media bar, and full concierge programme evidence.
 
 ### Slice A — Delivery Reality Audit (Postgres `lux_listings` + public read APIs, 2026-05-14)
 
@@ -220,9 +220,9 @@ Delivery Reality Audit (Slice A — read APIs only):
   - POST https://lux.corpflowai.com/api/lux/listings → 405
 - DB / schema: `lux_listings` query path healthy on Production (empty list implies Prisma `findMany` succeeded; table present). Whether the table was created by **`npx prisma migrate deploy`** vs **build-time ensure-schema** was not distinguished from HTTP evidence alone — operators should keep migration history aligned with Prisma in the usual way.
 - Expected vs actual: Matches — host-gated JSON, published filter, safe error shapes.
-- Client-facing /properties page: NOT IN SCOPE for Slice A — not tested (N/A).
+- Client-facing /properties page: **Slice B (PR #184)** — see Slice B audit below (Slice A covered APIs only).
 - Slice A read API surface usable: YES
-- Full programme §8 Reality Gate: NO — pending `/properties`, editor, first published listing, media, concierge evidence
+- Full programme §8 Reality Gate: PARTIAL — pending editor, first real client-published listing, governed public media programme bar, full concierge evidence (public `/properties` HTML is live as of Slice B)
 - Final verdict (Slice A only): COMPLETE
 ```
 
@@ -234,22 +234,23 @@ Delivery Reality Audit (Slice A — read APIs only):
 
 **Programme §8 Reality Gate:** remains **PARTIAL** until a **real client-created** published listing, governed public imagery, full concierge evidence, and editor capability are all live-verified — **a live `/properties` page with an empty state does not complete the full programme gate.**
 
-**Live verification (post-deploy):** operator records here after Production is Ready — **`GET https://lux.corpflowai.com/properties`** → **200**, premium empty state or listing cards, forbidden internal words absent on HTML, concierge CTA present, non-Lux host returns **404** for this route.
+**Live verification (post-deploy):** **2026-05-14** — **`GET https://lux.corpflowai.com/properties`** → **200**; HTML includes **Private property showcase**, **Speak with the concierge** (`/concierge?intent=property`), and the Slice B empty-state body line about the first property being prepared for client review. **`GET https://core.corpflowai.com/properties`** → **404** (Lux surface not exposed on core host). Programme **§8** remains **PARTIAL** (first real published inventory, editor, full concierge evidence still pending).
 
-#### Slice B — Delivery Reality Audit (fill after live verify)
+#### Slice B — Delivery Reality Audit (2026-05-14)
 
 ```text
 Delivery Reality Audit (Slice B — public /properties):
 - Local fix exists: YES
-- Merged to main: (pending PR)
-- Production deployment ID:
-- Commit deployed:
+- Merged to main: YES — PR #184 — commit 873acea42ea227d51aca0b41ff9070a040a2f538
+- GitHub Production deployment: id 4695014873 — environment Production — status success — SHA 873acea42ea227d51aca0b41ff9070a040a2f538
+- Vercel dpl_* id: use Vercel dashboard Deployments for this SHA if a dpl_… id is required for runbooks
 - Live URLs tested:
-  - GET https://lux.corpflowai.com/properties
-- Expected vs actual:
-- Client-facing flow usable: (empty state or cards + concierge CTA)
-- Full programme §8 Reality Gate: PARTIAL (no first real published inventory requirement for this slice’s own verdict)
-- Final verdict (Slice B surface): COMPLETE or PARTIAL (record explicitly)
+  - GET https://lux.corpflowai.com/properties → 200 — premium empty state (published listings empty)
+  - GET https://core.corpflowai.com/properties → 404
+- Expected vs actual: Matches — Lux-only route, no forbidden marketing copy in audited public strings; concierge CTA present
+- Client-facing /properties flow usable: YES (empty state + concierge path)
+- Full programme §8 Reality Gate: PARTIAL — editor, first real client-published listing, governed public media bar, and full concierge programme evidence still open
+- Final verdict (Slice B /properties surface only): COMPLETE
 ```
 
 ---
