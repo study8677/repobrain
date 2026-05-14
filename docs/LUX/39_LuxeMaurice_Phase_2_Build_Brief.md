@@ -196,6 +196,7 @@ No **Done** claim unless **all** are true on **Production** (`lux.corpflowai.com
 - [ ] **Video:** either **not** shown on public pages, or shown **only** behind explicit approval + agreed player semantics (document which).  
 - [ ] **Enquiry CTA** completes; lead row shows **property context** in CRM (`/change` or existing list).  
 - [ ] **Anton** and **Jan** can create/edit/publish-request **without** calling a developer for routine content.  
+- [ ] **`/properties/admin`** (Lux host, editor session) — **200** for allowlisted editors; unauthenticated users redirect to **`/login?next=/properties/admin`**; wrong host → **404**.  
 - [ ] Record: **Vercel deployment id**, **commit SHA**, **live URLs** tested — see `.cursor/rules/delivery-reality.mdc`.
 
 **Slice A vs Reality Gate:** Shipping **read APIs + model** alone does **not** clear the **full** §8 programme gate. **Slice A** live verification is recorded in the **subsection below**. **Slice B** (public **`/properties`**) is recorded under **Slice B** below; full §8 remains **PARTIAL** until editor, first real published listing, governed public media bar, and full concierge programme evidence.
@@ -255,10 +256,46 @@ Delivery Reality Audit (Slice B — public /properties):
 
 ---
 
+### Slice C — Visual property editor (`/properties/admin`) + governed media + editor preview
+
+**Scope (shipped in repo):**
+
+- **Route:** `pages/properties/admin.js` → **`/properties/admin`** on **`luxe-maurice`** marketing host only (same hostname / `tenant_hostnames` gate as **`/properties`**). Non-editors → **`/login?next=/properties/admin`**; Core / other tenants → **404**.  
+- **Editor allowlist (code):** `lib/server/lux-property-editor-access.js` — tenant password session (`typ: 'tenant'`, **`username`** present — PIN-only sessions excluded) for **`luxe-maurice`** and lowercase username **`jan@luxemaurice.com`** or **`anton@corpflowai.com`**.  
+- **CMP actions (tenant session + Dormant Gate):** `lux-listing-admin-list`, `lux-listing-admin-get`, `lux-listing-admin-save`, `lux-listing-admin-set-visibility` → `lib/cmp/_lib/lux-listing-admin-handlers.js` + `lib/server/lux-listing-admin-service.js`. Writes always use server **`tenantId = 'luxe-maurice'`**; client body **`tenant_id`** is ignored.  
+- **Visibility:** `draft` \| `preview` \| `published` \| `archived` — no auto-publish; **`publishedAt`** set only when visibility becomes **`published`**, cleared for **`draft`** / **`preview`**.  
+- **Public safety:** `fetchPublishedLuxListingsPublic` / `fetchPublishedLuxListingDetailPublic` / `resolveLuxPropertyRefWithPublishedDb` unchanged — **published** only. **`assertLuxPublicMediaPropertyRef`** allows staged catalogue refs **or** **published** Postgres slugs only (draft/preview DB slugs **cannot** receive public **`/api/lux/property-media`** bytes).  
+- **Attachment linking before publish:** `resolveLuxPropertyRefForAttachmentLink` resolves staged catalogue **or** any **non-archived** Postgres row so **`lux-attachment-property-*`** can target listing slugs while still draft/preview.  
+- **Editor preview:** **`/property/[slug]?preview=1`** — server requires editor session + loads **`draft`/`preview`** row via **`fetchLuxListingDraftPreviewRow`**; public visitors without gate see **404** for unpublished slugs. **`LuxeMauricePropertyDetailPage`** shows a preview ribbon when **`editor_preview`**.  
+- **UI:** `components/LuxeMauricePropertiesAdminApp.js` — Lux-branded desk (not `/change` chrome); listing inventory + form + quick visibility; **media** panel calls existing **`lux-attachment-property-link-set`**, **`link-remove`**, **`publish`**, **`unpublish`** with **`property_slug`** = listing slug and default programme ticket id from `lib/cmp/_lib/lux-client-requests.js` (upload/review still in **`/change`**).  
+- **Tests:** `node-tests/lux-listing-admin.test.mjs` (editor allowlist, tenant lock on save, visibility / `publishedAt`, public media gate, attachment resolve for drafts, preview row query).  
+
+**Programme §8 Reality Gate:** remains **PARTIAL** until **live** verification that Anton/Jan can run the editor end-to-end on Production, **first real client-published** listing + governed imagery + concierge evidence are recorded. **Do not** close master ticket **`cmo8mjijk0000jl04l1jz0v6d`**.
+
+#### Slice C — Delivery Reality Audit (template — fill after Production verification)
+
+```text
+Delivery Reality Audit (Slice C — /properties/admin + preview + gates):
+- Local fix exists: YES
+- Merged to main: (record PR + SHA after merge)
+- Production deployment id / SHA: (Vercel Production Ready for merged SHA)
+- Live URLs tested:
+  - GET https://lux.corpflowai.com/properties/admin → (200 as editor | redirect as anon)
+  - Editor: create draft listing → preview URL → set published → appears on /properties and /property/<slug> without ?preview=1
+  - Draft/preview listing → must not appear on public /properties or public detail without preview gate
+  - Concierge CTA still /concierge?intent=property&property=<slug>
+- Client-facing editor usable: (YES/NO after live test)
+- First real client-created published property: (YES/NO)
+- Full programme §8 Reality Gate: PARTIAL until first real listing + media + concierge bar
+- Final verdict (Slice C only): COMPLETE only after live editor verification; else PARTIAL
+```
+
+---
+
 ## 9. Open decisions (resolve during implementation / programme note)
 
 1. **Public URL for detail:** `/property/[slug]` (existing) vs `/properties/[slug]` — avoid duplicate canonical URLs; pick one public pattern and redirect or link consistently.  
-2. **Preview UX:** server-only draft flag vs signed preview token vs editor impersonation — security vs simplicity.  
+2. **Preview UX (Slice C resolution):** **Editor session** on Lux host + **`/property/[slug]?preview=1`** for **`draft`/`preview`** Postgres rows only; no signed token in this slice.  
 3. **Single source of truth cutover:** when Postgres properties **replace** or **merge with** `luxe-maurice-staged-properties.js` for homepage cards.  
 4. **Which CMP ticket** anchors attachments for client-created properties (programme ticket vs per-property child ticket).  
 5. **Jan account provisioning:** magic link vs password — use existing auth flows only.  

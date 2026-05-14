@@ -10,9 +10,9 @@ function safeStr(v) {
 
 /**
  * LuxeMaurice-only property detail (Phase 2C). Props must be server-built — do not trust client-supplied listing fields.
- * @param {{ property: { ref: string, title: string, location: string, property_type: string, status: string | null, price_display: string, discovery_source: 'curated' | 'manual_curated' | 'feed' | 'lux_postgres', summary_text: string, highlights: string[], hero_image?: string | null, published_hero?: { src: string, src_set?: string, alt: string, caption: string | null } | null, published_gallery?: { src: string, src_set?: string, alt: string, caption: string | null, gallery_order?: number | null, is_gallery_cover?: boolean }[] } }} props
+ * @param {{ property: { ref: string, title: string, location: string, property_type: string, status: string | null, price_display: string, discovery_source: 'curated' | 'manual_curated' | 'feed' | 'lux_postgres', summary_text: string, highlights: string[], hero_image?: string | null, published_hero?: { src: string, src_set?: string, alt: string, caption: string | null } | null, published_gallery?: { src: string, src_set?: string, alt: string, caption: string | null, gallery_order?: number | null, is_gallery_cover?: boolean }[] }, editor_preview?: boolean }} props
  */
-export default function LuxeMauricePropertyDetailPage({ property }) {
+export default function LuxeMauricePropertyDetailPage({ property, editor_preview }) {
   const p = property || {};
   const ref = safeStr(p.ref);
   const isFeed = p.discovery_source === 'feed';
@@ -100,6 +100,32 @@ export default function LuxeMauricePropertyDetailPage({ property }) {
           <span style={{ fontSize: 11, color: T.goldDeep, fontWeight: 750 }}>Featured · developer-led</span>
         )}
       </header>
+
+      {editor_preview ? (
+        <div
+          style={{
+            margin: '0 auto',
+            maxWidth: 800,
+            padding: '14px 28px 0',
+            fontSize: 14,
+            lineHeight: 1.5,
+            color: T.heroDeep,
+            fontWeight: 650,
+          }}
+        >
+          <div
+            style={{
+              borderRadius: T.radiusMd,
+              border: `1px solid ${T.goldDeep}`,
+              background: T.sand,
+              padding: '12px 16px',
+            }}
+          >
+            Private preview — this URL is for editors only and is not the public listing. Remove{' '}
+            <code style={{ fontSize: 12 }}>?preview=1</code> to open the visitor-facing page when the property is published.
+          </div>
+        </div>
+      ) : null}
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '40px 28px 72px' }}>
         <div
