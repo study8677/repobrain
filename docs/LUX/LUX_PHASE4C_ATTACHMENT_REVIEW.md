@@ -475,11 +475,18 @@ Delivery Reality Audit:
 
 ```text
 Delivery Reality Audit:
-- Local implementation: YES — strict **`width=`** buckets, **`buildLuxPublicPropertyMediaSrcSet`**, **`src_set`** on collectors + **`property-media-list`**, **`srcset`/`sizes`** on property hero/gallery + homepage/feed cards; **`buildLuxPublicMediaTransformPlan`** abstraction only (`shouldTransform: false`, `source: original`); **`npm test`** and **`npm run build`** passed (2026-05-11).
-- Merged to main: pending PR
-- Production deployment: pending post-merge (Vercel Production)
-- Live verification (pending): `npm run smoke:lux-phase4c1 -- --target=production` — expect **invalid width → 400**, **`X-Lux-Media-Source: original`** on published **200**, **`width=1024`** **200**, property HTML **`srcset=`** + hero **`width=1920`**, list items **`src_set`** with **`w`** descriptors; **5A** cache rules unchanged on **200** / denials.
+- Local implementation: YES — strict **`width=`** buckets, **`buildLuxPublicPropertyMediaSrcSet`**, **`src_set`** on collectors + **`property-media-list`**, **`srcset`/`sizes`** on property hero/gallery + homepage/feed cards; **`buildLuxPublicMediaTransformPlan`** abstraction only (`shouldTransform: false`, `source: original`); **`npm test`** and **`npm run build`** passed on branch before merge.
+- Merged to main: YES — PR **#176** (squash merge commit **`b84ecf50c6bd38441ca1ec398224c3eeca67443c`**)
+- Production deployment: GitHub deployment **`4684011845`** (Vercel **`corpflow-ai-command-center-cyp58ytxn-corpflowai.vercel.app`**, state **success**; **`sha`** = **`b84ecf50c6bd38441ca1ec398224c3eeca67443c`**)
+- Live verification (2026-05-14): `npm run smoke:lux-phase4c1 -- --target=production` — **ALL CHECKS PASSED**
+  - **Invalid width:** smoke step **`property-media rejects invalid width bucket (5B)`** — **400** before publish path
+  - **Allowlisted width + source header:** **`property-media accepts allowlisted width (5B)`** (e.g. **`width=1024`** **200**); prior step asserts **`X-Lux-Media-Source: original`** on published **200**
+  - **Srcset (property hero):** **`property page shows published hero caption + alt`** (script asserts **`srcset=`** + hero **`width=1920`** in `/property/lm-phase2d-manual-demo` HTML during publish window)
+  - **Srcset (card / homepage):** **`homepage shows published card media for lm-phase2d-manual-demo`** (5B checks include homepage **`srcset`** where card media is composed)
+  - **Gallery / list:** published gallery + **`property-media-list`** safe entries; list **`src_set`** checks per script
+  - **Lifecycle:** unpublish, **IMAGE_ONLY** video gate, **4D3** archive → **404** / restore non-auto-republish / explicit republish — **passed**
+  - **Public no-leak:** **`public /`**, **`/concierge`**, **`/property/lm-phase2d-manual-demo`** — **clean** (no attachment metadata leak strings)
 - Master programme ticket `cmo8mjijk0000jl04l1jz0v6d`: intentionally **not** closed by this phase
-- Client-facing flow usable: pending production confirmation (local + CI expected YES)
-- Final verdict: PARTIAL (code + tests + docs shipped in branch; production smoke not yet recorded)
+- Client-facing flow usable: YES
+- Final verdict: COMPLETE
 ```
