@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Phase 4C.1 + 4C.3 + 4D.1 + 4D.2 + 4D.5 + 5A + 5B live verification — Lux operator media review + property publish + gallery +
- * homepage card + optional smoke artifact archive + public media cache/variant scaffold + responsive srcset width buckets.
+ * Phase 4C.1 + 4C.3 + 4D.1 + 4D.2 + 4D.5 + 5A + 5B + 5C live verification — Lux operator media review + property publish + gallery +
+ * homepage card + optional smoke artifact archive + public media cache/variant scaffold + responsive srcset width buckets +
+ * storage adapter readiness (Postgres bytes + observability headers).
  *
  * Targets either a Vercel preview (Protection Bypass required) or production.
  * Strictly read/write to a SINGLE Lux client-request ticket created at the start
@@ -176,6 +177,17 @@ async function http(method, urlPath, { body, headers } = {}) {
     /* ignore */
   }
   return { res, status: res.status, json, text };
+}
+
+/** Phase 5C — published **200** responses only; denials must not carry these headers. */
+function assertLux5cPublishedMediaHeaders(res, variantExpected) {
+  const want = String(variantExpected || '').toLowerCase();
+  const bk = String(res.headers.get('x-lux-media-backend') || '').toLowerCase();
+  if (bk !== 'postgres') fail(`expected X-Lux-Media-Backend postgres, got ${bk}`);
+  const tf = String(res.headers.get('x-lux-media-transform') || '').toLowerCase();
+  if (tf !== 'original') fail(`expected X-Lux-Media-Transform original, got ${tf}`);
+  const va = String(res.headers.get('x-lux-media-variant') || '').toLowerCase();
+  if (va !== want) fail(`expected X-Lux-Media-Variant ${want}, got ${va}`);
 }
 
 async function login() {
@@ -536,10 +548,16 @@ async function main() {
 
   const badVariant = await getPropertyMedia('lm-phase2d-manual-demo', imgId, 'hero', { variant: 'xlarge' });
   if (badVariant.status !== 400) fail(`property-media invalid variant expected 400, got ${badVariant.status}`);
+  if (badVariant.res.headers.get('x-lux-media-backend')) {
+    fail('property-media invalid variant must not expose X-Lux-Media-Backend (5C)');
+  }
   ok('property-media rejects invalid variant (5A allowlist)');
 
   const badWidth = await getPropertyMedia('lm-phase2d-manual-demo', imgId, 'hero', { width: '3000' });
   if (badWidth.status !== 400) fail(`property-media invalid width expected 400, got ${badWidth.status}`);
+  if (badWidth.res.headers.get('x-lux-media-backend')) {
+    fail('property-media invalid width must not expose X-Lux-Media-Backend (5C)');
+  }
   ok('property-media rejects invalid width bucket (5B)');
 
   await publishProperty(ticketId, imgId, 'lm-phase2d-manual-demo', 'hero', pubCaption, pubAlt);
@@ -554,10 +572,12 @@ async function main() {
   if (!ct.startsWith('image/')) fail(`property-media expected image content-type, got ${ct}`);
   const xSrc = String(afterPub.res.headers.get('x-lux-media-source') || '').toLowerCase();
   if (xSrc !== 'original') fail(`property-media expected X-Lux-Media-Source original, got ${xSrc}`);
+  assertLux5cPublishedMediaHeaders(afterPub.res, 'hero');
   ok('property-media serves published PNG after publish');
 
   const afterPubWidth = await getPropertyMedia('lm-phase2d-manual-demo', imgId, 'hero', { width: '1024' });
   if (afterPubWidth.status !== 200) fail(`property-media width=1024 expected 200, got ${afterPubWidth.status}`);
+  assertLux5cPublishedMediaHeaders(afterPubWidth.res, 'hero');
   ok('property-media accepts allowlisted width (5B)');
 
   const afterPubVariantHero = await getPropertyMedia('lm-phase2d-manual-demo', imgId, 'hero', { variant: 'hero' });
@@ -648,6 +668,7 @@ async function main() {
   if (gA.status !== 200 || gB.status !== 200) {
     fail(`gallery property-media expected 200/200, got ${gA.status}/${gB.status}`);
   }
+  assertLux5cPublishedMediaHeaders(gB.res, 'gallery');
   ok('property-media serves both published gallery PNGs');
 
   const listR = await getPropertyMediaList('lm-phase2d-manual-demo');
@@ -707,6 +728,7 @@ async function main() {
   await publishProperty(ticketId, cardImg, 'lm-phase2d-manual-demo', 'card', null, cardAltProbe);
   const cardBytes = await getPropertyMedia('lm-phase2d-manual-demo', cardImg, 'card');
   if (cardBytes.status !== 200) fail(`card property-media expected 200, got ${cardBytes.status}`);
+  assertLux5cPublishedMediaHeaders(cardBytes.res, 'card');
   ok('property-media serves published card PNG');
 
   const listCardCheck = await getPropertyMediaList('lm-phase2d-manual-demo');
@@ -803,6 +825,7 @@ async function main() {
   await publishProperty(ticketId, imgId, 'lm-phase2d-manual-demo', 'hero', pubCaption, pubAlt);
   const postRepubMedia = await getPropertyMedia('lm-phase2d-manual-demo', imgId, 'hero');
   if (postRepubMedia.status !== 200) fail(`4D3: expected 200 after explicit republish, got ${postRepubMedia.status}`);
+  assertLux5cPublishedMediaHeaders(postRepubMedia.res, 'hero');
   ok('4D3: explicit publish after restore is public again');
 
   await unpublishProperty(ticketId, imgId, 'lm-phase2d-manual-demo', 'hero');

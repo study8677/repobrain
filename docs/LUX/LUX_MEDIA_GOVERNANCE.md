@@ -2,7 +2,7 @@
 
 **Authoritative programme ticket:** `cmo8mjijk0000jl04l1jz0v6d` (not closed by media phases).
 
-This document describes **how media becomes public** on `lux.corpflowai.com` after Phase 4C.x / **4D.1** / **4D.2**, plus **Phase 4D.3** (operator **archive / restore** without deleting bytes), plus **Phase 4D.4** (operator-only **`/change`** summaries, filters, and “where used” copy — **no** new public fields or routes), plus **Phase 4D.5** (operator **cleanup policy** for smoke/test artifacts: expanded hinting, **Cleanup candidate** advisory, optional one-click archive with a standard reason, smoke script summary + optional `--archive-smoke-artifacts` — **still no** hard-delete by default), plus **Phase 5A** (public **cache + `variant=` scaffold** + MIME normalization + safe list metadata — **no** real transforms or external CDN yet), plus **Phase 5B** (strict **`width=`** buckets + **`src_set`** on collectors/list + **`srcset`/`sizes`** on public pages — **still** original bytes only; **`buildLuxPublicMediaTransformPlan`** is abstraction only), and the **hard boundaries** before CDN, transforms, DAM, automation, or social surfaces exist.
+This document describes **how media becomes public** on `lux.corpflowai.com` after Phase 4C.x / **4D.1** / **4D.2**, plus **Phase 4D.3** (operator **archive / restore** without deleting bytes), plus **Phase 4D.4** (operator-only **`/change`** summaries, filters, and “where used” copy — **no** new public fields or routes), plus **Phase 4D.5** (operator **cleanup policy** for smoke/test artifacts: expanded hinting, **Cleanup candidate** advisory, optional one-click archive with a standard reason, smoke script summary + optional `--archive-smoke-artifacts` — **still no** hard-delete by default), plus **Phase 5A** (public **cache + `variant=` scaffold** + MIME normalization + safe list metadata — **no** real transforms or external CDN yet), plus **Phase 5B** (strict **`width=`** buckets + **`src_set`** on collectors/list + **`srcset`/`sizes`** on public pages — **still** original bytes only; **`buildLuxPublicMediaTransformPlan`** is abstraction only), plus **Phase 5C** (**storage adapter** behind `handleLuxPropertyMedia`: Postgres bytes today; **`readPublishedLuxMediaBytes`** + safe **`X-Lux-Media-*`** observability headers on **200** only — **no** external object store, **no** CDN upload, **no** real transforms), and the **hard boundaries** before CDN, transforms, DAM, automation, or social surfaces exist.
 
 ## Lifecycles (strict order)
 
@@ -59,6 +59,18 @@ Pure **client-side** helpers in `lib/cmp/_lib/lux-request-attachments.js` drive:
 
 **List JSON:** `property-media-list` items add safe **`src_set`** (same contract as page composition). **Cache rules** match **5A** (published **200**: `public, max-age=300, must-revalidate`; denials: `private, no-store`).
 
+## Phase 5C — CDN / object-storage readiness (storage adapter; behaviour unchanged)
+
+**Purpose:** isolate **byte retrieval** behind `lib/server/lux-media-storage.js` so a future adapter (object store + edge) can swap in **without** changing URL builders, collectors, or publish gates. **`getLuxMediaStorageAdapter()`** / **`readPublishedLuxMediaBytes()`** run **only after** the same `handleLuxPropertyMedia` checks as today.
+
+**Current adapter:** **`postgres_attachment_bytes`** reads `cmp_ticket_attachments.data` already loaded by the route — **no** schema migration, **no** new public fields, **no** storage path in HTTP.
+
+**Transform plan:** **`buildLuxPublicMediaTransformPlan`** is passed into the adapter; **`shouldTransform`** remains **false**; if ever **true**, the route responds **501** (not used in production until transforms are approved).
+
+**Observability (published 200 only):** **`X-Lux-Media-Backend: postgres`**, **`X-Lux-Media-Variant: <token>`**, **`X-Lux-Media-Transform: original`**, alongside existing **`X-Lux-Media-Source`**. Denials must **not** expose backend/variant/transform headers.
+
+**Future adapter boundary:** any CDN/R2/S3 worker must **not** bypass `handleLuxPropertyMedia`; it consumes the same **delivery context** (property, attachment id, slot, variant, width, plan) and returns bytes only when governance already passed.
+
 ## Slot semantics
 
 | Slot        | Public (current) | Notes |
@@ -71,7 +83,7 @@ Pure **client-side** helpers in `lib/cmp/_lib/lux-request-attachments.js` drive:
 
 ## Public surfaces (current)
 
-- **`GET /api/lux/property-media?property=&attachment=&slot=[&variant=][&width=]`** — Lux host + `luxe-maurice` context; **published + reviewed + image** + matching link + attachment **`lifecycle_status` not `archived`**; **404** otherwise; **400** for invalid `slot`, invalid **`variant`** when provided, or invalid **`width`** when provided; conservative **public** cache on **200** (`max-age=300`, `must-revalidate`); denials **`private, no-store`**; correct **`Content-Type`** (`image/*`, `image/jpg` normalized to **`image/jpeg`**); optional **`X-Lux-Media-Source`** (`original` when bytes are not transformed); **no** raw storage path in response.
+- **`GET /api/lux/property-media?property=&attachment=&slot=[&variant=][&width=]`** — Lux host + `luxe-maurice` context; **published + reviewed + image** + matching link + attachment **`lifecycle_status` not `archived`**; **404** otherwise; **400** for invalid `slot`, invalid **`variant`** when provided, or invalid **`width`** when provided; conservative **public** cache on **200** (`max-age=300`, `must-revalidate`); denials **`private, no-store`**; correct **`Content-Type`** (`image/*`, `image/jpg` normalized to **`image/jpeg`**); optional **`X-Lux-Media-Source`** (`original` when bytes are not transformed); on **200** only (Phase **5C**): **`X-Lux-Media-Backend`**, **`X-Lux-Media-Variant`**, **`X-Lux-Media-Transform`** (safe tokens only; **no** tenant ids, **no** storage paths); **no** raw storage path in response.
 - **`GET /api/lux/property-media-list?property=`** — Same host gate; JSON list of **safe** entries (`slot`, `src`, `src_set`, `variant`, `content_type`, `public_caption`, `public_alt_text`, `gallery_order`, `is_gallery_cover`) for **hero + card + gallery**. **No** operator audit fields, **no** `lux_request_meta`, **no** private download URLs.
 - **`/` (LuxeMaurice acquisition)** — Property cards use **published `card`** image when present (`collectPublishedLuxCardMediaByPropertyRefs`); otherwise same-origin staged hero path or neutral placeholder. Feed cards use the same rule when the feed id resolves.
 - **`/property/[slug]`** — Renders published **hero** (if any) and a **Gallery** grid for published **gallery** slot images with public caption/alt only (card slot is for listing/home cards, not detail layout in this phase).
@@ -86,7 +98,7 @@ Pure **client-side** helpers in `lib/cmp/_lib/lux-request-attachments.js` drive:
 
 Out of scope until explicitly specced:
 
-- CDN domains, signed edge URLs, **real** on-the-fly image transforms **wired to production** (Phase **5A/5B** reserve **`variant=`**, **`width=`**, **`src_set`**, and cache semantics; bytes today remain **original** via **`handleLuxPropertyMedia`** until approved).
+- CDN domains, signed edge URLs, **real** on-the-fly image transforms **wired to production** (Phase **5A/5B** reserve **`variant=`**, **`width=`**, **`src_set`**, and cache semantics; Phase **5C** adds the **storage adapter** hook; bytes today remain **original** via **`handleLuxPropertyMedia`** + **`postgres_attachment_bytes`** until approved).
 - Video transcoding or public video players.
 - External DAM, bulk import, AI tagging, auto-cropping.
 

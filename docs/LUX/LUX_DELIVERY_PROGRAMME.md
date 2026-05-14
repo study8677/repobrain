@@ -176,6 +176,13 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - **Rule**: **`buildLuxPublicPropertyMediaSrc`** may append **`&width=`**; **`buildLuxPublicPropertyMediaSrcSet`** composes list **`src_set`**; **`buildLuxPublicMediaTransformPlan`** is abstraction only (`shouldTransform: false`, `source: original`) until Phase **5C+**. Collectors and **`property-media-list`** include safe **`src_set`**.
 - **Surface**: `lib/cmp/_lib/lux-request-attachments.js`, `lib/server/lux-property-media.js`, `lib/server/lux-published-property-media.js`, `components/LuxeMauricePropertyDetailPage.js`, `components/LuxeMauriceTenantPresentation.js`, `scripts/smoke-lux-phase4c1-attachment-review.mjs`, node tests. See **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**.
 
+### Phase 5C — CDN / object-storage readiness (storage adapter; Postgres bytes only)
+
+- **Purpose**: introduce a **server-side storage adapter** (`lib/server/lux-media-storage.js`) and **`readPublishedLuxMediaBytes`** so future object-store/CDN backends plug in **without** changing public URL contracts or bypassing **`handleLuxPropertyMedia`** / **`buildLuxPublicPropertyMediaSrc`** / collectors. **Production behaviour unchanged:** same bytes, same gates, same cache headers.
+- **Rule**: byte reads go through **`getLuxMediaStorageAdapter()`** → **`postgres_attachment_bytes`** today; **`buildLuxPublicMediaTransformPlan`** is wired into the read path (`shouldTransform` stays **false**). Published **200** adds safe **`X-Lux-Media-Backend` / `X-Lux-Media-Variant` / `X-Lux-Media-Transform`** headers only on success.
+- **Surface**: `lib/server/lux-media-storage.js`, `lib/server/lux-property-media.js`, `scripts/smoke-lux-phase4c1-attachment-review.mjs`, node tests, **`docs/LUX/LUX_MEDIA_GOVERNANCE.md`**, **`docs/LUX/LUX_PHASE4C_ATTACHMENT_REVIEW.md`**.
+- **Core assimilation recommendation**: add new backends by extending **`lux-media-storage.js`** selection only after governance stays centralized in **`handleLuxPropertyMedia`**; never serve bytes from a parallel public route.
+
 ### Phase 5 — Production reality gate and client handoff
 
 - **Client-visible outcome**: the delivered system matches the programme claims; clients can use it.

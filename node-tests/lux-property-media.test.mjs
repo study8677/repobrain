@@ -107,6 +107,9 @@ test('handleLuxPropertyMedia · 200 uses public max-age=300 must-revalidate + no
   assert.equal(res.headers['x-content-type-options'], 'nosniff');
   assert.equal(res.headers['content-type'], 'image/png');
   assert.equal(res.headers['x-lux-media-source'], 'original');
+  assert.equal(res.headers['x-lux-media-backend'], 'postgres');
+  assert.equal(res.headers['x-lux-media-variant'], 'hero');
+  assert.equal(res.headers['x-lux-media-transform'], 'original');
   assert.ok(!cc.includes('stale-while-revalidate'));
 });
 
@@ -119,6 +122,7 @@ test('handleLuxPropertyMedia · invalid width → 400 + no-store', async () => {
   );
   assert.equal(res.statusCode, 400);
   assert.match(String(res.headers['cache-control'] || ''), /no-store/);
+  assert.equal(res.headers['x-lux-media-backend'], undefined);
 });
 
 test('handleLuxPropertyMedia · allowlisted width → 200 (still original bytes)', async () => {
@@ -130,6 +134,8 @@ test('handleLuxPropertyMedia · allowlisted width → 200 (still original bytes)
   );
   assert.equal(res.statusCode, 200);
   assert.equal(res.headers['x-lux-media-source'], 'original');
+  assert.equal(res.headers['x-lux-media-backend'], 'postgres');
+  assert.equal(res.headers['x-lux-media-transform'], 'original');
 });
 
 test('handleLuxPropertyMedia · invalid explicit variant → 400 + no-store', async () => {
@@ -141,6 +147,7 @@ test('handleLuxPropertyMedia · invalid explicit variant → 400 + no-store', as
   );
   assert.equal(res.statusCode, 400);
   assert.match(String(res.headers['cache-control'] || ''), /no-store/);
+  assert.equal(res.headers['x-lux-media-backend'], undefined);
 });
 
 test('handleLuxPropertyMedia · unpublished link → 404 + no-store', async () => {
@@ -148,6 +155,7 @@ test('handleLuxPropertyMedia · unpublished link → 404 + no-store', async () =
   await handleLuxPropertyMedia(makeReq({ property: PROP, attachment: 'att-u-1', slot: 'hero' }), res, makePrismaUnpublished());
   assert.equal(res.statusCode, 404);
   assert.match(String(res.headers['cache-control'] || ''), /no-store/);
+  assert.equal(res.headers['x-lux-media-backend'], undefined);
 });
 
 test('handleLuxPropertyMedia · image/jpg content-type normalized to image/jpeg', async () => {
@@ -195,4 +203,53 @@ test('handleLuxPropertyMedia · image/jpg content-type normalized to image/jpeg'
   await handleLuxPropertyMedia(makeReq({ property: PROP, attachment: attId, slot: 'hero' }), res, prisma);
   assert.equal(res.statusCode, 200);
   assert.equal(res.headers['content-type'], 'image/jpeg');
+  assert.equal(res.headers['x-lux-media-backend'], 'postgres');
+  assert.equal(res.headers['x-lux-media-variant'], 'hero');
+});
+
+test('handleLuxPropertyMedia · null attachment data after gates → 404 + no-store', async () => {
+  const attId = 'att-null-data';
+  const ticketId = 't-null';
+  const consoleJson = {
+    lux_request_meta: {
+      attachments: [
+        {
+          attachment_id: attId,
+          review_status: 'reviewed',
+          lifecycle_status: 'active',
+          property_links: [
+            {
+              property_slug: PROP,
+              intended_slot: 'hero',
+              publish_status: 'published',
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const prisma = {
+    cmpTicketAttachment: {
+      findUnique: async ({ where: { id } }) =>
+        id === attId
+          ? {
+              id: attId,
+              ticketId,
+              tenantId: 'luxe-maurice',
+              contentType: 'image/png',
+              fileName: 'x.png',
+              data: null,
+            }
+          : null,
+    },
+    cmpTicket: {
+      findUnique: async ({ where: { id } }) =>
+        id === ticketId ? { tenantId: 'luxe-maurice', consoleJson } : null,
+    },
+  };
+  const res = makeRes();
+  await handleLuxPropertyMedia(makeReq({ property: PROP, attachment: attId, slot: 'hero' }), res, prisma);
+  assert.equal(res.statusCode, 404);
+  assert.match(String(res.headers['cache-control'] || ''), /no-store/);
+  assert.equal(res.headers['x-lux-media-backend'], undefined);
 });
