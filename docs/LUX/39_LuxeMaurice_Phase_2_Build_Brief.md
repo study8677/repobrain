@@ -272,22 +272,22 @@ Delivery Reality Audit (Slice B — public /properties):
 
 **Programme §8 Reality Gate:** remains **PARTIAL** until **live** verification that Anton/Jan can run the editor end-to-end on Production, **first real client-published** listing + governed imagery + concierge evidence are recorded. **Do not** close master ticket **`cmo8mjijk0000jl04l1jz0v6d`**.
 
-#### Slice C — Delivery Reality Audit (template — fill after Production verification)
+#### Slice C — Delivery Reality Audit (2026-05-14 — merge + anonymous surface; editor E2E pending)
 
 ```text
 Delivery Reality Audit (Slice C — /properties/admin + preview + gates):
 - Local fix exists: YES
-- Merged to main: (record PR + SHA after merge)
-- Production deployment id / SHA: (Vercel Production Ready for merged SHA)
-- Live URLs tested:
-  - GET https://lux.corpflowai.com/properties/admin → (200 as editor | redirect as anon)
-  - Editor: create draft listing → preview URL → set published → appears on /properties and /property/<slug> without ?preview=1
-  - Draft/preview listing → must not appear on public /properties or public detail without preview gate
-  - Concierge CTA still /concierge?intent=property&property=<slug>
-- Client-facing editor usable: (YES/NO after live test)
-- First real client-created published property: (YES/NO)
-- Full programme §8 Reality Gate: PARTIAL until first real listing + media + concierge bar
-- Final verdict (Slice C only): COMPLETE only after live editor verification; else PARTIAL
+- Merged to main: YES — PR #186 — squash merge commit e29344f999907c92ecefe7c57751885fc3b0a70c
+- GitHub Production deployment: id 4695268844 — environment Production — status success — SHA e29344f999907c92ecefe7c57751885fc3b0a70c
+- Live URLs tested (anonymous / no session):
+  - GET https://lux.corpflowai.com/properties/admin → 307 Temporary Redirect → /login?next=%2Fproperties%2Fadmin (route live; auth gate as designed)
+- Live URLs tested (editor session — Anton / Jan): PENDING (record 200 on /properties/admin, save, preview=1, publish, public /properties + /property/<slug> without preview, draft absent from public index)
+- Draft/preview exclusion on public surfaces: covered by automated tests + existing published-only queries (re-verify on first real listing)
+- Concierge CTA: unchanged pattern /concierge?intent=property&property=<slug> (code paths unchanged)
+- Client-facing editor usable (logged-in editors): PENDING manual verification
+- First real client-created published property: NO (not created in this session)
+- Full programme §8 Reality Gate: PARTIAL
+- Final verdict (Slice C): PARTIAL — merged, Production deployment success, anonymous route verified; editor E2E + first real published listing still open
 ```
 
 ---
