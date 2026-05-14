@@ -198,6 +198,34 @@ No **Done** claim unless **all** are true on **Production** (`lux.corpflowai.com
 - [ ] **Anton** and **Jan** can create/edit/publish-request **without** calling a developer for routine content.  
 - [ ] Record: **Vercel deployment id**, **commit SHA**, **live URLs** tested — see `.cursor/rules/delivery-reality.mdc`.
 
+**Slice A vs Reality Gate:** Shipping **read APIs + model** alone does **not** clear the **full** §8 programme gate (public `/properties`, detail UX, media, concierge). **Slice A** live verification is recorded in the **subsection below**.
+
+### Slice A — Delivery Reality Audit (Postgres `lux_listings` + public read APIs, 2026-05-14)
+
+**Recorded:** 2026-05-14 (operator / agent live checks). **Master ticket** `cmo8mjijk0000jl04l1jz0v6d` — **remains open** (programme not complete).
+
+```text
+Delivery Reality Audit (Slice A — read APIs only):
+- Local fix exists: YES (merged PR #181)
+- Merged to main: YES — commit 5ad396cdd844af6b135d4eeaa8416543e1861478
+- Production deployment (GitHub Deployments): id 4684389034 — environment Production — status success (Vercel bot) — SHA 5ad396cdd844af6b135d4eeaa8416543e1861478
+- Vercel dpl_* id: use Vercel dashboard Deployments for this SHA if a `dpl_…` id is required for runbooks
+- Live URLs tested:
+  - GET https://lux.corpflowai.com/api/lux/listings → 200, body {"ok":true,"listings":[]} (empty published set; not 500)
+  - GET https://lux.corpflowai.com/api/lux/listing (no slug) → 400 JSON
+  - GET https://lux.corpflowai.com/api/lux/listing?slug=invalid..slug → 400 JSON (slug normalization)
+  - GET https://lux.corpflowai.com/api/lux/listing?slug=lm-nonexistent-zzzz → 404 JSON
+  - GET https://lux.corpflowai.com/api/lux/listing?slug=lm-nc-ridge → 404 (staged catalogue slug has no published DB row; expected until Slice B+ seeds Postgres)
+  - GET https://core.corpflowai.com/api/lux/listings → 404 (non–luxe-maurice tenant host context)
+  - POST https://lux.corpflowai.com/api/lux/listings → 405
+- DB / schema: `lux_listings` query path healthy on Production (empty list implies Prisma `findMany` succeeded; table present). Whether the table was created by **`npx prisma migrate deploy`** vs **build-time ensure-schema** was not distinguished from HTTP evidence alone — operators should keep migration history aligned with Prisma in the usual way.
+- Expected vs actual: Matches — host-gated JSON, published filter, safe error shapes.
+- Client-facing /properties page: NOT IN SCOPE for Slice A — not tested (N/A).
+- Slice A read API surface usable: YES
+- Full programme §8 Reality Gate: NO — pending `/properties`, editor, first published listing, media, concierge evidence
+- Final verdict (Slice A only): COMPLETE
+```
+
 ---
 
 ## 9. Open decisions (resolve during implementation / programme note)
