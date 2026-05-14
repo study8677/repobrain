@@ -66,6 +66,7 @@ import {
 } from '../lib/server/change-attachments.js';
 import { handleLuxPropertyMedia } from '../lib/server/lux-property-media.js';
 import { handleLuxPropertyMediaList } from '../lib/server/lux-published-property-media.js';
+import { tryHandleLuxListingsPublicRead } from '../lib/server/lux-listings-public.js';
 import { getChangeConsoleReadinessForTenant } from '../lib/server/change-console-readiness.js';
 import { growthPipelineHandler } from '../lib/server/growth-pipeline.js';
 import { recordTrustedAutomationEvent } from '../lib/automation/internal.js';
@@ -738,6 +739,9 @@ export default async function handler(req, res) {
   }
   if (pathSeg === 'lux/property-media-list') {
     return handleLuxPropertyMediaList(req, res, prisma);
+  }
+  if (await tryHandleLuxListingsPublicRead(req, res, prisma, pathSeg)) {
+    return;
   }
 
   if (pathSeg === 'growth' || pathSeg.startsWith('growth/')) {

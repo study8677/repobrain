@@ -121,6 +121,35 @@ model CmpTicketAttachment {
   @@map("cmp_ticket_attachments")
 }
 
+/// Manual LuxeMaurice catalogue rows (Phase 2). Public HTTP reads return only `visibility_status = published` on Lux host.
+model LuxListing {
+  id               String    @id @default(cuid())
+  tenantId         String    @map("tenant_id")
+  slug             String
+  title            String
+  regionLabel      String    @map("region_label")
+  propertyType     String    @map("property_type")
+  listingStatus    String?   @map("listing_status")
+  priceRange       String?   @map("price_range")
+  shortTeaser      String?   @map("short_teaser")
+  description      String    @default("")
+  highlightsJson   Json      @default("[]") @map("highlights_json")
+  bedrooms         Int?
+  bathrooms        Float?
+  areaSqm          Float?    @map("area_sqm")
+  mediaRefsJson    Json?     @map("media_refs_json")
+  visibilityStatus String    @map("visibility_status")
+  createdById      String?   @map("created_by_id")
+  updatedById      String?   @map("updated_by_id")
+  publishedAt      DateTime? @map("published_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tenantId, slug], map: "lux_listings_tenant_id_slug_key")
+  @@index([tenantId, visibilityStatus], map: "lux_listings_tenant_id_visibility_status_idx")
+  @@map("lux_listings")
+}
+
 model TenantPersona {
   id                    String  @id @default(cuid())
   tenantId              String  @unique @map("tenant_id")
