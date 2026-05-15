@@ -30,6 +30,14 @@ test('lux property editor: allowlist + tenant + username', () => {
     isLuxPropertyEditorSession({
       typ: 'tenant',
       tenant_id: 'luxe-maurice',
+      username: 'antonvdberg@corpflowai.com',
+    }),
+    true,
+  );
+  assert.equal(
+    isLuxPropertyEditorSession({
+      typ: 'tenant',
+      tenant_id: 'luxe-maurice',
       username: 'someone@example.com',
     }),
     false,
