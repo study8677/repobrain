@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "antigravity-cli"
 version = "1.0.0"
-description = "Inject the Artifact-First cognitive architecture into any project."
+description = "Inject Antigravity context files and offline helpers into any project."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

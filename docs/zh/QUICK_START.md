@@ -1,10 +1,10 @@
 # 🚀 快速开始指南
 
-几分钟内运行 Antigravity Workspace Template。
+几分钟内运行 Antigravity 代码库知识引擎。
 
 ## 📋 前置条件
 
-- Python 3.9+
+- Python 3.10+
 - pip 或 conda
 - Git
 
@@ -22,7 +22,7 @@ pip install -e ./cli -e './engine[dev]'
 ag refresh --workspace .
 ```
 
-该命令会扫描项目、更新 `.antigravity/`，并为后续问答准备知识层。
+该命令会扫描项目、构建 `.antigravity/`，并为后续路由式问答准备代码库知识库。
 
 ### 3. 提问项目问题
 ```bash
@@ -49,8 +49,9 @@ docker-compose up --build
 
 ```bash
 # LLM 配置
-GOOGLE_API_KEY=your-api-key-here
-GEMINI_MODEL_NAME=gemini-2.0-flash-exp
+OPENAI_BASE_URL=https://your-endpoint/v1
+OPENAI_API_KEY=your-key
+OPENAI_MODEL=your-model
 
 # MCP 配置
 MCP_ENABLED=true
@@ -78,15 +79,11 @@ ag refresh --workspace .
 ## 📁 项目结构参考
 
 ```
-├── antigravity_engine/
-│   ├── agent.py         # 主循环
-│   ├── config.py        # 配置管理
-│   ├── memory.py        # 记忆引擎
-│   ├── agents/          # 专家型 Agent
-│   └── tools/           # 工具实现
-├── artifacts/           # 输出 artifacts
-├── .context/            # 知识库
-└── .antigravity/        # Antigravity 规则
+├── cli/                         # 轻量 ag CLI 与模板
+├── engine/antigravity_engine/    # 知识引擎、hub、MCP server、sandbox
+├── artifacts/                   # 计划、报告与 benchmark 输出
+├── memory/                      # Markdown 交互记忆
+└── .antigravity/                # 目标仓库中生成的知识库
 ```
 
 详见 [项目结构](README.md)。
@@ -108,20 +105,21 @@ pytest --cov=antigravity_engine engine/tests/
 
 ### Agent 无法启动
 ```bash
-# 检查依赖
-pip list | grep -Ei "google-genai|google-generativeai"
+# 检查 engine CLI
+ag-ask --help
 
-# 检查 GOOGLE_API_KEY
-echo $GOOGLE_API_KEY
+# 检查 OpenAI-compatible 配置
+echo $OPENAI_BASE_URL
+echo $OPENAI_API_KEY
 ```
 
 ### 工具未加载
 ```bash
-# 检查 antigravity_engine/tools/ 文件
-ls -la antigravity_engine/tools/
+# 检查 engine 工具文件
+ls -la engine/antigravity_engine/tools/
 
 # 检查语法
-python -m py_compile antigravity_engine/tools/*.py
+python -m py_compile engine/antigravity_engine/tools/*.py
 ```
 
 ### 记忆异常

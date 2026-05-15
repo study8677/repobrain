@@ -1,12 +1,13 @@
-# 📚 Antigravity Workspace Documentation
+# 📚 Antigravity Documentation
 
-Welcome to the comprehensive documentation for the **Antigravity Workspace Template** — a production-grade starter kit for building autonomous AI agents on Google Antigravity.
+Welcome to the documentation for **Antigravity** — a cross-IDE repository
+knowledge engine for grounded codebase Q&A.
 
 ## 🎯 Quick Navigation
 
 ### Getting Started
 - **[Quick Start Guide](QUICK_START.md)** — Installation, local development, and first steps
-- **[Project Philosophy](PHILOSOPHY.md)** — Core concepts and Artifact-First protocol
+- **[Project Philosophy](PHILOSOPHY.md)** — Product thesis and support boundaries
 
 ### Core Features
 - **[Zero-Config Features](ZERO_CONFIG.md)** — Automatic tool and context discovery
@@ -18,21 +19,21 @@ Welcome to the comprehensive documentation for the **Antigravity Workspace Templ
 
 ## 🌟 Key Features
 
-### 🧠 Infinite Memory Engine
-Recursive summarization automatically compresses history—context limits are a thing of the past.
+### 🧠 Repository Knowledge Base
+`ag-refresh` builds `.antigravity/` so AI tools can reason over a fresh model of
+the repository.
 
-### 🛠️ Universal Tool Protocol
-Generic ReAct pattern. Just register any Python function in `antigravity_engine/tools/`, and the Agent learns to use it automatically.
+### 🛠️ Routed Codebase Q&A
+`ag-ask` routes questions to the right module context and answers with file
+evidence.
 
-### 🎓 Skill-Based Project Initialization
-Use the built-in `agent-repo-init` skill to bootstrap a clean repository from this template.
-It supports `quick` and `full` modes and includes a portable script at `skills/agent-repo-init/scripts/init_project.py`.
+### 🎓 Native Plugin Channels
+Claude Code and Codex CLI get slash commands for setup, refresh, ask, and
+workspace bootstrapping.
 
-### ⚡️ Gemini Native
-Optimized for Gemini 2.0 Flash's speed and function calling capabilities.
-
-### 🔌 External LLM Support
-Call any OpenAI-compatible API via the built-in `call_openai_chat` tool (supports OpenAI, Azure, Ollama).
+### 🔌 Compatible Integrations
+Other IDEs can use shared context files, raw CLI commands, or the optional MCP
+server.
 
 ## 🚀 Common Tasks
 
@@ -40,7 +41,7 @@ Call any OpenAI-compatible API via the built-in `call_openai_chat` tool (support
 
 | Task | Documentation |
 |------|----------------|
-| Get started with the agent | [Quick Start](QUICK_START.md) |
+| Get started with Antigravity | [Quick Start](QUICK_START.md) |
 | Build a custom tool | [Zero-Config Features](ZERO_CONFIG.md) |
 | Initialize a new project from this template | [Zero-Config Features](ZERO_CONFIG.md) |
 | Connect to an MCP server | [MCP Integration](MCP_INTEGRATION.md) |
@@ -53,28 +54,14 @@ Call any OpenAI-compatible API via the built-in `call_openai_chat` tool (support
 
 ```
 .
-├── .antigravity/        # 🛸 Antigravity config/rules
-├── .context/            # 📚 Knowledge base auto-injected
-├── artifacts/           # 📂 Agent outputs (plans, logs, visuals)
-├── antigravity_engine/   # 🧠 Agent source code
-│   ├── agent.py         # Main agent loop
-│   ├── memory.py        # JSON memory manager
-│   ├── mcp_client.py    # MCP integration
-│   ├── swarm.py         # Multi-agent orchestration
-│   ├── agents/          # Specialist agents
-│   │   ├── base_agent.py
-│   │   ├── coder_agent.py
-│   │   ├── reviewer_agent.py
-│   │   └── researcher_agent.py
-│   ├── tools/           # Tool implementations
-│   │   ├── demo_tool.py
-│   │   └── mcp_tools.py
-│   └── hub/             # Knowledge Hub (scanner, agents, pipeline)
-├── tests/               # ✅ Test suite
-├── scripts/             # 🧪 Utility scripts
-├── docker-compose.yml   # Local dev stack
-├── README.md            # Main landing page
-└── pyproject.toml       # Python dependencies
+├── cli/                         # ag CLI, templates, offline helpers
+├── engine/antigravity_engine/    # Knowledge engine, hub, MCP server, sandbox
+├── commands/                    # Shared slash-command definitions
+├── skills/                      # Plugin-facing skills
+├── docs/                        # Documentation in multiple languages
+├── artifacts/                   # Plans, reports, and benchmark outputs
+├── memory/                      # Markdown interaction memory
+└── .antigravity/                # Generated knowledge base in target repos
 ```
 
 ## 🎓 Documentation by Role
@@ -96,7 +83,7 @@ Call any OpenAI-compatible API via the built-in `call_openai_chat` tool (support
 
 ### For Contributors
 1. Read [Project Philosophy](PHILOSOPHY.md)
-2. Check [Development Roadmap](ROADMAP.md) Phase 9
+2. Read the repository root `CONTRIBUTING.md`
 3. Open an issue to propose ideas
 
 ## 🔗 External Resources
@@ -109,8 +96,8 @@ Call any OpenAI-compatible API via the built-in `call_openai_chat` tool (support
 
 ## ❓ FAQ
 
-**Q: Can I use this with OpenAI instead of Gemini?**  
-A: Yes! Set `OPENAI_BASE_URL` and `OPENAI_API_KEY` in `.env`. See [Quick Start](QUICK_START.md) for details.
+**Q: Which LLM providers are supported?**  
+A: Use any OpenAI-compatible endpoint through `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `OPENAI_MODEL`. Gemini is also supported through `GOOGLE_API_KEY` and `GEMINI_MODEL_NAME`.
 
 **Q: How do I add a custom tool?**  
 A: Drop a Python file in `antigravity_engine/tools/` with your functions. No registration needed! See [Zero-Config Features](ZERO_CONFIG.md).
@@ -118,8 +105,8 @@ A: Drop a Python file in `antigravity_engine/tools/` with your functions. No reg
 **Q: How do I initialize a fresh project from this template?**  
 A: Use the `agent-repo-init` skill in `quick` or `full` mode, or run `skills/agent-repo-init/scripts/init_project.py`. See [Zero-Config Features](ZERO_CONFIG.md).
 
-**Q: How do I deploy to production?**  
-A: Use Docker! See [Quick Start](QUICK_START.md) Docker section.
+**Q: How do I deploy the MCP server?**  
+A: Use Docker or run `ag-mcp --workspace <project>`. See [Quick Start](QUICK_START.md) Docker section.
 
 **Q: Can I use multiple agents?**  
 A: Yes! Use the swarm system. See [Multi-Agent Swarm](SWARM_PROTOCOL.md).
@@ -176,7 +163,5 @@ This project is licensed under the **MIT License**. See [LICENSE](../../LICENSE)
 
 **Latest Update:** April 2026
 **Version:** Phase 10 (Knowledge Hub) ✅ — structured evidence pipeline + multi-language module support
-
-**Happy building with Antigravity!** 🚀
 
 Friendly Link: [LINUX DO](https://linux.do/)

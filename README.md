@@ -2,11 +2,13 @@
 
 <img src="docs/assets/logo.png" alt="Antigravity Workspace" width="200"/>
 
-# Antigravity — Workspace Template for Claude Code, Codex CLI & Cursor
+# Antigravity
 
-### Multi-agent knowledge engine + optional MCP server that turns any repo into a queryable AI assistant. Works with Claude Code, Codex CLI, Cursor, Windsurf, and Gemini CLI.
+### Cross-IDE repository knowledge engine for grounded codebase Q&A.
 
-`ag-refresh` builds a knowledge base. `ag-ask` answers questions. Any LLM, any IDE.
+`ag-refresh` builds the repository knowledge base. `ag-ask` routes questions to
+the right module context with source evidence. Plugins, CLI commands, and MCP are
+delivery channels around that core workflow.
 
 Language: **English** | [中文](README_CN.md) | [Español](README_ES.md)
 
@@ -135,6 +137,21 @@ Creates a **new** project from the Antigravity template. Two modes: `quick` (fas
 ```
 
 > The plugin also bundles the `agent-repo-init` skill (the same backend that `ag-init` invokes — Codex / Claude can also match it by description) and the optional `ag-mcp` MCP server (`ask_project` + `refresh_project`) for tool-style integration.
+
+---
+
+## Support Matrix
+
+| Layer | Channels | Contract |
+|:------|:---------|:---------|
+| Native plugins | Claude Code, Codex CLI | Bundled slash commands for `ag-setup`, `ag-refresh`, `ag-ask`, and `ag-init`. |
+| Compatible IDEs | Cursor, Windsurf, Gemini CLI, VS Code + Copilot, Cline, Aider | Use shared context files, the `ag`/`ag-*` CLI entrypoints, or an MCP client. |
+| Advanced tool integration | `ag-mcp` | Exposes `ask_project` and `refresh_project` for hosts that can call MCP tools. |
+| Workspace bootstrapping | `ag-init`, `ag init` | Starts a new repo or injects portable agent context into an existing one. |
+
+The native plugins are the first-class install path today. Other environments are
+supported through the same repository knowledge artifacts rather than separate
+host-specific plugin packages.
 
 ---
 

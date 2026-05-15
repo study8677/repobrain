@@ -2,75 +2,84 @@ name: Agent CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   engine-test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
 
-    - name: Install engine dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install "./engine[dev]"
+      - name: Install engine dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "./engine[dev]"
 
-    - name: Run engine tests
-      run: |
-        pytest engine/tests/
+      - name: Run engine tests
+        run: pytest engine/tests/
 
-    - name: Verify engine entrypoints
-      run: |
-        ag-ask --help
-        ag-refresh --help
-        ag-mcp --help
-        python -m antigravity_engine --help
-        python -m antigravity_engine.hub --help
+      - name: Verify engine entrypoints
+        run: |
+          ag-ask --help
+          ag-refresh --help
+          ag-mcp --help
+          python -m antigravity_engine --help
+          python -m antigravity_engine.hub --help
 
   docker-check:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
-    - name: Validate docker-compose config
-      run: docker compose config --quiet
+      - name: Validate docker-compose config
+        run: docker compose config --quiet
 
-    - name: Build main Dockerfile
-      run: docker build -t ag-ci-test .
+      - name: Build main Dockerfile
+        run: docker build -t ag-ci-test .
 
-    - name: Build sandbox Dockerfile
-      run: docker build -f Dockerfile.sandbox -t ag-sandbox-ci-test .
+      - name: Build sandbox Dockerfile
+        run: docker build -f Dockerfile.sandbox -t ag-sandbox-ci-test .
 
   cli-check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.12"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
 
-    - name: Install CLI and engine
-      run: |
-        python -m pip install --upgrade pip
-        pip install "./engine[dev]" ./cli
+      - name: Install CLI and engine
+        run: |
+          python -m pip install --upgrade pip
+          pip install "./engine[dev]" ./cli
 
-    - name: Run CLI tests
-      run: pytest cli/tests/
+      - name: Run CLI tests
+        run: pytest cli/tests/
 
-    - name: Verify CLI commands
-      run: |
-        ag --help
-        ag ask --help
-        ag refresh --help
+      - name: Verify CLI commands
+        run: |
+          ag --help
+          ag ask --help
+          ag refresh --help

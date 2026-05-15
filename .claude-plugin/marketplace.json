@@ -13,7 +13,7 @@
       "name": "antigravity",
       "source": "./",
       "description": "Multi-agent knowledge hub: CLI-backed slash commands (ag-setup / ag-init / ag-refresh / ag-ask) for both Claude Code and Codex CLI, agent-repo-init skill, and optional MCP server.",
-      "version": "0.2.2",
+      "version": "0.2.1",
       "category": "developer-tools",
       "keywords": ["mcp", "knowledge-graph", "multi-agent", "scaffolding"]
     }
