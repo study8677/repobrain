@@ -1,10 +1,10 @@
 # 🚀 Quick Start Guide
 
-Get up and running with the Antigravity Workspace Template in minutes.
+Get the Antigravity repository knowledge engine running in minutes.
 
 ## 📋 Prerequisites
 
-- Python 3.9+
+- Python 3.10+
 - pip or conda
 - Git
 
@@ -22,8 +22,8 @@ pip install -e ./cli -e './engine[dev]'
 ag refresh --workspace .
 ```
 
-This command scans the project, updates `.antigravity/`, and prepares the
-knowledge hub for routed project Q&A.
+This command scans the project, builds `.antigravity/`, and prepares the
+repository knowledge base for routed project Q&A.
 
 ### 3. Ask Project Questions
 ```bash
@@ -56,8 +56,9 @@ Create a `.env` file:
 
 ```bash
 # LLM Configuration
-GOOGLE_API_KEY=your-api-key-here
-GEMINI_MODEL_NAME=gemini-2.0-flash-exp
+OPENAI_BASE_URL=https://your-endpoint/v1
+OPENAI_API_KEY=your-key
+OPENAI_MODEL=your-model
 
 # MCP Configuration
 MCP_ENABLED=true
@@ -85,15 +86,11 @@ ag refresh --workspace .
 ## 📁 Project Structure Reference
 
 ```
-├── antigravity_engine/
-│   ├── agent.py         # Main agent loop
-│   ├── config.py        # Configuration management
-│   ├── memory.py        # Memory engine
-│   ├── agents/          # Specialist agents
-│   └── tools/           # Tool implementations
-├── artifacts/           # Output artifacts
-├── .context/            # Knowledge base
-└── .antigravity/        # Antigravity rules
+├── cli/                         # Lightweight ag CLI and templates
+├── engine/antigravity_engine/    # Knowledge engine, hub, MCP server, sandbox
+├── artifacts/                   # Plans, reports, and benchmark outputs
+├── memory/                      # Markdown interaction memory
+└── .antigravity/                # Generated knowledge base in target repos
 ```
 
 See [Project Structure](../README.md#project-structure) for details.
@@ -115,20 +112,21 @@ pytest --cov=antigravity_engine engine/tests/
 
 ### Agent doesn't start
 ```bash
-# Check if dependencies are installed
-pip list | grep -Ei "google-genai|google-generativeai"
+# Check if the engine CLI is installed
+ag-ask --help
 
-# Verify GOOGLE_API_KEY is set
-echo $GOOGLE_API_KEY
+# Verify OpenAI-compatible configuration
+echo $OPENAI_BASE_URL
+echo $OPENAI_API_KEY
 ```
 
 ### Tools not loading
 ```bash
-# Verify antigravity_engine/tools/ has valid Python files
-ls -la antigravity_engine/tools/
+# Verify engine tools have valid Python files
+ls -la engine/antigravity_engine/tools/
 
 # Check for syntax errors
-python -m py_compile antigravity_engine/tools/*.py
+python -m py_compile engine/antigravity_engine/tools/*.py
 ```
 
 ### Memory issues

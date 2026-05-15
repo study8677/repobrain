@@ -1,0 +1,49 @@
+name: Feature request
+description: Propose an improvement to the Antigravity knowledge engine or its delivery channels.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antigravity is a repository knowledge engine first. Explain how the request improves grounded codebase Q&A, refresh quality, install ergonomics, or supported delivery channels.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior or interface you want.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Knowledge refresh
+        - Routed Q&A
+        - Evidence validation
+        - CLI
+        - MCP
+        - Claude Code plugin
+        - Codex CLI plugin
+        - Documentation
+        - Docker/deployment
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workaround or design did you consider?
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context

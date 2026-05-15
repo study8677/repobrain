@@ -1,10 +1,10 @@
 # 🚀 Guía de Inicio Rápido
 
-Comienza a usar la Plantilla Workspace de Antigravity en minutos.
+Comienza a usar el motor de conocimiento de repositorios de Antigravity en minutos.
 
 ## 📋 Requisitos Previos
 
-- Python 3.9+
+- Python 3.10+
 - pip o conda
 - Git
 
@@ -22,8 +22,8 @@ pip install -e ./cli -e './engine[dev]'
 ag refresh --workspace .
 ```
 
-Este comando escanea el proyecto, actualiza `.antigravity/` y prepara el
-knowledge hub para preguntas enrutadas sobre el codebase.
+Este comando escanea el proyecto, construye `.antigravity/` y prepara la base
+de conocimiento del repositorio para preguntas enrutadas sobre el codebase.
 
 ### 3. Hacer Preguntas sobre el Proyecto
 ```bash
@@ -56,8 +56,9 @@ Crea un archivo `.env`:
 
 ```bash
 # Configuración de LLM
-GOOGLE_API_KEY=tu-clave-api-aqui
-GEMINI_MODEL_NAME=gemini-2.0-flash-exp
+OPENAI_BASE_URL=https://tu-endpoint/v1
+OPENAI_API_KEY=tu-clave
+OPENAI_MODEL=tu-modelo
 
 # Configuración de MCP
 MCP_ENABLED=true
@@ -85,15 +86,11 @@ ag refresh --workspace .
 ## 📁 Referencia de Estructura del Proyecto
 
 ```
-├── antigravity_engine/
-│   ├── agent.py         # Bucle principal del agente
-│   ├── config.py        # Gestión de configuración
-│   ├── memory.py        # Motor de memoria
-│   ├── agents/          # Agentes especialistas
-│   └── tools/           # Implementaciones de herramientas
-├── artifacts/           # Artefactos de salida
-├── .context/            # Base de conocimiento
-└── .antigravity/        # Reglas de Antigravity
+├── cli/                         # CLI ag ligero y plantillas
+├── engine/antigravity_engine/    # Motor de conocimiento, hub, MCP server, sandbox
+├── artifacts/                   # Planes, reportes y salidas de benchmark
+├── memory/                      # Memoria de interacción en Markdown
+└── .antigravity/                # Base de conocimiento generada en repos destino
 ```
 
 Consulta [Estructura del Proyecto](../README.md#project-structure) para detalles.
@@ -115,20 +112,21 @@ pytest --cov=antigravity_engine engine/tests/
 
 ### El agente no se inicia
 ```bash
-# Verifica si las dependencias están instaladas
-pip list | grep -Ei "google-genai|google-generativeai"
+# Verifica que el CLI del engine esté instalado
+ag-ask --help
 
-# Verifica que GOOGLE_API_KEY esté configurada
-echo $GOOGLE_API_KEY
+# Verifica la configuración OpenAI-compatible
+echo $OPENAI_BASE_URL
+echo $OPENAI_API_KEY
 ```
 
 ### Las herramientas no cargan
 ```bash
-# Verifica que antigravity_engine/tools/ tenga archivos Python válidos
-ls -la antigravity_engine/tools/
+# Verifica que las herramientas del engine sean archivos Python válidos
+ls -la engine/antigravity_engine/tools/
 
 # Verifica errores de sintaxis
-python -m py_compile antigravity_engine/tools/*.py
+python -m py_compile engine/antigravity_engine/tools/*.py
 ```
 
 ### Problemas de memoria

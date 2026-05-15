@@ -6,12 +6,15 @@ services:
       - path: .env
         required: false
     environment:
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - AGENT_NAME=ProductionAgent
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME:-}
+      - AGENT_NAME=${AGENT_NAME:-AntigravityAgent}
       - DEBUG_MODE=${DEBUG_MODE:-false}
     volumes:
       - ./memory:/app/memory
       - ./artifacts:/app/artifacts
       - ./.antigravity:/app/.antigravity
-      - ./.context:/app/.context
     restart: unless-stopped

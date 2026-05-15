@@ -1,8 +1,8 @@
 """
 Antigravity CLI – ag init <target_dir>
 
-Copies the Artifact-First cognitive architecture templates into any
-project directory, making any AI IDE an industry-savvy architect.
+Copies portable Antigravity context files into any project directory so AI IDEs
+can share the same repository knowledge entrypoints.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from rich.tree import Tree
 # flattened into the root command by Typer's single-command optimisation.
 app = typer.Typer(
     name="ag",
-    help="Antigravity – inject AI cognitive architecture into any project.",
+    help="Antigravity – inject portable AI repository context into any project.",
     add_completion=False,
     no_args_is_help=True,
     rich_markup_mode="rich",
@@ -137,7 +137,7 @@ def _run_hub(workspace: Path, *args: str) -> int:
 def init_cmd(
     target_dir: str = typer.Argument(
         ...,
-        help="Directory to inject the cognitive architecture into.",
+        help="Directory to inject Antigravity context into.",
     ),
     force: bool = typer.Option(
         False,
@@ -146,7 +146,7 @@ def init_cmd(
         help="Overwrite existing files instead of skipping them.",
     ),
 ) -> None:
-    """Inject the Artifact-First cognitive architecture into TARGET_DIR."""
+    """Inject Antigravity context files into TARGET_DIR."""
 
     target = Path(target_dir).resolve()
 
@@ -165,7 +165,7 @@ def init_cmd(
 
     # ── Copy templates with spinner ─────────────────────────────────
     with console.status(
-        "[cyan]⚛  Injecting Artifact-First cognitive architecture…[/cyan]",
+        "[cyan]⚛  Injecting Antigravity context files…[/cyan]",
         spinner="dots",
     ):
         created = _copy_tree(templates, target, force=force)
@@ -202,7 +202,7 @@ def init_cmd(
         ("  2. ", "bold cyan"),
         ("Open the directory in your AI IDE (Cursor, VS Code, Windsurf…)\n", ""),
         ("  3. ", "bold cyan"),
-        ("Start prompting — the cognitive architecture is already loaded.\n", ""),
+        ("Start prompting — Antigravity context is already loaded.\n", ""),
     )
 
     console.print(
