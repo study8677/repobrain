@@ -342,6 +342,27 @@ Constraints: one Postgres POSTGRES_URL; follow docs/operations/TENANT_CLIENT_LOG
 
 ---
 
+## 12. Delivery Reality Audit — Lux `/change` operator chrome (PR #192)
+
+Shipped **2026-05-15**: LuxeMaurice tenant session on `lux.corpflowai.com` gets **cream / gold / editorial** Change Console chrome (aligned with `/properties/admin` desk), queue badges + **Test & smoke artifacts** bucket, programme desk summary (master `cmo8mjijk0000jl04l1jz0v6d` — **still open**), quick links, **Technical details** collapsed JSON snapshot, media library accordion (`#lux-media-workspace`), attachments in a Lux collapsible. **Non-Lux** tenants keep the **existing dark** operator layout. **CMP / auth / session semantics unchanged.** **`/change-v2` untouched.**
+
+```text
+Delivery Reality Audit:
+- Local fix exists: YES
+- Merged to main: YES (squash via PR #192)
+- Production deployment ID (GitHub): 4696413503
+- Commit deployed (merge): 2e83f00464bc7b5b70b3966f8c16754342af0823
+- Live URLs tested:
+  - GET https://lux.corpflowai.com/change — 200 (anonymous: dark “Change Console” shell and “TICKET SNAPSHOT”; expected — Lux light chrome is session-gated to luxe-maurice tenant)
+  - GET https://lux.corpflowai.com/properties — 200 (unchanged marketing / empty state)
+- Expected vs actual (anonymous): Non-Lux layout on /change without tenant login — matches design (Lux chrome only when `luxChangeChrome` applies).
+- Lux operator session checks still required: confirm cream shell, programme card, smoke bucket, accordions, quick links, technical JSON opens, attachment actions unchanged.
+- Client-facing flow usable (Lux operator desk): PARTIAL until Lux session verification recorded
+- Final verdict: PARTIAL (merge + Production deployment on SHA above; **Lux-session UI verification pending**)
+```
+
+---
+
 ## Output summary (for Anton / PM)
 
 | Item | Value |
