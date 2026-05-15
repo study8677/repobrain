@@ -34,6 +34,8 @@ import {
   luxAttachmentCleanupCandidate,
   luxAttachmentMatchesOperatorFilter,
 } from '../lib/cmp/_lib/lux-request-attachments.js';
+import { buildLuxChangeConsoleChrome } from '../lib/client/lux-change-console-theme.js';
+import { classifyLuxChangeQueueTicket, partitionLuxChangeQueueTickets } from '../lib/client/lux-change-queue-classify.js';
 
 function normalizeLocale(raw) {
   const s = String(raw || '').trim().toLowerCase().replace(/_/g, '-');
@@ -64,7 +66,8 @@ function isoToDatetimeLocalValue(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function pillStyle(active) {
+function pillStyle(active, chrome) {
+  if (chrome && typeof chrome.pill === 'function') return chrome.pill(active);
   return {
     padding: '8px 10px',
     borderRadius: 999,
@@ -75,6 +78,84 @@ function pillStyle(active) {
     fontWeight: 800,
     cursor: 'pointer',
   };
+}
+
+/** Lux-only: `<details>` accordion so media tools are not all expanded at once. */
+function LuxChangeCollapsibleSection({ chrome, summary, cardStyle, children, defaultOpen = false, sectionId }) {
+  if (!chrome) {
+    return <div style={cardStyle}>{children}</div>;
+  }
+  return (
+    <details id={sectionId} style={{ ...cardStyle, minWidth: 0 }} defaultOpen={defaultOpen}>
+      <summary
+        style={{
+          cursor: 'pointer',
+          listStyle: 'none',
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: '0.08em',
+          color: chrome.textLabel,
+        }}
+      >
+        {summary}
+      </summary>
+      <div style={{ marginTop: 12 }}>{children}</div>
+    </details>
+  );
+}
+
+function ChangeQueueTicketRow({ t, selectedTicketId, onSelect, luxChrome }) {
+  const id = String(t.ticket_id || '');
+  const active = id && id === selectedTicketId;
+  const cls = luxChrome ? classifyLuxChangeQueueTicket(t) : null;
+  const btnStyle = luxChrome
+    ? cls.bucket === 'smoke_test'
+      ? luxChrome.queueBtnSmoke(active)
+      : luxChrome.queueBtn(active)
+    : {
+        textAlign: 'left',
+        padding: 12,
+        borderRadius: 14,
+        border: `1px solid ${active ? 'rgba(56,189,248,0.6)' : 'rgba(148,163,184,0.25)'}`,
+        background: active ? 'rgba(56,189,248,0.10)' : 'rgba(15,23,42,0.35)',
+        color: '#e2e8f0',
+        cursor: 'pointer',
+        minWidth: 0,
+        maxWidth: '100%',
+        width: '100%',
+        boxSizing: 'border-box',
+      };
+  const monoColor = luxChrome ? luxChrome.textMuted : '#94a3b8';
+  const titleColor = luxChrome ? luxChrome.text : '#e2e8f0';
+  return (
+    <button type="button" onClick={() => onSelect(id)} style={btnStyle}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+        {luxChrome && cls ? <span style={luxChrome.badge(cls.bucket)}>{cls.badge}</span> : null}
+        <div
+          style={{
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            fontSize: 10,
+            color: monoColor,
+            ...changeTextContainStyle(),
+          }}
+        >
+          {id}
+        </div>
+      </div>
+      <div
+        style={{
+          marginTop: 6,
+          fontSize: 13,
+          color: titleColor,
+          lineHeight: 1.35,
+          fontWeight: luxChrome ? 650 : 400,
+          ...changeTextContainStyle(),
+        }}
+      >
+        {String(t.requested_change || '—')}
+      </div>
+    </button>
+  );
 }
 
 /** Mirrors `public/change.html` workflow labels for Intake detection. */
@@ -267,6 +348,24 @@ export default function ChangeConsolePage() {
     () => attachments.filter((a) => luxAttachmentMatchesOperatorFilter(a, attachmentOperatorFilter)),
     [attachments, attachmentOperatorFilter],
   );
+
+  const luxOperatorPropertySlugHint = useMemo(() => {
+    const lib = String(luxMediaLibSlug || '').trim();
+    if (lib) return lib;
+    const drafts = attachmentLinkSlugDrafts && typeof attachmentLinkSlugDrafts === 'object' ? attachmentLinkSlugDrafts : {};
+    for (const k of Object.keys(drafts)) {
+      const s = String(drafts[k] || '').trim();
+      if (s) return s;
+    }
+    for (const a of attachments) {
+      const pls = Array.isArray(a.property_links) ? a.property_links : [];
+      for (const pl of pls) {
+        const slug = String(pl?.property_slug || '').trim();
+        if (slug) return slug;
+      }
+    }
+    return '';
+  }, [luxMediaLibSlug, attachmentLinkSlugDrafts, attachments]);
 
   const showChangeLayoutFixture =
     process.env.NODE_ENV === 'development' && router.isReady && String(router.query.changeLayoutFixture || '') === '1';
@@ -835,6 +934,13 @@ export default function ChangeConsolePage() {
     );
   }, [session.logged_in, session.level, session.tenant_id]);
 
+  const luxChangeChrome = useMemo(
+    () => (luxLeadCrmEnabled ? buildLuxChangeConsoleChrome() : null),
+    [luxLeadCrmEnabled],
+  );
+  const luxQueueParts = useMemo(() => partitionLuxChangeQueueTickets(tickets), [tickets]);
+  const [luxQueueTestsOpen, setLuxQueueTestsOpen] = useState(false);
+
   const crmStageCounts = useMemo(() => {
     const base = Object.fromEntries(LUX_LEAD_CRM_STAGES.map((s) => [s, 0]));
     if (!luxLeadCrmEnabled) return base;
@@ -1236,30 +1342,45 @@ export default function ChangeConsolePage() {
   const showIntakeSurface = showIntakeSkin || forceRefine;
   const workflowStageLabel = ticket ? wfLabel : '—';
 
-  const pageInner = {
-    fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif',
-    padding: 24,
-    maxWidth: 1200,
-    margin: '0 auto',
-    width: '100%',
-    minWidth: 0,
-    boxSizing: 'border-box',
-    color: '#e2e8f0',
-  };
+  const pageInner = luxChangeChrome
+    ? { ...luxChangeChrome.pageInner }
+    : {
+        fontFamily: 'system-ui, Segoe UI, Roboto, sans-serif',
+        padding: 24,
+        maxWidth: 1200,
+        margin: '0 auto',
+        width: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
+        color: '#e2e8f0',
+      };
 
-  const card = changePanelStyle({
-    border: '1px solid rgba(148,163,184,0.25)',
-    borderRadius: 16,
-    background: 'rgba(2,6,23,0.55)',
-    padding: 16,
-  });
+  const card = luxChangeChrome
+    ? { ...luxChangeChrome.card }
+    : changePanelStyle({
+        border: '1px solid rgba(148,163,184,0.25)',
+        borderRadius: 16,
+        background: 'rgba(2,6,23,0.55)',
+        padding: 16,
+      });
 
-  const subtleCard = changePanelStyle({
-    border: '1px solid rgba(148,163,184,0.18)',
-    borderRadius: 16,
-    background: 'rgba(2,6,23,0.45)',
-    padding: 16,
-  });
+  const subtleCard = luxChangeChrome
+    ? { ...luxChangeChrome.subtleCard }
+    : changePanelStyle({
+        border: '1px solid rgba(148,163,184,0.18)',
+        borderRadius: 16,
+        background: 'rgba(2,6,23,0.45)',
+        padding: 16,
+      });
+
+  const luxInk = luxChangeChrome
+    ? {
+        label: luxChangeChrome.textLabel,
+        body: luxChangeChrome.text,
+        muted: luxChangeChrome.textMuted,
+        borderHairline: luxChangeChrome.border,
+      }
+    : null;
 
   const dollarsOur = cv?.actual_cost_to_client_usd ?? cv?.display_amount_usd ?? null;
   const dollarsMarket = cv?.market_reference_usd ?? cv?.full_market_value_usd ?? null;
@@ -1389,7 +1510,7 @@ export default function ChangeConsolePage() {
   ]);
 
   return (
-    <div ref={changeRootRef} style={changePageShellStyle({ background: '#020617', minHeight: '100vh' })}>
+    <div ref={changeRootRef} style={luxChangeChrome ? luxChangeChrome.shellStyle() : changePageShellStyle({ background: '#020617', minHeight: '100vh' })}>
       <div style={pageInner}>
       {showChangeDebugBanner ? (
         <div
@@ -1419,10 +1540,130 @@ export default function ChangeConsolePage() {
         </div>
       ) : null}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 24, fontWeight: 950, color: '#f8fafc' }}>Change Console</div>
-        <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 13, lineHeight: 1.45 }}>
-          Operator workspace: open, select a ticket, take one governed action.
-        </div>
+        {luxChangeChrome ? (
+          <>
+            <div style={{ fontFamily: luxChangeChrome.fontDisplay, fontSize: 28, fontWeight: 700, color: luxChangeChrome.heroDeep }}>
+              LuxeMaurice · Change Console
+            </div>
+            <div style={{ marginTop: 8, color: luxChangeChrome.textMuted, fontSize: 14, lineHeight: 1.55 }}>
+              Operator workspace on Lux — same programme as the public site and property desk. Pick a ticket, then use one
+              governed action at a time.
+            </div>
+            <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+              <a
+                href="/properties"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  border: `1px solid ${luxChangeChrome.gold}`,
+                  color: luxChangeChrome.gold,
+                  fontWeight: 800,
+                  fontSize: 12,
+                  textDecoration: 'none',
+                  background: luxChangeChrome.white,
+                }}
+              >
+                Public /properties
+              </a>
+              <a
+                href="/properties/admin"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  border: `1px solid ${luxChangeChrome.gold}`,
+                  color: luxChangeChrome.gold,
+                  fontWeight: 800,
+                  fontSize: 12,
+                  textDecoration: 'none',
+                  background: luxChangeChrome.white,
+                }}
+              >
+                Property editor
+              </a>
+              <a
+                href="/concierge"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  border: `1px solid ${luxChangeChrome.border}`,
+                  color: luxChangeChrome.text,
+                  fontWeight: 750,
+                  fontSize: 12,
+                  textDecoration: 'none',
+                  background: luxChangeChrome.sand,
+                }}
+              >
+                Concierge
+              </a>
+              {luxOperatorPropertySlugHint ? (
+                <>
+                  <a
+                    href={`/property/${encodeURIComponent(luxOperatorPropertySlugHint)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: 999,
+                      border: `1px solid ${luxChangeChrome.border}`,
+                      color: luxChangeChrome.heroDeep,
+                      fontWeight: 800,
+                      fontSize: 12,
+                      textDecoration: 'none',
+                      background: luxChangeChrome.white,
+                    }}
+                  >
+                    Listing · {luxOperatorPropertySlugHint}
+                  </a>
+                  <a
+                    href={`/property/${encodeURIComponent(luxOperatorPropertySlugHint)}?preview=1`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: 999,
+                      border: `1px solid ${luxChangeChrome.border}`,
+                      color: luxChangeChrome.text,
+                      fontWeight: 750,
+                      fontSize: 12,
+                      textDecoration: 'none',
+                      background: luxChangeChrome.sand,
+                    }}
+                  >
+                    Preview (staff)
+                  </a>
+                </>
+              ) : null}
+              <a
+                href="#lux-media-workspace"
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  border: `1px solid ${luxChangeChrome.border}`,
+                  color: luxChangeChrome.text,
+                  fontWeight: 750,
+                  fontSize: 12,
+                  textDecoration: 'none',
+                  background: luxChangeChrome.white,
+                }}
+              >
+                Media workspace
+              </a>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 24, fontWeight: 950, color: '#f8fafc' }}>Change Console</div>
+            <div style={{ marginTop: 6, color: '#94a3b8', fontSize: 13, lineHeight: 1.45 }}>
+              Operator workspace: open, select a ticket, take one governed action.
+            </div>
+          </>
+        )}
       </div>
 
       <div
@@ -1436,7 +1677,14 @@ export default function ChangeConsolePage() {
       >
         <div style={{ ...card, minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 900,
+                color: luxChangeChrome ? luxChangeChrome.textLabel : '#cbd5e1',
+                letterSpacing: '0.08em',
+              }}
+            >
               OPERATOR QUEUE
             </div>
             <button
@@ -1462,25 +1710,29 @@ export default function ChangeConsolePage() {
                 }
               }}
               disabled={busy}
-              style={{
-                padding: '6px 10px',
-                borderRadius: 10,
-                border: '1px solid rgba(148,163,184,0.25)',
-                background: 'rgba(15,23,42,0.35)',
-                color: '#e2e8f0',
-                fontWeight: 800,
-                fontSize: 12,
-                cursor: busy ? 'not-allowed' : 'pointer',
-              }}
+              style={
+                luxChangeChrome
+                  ? luxChangeChrome.refreshBtn(busy)
+                  : {
+                      padding: '6px 10px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(148,163,184,0.25)',
+                      background: 'rgba(15,23,42,0.35)',
+                      color: '#e2e8f0',
+                      fontWeight: 800,
+                      fontSize: 12,
+                      cursor: busy ? 'not-allowed' : 'pointer',
+                    }
+              }
             >
               Refresh
             </button>
           </div>
 
-          <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>
+          <div style={{ marginTop: 10, fontSize: 12, color: luxChangeChrome ? luxChangeChrome.textMuted : '#94a3b8' }}>
             {session.logged_in ? (
               <span>
-                Session: <strong style={{ color: '#e2e8f0' }}>{String(session.level || '')}</strong>
+                Session: <strong style={{ color: luxChangeChrome ? luxChangeChrome.text : '#e2e8f0' }}>{String(session.level || '')}</strong>
                 {session.tenant_id ? (
                   <span>
                     {' '}
@@ -1490,7 +1742,7 @@ export default function ChangeConsolePage() {
               </span>
             ) : (
               <span>
-                Not logged in. <a href="/login" style={{ color: '#7dd3fc' }}>Login</a>
+                Not logged in. <a href="/login" style={{ color: luxChangeChrome ? luxChangeChrome.link : '#7dd3fc' }}>Login</a>
               </span>
             )}
           </div>
@@ -1498,55 +1750,83 @@ export default function ChangeConsolePage() {
           <div style={{ marginTop: 12 }}>
             {tickets.length ? (
               <div style={{ display: 'grid', gap: 8 }}>
-                {tickets.map((t) => {
-                  const id = String(t.ticket_id || '');
-                  const active = id && id === selectedTicketId;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => onSelectTicket(id)}
-                      style={{
-                        textAlign: 'left',
-                        padding: 12,
-                        borderRadius: 14,
-                        border: `1px solid ${active ? 'rgba(56,189,248,0.6)' : 'rgba(148,163,184,0.25)'}`,
-                        background: active ? 'rgba(56,189,248,0.10)' : 'rgba(15,23,42,0.35)',
-                        color: '#e2e8f0',
-                        cursor: 'pointer',
-                        minWidth: 0,
-                        maxWidth: '100%',
-                        width: '100%',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <div
+                {!luxChangeChrome ? (
+                  tickets.map((t) => {
+                    const id = String(t.ticket_id || '');
+                    return (
+                      <ChangeQueueTicketRow
+                        key={id || 'q'}
+                        t={t}
+                        selectedTicketId={selectedTicketId}
+                        onSelect={onSelectTicket}
+                        luxChrome={null}
+                      />
+                    );
+                  })
+                ) : (
+                  <>
+                    {luxQueueParts.primary.map((t) => {
+                      const id = String(t.ticket_id || '');
+                      return (
+                        <ChangeQueueTicketRow
+                          key={id || 'row'}
+                          t={t}
+                          selectedTicketId={selectedTicketId}
+                          onSelect={onSelectTicket}
+                          luxChrome={luxChangeChrome}
+                        />
+                      );
+                    })}
+                    {luxQueueParts.smoke.length ? (
+                      <details
+                        open={luxQueueTestsOpen}
+                        onToggle={(e) => setLuxQueueTestsOpen(Boolean(e.target.open))}
                         style={{
-                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                          fontSize: 10,
-                          color: '#94a3b8',
-                          ...changeTextContainStyle(),
+                          border: `1px dashed ${luxChangeChrome.border}`,
+                          borderRadius: 12,
+                          padding: '8px 10px',
+                          background: luxChangeChrome.sand,
                         }}
                       >
-                        {id}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: 6,
-                          fontSize: 12,
-                          color: '#e2e8f0',
-                          lineHeight: 1.35,
-                          ...changeTextContainStyle(),
-                        }}
-                      >
-                        {String(t.requested_change || '—')}
-                      </div>
-                    </button>
-                  );
-                })}
+                        <summary
+                          style={{
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: luxChangeChrome.textMuted,
+                            listStyle: 'none',
+                          }}
+                        >
+                          Test & smoke artifacts ({luxQueueParts.smoke.length}) — deprioritized; still selectable
+                        </summary>
+                        <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                          {luxQueueParts.smoke.map((t) => {
+                            const id = String(t.ticket_id || '');
+                            return (
+                              <ChangeQueueTicketRow
+                                key={id || 'smoke'}
+                                t={t}
+                                selectedTicketId={selectedTicketId}
+                                onSelect={onSelectTicket}
+                                luxChrome={luxChangeChrome}
+                              />
+                            );
+                          })}
+                        </div>
+                      </details>
+                    ) : null}
+                  </>
+                )}
               </div>
             ) : (
-              <div style={{ marginTop: 10, color: '#94a3b8', fontSize: 12, lineHeight: 1.4 }}>
+              <div
+                style={{
+                  marginTop: 10,
+                  color: luxChangeChrome ? luxChangeChrome.textMuted : '#94a3b8',
+                  fontSize: 12,
+                  lineHeight: 1.4,
+                }}
+              >
                 {session.logged_in
                   ? 'No open tickets found (or queue is unavailable for this session).'
                   : 'Log in to view your queue.'}
@@ -1556,6 +1836,57 @@ export default function ChangeConsolePage() {
         </div>
 
         <div style={{ display: 'grid', gap: 14, minWidth: 0, width: '100%', maxWidth: '100%' }}>
+          {luxChangeChrome ? (
+            <div
+              id="lux-programme-desk-summary"
+              style={{
+                ...card,
+                minWidth: 0,
+                border: `1px solid ${luxChangeChrome.border}`,
+                background: `linear-gradient(180deg, ${luxChangeChrome.white} 0%, ${luxChangeChrome.sand} 100%)`,
+              }}
+            >
+              <div style={{ fontFamily: luxChangeChrome.fontDisplay, fontSize: 20, fontWeight: 700, color: luxChangeChrome.heroDeep }}>
+                Programme status
+              </div>
+              <div style={{ marginTop: 6, fontSize: 12, color: luxChangeChrome.textMuted, lineHeight: 1.45 }}>
+                Master ticket <code style={{ fontSize: 11, color: luxChangeChrome.text }}>{LUX_PARENT_PROGRAMME_TICKET_ID}</code>{' '}
+                — compact desk view; open the ticket for full history.
+              </div>
+              <ul style={{ marginTop: 12, paddingLeft: 18, fontSize: 13, color: luxChangeChrome.text, lineHeight: 1.55 }}>
+                <li>
+                  <strong>Public /properties</strong> — live for published inventory.
+                </li>
+                <li>
+                  <strong>Property editor</strong> — /properties/admin for allowlisted staff.
+                </li>
+                <li>
+                  <strong>Media governance</strong> — review, link, publish, lifecycle (server-enforced).
+                </li>
+                <li>
+                  <strong>First real client-published listing</strong> — pending programme evidence.
+                </li>
+                <li>
+                  <strong>Jan validation / concierge verification</strong> — pending.
+                </li>
+              </ul>
+              <div style={{ marginTop: 12 }}>
+                <a
+                  href="#lux-media-workspace"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: luxChangeChrome.gold,
+                    textDecoration: 'none',
+                    borderBottom: `1px solid ${luxChangeChrome.gold}`,
+                  }}
+                >
+                  Jump to media workspace
+                </a>
+              </div>
+            </div>
+          ) : null}
+
           <div style={{ ...card, minWidth: 0 }}>
             <div
               style={{
@@ -1569,10 +1900,25 @@ export default function ChangeConsolePage() {
               }}
             >
               <div style={changeFlexMainChildStyle()}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 900,
+                    color: luxInk ? luxInk.label : '#cbd5e1',
+                    letterSpacing: '0.08em',
+                  }}
+                >
                   STAGE
                 </div>
-                <div style={{ marginTop: 6, fontSize: 13, color: '#e2e8f0', lineHeight: 1.45, ...changeTextContainStyle() }}>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 13,
+                    color: luxInk ? luxInk.body : '#e2e8f0',
+                    lineHeight: 1.45,
+                    ...changeTextContainStyle(),
+                  }}
+                >
                   <div style={{ fontWeight: 800 }}>
                     Stage:{' '}
                     {selectedTicketId
@@ -1586,7 +1932,7 @@ export default function ChangeConsolePage() {
                       marginTop: 6,
                       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                       fontSize: 12,
-                      color: '#94a3b8',
+                      color: luxInk ? luxInk.muted : '#94a3b8',
                       ...changeTextContainStyle(),
                     }}
                   >
@@ -1596,14 +1942,14 @@ export default function ChangeConsolePage() {
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
                 {stageTabs.map((s) => (
-                  <button key={s} type="button" onClick={() => setStage(s)} style={pillStyle(stage === s)}>
+                  <button key={s} type="button" onClick={() => setStage(s)} style={pillStyle(stage === s, luxChangeChrome)}>
                     {s}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div style={{ marginTop: 14, borderTop: '1px solid rgba(148,163,184,0.18)', paddingTop: 14 }}>
+            <div style={{ marginTop: 14, borderTop: `1px solid ${luxInk ? luxInk.borderHairline : 'rgba(148,163,184,0.18)'}`, paddingTop: 14 }}>
               {showLuxPhase1ReviewPanel ? (
                 <div
                   style={{
@@ -1806,21 +2152,52 @@ export default function ChangeConsolePage() {
                     : String(ticket?.ticket_progress?.client_view?.workflow_next_action || '—')}
                 </div>
                 {ticket?.lux_programme_summary?.phase_2_status ? (
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: 12,
-                      color: '#94a3b8',
-                      lineHeight: 1.45,
-                      ...changeTextContainStyle(),
-                    }}
-                  >
-                    Programme: Phase 1 {String(ticket.lux_programme_summary.phase_1_status || '—')} · Phase 2{' '}
-                    {String(ticket.lux_programme_summary.phase_2_status || '—')}
-                    {ticket.lux_programme_summary.listing_approach
-                      ? ` · listing approach: ${String(ticket.lux_programme_summary.listing_approach)}`
-                      : null}
-                  </div>
+                  luxChangeChrome ? (
+                    <details style={{ marginTop: 8 }}>
+                      <summary
+                        style={{
+                          fontSize: 12,
+                          color: luxChangeChrome.textMuted,
+                          cursor: 'pointer',
+                          listStyle: 'none',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Programme detail (Phase 1 / 2 summary)
+                      </summary>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 12,
+                          color: luxChangeChrome.textMuted,
+                          lineHeight: 1.45,
+                          ...changeTextContainStyle(),
+                        }}
+                      >
+                        Programme: Phase 1 {String(ticket.lux_programme_summary.phase_1_status || '—')} · Phase 2{' '}
+                        {String(ticket.lux_programme_summary.phase_2_status || '—')}
+                        {ticket.lux_programme_summary.listing_approach
+                          ? ` · listing approach: ${String(ticket.lux_programme_summary.listing_approach)}`
+                          : null}
+                      </div>
+                    </details>
+                  ) : (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontSize: 12,
+                        color: '#94a3b8',
+                        lineHeight: 1.45,
+                        ...changeTextContainStyle(),
+                      }}
+                    >
+                      Programme: Phase 1 {String(ticket.lux_programme_summary.phase_1_status || '—')} · Phase 2{' '}
+                      {String(ticket.lux_programme_summary.phase_2_status || '—')}
+                      {ticket.lux_programme_summary.listing_approach
+                        ? ` · listing approach: ${String(ticket.lux_programme_summary.listing_approach)}`
+                        : null}
+                    </div>
+                  )
                 ) : null}
               </div>
             </div>
@@ -2173,52 +2550,100 @@ export default function ChangeConsolePage() {
           ) : null}
 
           {!showIntakeSurface && !isEstimateMode ? (
-            <div style={{ ...card, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
-                TICKET SNAPSHOT
-              </div>
-              <div style={{ marginTop: 10, maxWidth: '100%', minWidth: 0, overflowX: 'hidden' }}>
-                <pre
+            luxChangeChrome ? (
+              <details
+                key={`lux-snap-${selectedTicketId || 'none'}`}
+                style={{ ...card, minWidth: 0 }}
+              >
+                <summary
                   style={{
-                    padding: 12,
-                    borderRadius: 14,
-                    border: '1px solid rgba(148,163,184,0.18)',
-                    background: 'rgba(2,6,23,0.45)',
+                    cursor: 'pointer',
+                    listStyle: 'none',
                     fontSize: 12,
-                    color: '#e2e8f0',
-                    ...changePreBlockStyle(),
+                    fontWeight: 900,
+                    letterSpacing: '0.08em',
+                    color: luxChangeChrome.textLabel,
                   }}
                 >
-                  {JSON.stringify(
-                    ticket
-                      ? {
-                          ticket_id: selectedTicketId,
-                          status: ticket.status,
-                          stage: ticket.stage,
-                          workflow_state: ticket?.ticket_progress?.client_view?.workflow_state,
-                              description_preview: ticket.description ? String(ticket.description).slice(0, 500) : null,
-                          client_decisions_summary: ticket.client_decisions_summary || null,
-                          lux_programme_summary: ticket.lux_programme_summary || null,
-                          operator_signal: ticket.operator_signal || null,
-                        }
-                      : { hint: session.logged_in ? 'Select a ticket to load.' : 'Log in to load tickets.' },
-                    null,
-                    2,
-                  )}
-                </pre>
+                  Technical details · ticket snapshot (JSON)
+                </summary>
+                <div style={{ marginTop: 10, maxWidth: '100%', minWidth: 0, overflowX: 'hidden' }}>
+                  <pre
+                    style={{
+                      ...luxChangeChrome.pre(),
+                      ...changePreBlockStyle(),
+                    }}
+                  >
+                    {JSON.stringify(
+                      ticket
+                        ? {
+                            ticket_id: selectedTicketId,
+                            status: ticket.status,
+                            stage: ticket.stage,
+                            workflow_state: ticket?.ticket_progress?.client_view?.workflow_state,
+                            description_preview: ticket.description ? String(ticket.description).slice(0, 500) : null,
+                            client_decisions_summary: ticket.client_decisions_summary || null,
+                            lux_programme_summary: ticket.lux_programme_summary || null,
+                            operator_signal: ticket.operator_signal || null,
+                          }
+                        : { hint: session.logged_in ? 'Select a ticket to load.' : 'Log in to load tickets.' },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </div>
+              </details>
+            ) : (
+              <div style={{ ...card, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+                  TICKET SNAPSHOT
+                </div>
+                <div style={{ marginTop: 10, maxWidth: '100%', minWidth: 0, overflowX: 'hidden' }}>
+                  <pre
+                    style={{
+                      padding: 12,
+                      borderRadius: 14,
+                      border: '1px solid rgba(148,163,184,0.18)',
+                      background: 'rgba(2,6,23,0.45)',
+                      fontSize: 12,
+                      color: '#e2e8f0',
+                      ...changePreBlockStyle(),
+                    }}
+                  >
+                    {JSON.stringify(
+                      ticket
+                        ? {
+                            ticket_id: selectedTicketId,
+                            status: ticket.status,
+                            stage: ticket.stage,
+                            workflow_state: ticket?.ticket_progress?.client_view?.workflow_state,
+                            description_preview: ticket.description ? String(ticket.description).slice(0, 500) : null,
+                            client_decisions_summary: ticket.client_decisions_summary || null,
+                            lux_programme_summary: ticket.lux_programme_summary || null,
+                            operator_signal: ticket.operator_signal || null,
+                          }
+                        : { hint: session.logged_in ? 'Select a ticket to load.' : 'Log in to load tickets.' },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </div>
               </div>
-            </div>
+            )
           ) : null}
 
-          {luxLeadCrmEnabled && !showIntakeSurface && !isEstimateMode ? (
-            <div style={{ ...card, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
-                MEDIA LIBRARY (LUX) <span style={{ color: '#94a3b8', fontWeight: 700 }}>· Phase 5D</span>
-              </div>
-              <div style={{ marginTop: 6, fontSize: 11, color: '#64748b', lineHeight: 1.45 }}>
-                Cross-ticket Lux programme requests — JSON metadata only (no bytes). Use Load / refresh after changing
-                filters.
-              </div>
+          {luxChangeChrome && !showIntakeSurface && !isEstimateMode ? (
+            <LuxChangeCollapsibleSection
+              chrome={luxChangeChrome}
+              summary="Media library · cross-ticket index (Phase 5D)"
+              cardStyle={{ ...card, minWidth: 0 }}
+              defaultOpen={false}
+              sectionId="lux-media-workspace"
+            >
+                <div style={{ marginTop: 0, fontSize: 11, color: luxChangeChrome.textMuted, lineHeight: 1.45 }}>
+                  Cross-ticket Lux programme requests — JSON metadata only (no bytes). Use Load / refresh after changing
+                  filters.
+                </div>
               <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 <button
                   type="button"
@@ -2403,11 +2828,17 @@ export default function ChangeConsolePage() {
                   </div>
                 </div>
               ) : null}
-            </div>
+            </LuxChangeCollapsibleSection>
           ) : null}
 
           {!showIntakeSurface && !isEstimateMode && selectedTicketId && attachments.length > 0 ? (
-            <div style={{ ...card, minWidth: 0 }}>
+            <LuxChangeCollapsibleSection
+              chrome={luxChangeChrome}
+              summary="This ticket · attachments, review, link, publish"
+              cardStyle={{ ...card, minWidth: 0 }}
+              defaultOpen={Boolean(luxChangeChrome)}
+            >
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
                 ATTACHMENTS
                 <span style={{ marginLeft: 8, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.04em' }}>
@@ -3429,6 +3860,7 @@ export default function ChangeConsolePage() {
                 approval.
               </div>
             </div>
+            </LuxChangeCollapsibleSection>
           ) : null}
 
           {!showIntakeSurface && !isEstimateMode ? (

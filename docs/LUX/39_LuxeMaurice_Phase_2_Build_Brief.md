@@ -95,6 +95,8 @@ Ship **one narrow vertical slice** that includes all of:
 
 **Product principle:** `/change` remains **operator/governance back-office** (programme tickets, attachments review, publish events, CRM). **Client-usable** property work happens on a **visual** admin route.
 
+**Operator UX (LuxeMaurice only):** On `lux.corpflowai.com`, `/change` uses the same **cream / gold / editorial** chrome as the public Lux site and `/properties/admin` (light cards, queue badges, collapsed technical JSON, grouped media library). Other tenants keep the existing dark operator shell.
+
 ### Preferred route
 
 - Implement **`/properties/admin`** **or** **`/admin/properties`** (pick one; avoid duplicating both unless middleware clearly canonicalizes).  

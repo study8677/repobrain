@@ -8,7 +8,7 @@
     "verify:vercel-hobby-crons": "node scripts/validate-vercel-hobby-crons.mjs",
     "ci:report": "node scripts/ci-friendly-report.mjs",
     "control:loop": "node scripts/factory-control-loop.mjs",
-    "test": "node --test node-tests/*.mjs",
+    "test": "node scripts/run-node-tests.mjs",
     "verify:cmp-env": "node scripts/verify-cmp-env-read.mjs",
     "provision:tenant-test": "node scripts/provision-tenant-test-access.mjs",
     "topup:tenant-tokens": "node scripts/top-up-tenant-token-balance.mjs",
