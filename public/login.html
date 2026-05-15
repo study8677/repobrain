@@ -31,6 +31,10 @@
         </p>
 
         <div id="banner" class="hidden mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-rose-200 text-sm"></div>
+        <div
+          id="propertyDeskGateBanner"
+          class="hidden mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100 text-sm leading-relaxed"
+        ></div>
         <div id="ok" class="hidden mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-200 text-sm"></div>
 
         <div class="mt-8 space-y-4">
@@ -476,9 +480,15 @@
             try {
               const r = await fetch('/api/auth/me', { credentials: 'include' });
               const j = await r.json();
-              if (j && j.logged_in && j.level === 'tenant') {
-                window.location.href = safeNextPath();
+              if (!(j && j.logged_in && j.level === 'tenant')) return;
+              const next = safeNextPath();
+              if (next === '/properties/admin') {
+                if (j.tenant_id === 'luxe-maurice' && j.lux_property_editor === true) {
+                  window.location.href = next;
+                }
+                return;
               }
+              window.location.href = next;
             } catch (_) {}
           }
 
@@ -579,6 +589,25 @@
           });
 
           await maybeRedirectIfSession();
+
+          try {
+            var nq = new URLSearchParams(window.location.search);
+            if (nq.get('next') === '/properties/admin') {
+              var pr = await fetch('/api/auth/me', { credentials: 'include' });
+              var pj = await pr.json();
+              if (pj && pj.logged_in && pj.level === 'tenant' && pj.tenant_id === 'luxe-maurice' && pj.lux_property_editor !== true) {
+                var gateEl = $('propertyDeskGateBanner');
+                if (gateEl) {
+                  var who = pj.username ? String(pj.username) : 'this workspace (PIN or non-editor account)';
+                  gateEl.textContent =
+                    'You are already signed in as ' +
+                    who +
+                    '. The property desk is only for editor-enabled staff. You can open it to read the access message, or continue below.';
+                  gateEl.classList.remove('hidden');
+                }
+              }
+            }
+          } catch (_) {}
         } else if (login_route === 'operator') {
           let hostMappedTenantId = null;
 
