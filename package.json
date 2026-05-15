@@ -27,7 +27,9 @@
     "vercel:env:pull": "node scripts/vercel-env.mjs pull",
     "vercel:env:push:dry": "node scripts/vercel-env.mjs push --backend=auto",
     "vercel:env:push": "node scripts/vercel-env.mjs push --backend=auto --force",
-    "vercel:env:push:cli": "node scripts/vercel-env.mjs push --backend=cli --force"
+    "vercel:env:push:cli": "node scripts/vercel-env.mjs push --backend=cli --force",
+    "production:pulse": "node scripts/production-pulse.mjs",
+    "production:pulse:test": "node --test node-tests/production-pulse.test.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

@@ -12,6 +12,7 @@ import technicalLeadCronHandler, {
   handleTechnicalLeadAuditsList,
   handleTechnicalLeadFactoryMaster,
 } from '../lib/server/technical-lead-cron.js';
+import { buildProductionPulseV1Report } from '../scripts/production-pulse.mjs';
 import cmpMonitorCronHandler from '../lib/server/cmp-monitor-cron.js';
 import cmpHandler from '../lib/cmp/router.js';
 import feedbackHandler from '../lib/server/feedback.js';
@@ -424,6 +425,32 @@ async function handleFactoryHealth(req, res) {
 }
 
 /**
+ * Production Pulse v1 — compact control-plane JSON for ops/n8n (no secret values).
+ *
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @returns {Promise<void>}
+ */
+async function handleProductionPulseRuntime(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  try {
+    const body = await buildProductionPulseV1Report(prisma);
+    const ok = Boolean(body && typeof body === 'object' && body.ok === true);
+    return res.status(ok ? 200 : 503).json(body);
+  } catch (e) {
+    return res.status(500).json({
+      schema: 'corpflow.production_pulse.v1',
+      ok: false,
+      error: 'PRODUCTION_PULSE_FAILED',
+      message: String(e?.message || e),
+    });
+  }
+}
+
+/**
  * Groq chat — parity with former `api/index.py` FastAPI route.
  *
  * @param {import('http').IncomingMessage} req
@@ -710,6 +737,9 @@ export default async function handler(req, res) {
     }
     if (pathSeg === 'factory/health') {
       return handleFactoryHealth(req, res);
+    }
+    if (pathSeg === 'factory/production-pulse/runtime') {
+      return handleProductionPulseRuntime(req, res);
     }
     if (pathSeg === 'chat') {
       return handleChat(req, res);

@@ -1,0 +1,61 @@
+{
+  "name": "CorpFlow Production Pulse v1 (skeleton)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "corpflow-production-pulse-v1",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "WebhookPulse",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "corpflow-production-pulse-v1"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.CORPFLOW_PRODUCTION_PULSE_RUNTIME_URL}}",
+        "authentication": "none",
+        "options": { "timeout": 30000 }
+      },
+      "id": "HttpPulse",
+      "name": "GET runtime pulse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "IfOk",
+      "name": "IF deployment ok",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "GET runtime pulse", "type": "main", "index": 0 }]]
+    },
+    "GET runtime pulse": {
+      "main": [[{ "node": "IF deployment ok", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Skeleton: set CORPFLOW_PRODUCTION_PULSE_RUNTIME_URL in n8n to https://YOUR_CORE_ORIGIN/api/factory/production-pulse/runtime. Extend with Slack/email on false branch."
+  }
+}
