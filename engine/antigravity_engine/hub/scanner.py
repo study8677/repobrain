@@ -375,9 +375,12 @@ def _read_entry_points(root: Path, config_contents: dict[str, str]) -> dict[str,
     pyproject_text = config_contents.get("pyproject.toml", "")
     if pyproject_text:
         try:
-            import tomllib
+            import tomllib  # type: ignore[import-not-found]
         except ModuleNotFoundError:
-            tomllib = None  # type: ignore[assignment]
+            try:
+                import tomli as tomllib  # type: ignore[import-not-found, no-redef]
+            except ModuleNotFoundError:
+                tomllib = None  # type: ignore[assignment]
         if tomllib is not None:
             try:
                 data = tomllib.loads(pyproject_text)
