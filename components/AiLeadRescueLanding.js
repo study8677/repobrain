@@ -15,6 +15,7 @@ const styles = {
   h1: { margin: 0, fontSize: 'clamp(38px, 7vw, 76px)', lineHeight: 0.96, letterSpacing: '-0.055em', maxWidth: 790 },
   lead: { marginTop: 20, fontSize: 'clamp(17px, 2vw, 22px)', lineHeight: 1.55, color: '#c9d8e8', maxWidth: 760 },
   card: { border: '1px solid rgba(255,255,255,0.13)', borderRadius: 26, background: 'rgba(255,255,255,0.07)', boxShadow: '0 24px 80px rgba(0,0,0,0.28)', padding: 22, backdropFilter: 'blur(14px)' },
+  highlightCard: { border: '1px solid rgba(45,212,191,0.34)', borderRadius: 26, background: 'rgba(45,212,191,0.10)', boxShadow: '0 24px 80px rgba(0,0,0,0.28)', padding: 22, backdropFilter: 'blur(14px)' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 },
   cta: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: '13px 16px', border: 0, fontWeight: 800, cursor: 'pointer', textDecoration: 'none' },
   primary: { background: '#2dd4bf', color: '#031018' },
@@ -33,16 +34,18 @@ const regionCopy = {
   mauritius: {
     title: 'Mauritius businesses',
     price: 'from MUR 6,900',
-    subtitle: 'For local SMBs that want a simple lead capture, alert, and follow-up system with Mauritius payment/accounting flow.',
-    payments: ['SMB Mauritius payment path', 'Local invoice', 'MUR pricing'],
-    cta: 'Start Mauritius intake',
+    subtitle: 'Local invoice, MUR pricing, and SMB Mauritius payment path after intake review.',
+    payments: ['Local invoice', 'MUR pricing', 'SMB Mauritius payment path'],
+    cta: 'Start intake — Mauritius',
+    path: 'SMB Mauritius / local invoice / MUR pricing',
   },
   international: {
     title: 'International businesses',
     price: 'from USD 150',
-    subtitle: 'For businesses outside Mauritius that want the same 48-hour setup with international payment rails.',
-    payments: ['PayPal', 'Google Pay where available', 'Wise', 'USD pricing'],
-    cta: 'Start international intake',
+    subtitle: 'USD pricing and international payment route after intake review.',
+    payments: ['USD pricing', 'PayPal / Wise / Google Pay where available', 'International payment route'],
+    cta: 'Start intake — International',
+    path: 'PayPal / Wise / Google Pay where available',
   },
 };
 
@@ -50,7 +53,7 @@ function RegionCard({ active, region, onSelect }) {
   const c = regionCopy[region];
   return (
     <div style={{ ...styles.card, outline: active ? '2px solid #2dd4bf' : 'none' }}>
-      <div style={styles.label}>{region === 'mauritius' ? 'Domestic path' : 'International path'}</div>
+      <div style={styles.label}>{region === 'mauritius' ? 'Domestic route' : 'International route'}</div>
       <h3 style={{ margin: '8px 0 0', fontSize: 24 }}>{c.title}</h3>
       <div style={{ marginTop: 8, color: '#2dd4bf', fontWeight: 850, fontSize: 22 }}>{c.price}</div>
       <p style={styles.muted}>{c.subtitle}</p>
@@ -65,8 +68,8 @@ function RegionCard({ active, region, onSelect }) {
 }
 
 export default function AiLeadRescueLanding({ host = '' }) {
-  const [region, setRegion] = useState('mauritius');
-  const selected = useMemo(() => regionCopy[region], [region]);
+  const [region, setRegion] = useState('');
+  const selected = useMemo(() => (region ? regionCopy[region] : null), [region]);
 
   async function submitLead(e) {
     e.preventDefault();
@@ -79,10 +82,10 @@ export default function AiLeadRescueLanding({ host = '' }) {
       intent: String(fd.get('message') || '').trim(),
       meta: {
         product: 'ai-lead-rescue',
-        region_path: region,
+        region_path: region || 'not_selected',
         business_name: String(fd.get('business_name') || '').trim(),
         lead_sources: String(fd.get('lead_sources') || '').trim(),
-        preferred_payment_path: region === 'mauritius' ? 'SMB Mauritius' : 'PayPal / Google Pay / Wise',
+        preferred_payment_path: selected ? selected.path : 'not_selected',
         host,
         page: '/lead-rescue',
       },
@@ -96,6 +99,7 @@ export default function AiLeadRescueLanding({ host = '' }) {
       if (!r.ok) throw new Error('intake_failed');
       alert('Thank you — your AI Lead Rescue intake was submitted. We will contact you shortly.');
       form.reset();
+      setRegion('');
     } catch {
       alert('Could not submit the intake. Please contact us directly or try again shortly.');
     }
@@ -118,27 +122,27 @@ export default function AiLeadRescueLanding({ host = '' }) {
 
         <section style={styles.hero}>
           <div>
-            <span style={styles.badge}>48-hour setup · lead capture · instant alerts · follow-up log</span>
+            <span style={styles.badge}>48-hour setup · lead capture · instant alerts · follow-up board</span>
             <h1 style={styles.h1}>Stop losing leads because follow-up is too slow.</h1>
             <p style={styles.lead}>
-              AI Lead Rescue captures new enquiries, alerts the owner instantly, logs follow-ups, and gives a simple daily lead summary — without forcing you to rebuild your website or CRM.
+              AI Lead Rescue captures new enquiries, alerts the owner/operator, logs every lead in a simple follow-up board, and sends a daily summary — without rebuilding your website or forcing you into a CRM.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
-              <a style={{ ...styles.cta, ...styles.primary }} href="#payment-paths">Choose payment path</a>
-              <a style={{ ...styles.cta, ...styles.secondary }} href="#how-it-works">How it works</a>
+              <a style={{ ...styles.cta, ...styles.primary }} href="#intake">Start my 48-hour setup</a>
+              <a style={{ ...styles.cta, ...styles.secondary }} href="#how-it-works">See how it works</a>
             </div>
           </div>
 
           <aside style={styles.card}>
             <div style={styles.label}>Launch offer</div>
-            <h2 style={{ ...styles.h2, fontSize: 28 }}>Pilot setup from $150 / MUR 6,900</h2>
+            <h2 style={{ ...styles.h2, fontSize: 28 }}>48-hour pilot setup from $150 / MUR 6,900</h2>
             <ul style={styles.list}>
-              <li>Lead intake or form capture</li>
-              <li>Owner alert through Telegram/email path</li>
+              <li>Connect one lead source: form, email, WhatsApp/manual intake, or Google Form</li>
+              <li>Instant owner/operator alert</li>
               <li>Google Sheet lead log</li>
-              <li>Follow-up status board</li>
+              <li>Simple follow-up status board</li>
               <li>Daily lead summary</li>
-              <li>7 days of monitoring</li>
+              <li>7 days of pilot monitoring</li>
             </ul>
             <p style={{ ...styles.muted, fontSize: 13 }}>
               First pilots are intentionally simple: no CRM rebuild, no website rebuild, no long strategy project.
@@ -146,23 +150,27 @@ export default function AiLeadRescueLanding({ host = '' }) {
           </aside>
         </section>
 
-        <section id="payment-paths" style={styles.section}>
-          <div style={styles.label}>Two payment/accounting paths</div>
-          <h2 style={styles.h2}>One offer, separate domestic and international routes.</h2>
-          <p style={styles.muted}>
-            We keep the brand and delivery simple while separating Mauritius and international payment/accounting flows.
-          </p>
-          <div style={{ ...styles.grid, marginTop: 16 }}>
-            <RegionCard region="mauritius" active={region === 'mauritius'} onSelect={setRegion} />
-            <RegionCard region="international" active={region === 'international'} onSelect={setRegion} />
+        <section style={styles.section}>
+          <div style={styles.highlightCard}>
+            <div style={styles.label}>Who this is for</div>
+            <h2 style={styles.h2}>This is for you if:</h2>
+            <ul style={styles.list}>
+              <li>You receive enquiries through your website, WhatsApp, email, Facebook, or listings</li>
+              <li>Leads sometimes get missed, delayed, or forgotten</li>
+              <li>You do not want to rebuild your website or CRM</li>
+              <li>You want a simple daily view of new leads and follow-ups</li>
+              <li>One missed enquiry could cost more than the setup fee</li>
+            </ul>
           </div>
         </section>
 
         <section id="how-it-works" style={styles.section}>
-          <div style={styles.grid}>
+          <div style={styles.label}>What happens in 48 hours</div>
+          <h2 style={styles.h2}>A lightweight rescue system, not a long software project.</h2>
+          <div style={{ ...styles.grid, marginTop: 16 }}>
             <div style={styles.card}>
               <div style={styles.label}>Step 1</div>
-              <h3>Connect your lead source</h3>
+              <h3>Connect one lead source</h3>
               <p style={styles.muted}>We start with what you already use: your website form, email inbox, WhatsApp/manual intake, or a lightweight Google Form.</p>
             </div>
             <div style={styles.card}>
@@ -178,11 +186,46 @@ export default function AiLeadRescueLanding({ host = '' }) {
           </div>
         </section>
 
+        <section id="payment-paths" style={styles.section}>
+          <div style={styles.label}>Region and invoice route</div>
+          <h2 style={styles.h2}>Start with the same 48-hour setup. Choose your region at intake.</h2>
+          <p style={styles.muted}>
+            We support Mauritius and international businesses with separate payment and invoice routes after your intake is reviewed.
+          </p>
+          <div style={{ ...styles.grid, marginTop: 16 }}>
+            <RegionCard region="mauritius" active={region === 'mauritius'} onSelect={setRegion} />
+            <RegionCard region="international" active={region === 'international'} onSelect={setRegion} />
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.card}>
+            <div style={styles.label}>Reassurance</div>
+            <h2 style={styles.h2}>Not another complicated CRM.</h2>
+            <p style={styles.muted}>
+              AI Lead Rescue is intentionally lightweight. It does not replace your website, CRM, WhatsApp, or sales process. It simply makes sure new enquiries are captured, alerted, logged, and followed up.
+            </p>
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.highlightCard}>
+            <div style={styles.label}>Payment after intake review</div>
+            <p style={{ ...styles.muted, margin: 0 }}>
+              Payment is handled after intake review. You do not enter card or banking details on this page. Mauritius businesses receive the local invoice/MUR route. International businesses receive the USD route through PayPal, Wise, or Google Pay where available.
+            </p>
+          </div>
+        </section>
+
         <section id="intake" style={styles.section}>
           <div style={{ ...styles.card, maxWidth: 760 }}>
-            <div style={styles.label}>Start intake</div>
-            <h2 style={styles.h2}>{selected.title}: {selected.price}</h2>
-            <p style={styles.muted}>Selected payment route: {selected.payments.join(' / ')}.</p>
+            <div style={styles.label}>Final CTA</div>
+            <h2 style={styles.h2}>{selected ? `${selected.title}: ${selected.price}` : 'Start your AI Lead Rescue intake'}</h2>
+            <p style={styles.muted}>
+              {selected
+                ? `Selected payment route: ${selected.payments.join(' / ')}.`
+                : 'Select your business location so we can route the correct pricing and payment path.'}
+            </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
               {Object.keys(regionCopy).map((r) => (
                 <button key={r} type="button" onClick={() => setRegion(r)} style={{ ...styles.tabButton, ...(region === r ? styles.activeTab : {}) }}>
@@ -201,6 +244,9 @@ export default function AiLeadRescueLanding({ host = '' }) {
             </form>
             <p style={{ ...styles.muted, fontSize: 12 }}>
               Payment links/invoice details are issued after intake review. Do not enter card or banking details on this page.
+            </p>
+            <p style={{ ...styles.muted, fontSize: 12 }}>
+              We do not guarantee new revenue. We help make sure existing enquiries are captured, visible, and followed up.
             </p>
           </div>
         </section>
