@@ -27,8 +27,26 @@ This repository is the **CorpFlow AI Command Center**: **Next.js** (pages router
 2. **`.cursor/rules/commit-push-doc-constraints.mdc`** and **`.cursor/rules/security-sensitive-changes.mdc`** (always on).
 3. **`.cursor/rules/delivery-reality.mdc`** and **`.cursor/rules/predeploy-decision-checks.mdc`** — **operational completion** requires **live production** verification; **CI green and merge are not sufficient** to call a customer-facing change done.
 4. Security-sensitive edits: **`docs/operations/SECURITY_REVIEW_CHECKLIST.md`**.
+5. Buyer-facing marketing, landing, intake, pricing, CTA, productized service, AI Lead Rescue, or visual-design work: **`docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`** is mandatory and canonical. Review the change against that doctrine before merge.
 
 **Do not treat as proof of delivery:** local tests only, CI success alone, merge to `main` alone, or `/api/factory/health` (or other internal endpoints) alone when the work affects **client-visible** URLs or flows. Record **deployment ID**, **deployed commit**, **live URLs tested**, and **Delivery Reality Audit** verdict (**COMPLETE / PARTIAL / FAILED**) per the rules above.
+
+## Marketing / conversion doctrine
+
+When work touches public marketing pages, landing pages, intake pages, pricing presentation, CTA wording, productized service offers, AI Lead Rescue, buyer-facing copy, or buyer-facing visual design, read and apply:
+
+- **`docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`**
+
+Non-negotiable summary:
+
+- Effectiveness beats decoration.
+- Clarity beats cleverness.
+- Conversion beats completeness.
+- Primary CTAs must describe buyer intent, not internal process.
+- Payment/routing complexity must come after buyer intent.
+- For AI Lead Rescue, do not use **“Choose payment path”** as the primary CTA.
+
+If a marketing surface looks polished but the intended buyer does not understand the offer, trust the path, and know exactly what to do next, the change is **PARTIAL**, not complete.
 
 ## Git note (default branch `main`)
 
@@ -39,6 +57,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Topic | Doc |
 |--------|-----|
 | Priorities & checklist | `docs/CORPFLOW_SHARED_TODO.md` |
+| Marketing / conversion doctrine | `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` |
 | Delivery reality (live prod = done) | `.cursor/rules/delivery-reality.mdc`, `.cursor/rules/predeploy-decision-checks.mdc` |
 | Production bar (reliable, secure, observable) | `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md` |
 | Host / apex / login / tenancy | `docs/operations/TENANT_CLIENT_LOGIN.md` |

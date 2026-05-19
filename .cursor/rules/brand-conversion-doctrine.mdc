@@ -1,0 +1,34 @@
+---
+description: Mandatory brand and conversion doctrine for buyer-facing marketing, landing, intake, pricing, CTA, and visual-design work
+alwaysApply: true
+---
+
+# Brand and conversion doctrine
+
+When work touches public marketing pages, landing pages, intake pages, pricing presentation, CTA wording, productized service offers, AI Lead Rescue, buyer-facing copy, or buyer-facing visual design, read and apply:
+
+- `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`
+
+This doctrine is canonical unless a newer in-repo decision explicitly supersedes it.
+
+## Non-negotiable summary
+
+- Effectiveness beats decoration.
+- Clarity beats cleverness.
+- Conversion beats completeness.
+- The page is done only when the intended buyer understands the offer, trusts the path, and knows exactly what to do next.
+- Primary CTAs must describe buyer intent, not internal process.
+- Payment/routing complexity must come after buyer intent.
+- For AI Lead Rescue, do not use `Choose payment path` as the primary CTA.
+
+## Required review before merge
+
+Before merging buyer-facing marketing work, verify:
+
+- One primary conversion goal is obvious.
+- The offer is understandable within five seconds.
+- The CTA is buyer-action-oriented.
+- Payment, region, and routing complexity appears only after buyer intent.
+- The page avoids unsupported revenue guarantees and exaggerated AI claims.
+- The buyer knows the next step.
+- Live production verification is recorded for customer-visible routes, following `.cursor/rules/delivery-reality.mdc`.
