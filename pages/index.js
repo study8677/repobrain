@@ -3,6 +3,7 @@ import Head from 'next/head';
 
 import { PrismaClient } from '@prisma/client';
 
+import AiLeadRescueLanding from '../components/AiLeadRescueLanding.js';
 import LuxeMauriceTenantPresentation from '../components/LuxeMauriceTenantPresentation.js';
 import { LUXE_MAURICE_FEED_PROPERTIES } from '../lib/client/luxe-maurice-feed-properties.js';
 import { LUXE_MAURICE_STAGED_PROPERTIES } from '../lib/client/luxe-maurice-staged-properties.js';
@@ -466,7 +467,12 @@ function TenantSite({ site }) {
   );
 }
 
-export default function Home({ mode, site }) {
+const AI_LEAD_RESCUE_HOST = 'aileadrescue.corpflowai.com';
+
+export default function Home({ mode, site, host }) {
+  if (mode === 'ai_lead_rescue') {
+    return <AiLeadRescueLanding host={host || AI_LEAD_RESCUE_HOST} />;
+  }
   if (mode === 'tenant_site' && site?.client_ui?.lux_acquisition === true) {
     return <LuxeMauriceTenantPresentation site={site} />;
   }
@@ -483,6 +489,9 @@ export async function getServerSideProps({ req }) {
   const host = normalizeHost(req);
   if (host && isGhostHost(host)) {
     return { redirect: { destination: '/log-stream.html', permanent: false } };
+  }
+  if (host === AI_LEAD_RESCUE_HOST) {
+    return { props: { mode: 'ai_lead_rescue', site: null, host: AI_LEAD_RESCUE_HOST } };
   }
   const prisma = new PrismaClient();
   try {
