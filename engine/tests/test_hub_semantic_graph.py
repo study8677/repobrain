@@ -190,6 +190,28 @@ def test_javascript_adapter_extracts_commonjs_and_export_symbols(tmp_path: Path)
     }
 
 
+def test_typescript_adapter_ignores_import_like_text_inside_strings(
+    tmp_path: Path,
+) -> None:
+    """Import-like text inside strings should not create dependency edges."""
+    _write_text(
+        tmp_path / "src" / "strings.ts",
+        (
+            'const fakeRequire = "require(\\"not-a-real-module\\")";\n'
+            "const fakeDynamic = 'import(\"also-fake\")';\n"
+            "const fakeStatic = `import { nope } from \"template-fake\"`;\n"
+            "const fakeExport = 'export { nope } from \"export-fake\"';\n"
+            'import { real } from "./real";\n'
+            'const lazy = import("./lazy");\n'
+            'const toolkit = require("@scope/real");\n'
+        ),
+    )
+
+    semantics = analyze_source_file(tmp_path, tmp_path / "src" / "strings.ts")
+
+    assert semantics.imports == ["src/real", "src/lazy", "@scope/real"]
+
+
 def test_go_knowledge_graph_contains_semantic_edges(tmp_path: Path) -> None:
     """A Go workspace should contribute non-zero semantic graph edges."""
     _write_go_workspace(tmp_path)

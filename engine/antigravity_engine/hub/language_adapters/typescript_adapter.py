@@ -108,6 +108,7 @@ class TypeScriptLanguageAdapter:
     def _extract_import_refs(self, content: str, rel_path: str) -> list[_ImportRef]:
         """Extract ES module, dynamic import, require, and re-export specs."""
         searchable = self._strip_comments(content)
+        code_mask = self._mask_non_code(content)
         matches: list[tuple[int, str]] = []
         for pattern in (
             _IMPORT_FROM_RE,
@@ -117,6 +118,8 @@ class TypeScriptLanguageAdapter:
             _EXPORT_FROM_RE,
         ):
             for match in pattern.finditer(searchable):
+                if not self._match_starts_in_code(code_mask, match.start()):
+                    continue
                 matches.append((match.start(), match.group(1)))
 
         refs: list[_ImportRef] = []
@@ -505,6 +508,10 @@ class TypeScriptLanguageAdapter:
             if value.endswith(suffix):
                 return value[: -len(suffix)]
         return value
+
+    def _match_starts_in_code(self, masked_content: str, start: int) -> bool:
+        """Return whether a regex import match starts outside strings/comments."""
+        return start < len(masked_content) and not masked_content[start].isspace()
 
     def _strip_comments(self, content: str) -> str:
         """Remove line and block comments while preserving string literals."""
