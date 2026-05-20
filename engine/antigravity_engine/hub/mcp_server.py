@@ -178,6 +178,15 @@ def _root_uri_to_path(uri: str) -> Path | None:
     return Path(raw).resolve()
 
 
+def _is_within_workspace(candidate: Path, workspace: Path) -> bool:
+    """Return True when candidate is the same path or a child of workspace."""
+    try:
+        candidate.relative_to(workspace)
+        return True
+    except ValueError:
+        return False
+
+
 async def _maybe_upgrade_via_roots(ctx) -> None:
     """If the MCP client supports the `roots` protocol, prefer its root.
 
@@ -207,8 +216,15 @@ async def _maybe_upgrade_via_roots(ctx) -> None:
         return
 
     new_workspace = _root_uri_to_path(str(result.roots[0].uri))
-    if new_workspace is None or not new_workspace.exists():
+    if new_workspace is None or not new_workspace.exists() or not new_workspace.is_dir():
         print(f"[ag-mcp] MCP roots/list returned unusable URI {result.roots[0].uri!r}: keeping workspace = {_active_workspace}", file=sys.stderr)
+        return
+    if _active_workspace is not None and not _is_within_workspace(new_workspace, _active_workspace):
+        print(
+            "[ag-mcp] MCP roots/list returned out-of-scope workspace "
+            f"{new_workspace}: keeping workspace = {_active_workspace}",
+            file=sys.stderr,
+        )
         return
 
     if new_workspace == _active_workspace:
