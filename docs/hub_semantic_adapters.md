@@ -66,6 +66,37 @@ The core IR is language-neutral:
 - Go-specific signature summaries for group splitting
 - nested `go.mod` module-root normalization
 
+### TypeScript / JavaScript
+
+`language_adapters/typescript_adapter.py` supports `.ts`, `.tsx`, `.js`, and
+`.jsx` files. It uses a lightweight line-oriented parser rather than a full
+TypeScript compiler parser.
+
+Import extraction covers:
+
+- `import ... from "module"`
+- side-effect imports such as `import "module"`
+- dynamic imports such as `import("module")`
+- CommonJS `require("module")`
+- re-exports such as `export ... from "module"`
+
+Relative imports are normalized to stable extensionless repository module keys
+such as `src/components/button`. Files also provide their own extensionless
+module key, plus a `src/`-stripped alias for grouping convenience. `index.ts`
+and `index.js` files additionally provide the parent directory module key.
+
+Top-level symbol extraction covers:
+
+- `function` and `async function`
+- `class`
+- `interface`
+- `type`
+- `enum`
+- exported `const`, `let`, and `var` declarations
+
+Test detection covers `*.test.ts`, `*.spec.ts`, `*.test.tsx`, `*.spec.tsx`,
+and the same `.js`/`.jsx` variants, plus files under `__tests__/`.
+
 ### Fallback
 
 `language_adapters/generic_adapter.py` is used when a file extension is
@@ -123,5 +154,8 @@ To add TypeScript, Rust, or Java:
 - Adapters are intentionally lightweight and top-level only.
 - No full type resolution or cross-package symbol resolution is attempted.
 - Generic fallback summaries are coarse by design.
+- The TypeScript/JavaScript adapter is regex/line based. It does not evaluate
+  path aliases from `tsconfig.json`, resolve package exports, infer React
+  components, or parse nested/local declarations.
 - The current Go adapter assumes import paths are resolved from the nearest
   `go.mod`; multi-module workspaces beyond that are not deeply modeled.

@@ -83,6 +83,113 @@ def test_go_adapter_extracts_package_imports_symbols_entrypoints_and_tests(
     assert test_semantics.test_targets == ["example.com/app/internal/service"]
 
 
+def test_typescript_adapter_extracts_imports_symbols_and_tests(tmp_path: Path) -> None:
+    """TS/JS adapter should capture imports, exported symbols, and test metadata."""
+    _write_text(
+        tmp_path / "src" / "components" / "widget.tsx",
+        (
+            'import React from "react";\n'
+            'import type { User } from "./types";\n'
+            'import "./setup";\n'
+            'const lazy = () => import("../plugins/lazy");\n'
+            'const toolkit = require("@scope/toolkit");\n'
+            'export { helper } from "./helper";\n\n'
+            "export interface WidgetProps extends Record<string, unknown> {\n"
+            "    user: User;\n"
+            "}\n\n"
+            "export type WidgetMode = 'compact' | 'full';\n\n"
+            "export enum WidgetKind {\n"
+            "    Card = 'card',\n"
+            "}\n\n"
+            "export async function loadWidget(id: string): Promise<User> {\n"
+            "    return toolkit.load(id);\n"
+            "}\n\n"
+            "export class WidgetCard extends React.Component<WidgetProps> {}\n\n"
+            "export const WidgetBadge = ({ user }: WidgetProps) => <span>{user.id}</span>;\n"
+            "export let widgetVersion = '1';\n"
+            "export var legacyWidget = true;\n"
+        ),
+    )
+    _write_text(
+        tmp_path / "src" / "components" / "widget.test.tsx",
+        (
+            'import { WidgetBadge } from "./widget";\n\n'
+            "describe('WidgetBadge', () => {\n"
+            "    it('renders', () => WidgetBadge);\n"
+            "});\n"
+        ),
+    )
+
+    semantics = analyze_source_file(
+        tmp_path,
+        tmp_path / "src" / "components" / "widget.tsx",
+    )
+    test_semantics = analyze_source_file(
+        tmp_path,
+        tmp_path / "src" / "components" / "widget.test.tsx",
+    )
+
+    assert semantics.language == "TypeScript (React)"
+    assert semantics.adapter_name == "typescript"
+    assert set(semantics.imports) == {
+        "react",
+        "src/components/types",
+        "src/components/setup",
+        "src/plugins/lazy",
+        "@scope/toolkit",
+        "src/components/helper",
+    }
+    assert semantics.package_identity == "src/components/widget"
+    assert "src/components/widget" in semantics.provided_modules
+    assert "components/widget" in semantics.provided_modules
+
+    symbols = {symbol.name: symbol.kind for symbol in semantics.symbols}
+    assert symbols == {
+        "WidgetProps": "interface",
+        "WidgetMode": "type",
+        "WidgetKind": "enum",
+        "loadWidget": "function",
+        "WidgetCard": "class",
+        "WidgetBadge": "constant",
+        "widgetVersion": "variable",
+        "legacyWidget": "variable",
+    }
+    assert "## Imports" in semantics.signature_summary
+    assert "## Functions" in semantics.signature_summary
+    assert "export async function loadWidget" in semantics.signature_summary
+
+    assert test_semantics.is_test_file is True
+    assert test_semantics.test_targets == ["src/components/widget"]
+
+
+def test_javascript_adapter_extracts_commonjs_and_export_symbols(tmp_path: Path) -> None:
+    """JS files should use the TS/JS adapter instead of generic fallback."""
+    _write_text(
+        tmp_path / "src" / "index.js",
+        (
+            'const fs = require("node:fs");\n'
+            'const worker = require("./worker");\n'
+            'export { createThing } from "./thing";\n'
+            "export function main() {\n"
+            "    return worker.run(fs);\n"
+            "}\n"
+            "export class App {}\n"
+            "export const VERSION = '1';\n"
+        ),
+    )
+
+    semantics = analyze_source_file(tmp_path, tmp_path / "src" / "index.js")
+
+    assert semantics.language == "JavaScript"
+    assert semantics.adapter_name == "typescript"
+    assert semantics.imports == ["node:fs", "src/worker", "src/thing"]
+    assert {symbol.name: symbol.kind for symbol in semantics.symbols} == {
+        "main": "function",
+        "App": "class",
+        "VERSION": "constant",
+    }
+
+
 def test_go_knowledge_graph_contains_semantic_edges(tmp_path: Path) -> None:
     """A Go workspace should contribute non-zero semantic graph edges."""
     _write_go_workspace(tmp_path)
@@ -112,6 +219,41 @@ def test_go_knowledge_graph_contains_semantic_edges(tmp_path: Path) -> None:
         and node.get("type") == "method"
         for node in nodes
     )
+
+
+def test_typescript_knowledge_graph_contains_adapter_summary_and_import_edges(
+    tmp_path: Path,
+) -> None:
+    """A TS workspace should contribute adapter diagnostics and import edges."""
+    _write_text(
+        tmp_path / "src" / "types.ts",
+        "export interface User { id: string }\n",
+    )
+    _write_text(
+        tmp_path / "src" / "service.ts",
+        (
+            'import { User } from "./types";\n\n'
+            "export function loadUser(id: string): User {\n"
+            "    return { id };\n"
+            "}\n"
+        ),
+    )
+
+    graph = build_knowledge_graph(tmp_path, full_scan(tmp_path))
+    edges = graph["edges"]
+
+    assert graph["summary"]["semantic_adapters"] == {"typescript": 2}
+    assert graph["summary"]["generic_fallback_file_count"] == 0
+    assert {
+        "from": "file:src/service.ts",
+        "to": "module:src/types",
+        "type": "imports",
+    } in edges
+    assert {
+        "from": "file:src/service.ts",
+        "to": "symbol:src/service.ts:loadUser",
+        "type": "defines",
+    } in edges
 
 
 def test_go_module_grouping_uses_semantic_package_and_import_signals(

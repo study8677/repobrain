@@ -13,12 +13,14 @@ from antigravity_engine.hub.language_adapters.base import (
 from antigravity_engine.hub.language_adapters.generic_adapter import GenericLanguageAdapter
 from antigravity_engine.hub.language_adapters.go_adapter import GoLanguageAdapter
 from antigravity_engine.hub.language_adapters.python_adapter import PythonLanguageAdapter
+from antigravity_engine.hub.language_adapters.typescript_adapter import TypeScriptLanguageAdapter
 
 
 _GENERIC_ADAPTER = GenericLanguageAdapter()
 _ADAPTERS: tuple[LanguageAdapter, ...] = (
     PythonLanguageAdapter(),
     GoLanguageAdapter(),
+    TypeScriptLanguageAdapter(),
 )
 _ADAPTER_BY_SUFFIX = {
     suffix: adapter
