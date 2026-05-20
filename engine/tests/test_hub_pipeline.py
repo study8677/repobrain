@@ -261,6 +261,20 @@ def test_load_project_context_respects_total_budget(tmp_path: Path) -> None:
     assert "REGISTRY_MARKER" in section
 
 
+def test_load_project_context_skips_symlink_outside_workspace(tmp_path: Path) -> None:
+    """Symlinked project docs resolving outside workspace must be ignored."""
+    from antigravity_engine.hub.ask_pipeline import _load_project_context
+
+    ag_dir = tmp_path / ".antigravity"
+    ag_dir.mkdir()
+    outside = tmp_path.parent / "outside-secret.txt"
+    outside.write_text("SECRET_TOKEN_OUTSIDE\n", encoding="utf-8")
+    (ag_dir / "conventions.md").symlink_to(outside)
+
+    section = _load_project_context(ag_dir, map_content="")
+    assert section == ""
+
+
 # ---------------------------------------------------------------------------
 # Phase 1: config/entry/git in _format_scan_report
 # ---------------------------------------------------------------------------

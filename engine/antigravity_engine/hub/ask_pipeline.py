@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from antigravity_engine.hub._constants import SKIP_DIRS
+from antigravity_engine.hub._utils import is_safe_path
 from antigravity_engine.hub.contracts import (
     ClaimVerification,
     ModuleClaim,
@@ -486,6 +487,7 @@ def _load_project_context(
     per_source_cap = max(1000, max_chars // 3)
     budget = max_chars
     parts: list[str] = []
+    workspace = ag_dir.parent
 
     def _push(label: str, content: str) -> None:
         nonlocal budget
@@ -495,6 +497,25 @@ def _load_project_context(
         parts.append(f"### {label}\n{chunk}")
         budget -= len(chunk)
 
+    def _read_project_doc(path: Path) -> str:
+        """Read a bounded project doc only when it resolves inside workspace."""
+        if budget <= 0:
+            return ""
+        limit = min(per_source_cap, budget)
+        try:
+            resolved = path.resolve()
+        except OSError:
+            return ""
+        if not is_safe_path(workspace, resolved):
+            return ""
+        try:
+            if not resolved.is_file():
+                return ""
+            with resolved.open("r", encoding="utf-8", errors="replace") as f:
+                return f.read(limit)
+        except OSError:
+            return ""
+
     file_sources: list[tuple[str, Path]] = [
         ("Project Conventions (.antigravity/conventions.md)", ag_dir / "conventions.md"),
         ("Document Index (.antigravity/document_index.md)", ag_dir / "document_index.md"),
@@ -502,12 +523,9 @@ def _load_project_context(
     for label, path in file_sources:
         if budget <= 0:
             break
-        if not path.is_file():
-            continue
-        try:
-            _push(label, path.read_text(encoding="utf-8"))
-        except OSError:
-            continue
+        content = _read_project_doc(path)
+        if content:
+            _push(label, content)
 
     if budget > 0 and map_content.strip():
         _push("Module Map (.antigravity/map.md)", map_content)
@@ -519,12 +537,9 @@ def _load_project_context(
     for label, path in file_sources_after_map:
         if budget <= 0:
             break
-        if not path.is_file():
-            continue
-        try:
-            _push(label, path.read_text(encoding="utf-8"))
-        except OSError:
-            continue
+        content = _read_project_doc(path)
+        if content:
+            _push(label, content)
 
     if not parts:
         return ""
