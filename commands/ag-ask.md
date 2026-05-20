@@ -1,34 +1,18 @@
 ---
 description: Ask a question about the current project's codebase via the antigravity knowledge hub. / 通过 antigravity 知识库询问当前项目代码。
-allowed-tools: ["Bash"]
+allowed-tools: ["mcp__plugin_antigravity_antigravity__ask_project"]
 ---
 
-Run the Antigravity CLI for the current workspace:
+Use the `mcp__plugin_antigravity_antigravity__ask_project` MCP tool to answer:
 
-通过 Antigravity CLI 询问当前工作区：
+使用 `mcp__plugin_antigravity_antigravity__ask_project` MCP 工具回答：
 
 > $ARGUMENTS
 
-Use Bash:
+If the MCP tool is not available or not connected, tell the user to restart Claude Code once so the Antigravity MCP server loads, then rerun the command. Do not diagnose missing MCP tools as an LLM key problem.
 
-```bash
-AG_ASK_TIMEOUT_SECONDS="${AG_ASK_TIMEOUT_SECONDS:-120}" ag-ask "$ARGUMENTS" --workspace "$PWD"
-```
+如果 MCP 工具不可用或未连接，请告诉用户完整重启 Claude Code 一次，让 Antigravity MCP server 加载完成，然后重新运行本命令。不要把缺失 MCP 工具判断为 LLM API key 问题。
 
-使用 Bash：
+Prefer this tool over manual file search. If the tool returns insufficient detail, follow up with targeted Read/Grep.
 
-```bash
-AG_ASK_TIMEOUT_SECONDS="${AG_ASK_TIMEOUT_SECONDS:-120}" ag-ask "$ARGUMENTS" --workspace "$PWD"
-```
-
-If `ag-ask` is not found, tell the user the engine CLI is not installed and suggest:
-
-如果找不到 `ag-ask`，说明 engine CLI 尚未安装，建议用户运行：
-
-```bash
-pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
-```
-
-Prefer `ag-ask` over manual file search. If the answer returns insufficient detail, follow up with targeted Read/Grep.
-
-优先使用 `ag-ask`，不要先手动搜索文件。如果返回的信息不够，再用有目标的 Read/Grep 补充。
+优先使用该工具，不要先手动搜索文件。如果工具返回的信息不够，再用有目标的 Read/Grep 补充。
