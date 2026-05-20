@@ -181,12 +181,15 @@ def create_ask_tools(workspace: Path) -> dict[str, Callable]:
                 if file_pattern != "*" and not fnmatch.fnmatch(fname, file_pattern):
                     continue
                 fpath = Path(dirpath_str) / fname
+                resolved = fpath.resolve()
+                if not is_safe_path(ws, resolved):
+                    continue
                 try:
                     rel = fpath.relative_to(ws)
                 except ValueError:
                     continue
                 try:
-                    text = fpath.read_text(encoding="utf-8", errors="replace")
+                    text = resolved.read_text(encoding="utf-8", errors="replace")
                 except OSError:
                     continue
                 for lineno, line in enumerate(text.splitlines(), 1):

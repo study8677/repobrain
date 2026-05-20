@@ -56,6 +56,17 @@ def test_search_code_empty_query(tmp_path: Path) -> None:
     assert "Error" in result
 
 
+def test_search_code_skips_symlink_outside_workspace(tmp_path: Path) -> None:
+    outside_file = tmp_path.parent / "outside-secret.txt"
+    outside_file.write_text("AG_LEAK_TOKEN=outside-symlink-secret-12345\n")
+    (tmp_path / "linked_secret.env").symlink_to(outside_file)
+
+    tools = _make_tools(tmp_path)
+    result = tools["search_code"]("AG_LEAK_TOKEN")
+    assert "No results" in result
+    assert "linked_secret.env" not in result
+
+
 # ---------------------------------------------------------------------------
 # read_file
 # ---------------------------------------------------------------------------
