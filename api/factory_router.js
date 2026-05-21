@@ -12,7 +12,8 @@ import technicalLeadCronHandler, {
   handleTechnicalLeadAuditsList,
   handleTechnicalLeadFactoryMaster,
 } from '../lib/server/technical-lead-cron.js';
-import { buildProductionPulseV1Report } from '../scripts/production-pulse.mjs';
+// Lazy-loaded inside `handleProductionPulseRuntime` via dynamic import() so this CJS-transpiled
+// API route never `require()`s the .mjs ESM file (Vercel may split the function bundle).
 import cmpMonitorCronHandler from '../lib/server/cmp-monitor-cron.js';
 import cmpHandler from '../lib/cmp/router.js';
 import feedbackHandler from '../lib/server/feedback.js';
@@ -437,7 +438,8 @@ async function handleProductionPulseRuntime(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   try {
-    const body = await buildProductionPulseV1Report(prisma);
+    const mod = await import('../scripts/production-pulse.mjs');
+    const body = await mod.buildProductionPulseV1Report(prisma);
     const ok = Boolean(body && typeof body === 'object' && body.ok === true);
     return res.status(ok ? 200 : 503).json(body);
   } catch (e) {
