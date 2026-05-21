@@ -408,7 +408,7 @@ async function handleFactoryHealth(req, res) {
     password_reset_delivery_configured: password_reset_ok,
     password_reset_hint: password_reset_ok
       ? 'Tenant forgot-password can deliver via webhook and/or Resend when user exists.'
-      : 'Set CORPFLOW_PASSWORD_RESET_WEBHOOK_URL (n8n → email) and/or CORPFLOW_PASSWORD_RESET_RESEND_API_KEY + CORPFLOW_PASSWORD_RESET_FROM_EMAIL, or use debug token only in non-prod.',
+      : 'Set N8N_EMAIL_WEBHOOK_URL (+ N8N_EMAIL_WEBHOOK_SECRET, EMAIL_FROM) for n8n Gmail delivery, or CORPFLOW_PASSWORD_RESET_RESEND_API_KEY + CORPFLOW_PASSWORD_RESET_FROM_EMAIL for Resend. Legacy CORPFLOW_PASSWORD_RESET_WEBHOOK_URL still works.',
     factory_browser_admin_configured: factoryAdminWebLoginConfigured,
     tenancy_boundary: {
       core_hosts_configured: coreHostCount > 0,
