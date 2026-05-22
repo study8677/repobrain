@@ -2,7 +2,9 @@
 
 CorpFlowAI calls a single n8n Webhook from the **server** when a tenant user (e.g. a Lux client) requests a password reset. The Webhook hands the payload to a **Gmail Send Email** node, which delivers from the configured CorpFlowAI alias (`support@corpflowai.com`).
 
-This file is the canonical recipe. Operator-facing checklists in `docs/CORPFLOW_SHARED_TODO.md` and `.env.template` § password reset point here.
+This file is the canonical **wire-level recipe** for one event type (`password_reset`). For the **system-wide communications model** — event catalog, sender aliases, approval policy, evidence trail, and what tracker rows belong in `34_Communication_Event_Register` / `37_Communication_Review_Dashboard` (not the Drive manifest) — read **`docs/communications/CORPFLOW_COMMUNICATIONS_V1.md`** first.
+
+Operator-facing checklists in `docs/CORPFLOW_SHARED_TODO.md` and `.env.template` § password reset point here.
 
 ## 0) Prerequisites
 

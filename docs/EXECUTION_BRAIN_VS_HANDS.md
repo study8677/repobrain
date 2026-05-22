@@ -61,7 +61,7 @@ The workflow `.github/workflows/factory-health-ping.yml` uses GitHub secret **`C
 ## Concrete next moves (agreed framework: agent executes, you evaluate)
 
 1. **Add one scheduled GitHub Action** in this repo: weekly `curl` to `/api/factory/health` and fail the job if `ok: false` (no laptop needed).
-2. **Finish one n8n workflow** tied to `CORPFLOW_AUTOMATION_FORWARD_URL` (notify + optional Google Chat / email via Workspace).
+2. **Finish one n8n workflow** tied to `CORPFLOW_AUTOMATION_FORWARD_URL` (notify + optional Google Chat / email via Workspace). For any **email** branch, follow the disciplined path in **`docs/communications/CORPFLOW_COMMUNICATIONS_V1.md`** — typed event, sender alias, approval rule (auto-send only for system-transactional or operator-only events).
 3. **Optional:** `GET /api/automation/events` small operator page (factory-only) — ticket in `CORPFLOW_SHARED_TODO.md`.
 
 ## Security note

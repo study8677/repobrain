@@ -39,6 +39,14 @@ CorpFlow sends header `x-corpflow-automation-forward-secret` when the secret is 
 
 High-risk types from **external** ingest still require approval headers on the ingest API; CMP mirror events use trusted `cmp.*` / callback types only.
 
-## 4) Same webhook for password reset (optional)
+## 4) Outbound email is a separate workflow (not this recipe)
 
-You can reuse n8n for `CORPFLOW_PASSWORD_RESET_WEBHOOK_URL` with a **different** path and workflow. Keep secrets distinct per workflow.
+This recipe is for the **automation forward** channel (`CORPFLOW_AUTOMATION_FORWARD_URL` — operational envelopes / CMP mirror events). It is **not** the channel for client-facing transactional email.
+
+For outbound email (`password_reset`, future `estimate_ready`, `concierge_lead_received`, etc.):
+
+- Wire-level recipe: **`docs/n8n/password-reset-email-recipe.md`**.
+- Canonical model (event catalog, sender aliases, approval rules, evidence): **`docs/communications/CORPFLOW_COMMUNICATIONS_V1.md`**.
+- Env vars (preferred names): `N8N_EMAIL_WEBHOOK_URL`, `N8N_EMAIL_WEBHOOK_SECRET`, `EMAIL_FROM` (legacy `CORPFLOW_PASSWORD_RESET_WEBHOOK_*` still read as fallbacks).
+
+Keep the two workflows in n8n distinct: different webhook paths, different shared secrets, different downstream branches.

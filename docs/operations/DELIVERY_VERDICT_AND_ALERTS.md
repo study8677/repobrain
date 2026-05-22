@@ -50,6 +50,8 @@ In n8n: route `kind=cmp_delivery_blocked` to:
 - **Email to:** `antonvdberg@corpflowai.com` (until you change it)
 - **Telegram:** your bot/channel (optional if you want Telegram via n8n instead of direct)
 
+> **Where this fits in the communications model.** Ops-alert emails are an **operator-only** outbound channel under Comms v1 — they map to the **`operator_escalation`** event type (auto-send, internal recipients only) defined in **`docs/communications/CORPFLOW_COMMUNICATIONS_V1.md`** §4. They never reach a client mailbox. Use `support@corpflowai.com` as the sender. Do **not** widen the alert routing to a client-facing event without going through Comms v1's approval surface.
+
 ## How to verify end-to-end
 
 1. Pick a ticket in **Approved / Build**.

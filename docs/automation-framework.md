@@ -59,10 +59,10 @@ Override/extend prefixes with env `CORPFLOW_AUTOMATION_HIGH_RISK_PREFIXES` (comm
 
 ```json
 {
-  "slug": "google-smtp-relay-n8n",
-  "title": "Password reset email via n8n + Google SMTP",
-  "body_md": "...",
-  "tags": ["email", "n8n"]
+  "slug": "n8n-gmail-oauth-password-reset",
+  "title": "Password reset email via n8n + Gmail OAuth (canonical: docs/communications/CORPFLOW_COMMUNICATIONS_V1.md)",
+  "body_md": "Wire-level recipe in docs/n8n/password-reset-email-recipe.md. All outbound email goes through the typed-event path described in docs/communications/CORPFLOW_COMMUNICATIONS_V1.md (event catalog, sender aliases, approval rules, evidence trail).",
+  "tags": ["email", "n8n", "communications"]
 }
 ```
 

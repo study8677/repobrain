@@ -61,6 +61,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Delivery reality (live prod = done) | `.cursor/rules/delivery-reality.mdc`, `.cursor/rules/predeploy-decision-checks.mdc` |
 | Production bar (reliable, secure, observable) | `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md` |
 | Host / apex / login / tenancy | `docs/operations/TENANT_CLIENT_LOGIN.md` |
+| Outbound email / communications — required when adding any send-mail capability or comms event | `docs/communications/CORPFLOW_COMMUNICATIONS_V1.md` |
 | Security review triggers | `docs/operations/SECURITY_REVIEW_CHECKLIST.md` |
 | Incident / rotation stub | `docs/runbooks/SECURITY_OR_INCIDENT.md` |
 | Brain vs hands / automation | `docs/EXECUTION_BRAIN_VS_HANDS.md`, `docs/automation-framework.md` |

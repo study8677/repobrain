@@ -32,6 +32,7 @@
 - [ ] **HMAC/shared-secret** headers for automation and callbacks are **verified** (timing-safe compare where applicable).
 - [ ] **SSRF:** server-side `fetch` to URLs from user or ticket content uses **allowlists** or known-safe patterns; no blind fetch to internal IPs/metadata URLs unless explicitly designed and gated.
 - [ ] **Idempotency** for ingest/bootstrap remains respected when touching automation paths.
+- [ ] **Outbound email** (any new path that may send mail): the change is reflected in **`docs/communications/CORPFLOW_COMMUNICATIONS_V1.md`** (event type, sender alias, approval rule), no freeform `to` / `subject` / `body` is accepted from non-server callers, the n8n webhook secret never reaches the browser, and tokens / email bodies are excluded from logs.
 
 ## 6. Data access (Prisma / SQL)
 

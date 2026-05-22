@@ -33,6 +33,7 @@ Review quarterly or before signing a DPA. Replace placeholders with your actual 
 
 ## Related docs
 
+- `docs/communications/CORPFLOW_COMMUNICATIONS_V1.md` (outbound email model — canonical for which events, which aliases, which approval rules)
 - `docs/operations/TENANT_CLIENT_LOGIN.md`  
 - `docs/operations/SECURITY_REVIEW_CHECKLIST.md`  
 - `docs/runbooks/SECURITY_OR_INCIDENT.md`  
