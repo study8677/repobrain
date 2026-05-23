@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1200 120"
+  preserveAspectRatio="xMidYMid meet"
+  role="img"
+  aria-hidden="true"
+>
+  <title>CorpFlowAI trust band</title>
+  <desc>A quiet horizontal band with five small geometric markers representing CorpFlowAI's operating principles: real, evidence-led, lightweight, monitored, and humble.</desc>
+
+  <defs>
+    <linearGradient id="cf-trust-bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0b1f33"/>
+      <stop offset="50%" stop-color="#0f253c"/>
+      <stop offset="100%" stop-color="#0b1f33"/>
+    </linearGradient>
+    <linearGradient id="cf-trust-rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(190, 158, 105, 0.05)"/>
+      <stop offset="50%" stop-color="rgba(190, 158, 105, 0.35)"/>
+      <stop offset="100%" stop-color="rgba(190, 158, 105, 0.05)"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="120" fill="url(#cf-trust-bg)"/>
+  <line x1="60" y1="60" x2="1140" y2="60" stroke="url(#cf-trust-rule)" stroke-width="1"/>
+
+  <g stroke="rgba(125, 211, 252, 0.6)" stroke-width="1.2" fill="none" stroke-linecap="round">
+    <g transform="translate(160, 60)">
+      <rect x="-12" y="-12" width="24" height="24" rx="2"/>
+      <line x1="-6" y1="-2" x2="6" y2="-2"/>
+      <line x1="-6" y1="4" x2="2" y2="4"/>
+    </g>
+
+    <g transform="translate(380, 60)">
+      <polyline points="-12,4 -4,-6 4,2 12,-8"/>
+      <line x1="-12" y1="10" x2="12" y2="10"/>
+    </g>
+
+    <g transform="translate(600, 60)">
+      <line x1="-12" y1="-8" x2="12" y2="-8"/>
+      <line x1="-8" y1="0" x2="8" y2="0"/>
+      <line x1="-4" y1="8" x2="4" y2="8"/>
+    </g>
+
+    <g transform="translate(820, 60)">
+      <circle cx="0" cy="0" r="10"/>
+      <line x1="0" y1="-4" x2="0" y2="0"/>
+      <line x1="0" y1="0" x2="6" y2="2"/>
+    </g>
+
+    <g transform="translate(1040, 60)">
+      <line x1="-12" y1="0" x2="-2" y2="0"/>
+      <line x1="2" y1="0" x2="12" y2="0"/>
+      <line x1="0" y1="-6" x2="0" y2="6"/>
+    </g>
+  </g>
+
+  <g fill="rgba(190, 158, 105, 0.65)">
+    <circle cx="270" cy="60" r="1.4"/>
+    <circle cx="490" cy="60" r="1.4"/>
+    <circle cx="710" cy="60" r="1.4"/>
+    <circle cx="930" cy="60" r="1.4"/>
+  </g>
+</svg>

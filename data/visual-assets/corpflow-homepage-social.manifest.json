@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0.0",
+  "id": "corpflow-homepage-social",
+  "surface": "core",
+  "kind": "social_card",
+  "title": "CorpFlowAI homepage social card",
+  "description": "Open-graph / Twitter / LinkedIn share card for https://corpflowai.com/. Premium architectural editorial photograph: a single calm modern interior corner, deep navy + warm cream walls, dark walnut shelf with a small ceramic vessel and one dry stem.",
+  "source": {
+    "type": "repo",
+    "path": "/assets/visuals/corpflow-homepage-social.webp",
+    "content_hash": "sha256:cb049a4b074303ec6b3e35cdb61c629d125a4698e35c0939bbe4ccd018e3a691",
+    "width": 1200,
+    "height": 800
+  },
+  "licence": {
+    "tier": "ai_generated",
+    "owner": "CorpFlowAI",
+    "terms": "Generated under the CorpFlowAI vetted prompt library (see CORPFLOW_PROMPT_LIBRARY.md, prompt_id: corpflow-homepage-social-card). Reviewed against BRAND_AND_CONVERSION_DOCTRINE.md. No third-party IP used. Free to use across CorpFlowAI marketing surfaces."
+  },
+  "accessibility": {
+    "alt": "A calm modern interior corner: a deep navy wall meets a warm cream wall above a polished dark walnut shelf, on which a small ceramic vessel holds one dry stem in soft afternoon light.",
+    "lang": "en",
+    "decorative": false
+  },
+  "usage": {
+    "allowed_surfaces": ["core", "shared"],
+    "notes": "slot:homepage_social_card. Used as og:image and twitter:image for the public homepage. Source is 1200×800 (the generator's native ratio); social platforms typically letterbox to 1200×630 — image composition keeps the subject clear of all OG safe-area edges."
+  },
+  "lifecycle": {
+    "state": "vetted",
+    "created_at": "2026-05-21",
+    "reviewed_at": "2026-05-21",
+    "review_due": "2026-11-21"
+  },
+  "prompt_provenance": {
+    "prompt_id": "corpflow-homepage-social-card",
+    "model": "openai/gpt-image-1",
+    "model_version": "2026-04",
+    "generated_at": "2026-05-21T05:10:00.000Z",
+    "seed": "cf-home-social-2026-05-v1",
+    "reviewed_by": "anton@corpflowai.com",
+    "notes": "Reviewed against BRAND_AND_CONVERSION_DOCTRINE.md — calm, restrained, premium, no AI tropes, no text/logos/people."
+  }
+}

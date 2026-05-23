@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "id": "corpflow-homepage-hero",
+  "surface": "core",
+  "kind": "image",
+  "title": "CorpFlowAI homepage hero",
+  "description": "Above-the-fold hero on https://corpflowai.com/. Calm modern executive workspace — brushed oak meeting table, frosted-glass partitions, brushed-brass accents, soft natural daylight. No people, no electronics, no text, no logos.",
+  "source": {
+    "type": "repo",
+    "path": "/assets/visuals/corpflow-homepage-hero-1920.webp",
+    "content_hash": "sha256:28b5024108e29d1d3bf1fda82165c86a29d38f43afd345d085408533a6cb4b14",
+    "width": 1920,
+    "height": 1280
+  },
+  "licence": {
+    "tier": "ai_generated",
+    "owner": "CorpFlowAI",
+    "terms": "Generated under the CorpFlowAI vetted prompt library (see CORPFLOW_PROMPT_LIBRARY.md, prompt_id: corpflow-homepage-hero). Reviewed against BRAND_AND_CONVERSION_DOCTRINE.md. No third-party IP used. Free to use across CorpFlowAI marketing surfaces."
+  },
+  "accessibility": {
+    "alt": "A calm sunlit modern executive workspace with a long brushed-oak meeting table, a single matte-black document folder, and full-height reeded glass partitions in the background.",
+    "lang": "en",
+    "decorative": false
+  },
+  "usage": {
+    "allowed_surfaces": ["core", "shared"],
+    "primary_cta": "Start with AI Lead Rescue",
+    "notes": "slot:homepage_hero. Above-the-fold; renderer should mark eager. Responsive WebP set is /assets/visuals/corpflow-homepage-hero-{1920,1280,768}.webp — runtime currently selects the 1920w default and lets the browser/CSS scale; a future iteration may add a srcset wrapper."
+  },
+  "lifecycle": {
+    "state": "vetted",
+    "created_at": "2026-05-21",
+    "reviewed_at": "2026-05-21",
+    "review_due": "2026-11-21"
+  },
+  "prompt_provenance": {
+    "prompt_id": "corpflow-homepage-hero",
+    "model": "openai/gpt-image-1",
+    "model_version": "2026-04",
+    "generated_at": "2026-05-21T05:09:00.000Z",
+    "seed": "cf-home-hero-2026-05-v1",
+    "reviewed_by": "anton@corpflowai.com",
+    "notes": "First production homepage hero. Reviewed against BRAND_AND_CONVERSION_DOCTRINE.md — calm, structured, real, no AI tropes (no neon / robots / holograms / glowing brains / stock-photo feel). Matches Architectural Digest editorial reference."
+  }
+}

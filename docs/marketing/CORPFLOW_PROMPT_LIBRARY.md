@@ -112,6 +112,70 @@ Variants in this set use the same skeleton with one subject change:
 - `core-promise-icon-trackable` → small clock paired with a progress bar.
 - `core-promise-icon-actionable` → a single CTA-shaped button with a forward arrow.
 
+### `corpflow-homepage-hero`
+
+- **Use case:** Hero photograph anchoring the CorpFlowAI public homepage (`https://corpflowai.com/`). Should communicate calm operational competence, not AI hype.
+- **Surface:** `core` (also usable on `shared`).
+- **Kind:** `image` (raster, encoded to optimized WebP at 1920/1280/768 widths for responsive serving).
+- **Lifecycle:** `vetted`.
+- **Reviewer:** anton@corpflowai.com.
+
+Prompt:
+
+```
+Premium architectural editorial photograph for the hero of an enterprise B2B
+website. Wide cinematic 16:9 composition, photorealistic, magazine-quality.
+Subject: an empty modern executive workspace shot in soft natural daylight — a
+long brushed-oak meeting table running diagonally into the frame, a single
+matte-black document folder closed neatly on it, a low ceramic vessel with a
+single dry stem. Behind, full-height frosted-glass partitions cast soft
+horizontal shadows across a polished concrete floor. Tall vertical windows
+out of frame on the right wash the scene in warm late-afternoon light, with
+the rest of the room receding into calm cool shadow. Restrained palette:
+deep navy, warm cream, slate grey, brushed brass accents. Atmosphere of
+quiet professionalism, calm confidence, operational order.
+
+Strict constraints: no people, no faces, no hands, no electronics, no
+laptops, no phones, no screens, no monitors, no televisions, no signage,
+no logos, no text, no letters, no numbers, no posters, no charts, no brand
+marks, no neon, no glowing lights, no holograms, no robots, no machinery,
+no abstract sci-fi elements, no generic stock-photo composition, no
+over-saturated colors. Architectural Digest / Wallpaper magazine aesthetic.
+
+[Append global brand constraints]
+```
+
+### `corpflow-homepage-social-card`
+
+- **Use case:** Open-graph / Twitter / LinkedIn share card for `https://corpflowai.com/`. Used as `og:image` and `twitter:image`.
+- **Surface:** `core` (also usable on `shared`).
+- **Kind:** `social_card` (1200 × 630, encoded to optimized WebP).
+- **Lifecycle:** `vetted`.
+- **Reviewer:** anton@corpflowai.com.
+
+Prompt:
+
+```
+Open-graph social-share card, 1200 × 630, ultra-wide horizontal composition.
+Premium architectural editorial photograph for an enterprise B2B brand.
+Centered low-angle photograph: a single calm modern interior corner — deep
+navy painted wall on the left, warm cream linen-textured wall on the right,
+the boundary between them a perfectly vertical line at center. Below: a
+polished dark walnut shelf running the full width, holding a single small
+ceramic vessel with one dry stem. Soft directional warm afternoon side-light
+from off-frame on the right. Restrained palette: deep navy, warm cream,
+brushed brass, dark walnut. Architectural Digest aesthetic — calm, restrained,
+structured, quiet, premium.
+
+Strict constraints: NO people, NO faces, NO hands, NO electronics, NO
+laptops, NO phones, NO screens, NO text, NO letters, NO numbers, NO
+words, NO logos, NO signage, NO charts, NO graphs, NO arrows, NO icons,
+NO neon, NO glow, NO holograms, NO robots, NO sci-fi, NO futuristic
+elements, NO over-saturated colors, NO stock-photo composition.
+
+[Append global brand constraints]
+```
+
 ### `concierge-handoff-illustration`
 
 - **Use case:** Quiet supporting illustration for `/concierge` explaining "talk to a human → we set it up".

@@ -15,44 +15,59 @@ const s = {
   },
   shell: { maxWidth: 1120, margin: '0 auto', padding: '42px 20px 56px' },
   nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
-  brand: { fontWeight: 900, fontSize: 22 },
+  brand: { fontWeight: 900, fontSize: 22, letterSpacing: '-0.01em' },
   sub: { color: '#9fb2c8', fontSize: 13 },
   label: { fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7dd3fc', fontWeight: 800 },
   h1: { margin: '16px 0 0', fontSize: 'clamp(32px, 6vw, 52px)', lineHeight: 1.05, letterSpacing: '-0.04em', maxWidth: 820 },
   lead: { marginTop: 18, fontSize: 'clamp(16px, 2vw, 20px)', lineHeight: 1.6, color: '#c9d8e8', maxWidth: 760 },
-  section: { marginTop: 36 },
+  section: { marginTop: 44 },
   h2: { margin: '8px 0 0', fontSize: 28, letterSpacing: '-0.03em' },
   muted: { color: '#aebfd1', lineHeight: 1.65 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 16 },
-  card: { border: '1px solid rgba(255,255,255,0.13)', borderRadius: 22, background: 'rgba(255,255,255,0.06)', padding: 20 },
-  highlight: { border: '1px solid rgba(45,212,191,0.34)', borderRadius: 22, background: 'rgba(45,212,191,0.08)', padding: 20 },
-  cta: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: '13px 16px', fontWeight: 800, textDecoration: 'none', cursor: 'pointer' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 20 },
+  card: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    borderRadius: 22,
+    background: 'rgba(255,255,255,0.04)',
+    padding: 22,
+    transition: 'border-color 320ms ease, background 320ms ease, transform 320ms ease',
+  },
+  highlight: { border: '1px solid rgba(45,212,191,0.34)', borderRadius: 22, background: 'rgba(45,212,191,0.08)', padding: 22 },
+  cta: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: '13px 18px', fontWeight: 800, textDecoration: 'none', cursor: 'pointer' },
   primary: { background: '#2dd4bf', color: '#031018', border: 0 },
   secondary: { background: 'rgba(255,255,255,0.09)', color: '#eef6ff', border: '1px solid rgba(255,255,255,0.15)' },
   list: { margin: '12px 0 0', paddingLeft: 18, color: '#d6e4f2', lineHeight: 1.75 },
-  heroVisualWrap: {
-    marginTop: 28,
+  heroVisualFrame: {
+    position: 'relative',
+    marginTop: 32,
     borderRadius: 22,
-    border: '1px solid rgba(255,255,255,0.13)',
-    background: 'rgba(255,255,255,0.04)',
-    padding: 14,
     overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: '#06111f',
+    aspectRatio: '16 / 10',
   },
-  servicesVisualWrap: {
-    margin: '12px 0 18px',
-    display: 'flex',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    gap: 12,
+  heroVisualOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'linear-gradient(180deg, rgba(6,17,31,0) 60%, rgba(6,17,31,0.55) 100%)',
+    pointerEvents: 'none',
   },
-  trustBandWrap: {
-    marginTop: 16,
+  heroProvenanceWrap: {
+    marginTop: 8,
+  },
+  servicesVisualBand: {
+    marginTop: 18,
+    marginBottom: 4,
     borderRadius: 18,
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(255,255,255,0.04)',
-    padding: 12,
-    display: 'flex',
-    justifyContent: 'center',
+    overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: '#06111f',
+  },
+  trustVisualBand: {
+    marginTop: 22,
+    borderRadius: 14,
+    overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: '#0b1f33',
   },
 };
 
@@ -80,12 +95,17 @@ function Section({ id, label, title, children }) {
  * surrounding section without leaking layout details into the
  * renderer itself.
  */
-function HomepageSlot({ manifest, slotId, eager = false, wrapperStyle, rendererStyle }) {
+function HomepageSlot({ manifest, slotId, eager = false, wrapperStyle, rendererStyle, overlay, provenanceWrapperStyle, className }) {
   if (!manifest) return null;
   return (
-    <div data-slot-id={slotId} style={wrapperStyle}>
+    <div data-slot-id={slotId} style={wrapperStyle} className={className}>
       <VisualAssetRenderer manifest={manifest} eager={eager} style={rendererStyle} />
-      {isAiGeneratedManifest(manifest) ? <AssetProvenanceDisclosure manifest={manifest} /> : null}
+      {overlay || null}
+      {isAiGeneratedManifest(manifest) ? (
+        <div style={provenanceWrapperStyle}>
+          <AssetProvenanceDisclosure manifest={manifest} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -109,6 +129,9 @@ export default function CorpFlowPublicHome(props) {
     const src = socialCardAsset.source;
     if (!src || typeof src !== 'object') return null;
     if (typeof src.url === 'string' && /^https:\/\//.test(src.url)) return src.url;
+    if (typeof src.path === 'string' && src.path.startsWith('/')) {
+      return src.path;
+    }
     return null;
   })();
   const socialCardAlt = socialCardAsset?.accessibility?.alt || '';
@@ -124,9 +147,7 @@ export default function CorpFlowPublicHome(props) {
         {socialCardUrl ? <meta property="og:image" content={socialCardUrl} /> : null}
         {socialCardUrl ? <meta name="twitter:image" content={socialCardUrl} /> : null}
         {socialCardUrl && socialCardAlt ? <meta property="og:image:alt" content={socialCardAlt} /> : null}
-        {socialCardUrl ? (
-          <meta name="twitter:card" content="summary_large_image" />
-        ) : null}
+        {socialCardUrl ? <meta name="twitter:card" content="summary_large_image" /> : null}
       </Head>
       <main style={s.shell}>
         <nav style={s.nav}>
@@ -134,7 +155,7 @@ export default function CorpFlowPublicHome(props) {
             <div style={s.brand}>CorpFlowAI</div>
             <div style={s.sub}>Practical workflow systems for small businesses</div>
           </div>
-          <Link href="/lead-rescue" style={{ ...s.cta, ...s.primary }}>
+          <Link href="/lead-rescue" className="cf-cta-primary" style={{ ...s.cta, ...s.primary }}>
             Start with AI Lead Rescue
           </Link>
         </nav>
@@ -147,20 +168,30 @@ export default function CorpFlowPublicHome(props) {
             keep daily operations visible — without forcing a full CRM rebuild.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
-            <Link href="/lead-rescue" style={{ ...s.cta, ...s.primary }}>
+            <Link href="/lead-rescue" className="cf-cta-primary" style={{ ...s.cta, ...s.primary }}>
               Start with AI Lead Rescue
             </Link>
-            <a href="#services" style={{ ...s.cta, ...s.secondary }}>
+            <a href="#services" className="cf-cta-secondary" style={{ ...s.cta, ...s.secondary }}>
               See services
             </a>
           </div>
-          <HomepageSlot
-            manifest={heroAsset}
-            slotId="homepage_hero"
-            eager
-            wrapperStyle={s.heroVisualWrap}
-            rendererStyle={{ width: '100%', maxWidth: '100%', height: 'auto', borderRadius: 14 }}
-          />
+          {heroAsset ? (
+            <HomepageSlot
+              manifest={heroAsset}
+              slotId="homepage_hero"
+              eager
+              wrapperStyle={s.heroVisualFrame}
+              rendererStyle={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              overlay={<div style={s.heroVisualOverlay} aria-hidden="true" />}
+              className="cf-hero-visual"
+              provenanceWrapperStyle={{
+                position: 'absolute',
+                left: 14,
+                bottom: 10,
+                zIndex: 2,
+              }}
+            />
+          ) : null}
         </header>
 
         <Section label="What we do" title="Make work visible so it gets followed up.">
@@ -179,38 +210,42 @@ export default function CorpFlowPublicHome(props) {
         </Section>
 
         <Section id="services" label="Services" title="Productized setup and monitoring.">
-          <HomepageSlot
-            manifest={servicesGraphicAsset}
-            slotId="homepage_services_graphic"
-            wrapperStyle={s.servicesVisualWrap}
-            rendererStyle={{ maxWidth: 64, height: 'auto' }}
-          />
+          {servicesGraphicAsset ? (
+            <HomepageSlot
+              manifest={servicesGraphicAsset}
+              slotId="homepage_services_graphic"
+              wrapperStyle={s.servicesVisualBand}
+              rendererStyle={{ width: '100%', height: 'auto', display: 'block' }}
+              className="cf-services-visual"
+              provenanceWrapperStyle={s.heroProvenanceWrap}
+            />
+          ) : null}
           <div style={s.grid}>
-            <div style={s.card}>
-              <h3>AI Lead Rescue</h3>
+            <div style={s.card} className="cf-service-card">
+              <h3 style={{ marginTop: 0 }}>AI Lead Rescue</h3>
               <p style={s.muted}>
                 48-hour pilot setup for lead capture, owner/operator alerts, a Google Sheet lead log, a simple follow-up
                 board, and a daily summary.
               </p>
-              <Link href="/lead-rescue" style={{ ...s.cta, ...s.primary, marginTop: 12 }}>
+              <Link href="/lead-rescue" className="cf-cta-primary" style={{ ...s.cta, ...s.primary, marginTop: 12 }}>
                 View AI Lead Rescue
               </Link>
             </div>
-            <div style={s.card}>
-              <h3>Workflow Automation Setup</h3>
+            <div style={s.card} className="cf-service-card">
+              <h3 style={{ marginTop: 0 }}>Workflow Automation Setup</h3>
               <p style={s.muted}>
                 Lightweight automations for forms, sheets, alerts, summaries, and operational handoffs between people and
                 tools you already use.
               </p>
             </div>
-            <div style={s.card}>
-              <h3>Operations Visibility Dashboards</h3>
+            <div style={s.card} className="cf-service-card">
+              <h3 style={{ marginTop: 0 }}>Operations Visibility Dashboards</h3>
               <p style={s.muted}>
                 Simple dashboards and evidence logs so owners can see what needs attention without adopting a heavy CRM.
               </p>
             </div>
-            <div style={s.card}>
-              <h3>Monitoring and Support</h3>
+            <div style={s.card} className="cf-service-card">
+              <h3 style={{ marginTop: 0 }}>Monitoring and Support</h3>
               <p style={s.muted}>
                 Scheduled checks, alerts, and maintenance for deployed workflows after the initial pilot is live.
               </p>
@@ -235,7 +270,7 @@ export default function CorpFlowPublicHome(props) {
               We do not guarantee new revenue. We help make sure existing enquiries are captured, visible, and followed
               up.
             </p>
-            <Link href="/lead-rescue" style={{ ...s.cta, ...s.primary, marginTop: 12 }}>
+            <Link href="/lead-rescue" className="cf-cta-primary" style={{ ...s.cta, ...s.primary, marginTop: 12 }}>
               Start my 48-hour setup
             </Link>
           </div>
@@ -268,12 +303,15 @@ export default function CorpFlowPublicHome(props) {
             <li>We do not replace your website, CRM, WhatsApp, or sales process.</li>
             <li>We start with lightweight pilots before larger systems.</li>
           </ul>
-          <HomepageSlot
-            manifest={trustBandAsset}
-            slotId="homepage_trust_band"
-            wrapperStyle={s.trustBandWrap}
-            rendererStyle={{ maxWidth: '100%', height: 'auto' }}
-          />
+          {trustBandAsset ? (
+            <HomepageSlot
+              manifest={trustBandAsset}
+              slotId="homepage_trust_band"
+              wrapperStyle={s.trustVisualBand}
+              rendererStyle={{ width: '100%', height: 'auto', display: 'block' }}
+              className="cf-trust-visual"
+            />
+          ) : null}
         </Section>
 
         <Section id="contact" label="Contact" title="Get in touch">
@@ -292,6 +330,81 @@ export default function CorpFlowPublicHome(props) {
 
         <PublicSiteFooter extra="CorpFlowAI provides AI-assisted workflow setup and monitoring services for small businesses." />
       </main>
+
+      {/*
+        Subtle motion only. Per BRAND_AND_CONVERSION_DOCTRINE.md and the
+        delivery brief: slow gradients, soft fades, gentle hover, no
+        attention-seeking effects. Every animation is gated behind
+        `prefers-reduced-motion: no-preference` so users with motion
+        sensitivities see a fully static page.
+      */}
+      <style jsx global>{`
+        @media (prefers-reduced-motion: no-preference) {
+          .cf-hero-visual img,
+          .cf-hero-visual video {
+            transform: scale(1.0);
+            transform-origin: center;
+            transition: transform 1400ms cubic-bezier(0.22, 0.61, 0.36, 1);
+            animation: cfHeroSettle 1600ms ease-out both;
+          }
+          .cf-hero-visual:hover img,
+          .cf-hero-visual:hover video {
+            transform: scale(1.012);
+          }
+
+          @keyframes cfHeroSettle {
+            from {
+              opacity: 0;
+              transform: scale(1.02);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1.0);
+            }
+          }
+
+          .cf-services-visual,
+          .cf-trust-visual {
+            opacity: 0;
+            animation: cfFadeIn 900ms ease-out 200ms both;
+          }
+
+          @keyframes cfFadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(4px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .cf-service-card:hover {
+            border-color: rgba(125, 211, 252, 0.30);
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-1px);
+          }
+
+          .cf-cta-primary,
+          .cf-cta-secondary {
+            transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease;
+          }
+          .cf-cta-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px -10px rgba(45, 212, 191, 0.65);
+          }
+          .cf-cta-secondary:hover {
+            background: rgba(255, 255, 255, 0.14);
+          }
+        }
+
+        @media (max-width: 600px) {
+          .cf-hero-visual {
+            aspect-ratio: 4 / 3;
+          }
+        }
+      `}</style>
     </div>
   );
 }

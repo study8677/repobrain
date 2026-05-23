@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1200 300"
+  preserveAspectRatio="xMidYMid meet"
+  role="img"
+  aria-hidden="true"
+>
+  <title>CorpFlowAI services system flow</title>
+  <desc>Four-node geometric illustration of the CorpFlowAI service flow: capture, route, log, summarise.</desc>
+
+  <defs>
+    <linearGradient id="cf-services-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1f33"/>
+      <stop offset="100%" stop-color="#06111f"/>
+    </linearGradient>
+    <linearGradient id="cf-services-line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(190, 158, 105, 0.18)"/>
+      <stop offset="50%" stop-color="rgba(190, 158, 105, 0.44)"/>
+      <stop offset="100%" stop-color="rgba(190, 158, 105, 0.18)"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#cf-services-bg)"/>
+
+  <line x1="100" y1="150" x2="1100" y2="150" stroke="url(#cf-services-line)" stroke-width="1"/>
+
+  <g fill="none" stroke="rgba(125, 211, 252, 0.10)" stroke-width="0.6">
+    <line x1="180" y1="60" x2="180" y2="240"/>
+    <line x1="460" y1="60" x2="460" y2="240"/>
+    <line x1="740" y1="60" x2="740" y2="240"/>
+    <line x1="1020" y1="60" x2="1020" y2="240"/>
+  </g>
+
+  <g>
+    <circle cx="180" cy="150" r="36" fill="rgba(45, 212, 191, 0.06)" stroke="rgba(45, 212, 191, 0.45)" stroke-width="1.25"/>
+    <rect x="170" y="140" width="20" height="20" rx="3" fill="none" stroke="rgba(190, 158, 105, 0.85)" stroke-width="1.25"/>
+    <line x1="180" y1="150" x2="180" y2="150.001" stroke="rgba(238, 246, 255, 0.95)" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <circle cx="460" cy="150" r="36" fill="rgba(45, 212, 191, 0.06)" stroke="rgba(45, 212, 191, 0.45)" stroke-width="1.25"/>
+    <polyline points="450,144 460,154 470,144" fill="none" stroke="rgba(190, 158, 105, 0.85)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="450,150 460,160 470,150" fill="none" stroke="rgba(190, 158, 105, 0.55)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g>
+    <circle cx="740" cy="150" r="36" fill="rgba(45, 212, 191, 0.06)" stroke="rgba(45, 212, 191, 0.45)" stroke-width="1.25"/>
+    <line x1="728" y1="143" x2="752" y2="143" stroke="rgba(190, 158, 105, 0.85)" stroke-width="1.25" stroke-linecap="round"/>
+    <line x1="728" y1="150" x2="752" y2="150" stroke="rgba(190, 158, 105, 0.85)" stroke-width="1.25" stroke-linecap="round"/>
+    <line x1="728" y1="157" x2="746" y2="157" stroke="rgba(190, 158, 105, 0.55)" stroke-width="1.25" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <circle cx="1020" cy="150" r="36" fill="rgba(45, 212, 191, 0.06)" stroke="rgba(45, 212, 191, 0.45)" stroke-width="1.25"/>
+    <circle cx="1020" cy="150" r="14" fill="none" stroke="rgba(190, 158, 105, 0.85)" stroke-width="1.25"/>
+    <circle cx="1020" cy="150" r="3" fill="rgba(238, 246, 255, 0.95)"/>
+  </g>
+
+  <g fill="rgba(45, 212, 191, 0.55)">
+    <circle cx="320" cy="150" r="1.6"/>
+    <circle cx="600" cy="150" r="1.6"/>
+    <circle cx="880" cy="150" r="1.6"/>
+  </g>
+</svg>

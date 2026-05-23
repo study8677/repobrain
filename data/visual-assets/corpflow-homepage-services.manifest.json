@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "corpflow-homepage-services",
+  "surface": "core",
+  "kind": "illustration",
+  "title": "CorpFlowAI services system flow",
+  "description": "Geometric four-node 'system flow' illustration anchoring the Services section on the CorpFlowAI homepage. Represents the core service loop: capture → route → log → summarise. Hand-crafted SVG, deterministic, brand-aligned.",
+  "source": {
+    "type": "repo",
+    "path": "/assets/visuals/corpflow-homepage-services.svg",
+    "width": 1200,
+    "height": 300
+  },
+  "licence": {
+    "tier": "corpflow_owned",
+    "owner": "CorpFlowAI",
+    "terms": "Original CorpFlowAI mark. Free to reuse across CorpFlowAI surfaces; do not redistribute as stock or use in third-party marketing without written agreement."
+  },
+  "accessibility": {
+    "alt": "Four-node geometric flow illustration representing the CorpFlowAI service loop: capture, route, log, summarise.",
+    "lang": "en",
+    "decorative": false
+  },
+  "usage": {
+    "allowed_surfaces": ["core", "shared"],
+    "primary_cta": "View AI Lead Rescue",
+    "notes": "slot:homepage_services_graphic. Anchors the Services section above the four service cards. Pure SVG, ~1.6 KB on the wire."
+  },
+  "lifecycle": {
+    "state": "vetted",
+    "created_at": "2026-05-21",
+    "reviewed_at": "2026-05-21",
+    "review_due": "2027-05-21"
+  }
+}
