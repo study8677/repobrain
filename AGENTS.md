@@ -57,6 +57,13 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Topic | Doc |
 |--------|-----|
 | Priorities & checklist | `docs/CORPFLOW_SHARED_TODO.md` |
+| **Autonomous execution — work packet structure** | **`docs/execution/CORPFLOW_EXECUTION_PACKET_STANDARD.md`** |
+| **Autonomous execution — what may run without further approval, what must stop and ask** | **`docs/execution/CORPFLOW_AUTONOMOUS_ACTIONS_POLICY.md`** |
+| **Autonomous execution — current approved queue** | **`docs/execution/WEEKEND_EXECUTION_QUEUE.md`** |
+| **Autonomous execution — migrate recurring jobs off the laptop** | **`docs/execution/MIGRATION_TO_SERVER_CHECKLIST.md`** |
+| **Website quality scoring (per-tenant audit)** | **`docs/execution/WEBSITE_QUALITY_MEASUREMENT_FRAMEWORK.md`** |
+| **Analytics / Search Console / indexing per surface** | **`docs/execution/ANALYTICS_SEARCH_CONSOLE_INDEXING_CHECKLIST.md`** |
+| **Per-client migration audit (identity, login, marketing, off-laptop)** | **`docs/execution/CURRENT_CLIENT_MIGRATION_AUDIT_TEMPLATE.md`** |
 | Marketing / conversion doctrine | `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` |
 | Delivery reality (live prod = done) | `.cursor/rules/delivery-reality.mdc`, `.cursor/rules/predeploy-decision-checks.mdc` |
 | Production bar (reliable, secure, observable) | `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md` |
@@ -71,6 +78,21 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Env placeholders | `.env.template` |
 | ADR-lite decisions | `docs/decisions/README.md` |
 | Compliance starter | `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md` |
+
+## Autonomous execution framework (v1)
+
+CorpFlow operates a bounded autonomy model: Anton approves work **packets** once, and Cursor (or a contractor under the same rules) may execute approved work up to the next gate without further line-by-line approval. Treat the three docs above as canonical for any "should I do this without asking?" decision.
+
+- **Packet structure** (`docs/execution/CORPFLOW_EXECUTION_PACKET_STANDARD.md`): every approved packet has Goal, Definition of Done, Scope, Constraints, Risks, Allowed actions, Approval gates, Verification evidence, Rollback plan, Owner, and a Status block.
+- **What is allowed without further approval** (`docs/execution/CORPFLOW_AUTONOMOUS_ACTIONS_POLICY.md` §2): read-only inspection, docs updates, branch creation, tests/builds, Preview deploys, PR creation, evidence capture, non-production verification.
+- **What requires Anton's explicit approval** (same doc, §3): production deploy, secret changes, DNS, billing/payment, destructive DB changes, tenant migration, auth/security logic, client-facing email automation, or anything touching real client data beyond read-only verification.
+- **Current queue** (`docs/execution/WEEKEND_EXECUTION_QUEUE.md`): Goals 1–5 — Goal 1 *Stabilize permanent infrastructure*; Goal 2 *Apply audit findings + first off-laptop migration*; Goal 3 *Website quality scoring*; Goal 4 *Per-tenant migration audit (Lux first)*; Goal 5 *Analytics / Search Console / indexing plan*. All current packets are docs-only or read-only by design.
+- **Migration discipline** (`docs/execution/MIGRATION_TO_SERVER_CHECKLIST.md`): every packet that moves recurring work off Anton's laptop must satisfy the checklist (credential placement, parameterization, idempotency, retries, audit trail, schedule, rollback, doc updates).
+- **Quality scoring** (`docs/execution/WEBSITE_QUALITY_MEASUREMENT_FRAMEWORK.md`): five dimensions (conversion, performance, accessibility, SEO, trust) scored 0–20 each.
+- **Analytics / Search Console / indexing** (`docs/execution/ANALYTICS_SEARCH_CONSOLE_INDEXING_CHECKLIST.md`): per-surface checklist for analytics install, SC verification, sitemap, indexing requests, and `noindex` discipline on private surfaces.
+- **Per-tenant migration audit** (`docs/execution/CURRENT_CLIENT_MIGRATION_AUDIT_TEMPLATE.md`): identity/routing, login boundary, marketing surface, analytics, off-laptop posture — read-only, evidence-shape standardized.
+
+When in doubt, stop at the gate, post evidence, and ask. `delivery-reality.mdc` still applies: only **live verified** is `COMPLETE`.
 
 ## Build / test (app)
 
