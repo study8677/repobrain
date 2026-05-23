@@ -3,7 +3,10 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-import { AI_LEAD_RESCUE_STATUSES } from '../lib/cmp/_lib/ai-lead-rescue-operator.js';
+import {
+  AI_LEAD_RESCUE_CHECKLIST_ITEM_STATES,
+  AI_LEAD_RESCUE_STATUSES,
+} from '../lib/cmp/_lib/ai-lead-rescue-operator.js';
 
 const pageStyle = {
   minHeight: '100vh',
@@ -95,6 +98,9 @@ export default function AiLeadRescueAdminDetail() {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [invoiceRef, setInvoiceRef] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [checklistDrafts, setChecklistDrafts] = useState({});
+  const [checklistSaving, setChecklistSaving] = useState(null);
+  const [checklistError, setChecklistError] = useState('');
 
   const hydrateForm = useCallback((row) => {
     setStatus(row.operations?.status || 'NEW_INTAKE');
@@ -113,6 +119,12 @@ export default function AiLeadRescueAdminDetail() {
     setPaymentStatus(row.commercial?.payment_status || 'none');
     setInvoiceRef(row.commercial?.invoice_reference || '');
     setPaymentNotes(row.commercial?.payment_notes || '');
+    const items = Array.isArray(row.setup_checklist?.items) ? row.setup_checklist.items : [];
+    const drafts = {};
+    items.forEach((item) => {
+      drafts[item.key] = { state: item.state || 'pending', note: item.note || '' };
+    });
+    setChecklistDrafts(drafts);
   }, []);
 
   const load = useCallback(async () => {
@@ -138,6 +150,37 @@ export default function AiLeadRescueAdminDetail() {
   useEffect(() => {
     if (router.isReady) load();
   }, [router.isReady, load]);
+
+  async function saveChecklistItem(itemKey) {
+    if (!leadId) return;
+    const draft = checklistDrafts[itemKey];
+    if (!draft) return;
+    setChecklistSaving(itemKey);
+    setChecklistError('');
+    try {
+      const r = await fetch('/api/factory/lead-rescue/patch', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: leadId,
+          setup_checklist_item: {
+            key: itemKey,
+            state: draft.state || 'pending',
+            note: draft.note || null,
+          },
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'checklist_save_failed');
+      setLead(data.lead);
+      hydrateForm(data.lead);
+    } catch (err) {
+      setChecklistError(err instanceof Error ? err.message : 'Could not save checklist item.');
+    } finally {
+      setChecklistSaving(null);
+    }
+  }
 
   async function save(e) {
     e.preventDefault();
@@ -305,6 +348,131 @@ export default function AiLeadRescueAdminDetail() {
                 {saving ? 'Saving…' : 'Save changes'}
               </button>
             </form>
+
+            {lead.setup_checklist_eligible && Array.isArray(lead.setup_checklist?.items) ? (
+              <section style={{ ...card, marginTop: 24 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                  }}
+                >
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Setup checklist</h2>
+                  <span style={{ fontSize: 12, color: '#8899aa' }}>
+                    {lead.setup_checklist.completed_count}/{lead.setup_checklist.total_count} complete
+                    {lead.setup_checklist.all_done ? ' · pilot setup ready' : ''}
+                  </span>
+                </div>
+                <p style={{ color: '#8899aa', fontSize: 12, marginTop: 6, marginBottom: 16, lineHeight: 1.5 }}>
+                  Available once status reaches <code style={{ color: '#7dd3fc' }}>PAID_SETUP</code>. Each item saves
+                  independently. Use <strong>skipped</strong> only when the item does not apply to this client.
+                </p>
+                {checklistError ? (
+                  <p style={{ color: '#fca5a5', fontSize: 12, marginBottom: 12 }}>{checklistError}</p>
+                ) : null}
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
+                  {lead.setup_checklist.items.map((item) => {
+                    const draft = checklistDrafts[item.key] || { state: item.state, note: item.note || '' };
+                    const dirty =
+                      draft.state !== item.state || (draft.note || '') !== (item.note || '');
+                    const itemSaving = checklistSaving === item.key;
+                    const isDone = item.state === 'done' || item.state === 'skipped';
+                    return (
+                      <li
+                        key={item.key}
+                        style={{
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 10,
+                          padding: 14,
+                          background: isDone ? 'rgba(45,212,191,0.05)' : 'rgba(255,255,255,0.02)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: 12,
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.4 }}>{item.label}</div>
+                            {item.hint ? (
+                              <div style={{ fontSize: 12, color: '#8899aa', marginTop: 4, lineHeight: 1.5 }}>
+                                {item.hint}
+                              </div>
+                            ) : null}
+                            {item.completed_at ? (
+                              <div style={{ fontSize: 11, color: '#6ee7b7', marginTop: 6 }}>
+                                {item.state === 'skipped' ? 'Skipped' : 'Completed'} {fmtDate(item.completed_at)}
+                                {item.actor_label ? ` · ${item.actor_label}` : ''}
+                              </div>
+                            ) : item.updated_at ? (
+                              <div style={{ fontSize: 11, color: '#8899aa', marginTop: 6 }}>
+                                Updated {fmtDate(item.updated_at)}
+                                {item.actor_label ? ` · ${item.actor_label}` : ''}
+                              </div>
+                            ) : null}
+                          </div>
+                          <div style={{ display: 'grid', gap: 6, minWidth: 180 }}>
+                            <select
+                              style={input}
+                              value={draft.state}
+                              onChange={(e) =>
+                                setChecklistDrafts((prev) => ({
+                                  ...prev,
+                                  [item.key]: { ...draft, state: e.target.value },
+                                }))
+                              }
+                            >
+                              {AI_LEAD_RESCUE_CHECKLIST_ITEM_STATES.map((s) => (
+                                <option key={s} value={s}>
+                                  {s.replace(/_/g, ' ')}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => saveChecklistItem(item.key)}
+                              disabled={!dirty || itemSaving}
+                              style={{
+                                ...btn,
+                                padding: '8px 12px',
+                                fontSize: 12,
+                                opacity: !dirty || itemSaving ? 0.55 : 1,
+                                background: dirty ? '#2dd4bf' : 'rgba(255,255,255,0.08)',
+                                color: dirty ? '#031018' : '#9fb2c8',
+                                cursor: !dirty || itemSaving ? 'default' : 'pointer',
+                              }}
+                            >
+                              {itemSaving ? 'Saving…' : 'Save'}
+                            </button>
+                          </div>
+                        </div>
+                        <label style={{ display: 'grid', gap: 4, marginTop: 12 }}>
+                          <span style={{ ...labelStyle, marginBottom: 0 }}>Note (optional)</span>
+                          <textarea
+                            style={{ ...input, minHeight: 56, fontSize: 13 }}
+                            value={draft.note || ''}
+                            placeholder="What was done, links, follow-up needed…"
+                            onChange={(e) =>
+                              setChecklistDrafts((prev) => ({
+                                ...prev,
+                                [item.key]: { ...draft, note: e.target.value },
+                              }))
+                            }
+                          />
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ) : null}
           </>
         )}
       </main>

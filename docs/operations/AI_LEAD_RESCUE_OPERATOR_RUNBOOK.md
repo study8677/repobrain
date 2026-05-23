@@ -1,0 +1,198 @@
+# AI Lead Rescue — Operator Runbook
+
+Canonical runbook for CorpFlowAI operators handling **AI Lead Rescue** prospects and clients end-to-end without an external CRM. Pairs with `lib/cmp/_lib/ai-lead-rescue-operator.js` (logic + status model), the factory admin pages under `/admin/lead-rescue`, and the n8n forward recipe at `docs/n8n/automation-forward-recipe.md`.
+
+## Purpose
+
+AI Lead Rescue is a productised CorpFlowAI offer: connect a small business's existing lead source to a Google Sheet + Telegram alert + light follow-up board, then monitor for 7 days. This runbook is the **single source of truth** for how an operator works a lead from intake to monthly monitoring.
+
+It is **not**:
+
+- a full CRM,
+- a client portal,
+- a payment processor.
+
+It is an operator cockpit on top of one Postgres database (`POSTGRES_URL`) and one production Next.js app.
+
+## Access requirements — factory admin only
+
+All `/admin/lead-rescue*` pages and `/api/factory/lead-rescue/*` endpoints are gated by `verifyFactoryMasterAuth` and `requireAdminPageSession`. Operators access via:
+
+- **Browser:** factory admin login (the same login that grants the `/change` factory console). The admin page gate redirects unauthenticated visitors to `/login?next=/admin/lead-rescue`.
+- **API (curl / scripts):** `MASTER_ADMIN_KEY` header — the existing factory master pattern. Do not introduce new secrets.
+
+If you do not have factory admin access, you should not be working an AI Lead Rescue lead — escalate to the factory owner.
+
+## Status pipeline (canonical)
+
+Operators only ever move a lead between these states on the detail page:
+
+```
+NEW_INTAKE → QUALIFYING → DEMO_OFFERED → DEMO_BOOKED → QUOTE_SENT
+            → PAYMENT_PENDING → PAID_SETUP → SETUP_IN_PROGRESS → LIVE_PILOT
+            → MONITORING_OFFERED → MONTHLY_ACTIVE
+LOST and PAUSED are terminal/holding states reachable from any prior step.
+```
+
+The setup checklist card on the detail page is only visible from `PAID_SETUP` onwards (5 statuses: `PAID_SETUP`, `SETUP_IN_PROGRESS`, `LIVE_PILOT`, `MONITORING_OFFERED`, `MONTHLY_ACTIVE`). Before payment, the card is hidden and the API returns `CHECKLIST_NOT_ELIGIBLE` on any attempt to patch it.
+
+## How to review new intakes
+
+1. Go to **`/admin/lead-rescue`**.
+2. Sort by *Submitted date* (newest first) or filter `status = NEW_INTAKE`.
+3. Open the lead row → `/admin/lead-rescue/[id]`.
+4. Read the **Prospect** card:
+   - Business name, contact name, email, phone / WhatsApp
+   - Region (Mauritius / International / not selected)
+   - Business type / niche (if provided)
+   - Lead sources the prospect already has
+   - Intake message (full text submitted via `/lead-rescue`)
+   - Source page / host
+5. If a lead is obviously spam or out of scope, move it directly to `LOST` with a note (e.g. "Spam form submission").
+6. Otherwise, the SLA is **reply within 2 business hours** of intake (this is the line included in every notification).
+
+## How to qualify a prospect
+
+Move the status to **`QUALIFYING`** as soon as you take ownership.
+
+Inside the **Status & operations** form on the detail page:
+
+- **Status** — `QUALIFYING` (or further).
+- **Next action** — short, action-oriented (e.g. "Call to confirm region + lead source").
+- **Owner / operator** — your name or email. One operator at a time.
+- **Last contacted** — set whenever you reach out (call, email, WhatsApp).
+- **Notes** — free-form qualification notes (region clarified, current lead source, niche, budget signals).
+
+Use the predefined statuses to track progress:
+
+- `DEMO_OFFERED` — you offered a demo / discovery call.
+- `DEMO_BOOKED` — they accepted and a slot is on the calendar.
+- `QUOTE_SENT` — written quote with setup price + monthly monitoring price has been delivered.
+- `PAYMENT_PENDING` — quote accepted, awaiting payment.
+- `PAID_SETUP` — payment confirmed; the setup checklist appears below.
+
+If the prospect goes cold or declines, move to `LOST` (lost the deal) or `PAUSED` (revisit later). Always record why in *Notes*.
+
+## How to update commercial / payment tracking fields
+
+The **Commercial** card on the detail page records what was quoted and what was paid. These are **tracking fields only** — CorpFlowAI never processes a card or bank transfer inside this system.
+
+Operator-editable fields:
+
+- **Setup price** — numeric.
+- **Monthly monitoring price** — numeric.
+- **Currency** — short code, e.g. `MUR`, `USD`, `EUR`.
+- **Payment route** — free-text label of how the client paid you (e.g. "Bank transfer to MCB", "Wise EUR account", "Stripe link via concierge").
+- **Payment status** — short label (e.g. `none`, `quoted`, `pending`, `paid`, `refunded`).
+- **Invoice / reference** — invoice number or external reference (FreshBooks, Stripe payment intent ID, etc.). **The ID only — never the card or bank credentials.**
+- **Payment notes** — context (e.g. "Invoice issued via FreshBooks; client confirmed transfer scheduled 2025-05-22").
+
+### Payment tracking only — no payment processing
+
+This system **does not** and **must not**:
+
+- store card numbers, CVV, expiry, billing addresses linked to a card,
+- store full bank account numbers (IBAN, SWIFT, routing + account) of clients or operators,
+- store payment processor credentials, API keys, or login passwords,
+- attempt to charge a card or pull funds from a bank.
+
+All real money movement happens **outside** this app, through whatever provider you and the client already use (bank transfer, Wise, FreshBooks, Stripe link, cash on delivery, etc.). The Commercial card is a **ledger note**, not a payment terminal.
+
+## How the internal notification event works
+
+When a new `/lead-rescue` form submission arrives and `meta.product === 'ai-lead-rescue'`, the public intake handler (`lib/server/tenant-intake.js`) emits **two** automation events into Postgres:
+
+1. The generic `tenant.lead.captured` event (existing pattern).
+2. The AI-Lead-Rescue-specific event:
+   - **`event_type`**: `corpflow.lead_rescue.intake_received`
+   - **idempotency key**: `lead-rescue:intake:<lead_id>` (so retries never double-notify)
+   - **source**: `tenant_intake`
+   - **payload** includes:
+     - `lead_id`, `tenant_id`, `submitted_at`
+     - `prospect.*` (business, contact, email, phone, region path, lead sources, preferred payment path)
+     - `admin_detail_url` — absolute URL to `/admin/lead-rescue/<lead_id>` (resolved from `CORPFLOW_PUBLIC_BASE_URL` when set; otherwise the request host; otherwise relative path)
+     - `notification_text` — pre-formatted, multi-line text block ready to forward verbatim to a human channel
+
+If `CORPFLOW_AUTOMATION_FORWARD_URL` is configured, the row is also forwarded to n8n via the standard envelope.
+
+### n8n branch — `corpflow.lead_rescue.intake_received`
+
+See `docs/n8n/automation-forward-recipe.md` § 1. The recipe instructs:
+
+- IF node on `body.event_type === 'corpflow.lead_rescue.intake_received'`
+- Pipe `body.payload.notification_text` directly into Telegram / email / Slack (no further templating required)
+- Use `body.payload.admin_detail_url` as the link target in the alert
+- Honour the idempotency key `lead-rescue:intake:<lead_id>` if your downstream supports it (so retried forwards do not double-alert)
+- Structured fields under `body.payload.prospect.*` are also available for a spreadsheet / CRM mirror row if you want one
+
+The SLA inside `notification_text` is **"Review and reply within 2 business hours."** — keep this consistent with the runbook.
+
+## How to use the setup checklist
+
+The **Setup checklist** card appears on `/admin/lead-rescue/[id]` once the lead status is one of `PAID_SETUP`, `SETUP_IN_PROGRESS`, `LIVE_PILOT`, `MONITORING_OFFERED`, `MONTHLY_ACTIVE`.
+
+Each row has:
+
+- a state — `pending`, `in_progress`, `done`, or `skipped`,
+- an optional note (what was done, links, follow-up needed),
+- inline completion metadata: timestamp + actor label.
+
+Each row saves independently via the existing factory PATCH route — there is no separate "save all". Use `skipped` only when the item does not apply to this client (e.g. they already have a sheet you are reusing). The header reads **`X/13 complete`**; `done` and `skipped` both count as resolved.
+
+### 13-item setup checklist (v1, canonical order)
+
+| # | Item | Item key | What "done" means |
+|---|------|----------|--------------------|
+| 1 | Intake reviewed | `intake_reviewed` | Intake message read; business, contact, region, and lead sources verified. |
+| 2 | Payment / invoice confirmed | `payment_invoice_confirmed` | Setup payment received; invoice reference recorded in Commercial card. |
+| 3 | Lead source selected | `lead_source_selected` | One source picked (form / email / WhatsApp / Google Form) — the one the client already uses. |
+| 4 | Google Sheet created | `google_sheet_created` | Lead log sheet created with columns: date, name, contact, source, status; shared with client. |
+| 5 | Telegram destination confirmed | `telegram_destination_confirmed` | Operator / owner Telegram channel confirmed as the alert destination. |
+| 6 | Test lead submitted | `test_lead_submitted` | A real-looking enquiry submitted end-to-end. |
+| 7 | Alert received | `alert_received` | The test enquiry triggered the configured Telegram / owner alert. |
+| 8 | Lead appears in sheet | `lead_appears_in_sheet` | The test enquiry landed in the Google Sheet with every expected column. |
+| 9 | Follow-up status board created | `follow_up_board_created` | New / Replied / Booked / Won / Lost board for the owner. |
+| 10 | Daily summary configured | `daily_summary_configured` | Channel (email / WhatsApp), time zone, and recipient confirmed. |
+| 11 | Client hand-over message sent | `client_handover_sent` | Plain-language note: what was set up, what to expect, who to contact. |
+| 12 | 7-day monitoring started | `monitoring_7_day_started` | CorpFlow watches alerts + sheet daily for the pilot window. |
+| 13 | Monthly monitoring offered | `monthly_monitoring_offered` | Offer made for the post-pilot monthly monitoring tier. |
+
+The canonical order is locked in by an assertion in `node-tests/ai-lead-rescue-operator.test.mjs`. If you need to add or rename an item, update the v1 list in `lib/cmp/_lib/ai-lead-rescue-operator.js`, update the test, update this table, and bump the checklist `version` if the change is breaking.
+
+## What not to store
+
+The notes, payment-notes, and intake-message fields are jsonb / free-text and are **operator-visible**. Treat them as you would any internal CRM note, and **never** paste any of the following into any field:
+
+- **No card details** — PAN, CVV, expiry, cardholder name + last 4, magstripe/track data.
+- **No bank credentials** — full account + routing/IBAN/SWIFT pairs of the client or the operator, online banking passwords, OTPs.
+- **No passwords** — Google Workspace, Telegram, FreshBooks, Stripe, hosting, anything. Use the client's own password manager + sharing, never our database.
+- **No private medical / clinical / health details** — even if the prospect is in a medical niche, keep notes about the *business* (size, niche, lead source), not about identifiable patients.
+
+If a client sends one of these by mistake (e.g. pastes a card into a WhatsApp screenshot), **redact before recording** and tell them to use a payment provider directly.
+
+## Live verification checklist (do before calling any change COMPLETE)
+
+CI green and a merged PR are not proof of delivery. Before marking any AI Lead Rescue change `COMPLETE`, walk through:
+
+1. **Vercel Production deployment is Ready** for the merged commit. Record the deployment ID + commit SHA.
+2. **Factory admin login works** on production — you can reach `/admin/lead-rescue`.
+3. **List page** loads with the AI Lead Rescue intakes, filters, and search — no 5xx.
+4. **Detail page** loads for an existing lead — no 5xx; Prospect / Commercial / Status & operations cards all render.
+5. **Notification event fires exactly once** on a real (or test) `/lead-rescue` submission (check Postgres `automation_events` or n8n receipt; the idempotency key prevents duplicates).
+6. **n8n forwards `payload.notification_text`** to the configured operator Telegram / email channel.
+7. **Setup checklist** card appears for a `PAID_SETUP` (or later) lead and shows **all 13 items**; toggling one row saves and survives a page reload.
+8. **Eligibility gate** holds — the card stays hidden for `QUALIFYING` / `PAYMENT_PENDING` etc., and the PATCH endpoint returns `CHECKLIST_NOT_ELIGIBLE` for those statuses.
+
+If any of these fails on production, the change is **FAILED**, not COMPLETE — see `.cursor/rules/delivery-reality.mdc`.
+
+## Delivery Reality — local / preview is not complete
+
+Reminder from `.cursor/rules/delivery-reality.mdc` and `.cursor/rules/predeploy-decision-checks.mdc`:
+
+- **Local tests passing** is necessary but **not sufficient**.
+- **CI green** is necessary but **not sufficient**.
+- **Merge to `main`** is necessary but **not sufficient**.
+- **Vercel Preview** healthy is **not** the same as **Vercel Production** healthy.
+- A change is only **COMPLETE** when the Vercel Production deployment is Ready, the deployed commit contains the change, and the customer-visible flow (here: operator factory flow) has been verified live.
+
+For AI Lead Rescue specifically, no claim of `COMPLETE` is valid unless the live verification checklist above passes against the **Production** deployment, not a preview.
