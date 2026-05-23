@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 220" role="img" aria-label="Five-stage CorpFlowAI engagement timeline: intake review, pilot scope, 48-hour setup, 7-day pilot monitoring, pilot review meeting." preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="cf-track" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7dd3fc" stop-opacity="0.35"/>
+      <stop offset="0.5" stop-color="#7dd3fc" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0.40"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1080" height="220" fill="none"/>
+
+  <line x1="80" y1="80" x2="1000" y2="80" stroke="url(#cf-track)" stroke-width="1.5"/>
+
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <g transform="translate(80,80)">
+      <circle cx="0" cy="0" r="22" fill="rgba(125,211,252,0.10)" stroke="rgba(125,211,252,0.55)" stroke-width="1.4"/>
+      <text x="0" y="5" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="600">1</text>
+      <text x="0" y="58" text-anchor="middle" fill="#eef6ff" font-size="13" font-weight="600">Intake review</text>
+      <text x="0" y="78" text-anchor="middle" fill="#9fb2c8" font-size="11">1 business day</text>
+    </g>
+    <g transform="translate(310,80)">
+      <circle cx="0" cy="0" r="22" fill="rgba(125,211,252,0.10)" stroke="rgba(125,211,252,0.55)" stroke-width="1.4"/>
+      <text x="0" y="5" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="600">2</text>
+      <text x="0" y="58" text-anchor="middle" fill="#eef6ff" font-size="13" font-weight="600">Pilot scope</text>
+      <text x="0" y="78" text-anchor="middle" fill="#9fb2c8" font-size="11">half to 1 day</text>
+    </g>
+    <g transform="translate(540,80)">
+      <circle cx="0" cy="0" r="22" fill="rgba(125,211,252,0.10)" stroke="rgba(125,211,252,0.55)" stroke-width="1.4"/>
+      <text x="0" y="5" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="600">3</text>
+      <text x="0" y="58" text-anchor="middle" fill="#eef6ff" font-size="13" font-weight="600">48-hour setup</text>
+      <text x="0" y="78" text-anchor="middle" fill="#9fb2c8" font-size="11">2 days</text>
+    </g>
+    <g transform="translate(770,80)">
+      <circle cx="0" cy="0" r="22" fill="rgba(125,211,252,0.10)" stroke="rgba(125,211,252,0.55)" stroke-width="1.4"/>
+      <text x="0" y="5" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="600">4</text>
+      <text x="0" y="58" text-anchor="middle" fill="#eef6ff" font-size="13" font-weight="600">Pilot monitoring</text>
+      <text x="0" y="78" text-anchor="middle" fill="#9fb2c8" font-size="11">7 days, operator-watched</text>
+    </g>
+    <g transform="translate(1000,80)">
+      <circle cx="0" cy="0" r="22" fill="rgba(45,212,191,0.12)" stroke="rgba(45,212,191,0.65)" stroke-width="1.4"/>
+      <text x="0" y="5" text-anchor="middle" fill="#5eead4" font-size="14" font-weight="600">5</text>
+      <text x="0" y="58" text-anchor="middle" fill="#eef6ff" font-size="13" font-weight="600">Pilot review</text>
+      <text x="0" y="78" text-anchor="middle" fill="#9fb2c8" font-size="11">continue or close</text>
+    </g>
+  </g>
+
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#7dd3fc" letter-spacing="0.18em">
+    <text x="80" y="32" text-anchor="middle">START</text>
+    <text x="1000" y="32" text-anchor="middle">DECISION</text>
+  </g>
+</svg>

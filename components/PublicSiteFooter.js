@@ -12,6 +12,22 @@ export default function PublicSiteFooter({ extra }) {
           AI Lead Rescue
         </Link>
         {' · '}
+        <Link href="/about" style={linkStyle}>
+          About
+        </Link>
+        {' · '}
+        <Link href="/process" style={linkStyle}>
+          Process
+        </Link>
+        {' · '}
+        <Link href="/standards" style={linkStyle}>
+          Standards
+        </Link>
+        {' · '}
+        <Link href="/onboarding" style={linkStyle}>
+          Onboarding
+        </Link>
+        {' · '}
         <Link href="/contact" style={linkStyle}>
           Contact
         </Link>

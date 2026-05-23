@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "corpflow-process-timeline",
+  "surface": "core",
+  "kind": "illustration",
+  "title": "CorpFlowAI engagement process timeline",
+  "description": "Hand-crafted SVG diagram of the five-stage CorpFlowAI engagement process: intake review, pilot scope, 48-hour setup, seven-day pilot monitoring, and pilot review meeting. Used at the top of the public Process page (https://corpflowai.com/process). Restrained brushed-brass and pale-cyan markers on a transparent background so it sits cleanly on the dark navy page canvas.",
+  "source": {
+    "type": "repo",
+    "path": "/assets/visuals/corpflow-process-timeline.svg",
+    "content_hash": "sha256:eefed2e975901566e6acac12a75af4c230897007b9bd7652f4326cc54b08d860"
+  },
+  "licence": {
+    "tier": "corpflow_owned",
+    "owner": "CorpFlowAI",
+    "terms": "Original CorpFlowAI mark. Free to reuse across CorpFlowAI surfaces; do not redistribute as stock."
+  },
+  "accessibility": {
+    "alt": "Five-stage CorpFlowAI engagement timeline: intake review (1 business day), pilot scope, 48-hour setup, 7-day operator-watched pilot monitoring, and pilot review meeting where the owner and operator decide together to continue or close.",
+    "lang": "en",
+    "decorative": false
+  },
+  "usage": {
+    "allowed_surfaces": ["core", "shared"],
+    "primary_cta": "See how a CorpFlowAI engagement runs",
+    "notes": "slot:trust_process_timeline. Used on the institutional /process page; safe to reuse on /onboarding and shared surfaces. Keep on a dark canvas (#06111f - #101827)."
+  },
+  "lifecycle": {
+    "state": "vetted",
+    "created_at": "2026-05-21",
+    "reviewed_at": "2026-05-21",
+    "review_due": "2026-11-21"
+  }
+}
