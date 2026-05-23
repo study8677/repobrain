@@ -12,6 +12,8 @@ import { collectPublishedLuxCardMediaByPropertyRefs } from '../lib/server/lux-pu
 import { defaultPublicSite, mergeSiteDraft } from '../lib/server/tenant-site-public.js';
 import { verifyTenantPreviewToken } from '../lib/server/tenant-preview-token.js';
 import { isGhostHost } from '../lib/server/ghost-host.js';
+import { listVisualAssetManifests } from '../lib/visualAssets/loadManifest.js';
+import { selectHomepageAssets } from '../lib/visualAssets/selectHomepageAssets.js';
 
 /**
  * Minimal tenant marketing site renderer (v1).
@@ -365,7 +367,7 @@ function TenantSite({ site }) {
 
 const AI_LEAD_RESCUE_HOST = 'aileadrescue.corpflowai.com';
 
-export default function Home({ mode, site, host }) {
+export default function Home({ mode, site, host, homepageAssets }) {
   if (mode === 'ai_lead_rescue') {
     return <AiLeadRescueLanding host={host || AI_LEAD_RESCUE_HOST} />;
   }
@@ -376,9 +378,35 @@ export default function Home({ mode, site, host }) {
     return <TenantSite site={site} />;
   }
   if (mode === 'corpflow_marketing') {
-    return <CorpFlowPublicHome />;
+    return <CorpFlowPublicHome homepageAssets={homepageAssets || null} />;
   }
-  return <CorpFlowPublicHome />;
+  return <CorpFlowPublicHome homepageAssets={homepageAssets || null} />;
+}
+
+/**
+ * Build the homepage asset selection at SSR time. Centralised so we
+ * can swallow filesystem / validation failures without breaking the
+ * customer-facing route — per `.cursor/rules/delivery-reality.mdc`,
+ * a content-only failure must never take down `/`.
+ */
+function buildHomepageAssetsSafe() {
+  try {
+    const pool = listVisualAssetManifests('core').concat(listVisualAssetManifests('shared'));
+    const seen = new Set();
+    const deduped = [];
+    for (const m of pool) {
+      if (!m || typeof m.id !== 'string') continue;
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      deduped.push(m);
+    }
+    return selectHomepageAssets(deduped);
+  } catch (err) {
+    try {
+      console.warn('[corpflow-marketing] homepage asset selection failed; rendering without manifests', err && err.message ? err.message : err);
+    } catch {}
+    return null;
+  }
 }
 
 export async function getServerSideProps({ req }) {
@@ -392,7 +420,7 @@ export async function getServerSideProps({ req }) {
   const prisma = new PrismaClient();
   try {
     if (!host) {
-      return { props: { mode: 'corpflow_marketing', site: null } };
+      return { props: { mode: 'corpflow_marketing', site: null, homepageAssets: buildHomepageAssetsSafe() } };
     }
 
     const root = String(process.env.CORPFLOW_ROOT_DOMAIN || 'corpflowai.com')
@@ -400,7 +428,7 @@ export async function getServerSideProps({ req }) {
       .replace(/^\./, '')
       .trim();
     if (host === root || host === `www.${root}`) {
-      return { props: { mode: 'corpflow_marketing', site: null } };
+      return { props: { mode: 'corpflow_marketing', site: null, homepageAssets: buildHomepageAssetsSafe() } };
     }
 
     // Resolve tenant by DB host mapping first; fallback to null.
@@ -423,7 +451,7 @@ export async function getServerSideProps({ req }) {
       }
     }
     if (!tenantId) {
-      return { props: { mode: 'corpflow_marketing', site: null } };
+      return { props: { mode: 'corpflow_marketing', site: null, homepageAssets: buildHomepageAssetsSafe() } };
     }
 
     const [persona, tenantRow] = await Promise.all([
@@ -532,7 +560,7 @@ export async function getServerSideProps({ req }) {
 
     return { props: { mode: 'tenant_site', site } };
   } catch (_) {
-    return { props: { mode: 'corpflow_marketing', site: null } };
+    return { props: { mode: 'corpflow_marketing', site: null, homepageAssets: buildHomepageAssetsSafe() } };
   } finally {
     await prisma.$disconnect().catch(() => {});
   }

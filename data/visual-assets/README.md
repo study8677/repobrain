@@ -36,4 +36,17 @@ Today every page hard-codes its own `<img src>` and `alt` strings. As we add CMS
 | `lead-rescue-card.example.manifest.json` | `lead-rescue` | social_card | AI-generated social card with full prompt provenance |
 | `core-promise-icon.example.manifest.json` | `core` | icon | CDN-hosted SVG icon shared across surfaces |
 
-These are **scaffolding examples**. They do not yet drive any rendered page; runtime consumers will be wired in a later PR.
+These are **scaffolding examples**.
+
+## Runtime consumers
+
+The CorpFlowAI public homepage (`https://corpflowai.com/`) is the **first runtime consumer** of this directory. It loads manifests at SSR time via `lib/visualAssets/loadManifest.js` and selects them into homepage slots through `lib/visualAssets/selectHomepageAssets.js`. See:
+
+- `lib/visualAssets/loadManifest.js` — safe filesystem reader that validates manifests with `validateVisualAssetManifest()` (throws clearly in development, logs and skips in production so a content failure cannot take down a customer-facing route).
+- `lib/visualAssets/selectHomepageAssets.js` — pure mapping from manifests to the four homepage slots (`homepage_hero`, `homepage_services_graphic`, `homepage_trust_band`, `homepage_social_card`).
+- `components/VisualAssetRenderer.js` — accessibility-safe renderer (image / illustration / icon / video / lottie / social_card).
+- `components/AssetProvenanceDisclosure.js` — subtle expandable disclosure rendered only for AI-generated assets.
+
+To target a specific homepage slot from a manifest, either name the manifest with one of the `preferredIds` listed in `selectHomepageAssets.js` (e.g. `corpflow-homepage-hero.manifest.json`) or include a `slot:<slot_id>` token in `usage.notes`.
+
+Other surfaces (Lux, Lead Rescue, Concierge, Properties, France, Change, Core) will be wired similarly in subsequent PRs.

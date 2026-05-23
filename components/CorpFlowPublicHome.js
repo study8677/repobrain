@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 
 import PublicSiteFooter from './PublicSiteFooter.js';
+import VisualAssetRenderer, { isAiGeneratedManifest } from './VisualAssetRenderer.js';
+import AssetProvenanceDisclosure from './AssetProvenanceDisclosure.js';
 
 const s = {
   page: {
@@ -28,6 +30,30 @@ const s = {
   primary: { background: '#2dd4bf', color: '#031018', border: 0 },
   secondary: { background: 'rgba(255,255,255,0.09)', color: '#eef6ff', border: '1px solid rgba(255,255,255,0.15)' },
   list: { margin: '12px 0 0', paddingLeft: 18, color: '#d6e4f2', lineHeight: 1.75 },
+  heroVisualWrap: {
+    marginTop: 28,
+    borderRadius: 22,
+    border: '1px solid rgba(255,255,255,0.13)',
+    background: 'rgba(255,255,255,0.04)',
+    padding: 14,
+    overflow: 'hidden',
+  },
+  servicesVisualWrap: {
+    margin: '12px 0 18px',
+    display: 'flex',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: 12,
+  },
+  trustBandWrap: {
+    marginTop: 16,
+    borderRadius: 18,
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.04)',
+    padding: 12,
+    display: 'flex',
+    justifyContent: 'center',
+  },
 };
 
 function Section({ id, label, title, children }) {
@@ -40,7 +66,53 @@ function Section({ id, label, title, children }) {
   );
 }
 
-export default function CorpFlowPublicHome() {
+/**
+ * Render a single homepage slot from a governed manifest.
+ *
+ * Rules:
+ * - If `manifest` is null/undefined, returns `null` (slot is empty;
+ *   layout collapses gracefully).
+ * - If the manifest is AI-generated, an `AssetProvenanceDisclosure`
+ *   is rendered just below the asset; otherwise no disclosure.
+ * - Above-fold slots (hero) opt into eager loading via `eager`.
+ *
+ * `wrapperStyle` lets each slot integrate visually with its
+ * surrounding section without leaking layout details into the
+ * renderer itself.
+ */
+function HomepageSlot({ manifest, slotId, eager = false, wrapperStyle, rendererStyle }) {
+  if (!manifest) return null;
+  return (
+    <div data-slot-id={slotId} style={wrapperStyle}>
+      <VisualAssetRenderer manifest={manifest} eager={eager} style={rendererStyle} />
+      {isAiGeneratedManifest(manifest) ? <AssetProvenanceDisclosure manifest={manifest} /> : null}
+    </div>
+  );
+}
+
+/**
+ * @typedef {import('../lib/visualAssets/selectHomepageAssets.js').HomepageAssetSelection} HomepageAssetSelection
+ */
+
+/**
+ * @param {{ homepageAssets?: HomepageAssetSelection | null }} props
+ */
+export default function CorpFlowPublicHome(props) {
+  const homepageAssets = (props && typeof props.homepageAssets === 'object' && props.homepageAssets) || null;
+  const heroAsset = homepageAssets?.homepage_hero || null;
+  const servicesGraphicAsset = homepageAssets?.homepage_services_graphic || null;
+  const trustBandAsset = homepageAssets?.homepage_trust_band || null;
+  const socialCardAsset = homepageAssets?.homepage_social_card || null;
+
+  const socialCardUrl = (() => {
+    if (!socialCardAsset) return null;
+    const src = socialCardAsset.source;
+    if (!src || typeof src !== 'object') return null;
+    if (typeof src.url === 'string' && /^https:\/\//.test(src.url)) return src.url;
+    return null;
+  })();
+  const socialCardAlt = socialCardAsset?.accessibility?.alt || '';
+
   return (
     <div style={s.page}>
       <Head>
@@ -49,6 +121,12 @@ export default function CorpFlowPublicHome() {
           name="description"
           content="CorpFlowAI helps small businesses capture enquiries, route work, alert owners, log follow-ups, and keep daily operations visible."
         />
+        {socialCardUrl ? <meta property="og:image" content={socialCardUrl} /> : null}
+        {socialCardUrl ? <meta name="twitter:image" content={socialCardUrl} /> : null}
+        {socialCardUrl && socialCardAlt ? <meta property="og:image:alt" content={socialCardAlt} /> : null}
+        {socialCardUrl ? (
+          <meta name="twitter:card" content="summary_large_image" />
+        ) : null}
       </Head>
       <main style={s.shell}>
         <nav style={s.nav}>
@@ -76,6 +154,13 @@ export default function CorpFlowPublicHome() {
               See services
             </a>
           </div>
+          <HomepageSlot
+            manifest={heroAsset}
+            slotId="homepage_hero"
+            eager
+            wrapperStyle={s.heroVisualWrap}
+            rendererStyle={{ width: '100%', maxWidth: '100%', height: 'auto', borderRadius: 14 }}
+          />
         </header>
 
         <Section label="What we do" title="Make work visible so it gets followed up.">
@@ -94,6 +179,12 @@ export default function CorpFlowPublicHome() {
         </Section>
 
         <Section id="services" label="Services" title="Productized setup and monitoring.">
+          <HomepageSlot
+            manifest={servicesGraphicAsset}
+            slotId="homepage_services_graphic"
+            wrapperStyle={s.servicesVisualWrap}
+            rendererStyle={{ maxWidth: 64, height: 'auto' }}
+          />
           <div style={s.grid}>
             <div style={s.card}>
               <h3>AI Lead Rescue</h3>
@@ -177,6 +268,12 @@ export default function CorpFlowPublicHome() {
             <li>We do not replace your website, CRM, WhatsApp, or sales process.</li>
             <li>We start with lightweight pilots before larger systems.</li>
           </ul>
+          <HomepageSlot
+            manifest={trustBandAsset}
+            slotId="homepage_trust_band"
+            wrapperStyle={s.trustBandWrap}
+            rendererStyle={{ maxWidth: '100%', height: 'auto' }}
+          />
         </Section>
 
         <Section id="contact" label="Contact" title="Get in touch">
@@ -198,4 +295,3 @@ export default function CorpFlowPublicHome() {
     </div>
   );
 }
-
