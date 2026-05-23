@@ -24,7 +24,7 @@ Review quarterly or before signing a DPA. Replace placeholders with your actual 
 | Vendor | Role | Data touched | Region / notes |
 |--------|------|--------------|----------------|
 | Vercel | Hosting / edge | HTTP logs, env secrets runtime | Per Vercel account settings |
-| Neon / Postgres provider | Database | All application data | Set per your project |
+| **Neon** (`*.neon.tech`) | **Postgres database** (sole production data store; accessed via Prisma ORM) | All application data — tenants, auth, CMP tickets, automation events | AWS region per Neon project (e.g. `us-east-1`). Connection details + rotation in `docs/operations/POSTGRES_PROVIDER.md`. **Not** Prisma Postgres (`*.prisma.io`); see that doc for the naming hazard. |
 | GitHub | Code, Actions, dispatch | Repo, workflow metadata | If CMP uses GitHub |
 | n8n (self/hosted) | Workflow automation | Event payloads forwarded from CorpFlow | Your deployment |
 | Resend (if used) | Transactional email | Email addresses, reset URLs | Per Resend DPA |
@@ -33,6 +33,7 @@ Review quarterly or before signing a DPA. Replace placeholders with your actual 
 
 ## Related docs
 
+- `docs/operations/POSTGRES_PROVIDER.md` (Neon — canonical for the database)
 - `docs/communications/CORPFLOW_COMMUNICATIONS_V1.md` (outbound email model — canonical for which events, which aliases, which approval rules)
 - `docs/operations/TENANT_CLIENT_LOGIN.md`  
 - `docs/operations/SECURITY_REVIEW_CHECKLIST.md`  

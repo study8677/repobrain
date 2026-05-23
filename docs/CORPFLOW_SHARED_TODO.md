@@ -63,6 +63,7 @@ Treat this as part of **definition of done** whenever work is **committed and pu
 
 - **Security review discipline:** Use **`docs/operations/SECURITY_REVIEW_CHECKLIST.md`** for any change to authentication, cookies/sessions, `api/`, `lib/server/`, `lib/cmp/` authorization, Prisma schema/migrations, ingest/forward/HMAC, or open redirects. **Incident / key rotation start:** **`docs/runbooks/SECURITY_OR_INCIDENT.md`**.
 - **Change Console / Approve build credits:** **`tenant_personas`** holds **`token_credit_balance_usd`** and **`billing_exempt`** (one indexed row per tenant; single DB read per request). Optional env **`CORPFLOW_BILLING_EXEMPT_TENANT_IDS`** ORs with the DB flag. Run **`ensure-schema`** after deploy to add the column; **`corpflowai`** is idempotently set exempt when that row exists. See **`docs/operations/TOKEN_CREDITS_AND_APPROVE_BUILD.md`** and `npm run topup:tenant-tokens -- --tenant=... --billing-exempt=true`.
+- **Postgres provider (canonical):** Production data store is **Neon** (https://neon.tech) accessed via Prisma ORM. Six Vercel env keys point at the same Neon project (`POSTGRES_URL` + 5 aliases). Anyone touching DB env vars or diagnosing a connectivity issue: read **`docs/operations/POSTGRES_PROVIDER.md`** first (also documents the 2026-05-22 incident where Production was stuck on the defunct Prisma Postgres host).
 - **Postgres tables (once per prod DB):** `POST /api/factory/postgres/ensure-schema` with factory master auth — step-by-step: `docs/operations/ENSURE_POSTGRES_SCHEMA.md`.
 - **Tenant forgot-password email (you / ops):** Production needs at least one delivery path (see `GET /api/factory/health` → `password_reset_delivery`). Canonical recipe: **`docs/n8n/password-reset-email-recipe.md`**.
 - **Outbound email / communications (canonical):** All CorpFlow-originated outbound email goes through **one disciplined path** — server-side event → optional human approval → n8n Webhook (Gmail OAuth) → evidence. Event catalog, sender aliases (`support@`, `info@`, `sales@`, `help@`), approval policy, and tracker shape (`34_Communication_Event_Register` / `37_Communication_Review_Dashboard` — **not** `02_Drive_Migration_Manifest`) are frozen in **`docs/communications/CORPFLOW_COMMUNICATIONS_V1.md`**. Phase 1 live: `password_reset` only. Anyone adding a new outbound event reads that doc first.
@@ -103,7 +104,7 @@ Treat this as part of **definition of done** whenever work is **committed and pu
 
 - **Unify tenant site read** — one server helper for merged `{ tenant, site }` used by Next `getServerSideProps` and `GET /api/tenant/site`.
 - **Cache public reads** — `Cache-Control` (and optional `ETag`) on `GET /api/tenant/site` for anonymous traffic.
-- **Prisma / Postgres pooling** — align serverless client usage with Neon/Vercel guidance (document chosen pattern in `CONTEXT.md` or ops doc).
+- **Prisma / Postgres pooling** — align serverless client usage with Neon guidance (pooled vs non-pooled endpoints already enumerated in `docs/operations/POSTGRES_PROVIDER.md`; document any chosen pooling pattern there or in `CONTEXT.md`).
 - (Optional) **ISR / edge** for tenant `/` when draft staleness is acceptable.
 
 ## P1 — AI provision & Change Console

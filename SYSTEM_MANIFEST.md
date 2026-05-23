@@ -8,9 +8,9 @@
 ## 🏛️ 1. The Source of Truth (Hardware)
 These are the **only** authenticated connection strings in the environment. Any code referencing variables outside this list is considered "Ghost Logic" and will fail.
 
-| Variable | Provider | Purpose | Confirmed (Mar 18-21) |
+| Variable | Provider | Purpose | Confirmed |
 | :--- | :--- | :--- | :--- |
-| `POSTGRES_URL` | Vercel Postgres | Primary Sovereign Vault (Neon/Prisma) | ✅ |
+| `POSTGRES_URL` (+ 5 aliases) | **Neon Postgres** (via Prisma ORM) | Sole production data store. See `docs/operations/POSTGRES_PROVIDER.md` for all six aliases (pooled vs non-pooled) and the rotation playbook. **Not** Prisma Postgres (`*.prisma.io`). | ✅ (2026-05-22) |
 | `GROQ_API_KEY` | Groq Cloud | Llama-3-70B Intelligence Engine | ✅ |
 | `TELEGRAM_BOT_TOKEN` | Telegram | Notification Sentry | ✅ |
 
@@ -19,8 +19,8 @@ These are the **only** authenticated connection strings in the environment. Any 
 ## 🏗️ 2. Architectural Constraints
 * **Serverless Runtime:** All API routes (`/api/*`) run on Vercel Functions. 
 * **Filesystem:** **READ-ONLY**. Do not attempt to use SQLite (`.db` files) in production.
-* **Database Provider:** PostgreSQL via Prisma Client.
-* **Data Flow:** `Lead Input` → `Prisma Vault (Postgres)` (and optional n8n via `N8N_WEBHOOK_URL`).
+* **Database Provider:** **Neon Postgres** (https://neon.tech), accessed via **Prisma Client** (ORM). Canonical operational doc: **`docs/operations/POSTGRES_PROVIDER.md`**.
+* **Data Flow:** `Lead Input` → `Neon (Postgres via Prisma)` (and optional n8n via `N8N_WEBHOOK_URL`).
 
 ---
 
