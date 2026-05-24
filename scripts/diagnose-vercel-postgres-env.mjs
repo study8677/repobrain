@@ -45,23 +45,43 @@ function isDbKey(name) {
   return DB_KEY_PATTERNS.some((re) => re.test(String(name || '')));
 }
 
+function detectScheme(v) {
+  const m = /^([A-Za-z][A-Za-z0-9+.\-]*):/.exec(v);
+  return m ? m[1].toLowerCase() : null;
+}
+
 function tagValueShape(value) {
   if (value == null) return null;
   const v = String(value);
   if (!v.trim()) return { value_present_nonempty: false };
   let host = '';
   try {
-    const m = /^(?:postgres(?:ql)?|prisma):\/\/[^@]*@?([^:/?#]*)/i.exec(v);
+    // Accept any scheme that the runtime might pass to a Postgres consumer:
+    // postgres://, postgresql://, prisma://, prisma+postgres://, etc.
+    const m = /^[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^@]*@?([^:/?#]*)/i.exec(v);
     if (m) host = m[1] || '';
   } catch {
     host = '';
   }
+  const scheme = detectScheme(v);
   return {
     value_present_nonempty: true,
+    value_scheme: scheme,
+    value_scheme_is_neon_safe: scheme === 'postgres' || scheme === 'postgresql',
+    value_scheme_indicates_prisma_proxy:
+      scheme === 'prisma' ||
+      (scheme != null && scheme.startsWith('prisma+')) ||
+      (scheme != null && scheme.endsWith('+prisma')),
     value_starts_with_prisma_proto: /^prisma:\/\//i.test(v),
     value_host_contains_prisma_io: /\bprisma\.io\b/i.test(host),
     value_host_contains_neon_tech: /\bneon\.tech\b/i.test(host),
     value_host_contains_pooler: /-pooler\./i.test(host),
+    // Substring scans (cover query-string-embedded hosts, alt schemes, etc.)
+    // - never echoes the value, only emits booleans.
+    value_anywhere_db_prisma_io: /\bdb\.prisma\.io\b/i.test(v),
+    value_anywhere_prisma_io: /\bprisma\.io\b/i.test(v),
+    value_anywhere_prisma_data: /\bprisma-data\b/i.test(v),
+    value_anywhere_neon_tech: /\bneon\.tech\b/i.test(v),
   };
 }
 
@@ -122,10 +142,21 @@ async function main() {
   // Aggregate verdict
   const anyPrismaProto = rows.some((r) => r.value_starts_with_prisma_proto === true);
   const anyPrismaIoHost = rows.some((r) => r.value_host_contains_prisma_io === true);
+  const anyPrismaProxyScheme = rows.some(
+    (r) => r.value_scheme_indicates_prisma_proxy === true
+  );
+  const anyPrismaIoSubstring = rows.some(
+    (r) => r.value_anywhere_prisma_io === true || r.value_anywhere_db_prisma_io === true
+  );
+  const anyPrismaDataSubstring = rows.some((r) => r.value_anywhere_prisma_data === true);
   const allDecryptedAreNeon = rows
     .filter((r) => r.decryptable === true)
     .every(
-      (r) => r.value_host_contains_neon_tech === true && r.value_host_contains_prisma_io !== true
+      (r) =>
+        r.value_anywhere_neon_tech === true &&
+        r.value_anywhere_prisma_io !== true &&
+        r.value_anywhere_prisma_data !== true &&
+        r.value_scheme_indicates_prisma_proxy !== true
     );
   const sensitiveCount = rows.filter((r) => r.is_sensitive === true).length;
 
@@ -140,15 +171,20 @@ async function main() {
       sensitive_count: sensitiveCount,
       any_prisma_proto: anyPrismaProto,
       any_prisma_io_host: anyPrismaIoHost,
+      any_prisma_proxy_scheme: anyPrismaProxyScheme,
+      any_prisma_io_substring: anyPrismaIoSubstring,
+      any_prisma_data_substring: anyPrismaDataSubstring,
       all_decrypted_are_neon: allDecryptedAreNeon,
       verdict:
-        anyPrismaProto || anyPrismaIoHost
-          ? 'DRIFT — at least one DB env references Prisma protocol or db.prisma.io'
-          : sensitiveCount === rows.length && rows.length > 0
-            ? 'INDETERMINATE — all DB envs are Sensitive (values not readable). Inspect via Vercel UI.'
-            : allDecryptedAreNeon && rows.length > 0
-              ? 'CLEAN — every readable DB env points at neon.tech'
-              : 'NOTHING_FOUND — no DB env vars matched on Production target',
+        anyPrismaProto || anyPrismaIoHost || anyPrismaIoSubstring || anyPrismaDataSubstring
+          ? 'DRIFT — at least one DB env references Prisma proxy/host (db.prisma.io / prisma-data / prisma:// / prisma+postgres://)'
+          : anyPrismaProxyScheme
+            ? 'DRIFT — at least one DB env uses a Prisma proxy scheme (prisma:// / prisma+postgres://)'
+            : sensitiveCount === rows.length && rows.length > 0
+              ? 'INDETERMINATE — all DB envs are Sensitive (values not readable). Inspect via Vercel UI.'
+              : allDecryptedAreNeon && rows.length > 0
+                ? 'CLEAN — every readable DB env points at neon.tech (no prisma references)'
+                : 'NOTHING_FOUND — no DB env vars matched on Production target',
     },
   };
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

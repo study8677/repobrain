@@ -11,15 +11,16 @@ async function loadHelpers() {
   const src = await readFile(SCRIPT_PATH, 'utf8');
   const m1 = src.match(/const DB_KEY_PATTERNS = \[[\s\S]*?\];/);
   const m2 = src.match(/function isDbKey\(name\) \{[\s\S]*?\n\}/);
+  const mScheme = src.match(/function detectScheme\(v\) \{[\s\S]*?\n\}/);
   const m3 = src.match(/function tagValueShape\(value\) \{[\s\S]*?\n\}/);
-  if (!m1 || !m2 || !m3) {
+  if (!m1 || !m2 || !mScheme || !m3) {
     throw new Error('script structure changed; update test extractor');
   }
-  const moduleSrc = `${m1[0]}\n${m2[0]}\n${m3[0]}\nexport { isDbKey, tagValueShape, DB_KEY_PATTERNS };`;
-  const { isDbKey, tagValueShape, DB_KEY_PATTERNS } = await import(
+  const moduleSrc = `${m1[0]}\n${m2[0]}\n${mScheme[0]}\n${m3[0]}\nexport { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme };`;
+  const { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme } = await import(
     `data:text/javascript;charset=utf-8,${encodeURIComponent(moduleSrc)}`
   );
-  return { isDbKey, tagValueShape, DB_KEY_PATTERNS };
+  return { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme };
 }
 
 describe('diagnose-vercel-postgres-env / isDbKey', () => {
@@ -107,5 +108,54 @@ describe('diagnose-vercel-postgres-env / tagValueShape', () => {
     assert.ok(!json.includes('secret'), 'must not leak password');
     assert.ok(!json.includes('user:'), 'must not leak userinfo');
     assert.ok(!json.includes('db.prisma.io'), 'must not leak host literal');
+  });
+
+  it('flags Prisma Postgres marketplace prisma+postgres:// scheme', async () => {
+    const { tagValueShape } = await loadHelpers();
+    const r = tagValueShape(
+      'prisma+postgres://accelerate.prisma-data.net/?api_key=zzzz'
+    );
+    assert.equal(r.value_scheme, 'prisma+postgres');
+    assert.equal(r.value_scheme_indicates_prisma_proxy, true);
+    assert.equal(r.value_scheme_is_neon_safe, false);
+    assert.equal(r.value_anywhere_prisma_data, true);
+  });
+
+  it('substring scan catches db.prisma.io even when hostname regex misses', async () => {
+    const { tagValueShape } = await loadHelpers();
+    const r = tagValueShape(
+      'something://??connection?fallback=db.prisma.io:5432&u=x'
+    );
+    assert.equal(r.value_anywhere_db_prisma_io, true);
+    assert.equal(r.value_anywhere_prisma_io, true);
+  });
+
+  it('marks plain postgresql + Neon URLs as neon-safe with no prisma flags', async () => {
+    const { tagValueShape } = await loadHelpers();
+    const r = tagValueShape(
+      'postgresql://user:secret@ep-foo-pooler.us-east-1.aws.neon.tech:5432/db?sslmode=require'
+    );
+    assert.equal(r.value_scheme, 'postgresql');
+    assert.equal(r.value_scheme_is_neon_safe, true);
+    assert.equal(r.value_scheme_indicates_prisma_proxy, false);
+    assert.equal(r.value_anywhere_neon_tech, true);
+    assert.equal(r.value_anywhere_prisma_io, false);
+    assert.equal(r.value_anywhere_prisma_data, false);
+  });
+});
+
+describe('diagnose-vercel-postgres-env / detectScheme', () => {
+  it('detects standard schemes', async () => {
+    const { detectScheme } = await loadHelpers();
+    assert.equal(detectScheme('postgres://x'), 'postgres');
+    assert.equal(detectScheme('postgresql://x'), 'postgresql');
+    assert.equal(detectScheme('prisma://x'), 'prisma');
+    assert.equal(detectScheme('prisma+postgres://x'), 'prisma+postgres');
+  });
+
+  it('returns null for invalid input', async () => {
+    const { detectScheme } = await loadHelpers();
+    assert.equal(detectScheme(''), null);
+    assert.equal(detectScheme('://nohost'), null);
   });
 });
