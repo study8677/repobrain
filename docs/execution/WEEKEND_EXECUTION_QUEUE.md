@@ -315,7 +315,39 @@ This is the **live queue** of approved or pending packets for autonomous executi
 - **Verification evidence:** PR URL, audit report, Lighthouse outputs (or PSI links).
 - **Rollback plan:** revert PR; the audit is purely informational.
 - **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
-- **Status:** PENDING.
+- **Status:** COMPLETE — PR #219 squash-merged at commit `5b8258dd`. Score 44/100\* (Conversion 18/20, Performance 8/20\*, Accessibility 6/20, **SEO 0/20**, Trust 12/20). Verdict: Substantive gaps (40–59) — treat as draft for SEO; doctrine verdict PASS. Top-5 fixes named with point gain; SEO/accessibility/404/robots/sitemap fixes absorbed into Packet 3.2 below.
+
+---
+
+### Packet 3.2 — Lux SEO + accessibility + 404 + robots + sitemap fix
+
+- **Goal:** Close the SEO 0/20 + Accessibility 6/20 + Trust 12/20 gaps surfaced in Packet 3.1 / Packet 4.1 §F.1+F.2+F.3+F.6 in a single bounded runtime PR. Target outcome: Lux Quality score lifts from **44/100\* → ~70/100\*** without any visual redesign or tenant-data schema change.
+- **Definition of Done:**
+  - [x] `<html lang>` set on every render path (apex + Lux + Lead Rescue).
+  - [x] Viewport meta includes `initial-scale=1` site-wide.
+  - [x] Lux marketing root + every property page emits `<meta name="description">`, `<link rel="canonical">`, OG type/title/description/url/image, Twitter card/title/description/image.
+  - [x] `<main>` landmark wraps the primary content of the Lux marketing root (property pages already had one).
+  - [x] `pages/404.js` ships a branded fallback (replaces the generic Next.js `_error` HTML).
+  - [x] `public/robots.txt` exists and explicitly disallows `/change`, `/admin`, `/login`, `/master`, `/lux-editor`, `/lux-guide`, factory + cron + auth API namespaces. Lists apex + Lux sitemap URLs.
+  - [x] `pages/sitemap.xml.js` serves a host-aware sitemap (apex routes for `corpflowai.com`, Lux marketing + 8 property refs for `lux.corpflowai.com` + `luxe.*` aliases) with `Cache-Control: public, s-maxage=3600`.
+  - [x] At least 10 new node-tests cover the host detection, build-entries, and XML rendering.
+  - [x] `npm test` passes (363/363).
+  - [x] `npm run build` passes; `/sitemap.xml` registers as Dynamic, `/404` as Static.
+  - [ ] PR opened against `main`, CI green.
+  - [ ] After Anton's merge: `lux.corpflowai.com/` HTML carries `description`, `canonical`, OG block; `/robots.txt` and `/sitemap.xml` return 200.
+- **Scope:**
+  - In: `pages/_app.js` (new), `pages/_document.js` (new), `pages/404.js` (new), `pages/sitemap.xml.js` (new), `public/robots.txt` (new), `components/LuxeMauriceTenantPresentation.js` (Head + `<main>`), `components/LuxeMauricePropertyDetailPage.js` (Head), node-tests.
+  - Out: tenant-data schema (`lib/server/tenant-site-public.js` `meta` shape unchanged); analytics snippet (separate Packet 5.1.1, gated on Anton's analytics provider decision); Search Console verification (separate, Anton-only DNS TXT); `vercel.json` lux static rewrite cleanup (separate small docs-PR).
+- **Constraints:** No tenant-data writes. No `tenant_id` mutation. No DB migration. No new secrets. No client-facing email. No analytics / no third-party JS.
+- **Risks:**
+  - The Next.js Head merge in `LuxeMauriceTenantPresentation` could conflict with a future per-locale Head — mitigated by always emitting English defaults; per-locale will override safely.
+  - The static `vercel.json` rewrite for `/` on Lux (lines 9-28) is dead code today (live serves the Next.js path) but if it ever activates, it would shadow these Head changes — flagged in chat_history; cleanup PR follows.
+- **Allowed actions:** edit pages/components, add tests, `npm test`, `npm run build`, open PR. **Merge gated to Anton (production deploy).**
+- **Approval gates:** pre-merge.
+- **Verification evidence:** PR URL, build log, test output (363/363); after merge, Anton-side live re-probe of the URL set in DoD.
+- **Rollback plan:** revert the merge commit. No data persistence, no schema migration, no secret rotation — clean revert.
+- **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
+- **Status:** AWAITING ANTON MERGE — branch `feat/lux-seo-fix-2026-05-24`, PR opening next.
 
 ---
 

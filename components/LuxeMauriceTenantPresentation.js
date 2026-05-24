@@ -36,6 +36,23 @@ export default function LuxeMauriceTenantPresentation({ site }) {
   const headline =
     safeStr(tHero?.headline) || safeStr(tHero?.subtitle) || safeStr(hero.headline) || safeStr(hero.subtitle) || '';
   const tagline = safeStr(tHero?.tagline) || safeStr(hero.tagline) || '';
+
+  // SEO description: prefer explicit meta.description, fall back to a synthesized line
+  // from the tagline / about body so the page always ships an indexable summary.
+  const seoDescriptionRaw =
+    safeStr(meta.description) ||
+    safeStr(tagline) ||
+    safeStr(tAbout?.body) ||
+    safeStr(about.body) ||
+    'Discover exclusive luxury properties in Mauritius. Buy direct from the developer. Explore upcoming island residences and request a private preview with our concierge team.';
+  const seoDescription =
+    seoDescriptionRaw.length > 320 ? `${seoDescriptionRaw.slice(0, 317)}…` : seoDescriptionRaw;
+  const seoCanonical = 'https://lux.corpflowai.com/';
+  const seoOgImage =
+    safeStr(meta.og_image_url) ||
+    (typeof media.hero_image_url === 'string' && media.hero_image_url.startsWith('http')
+      ? media.hero_image_url
+      : '');
   const aboutTitle = safeStr(tAbout?.title) || safeStr(about.title) || 'Why Mauritius?';
   const aboutBody = safeStr(tAbout?.body) || safeStr(about.body) || '';
   const servicesTitle = safeStr(services.title) || 'Upcoming properties';
@@ -66,6 +83,17 @@ export default function LuxeMauriceTenantPresentation({ site }) {
     >
       <Head>
         <title>{pageTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <link rel="canonical" href={seoCanonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:url" content={seoCanonical} />
+        {seoOgImage ? <meta property="og:image" content={seoOgImage} /> : null}
+        <meta name="twitter:card" content={seoOgImage ? 'summary_large_image' : 'summary'} />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        {seoOgImage ? <meta name="twitter:image" content={seoOgImage} /> : null}
       </Head>
 
       <header
@@ -164,6 +192,7 @@ export default function LuxeMauriceTenantPresentation({ site }) {
         </div>
       ) : null}
 
+      <main>
       <section
         style={{
           padding: '56px 28px 64px',
@@ -848,6 +877,7 @@ export default function LuxeMauriceTenantPresentation({ site }) {
           </form>
         </div>
       </section>
+      </main>
 
       <footer
         style={{

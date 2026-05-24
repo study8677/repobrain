@@ -21,6 +21,33 @@ export default function LuxeMauricePropertyDetailPage({ property, editor_preview
   const conciergeHref = `/concierge?intent=property&property=${encodeURIComponent(ref)}`;
   const pageTitle = ref ? `${safeStr(p.title)} · Luxurious Mauritius` : 'Property · Luxurious Mauritius';
 
+  // SEO description: prefer the curated summary, fall back to a synthesized line
+  // built from location + property type + price so the page is always indexable
+  // even when summary_text is empty.
+  const summaryRaw = safeStr(p.summary_text);
+  const propertyType = safeStr(p.property_type);
+  const location = safeStr(p.location);
+  const priceLine = safeStr(p.price_display);
+  const synthesizedSummary = [
+    propertyType ? `${propertyType}` : null,
+    location ? `in ${location}` : null,
+    priceLine ? `· ${priceLine}` : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const seoDescriptionRaw =
+    summaryRaw ||
+    synthesizedSummary ||
+    'Luxurious Mauritius — private previews of developer-led residences. Request a private enquiry through our concierge.';
+  const seoDescription =
+    seoDescriptionRaw.length > 320 ? `${seoDescriptionRaw.slice(0, 317)}…` : seoDescriptionRaw;
+  const seoCanonical = ref ? `https://lux.corpflowai.com/property/${ref}` : 'https://lux.corpflowai.com/';
+  const seoOgImage =
+    (p.published_hero && typeof p.published_hero === 'object' && p.published_hero.src && /^https?:\/\//.test(p.published_hero.src))
+      ? p.published_hero.src
+      : '';
+
   const publishedHero = p.published_hero && typeof p.published_hero === 'object' ? p.published_hero : null;
   const publishedGallery = Array.isArray(p.published_gallery)
     ? p.published_gallery.filter((g) => g && typeof g === 'object' && safeStr(g.src))
@@ -64,6 +91,17 @@ export default function LuxeMauricePropertyDetailPage({ property, editor_preview
     >
       <Head>
         <title>{pageTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <link rel="canonical" href={seoCanonical} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:url" content={seoCanonical} />
+        {seoOgImage ? <meta property="og:image" content={seoOgImage} /> : null}
+        <meta name="twitter:card" content={seoOgImage ? 'summary_large_image' : 'summary'} />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        {seoOgImage ? <meta name="twitter:image" content={seoOgImage} /> : null}
       </Head>
       <header
         style={{

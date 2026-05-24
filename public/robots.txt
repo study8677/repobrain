@@ -1,0 +1,39 @@
+# CorpFlowAI public robots policy (v1, 2026-05-24).
+# Source of truth: docs/execution/ANALYTICS_SEARCH_CONSOLE_INDEXING_CHECKLIST.md
+# and docs/operations/ANALYTICS_SEARCH_CONSOLE_ROLLOUT_PLAN.md.
+#
+# This file is served from every host (apex + tenant subdomains) because it lives
+# in /public. Tenant-specific sitemap URLs are listed below.
+#
+# Rules:
+# - Marketing routes (apex + tenant marketing) are crawlable.
+# - Operator + factory + tenant-private surfaces are blocked.
+# - We do NOT block /api/ at the robots level — Vercel routes most of those to
+#   factory_router which serves JSON (search engines self-skip). We block the
+#   tenant-private API namespaces explicitly.
+
+User-agent: *
+Allow: /
+
+# Operator + factory + tenant-private surfaces (do not index):
+Disallow: /change
+Disallow: /change/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /login
+Disallow: /master
+Disallow: /master/
+Disallow: /lux-editor
+Disallow: /lux-guide
+Disallow: /sovereign-intake
+Disallow: /core-lux-migration-repair
+Disallow: /api/factory/
+Disallow: /api/cmp/
+Disallow: /api/cron/
+Disallow: /api/auth/
+Disallow: /api/admin/
+Disallow: /api/internal/
+
+# Sitemaps (one per public marketing host).
+Sitemap: https://corpflowai.com/sitemap.xml
+Sitemap: https://lux.corpflowai.com/sitemap.xml
