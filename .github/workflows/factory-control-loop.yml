@@ -1,0 +1,139 @@
+# Factory control loop — runs in GitHub cloud so Anton's laptop is no longer required to
+# detect drift between local Git, GitHub `origin/main`, the Vercel production deployment, and
+# `/api/factory/health`. Read-only by default — the deploy hook is intentionally NOT triggered
+# from this workflow (use `npm run control:loop -- --execute-hook` locally for that).
+#
+# What this verifies (on schedule + manual dispatch):
+#   1. `/api/factory/health` responds 200 with `ok: true` and required `checks.*` true.
+#      (only when CORPFLOW_FACTORY_HEALTH_URL repo secret is set)
+#   2. Latest Vercel Production deployment SHA matches `origin/main`.
+#      (only when VERCEL_TOKEN + VERCEL_PROJECT_ID repo secrets are set)
+#   3. `vercel.json` cron schedules are Hobby-safe (≤ once/day per job).
+#
+# Required repo secrets (none are blocking — workflow degrades gracefully when unset):
+#   CORPFLOW_FACTORY_HEALTH_URL  e.g. https://core.corpflowai.com/api/factory/health
+#   VERCEL_TOKEN                 Vercel API token with read access to the project
+#   VERCEL_PROJECT_ID            Vercel project id (e.g. prj_…) for the CorpFlow project
+#   VERCEL_TEAM_ID               (optional) Vercel team id when the project lives under a team
+#   TELEGRAM_BOT_TOKEN           CorpFlowAI ops bot token (same value as `lib/server/ops-alerts.js`)
+#   TELEGRAM_ALERT_CHAT_ID       Operator chat id for ops alerts
+#
+# When the workflow fails AND both Telegram secrets are present, a single Telegram alert is
+# posted summarising the top 5 fixes plus a link to the GitHub run. Telegram secret values are
+# never echoed to logs.
+#
+# Schedule policy:
+#   This workflow runs from `.github/workflows/` so it is NOT subject to Vercel Hobby's
+#   "≤ once per UTC day per job" cron rule (that rule applies only to vercel.json crons).
+#   The control-loop step itself still validates `vercel.json` against that rule and fails
+#   the workflow if the project's cron config drifts back into Hobby-incompatible territory.
+#
+# References:
+#   docs/operations/FACTORY_CONTROL_LOOP.md   — purpose, secrets, runbook, rollback
+#   scripts/factory-control-loop.mjs          — script invoked here
+#   scripts/post-control-loop-telegram-alert.mjs — alert helper
+#   .cursor/rules/delivery-reality.mdc        — why automated drift detection matters
+
+name: Factory control loop
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # Daily 06:00 UTC (10:00 UTC+4) — once per day, well within GitHub Actions limits
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: factory-control-loop
+  cancel-in-progress: false
+
+jobs:
+  control-loop:
+    runs-on: ubuntu-latest
+    # GitHub Actions: align with `test.yml` runtime expectations (Node 20 deprecation buffer).
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      # Pinned SHAs (supply chain): tag v6 — bump via `gh api repos/actions/checkout/commits/refs/tags/v6 --jq .sha`
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          # Full history so `git rev-list HEAD..origin/main` and `--fetch` work cleanly.
+          fetch-depth: 0
+
+      # Pinned SHAs (supply chain): tag v6 — bump via `gh api repos/actions/setup-node/commits/refs/tags/v6 --jq .sha`
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: '20'
+
+      - name: Show optional integration status (no secret values printed)
+        run: |
+          set -euo pipefail
+          echo "Optional integrations (presence-only — values never printed):"
+          if [ -n "${HEALTH_URL_PRESENT:-}" ]; then
+            echo "  factory health URL          : configured"
+          else
+            echo "  factory health URL          : SKIPPED (set CORPFLOW_FACTORY_HEALTH_URL repo secret to enable)"
+          fi
+          if [ -n "${VERCEL_TOKEN_PRESENT:-}" ] && [ -n "${VERCEL_PROJECT_ID_PRESENT:-}" ]; then
+            echo "  Vercel SHA comparison       : configured"
+          else
+            echo "  Vercel SHA comparison       : SKIPPED (set VERCEL_TOKEN + VERCEL_PROJECT_ID repo secrets to enable)"
+          fi
+          if [ -n "${TELEGRAM_TOKEN_PRESENT:-}" ] && [ -n "${TELEGRAM_CHAT_PRESENT:-}" ]; then
+            echo "  Telegram alert on failure   : configured"
+          else
+            echo "  Telegram alert on failure   : SKIPPED (set TELEGRAM_BOT_TOKEN + TELEGRAM_ALERT_CHAT_ID repo secrets to enable)"
+          fi
+        env:
+          # Only the *presence* of each secret is exported to the step environment as a
+          # non-empty marker — actual values stay scoped to the run step below.
+          HEALTH_URL_PRESENT: ${{ secrets.CORPFLOW_FACTORY_HEALTH_URL != '' && '1' || '' }}
+          VERCEL_TOKEN_PRESENT: ${{ secrets.VERCEL_TOKEN != '' && '1' || '' }}
+          VERCEL_PROJECT_ID_PRESENT: ${{ secrets.VERCEL_PROJECT_ID != '' && '1' || '' }}
+          TELEGRAM_TOKEN_PRESENT: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && '1' || '' }}
+          TELEGRAM_CHAT_PRESENT: ${{ secrets.TELEGRAM_ALERT_CHAT_ID != '' && '1' || '' }}
+
+      - name: Run factory control loop (read-only)
+        id: loop
+        env:
+          # `bootstrap-repo-env.mjs` aliases CORPFLOW_FACTORY_HEALTH_URL → FACTORY_HEALTH_URL,
+          # so we only need to forward the canonical name.
+          CORPFLOW_FACTORY_HEALTH_URL: ${{ secrets.CORPFLOW_FACTORY_HEALTH_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+        run: |
+          set +e
+          # Human-readable run for the GitHub Actions log (operators read this directly).
+          node scripts/factory-control-loop.mjs --fetch
+          loop_exit=$?
+          # Machine-readable JSON for the alert step. Best-effort: never block the workflow on it.
+          node scripts/factory-control-loop.mjs --fetch --json > loop.json 2>/dev/null
+          if [ ! -s loop.json ]; then echo '{}' > loop.json; fi
+          # Surface a structured error in the GitHub UI when the loop reports unhealthy state.
+          if [ "$loop_exit" -ne 0 ]; then
+            echo "::error::Factory control loop reported failure (exit $loop_exit). See preceding log lines marked '!' and follow docs/operations/FACTORY_CONTROL_LOOP.md."
+          fi
+          exit $loop_exit
+
+      - name: Upload loop JSON artifact (always)
+        if: ${{ always() }}
+        # Pinned SHAs (supply chain): tag v4 — bump via `gh api repos/actions/upload-artifact/commits/refs/tags/v4 --jq .sha`
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: factory-control-loop-report
+          path: loop.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Post Telegram alert on failure (best-effort)
+        if: ${{ failure() }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ALERT_CHAT_ID: ${{ secrets.TELEGRAM_ALERT_CHAT_ID }}
+          GH_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GH_RUN_NUMBER: ${{ github.run_number }}
+          GH_REPO_NAME: ${{ github.repository }}
+        run: node scripts/post-control-loop-telegram-alert.mjs loop.json

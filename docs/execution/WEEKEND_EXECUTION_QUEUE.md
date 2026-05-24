@@ -288,7 +288,7 @@ This is the **live queue** of approved or pending packets for autonomous executi
 - **Verification evidence:** PR URL, CI status, dry-run output of the script in PR comment, confirmation that `lib/server/ops-alerts.js` test usage does not log secret values.
 - **Rollback plan:** delete the workflow file (or set `on: workflow_dispatch` only); the script remains usable from Anton's laptop unchanged.
 - **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
-- **Status:** PENDING.
+- **Status:** IN_PROGRESS — branch `chore/factory-control-loop-github-action`, PR opening; workflow file + helper + tests + `docs/operations/FACTORY_CONTROL_LOOP.md` added; `npm test` 353/353 pass; `npm run build` green; first scheduled run will be captured in PR comment **before** merge approval.
 
 ---
 
