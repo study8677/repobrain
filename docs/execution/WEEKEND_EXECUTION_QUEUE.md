@@ -288,7 +288,7 @@ This is the **live queue** of approved or pending packets for autonomous executi
 - **Verification evidence:** PR URL, CI status, dry-run output of the script in PR comment, confirmation that `lib/server/ops-alerts.js` test usage does not log secret values.
 - **Rollback plan:** delete the workflow file (or set `on: workflow_dispatch` only); the script remains usable from Anton's laptop unchanged.
 - **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
-- **Status:** IN_PROGRESS — branch `chore/factory-control-loop-github-action`, PR opening; workflow file + helper + tests + `docs/operations/FACTORY_CONTROL_LOOP.md` added; `npm test` 353/353 pass; `npm run build` green; first scheduled run will be captured in PR comment **before** merge approval.
+- **Status:** COMPLETE (workflow shipped) + secondary blocker on secret value. PR #217 squash-merged at commit `92e6eb96`. First manual `workflow_dispatch` run on `main` (run id `26348877751`, 2026-05-24) executed end-to-end as designed — local-Git/Vercel-SHA/Hobby-cron checks all green; **`CORPFLOW_FACTORY_HEALTH_URL` secret returned HTTP 404** against the path the script tried (canonical `https://core.corpflowai.com/api/factory/health` returns 200 from a normal client). Telegram alert step ran on `failure()` and gracefully skipped because `TELEGRAM_BOT_TOKEN` / `TELEGRAM_ALERT_CHAT_ID` are not set in repo secrets. **Anton blockers (both are §3 hard gates):** (a) fix or rotate the `CORPFLOW_FACTORY_HEALTH_URL` secret value so it matches the live `core.corpflowai.com` health URL; (b) optionally set `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ALERT_CHAT_ID` repo secrets to enable failure alerts off-laptop. Both fixes are operator-only.
 
 ---
 
