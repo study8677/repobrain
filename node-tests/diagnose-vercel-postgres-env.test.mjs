@@ -12,15 +12,16 @@ async function loadHelpers() {
   const m1 = src.match(/const DB_KEY_PATTERNS = \[[\s\S]*?\];/);
   const m2 = src.match(/function isDbKey\(name\) \{[\s\S]*?\n\}/);
   const mScheme = src.match(/function detectScheme\(v\) \{[\s\S]*?\n\}/);
+  const mClass = src.match(/function classifyFirstChar\(v\) \{[\s\S]*?\n\}/);
   const m3 = src.match(/function tagValueShape\(value\) \{[\s\S]*?\n\}/);
-  if (!m1 || !m2 || !mScheme || !m3) {
+  if (!m1 || !m2 || !mScheme || !mClass || !m3) {
     throw new Error('script structure changed; update test extractor');
   }
-  const moduleSrc = `${m1[0]}\n${m2[0]}\n${mScheme[0]}\n${m3[0]}\nexport { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme };`;
-  const { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme } = await import(
+  const moduleSrc = `${m1[0]}\n${m2[0]}\n${mScheme[0]}\n${mClass[0]}\n${m3[0]}\nexport { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme, classifyFirstChar };`;
+  const { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme, classifyFirstChar } = await import(
     `data:text/javascript;charset=utf-8,${encodeURIComponent(moduleSrc)}`
   );
-  return { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme };
+  return { isDbKey, tagValueShape, DB_KEY_PATTERNS, detectScheme, classifyFirstChar };
 }
 
 describe('diagnose-vercel-postgres-env / isDbKey', () => {
@@ -141,6 +142,31 @@ describe('diagnose-vercel-postgres-env / tagValueShape', () => {
     assert.equal(r.value_anywhere_neon_tech, true);
     assert.equal(r.value_anywhere_prisma_io, false);
     assert.equal(r.value_anywhere_prisma_data, false);
+  });
+});
+
+describe('diagnose-vercel-postgres-env / classifyFirstChar', () => {
+  it('flags Vercel @ref placeholder', async () => {
+    const { classifyFirstChar, tagValueShape } = await loadHelpers();
+    assert.equal(classifyFirstChar('@my-secret-name'), 'at_ref');
+    assert.equal(tagValueShape('@my-secret-name').value_first_char_class, 'at_ref');
+  });
+
+  it('flags shell-style $REF', async () => {
+    const { classifyFirstChar } = await loadHelpers();
+    assert.equal(classifyFirstChar('$DB_REF'), 'dollar_ref');
+  });
+
+  it('classifies normal URI scheme starts as letter', async () => {
+    const { classifyFirstChar } = await loadHelpers();
+    assert.equal(classifyFirstChar('postgresql://x'), 'letter');
+  });
+
+  it('reports value_length_bucket', async () => {
+    const { tagValueShape } = await loadHelpers();
+    assert.equal(tagValueShape('x').value_length_bucket, 'tiny');
+    assert.equal(tagValueShape('x'.repeat(60)).value_length_bucket, 'short');
+    assert.equal(tagValueShape('x'.repeat(120)).value_length_bucket, 'normal');
   });
 });
 

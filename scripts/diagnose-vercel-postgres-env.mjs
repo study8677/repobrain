@@ -50,6 +50,17 @@ function detectScheme(v) {
   return m ? m[1].toLowerCase() : null;
 }
 
+function classifyFirstChar(v) {
+  if (!v) return 'empty';
+  const c = v.charAt(0);
+  if (c === '@') return 'at_ref';
+  if (c === '$') return 'dollar_ref';
+  if (/[A-Za-z]/.test(c)) return 'letter';
+  if (/[0-9]/.test(c)) return 'digit';
+  if (c === '/' || c === ':') return 'punct_uri';
+  return 'other';
+}
+
 function tagValueShape(value) {
   if (value == null) return null;
   const v = String(value);
@@ -82,6 +93,10 @@ function tagValueShape(value) {
     value_anywhere_prisma_io: /\bprisma\.io\b/i.test(v),
     value_anywhere_prisma_data: /\bprisma-data\b/i.test(v),
     value_anywhere_neon_tech: /\bneon\.tech\b/i.test(v),
+    // Shape signals (never the value itself).
+    value_first_char_class: classifyFirstChar(v),
+    value_length_bucket:
+      v.length === 0 ? 'empty' : v.length < 32 ? 'tiny' : v.length < 96 ? 'short' : 'normal',
   };
 }
 

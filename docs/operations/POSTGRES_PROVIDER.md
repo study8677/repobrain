@@ -154,6 +154,25 @@ If any one of these is observed, **assume drift first**, run the §2 inspection 
 - Step 5 — diagnostic workflow dispatch + JSON artifact.
 - Step 7 — chat-history entry by the agent that closes the incident.
 
+**Specific signature observed on 2026-05-25 (use as a fingerprint going forward):**
+
+The diagnostic workflow run on 2026-05-25 22:18 UTC reported `verdict=NOTHING_FOUND` with `db_var_count=6 sensitive=3` — but the runtime simultaneously errored with `db.prisma.io:5432`. The clue was in the timestamps and the value-shape booleans:
+
+| Key | Sensitive? | Created (UTC) | Diagnostic shape |
+|---|---|---|---|
+| `DATABASE_URL` | NO | **2026-05-24 04:07:00** | `value_scheme:null`, all host/substring scans `false` (opaque) |
+| `POSTGRES_URL` | NO | **2026-05-24 04:07:01** | same opaque shape |
+| `PRISMA_DATABASE_URL` | NO | **2026-05-24 04:07:01** | same opaque shape |
+| `DIRECT_URL` | YES | 2026-05-22 03:18:45 | not decryptable by token |
+| `POSTGRES_PRISMA_URL` | YES | 2026-05-22 03:18:44 | not decryptable by token |
+| `POSTGRES_URL_NON_POOLING` | YES | 2026-05-22 03:18:45 | not decryptable by token |
+
+**Read this:** when 2 or more DB env keys share a creation timestamp **down to the same second** and are NON-Sensitive (decryptable), that is the fingerprint of an **automated installation event** — a Vercel marketplace integration, a Storage tab auto-link, or an Infisical→Vercel sync that overrode prior values. Search for the integration in **Vercel → Storage** dated near that timestamp; disconnect it before doing anything else.
+
+**Why the diagnostic returned `NOTHING_FOUND` despite drift:** Vercel's REST API may return env values as opaque references (Vercel `@<ref>` placeholders, encoded blobs) rather than resolved literal URLs, depending on how the value was set. The runtime resolves them at function-cold-start, which is why `process.env.POSTGRES_URL` ends up as `…@db.prisma.io:5432/…` even though the API returned an unparseable reference string. The diagnostic's `value_first_char_class` field flags `at_ref` for `@<ref>`-prefixed values; if you see that on a key that is supposed to be Neon, that is also drift.
+
+**Why `runtime-config.js` aliases didn't save the runtime:** `cfg('POSTGRES_URL')` reads `process.env.POSTGRES_URL` first; only if **empty** does it fall back through `POSTGRES_PRISMA_URL` → `PRISMA_DATABASE_URL` → JSON blob. The 2026-05-24 auto-installed values were non-empty, so the (correct) Sensitive Neon aliases from 2026-05-22 were never consulted.
+
 **Provenance discipline (do not autonomously delete):**
 
 Before any env entry is deleted from Vercel or Infisical, search the repo for the literal env-key name (`rg '<KEY>' -- repo`). If any code path still reads the key, surface the finding to Anton before removal. The aliases listed in `lib/server/postgres-ensure-schema-connection.js` (`DATABASE_URL_UNPOOLED`, `POSTGRES_URL_UNPOOLED`, `PRISMA_DATABASE_URL_UNPOOLED`, `POSTGRES_PRISMA_URL_NON_POOLING`) and `lib/server/runtime-config.js` `cfg('POSTGRES_URL')` (`POSTGRES_PRISMA_URL`, `PRISMA_DATABASE_URL`) are **expected** alias names — they may exist with Neon values; they should never reference Prisma.
