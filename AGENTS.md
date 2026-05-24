@@ -76,6 +76,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | n8n forward | `docs/n8n/automation-forward-recipe.md` |
 | CMP API surface | `lib/cmp/README.md` |
 | Vercel / cron / Technical Lead / Bugbot | `docs/VERCEL_DEPLOYMENT.md` |
+| Analytics / Search Console / indexing — operational rollout plan (apex → Lux → future tenants) | `docs/operations/ANALYTICS_SEARCH_CONSOLE_ROLLOUT_PLAN.md` |
 | Env placeholders | `.env.template` |
 | ADR-lite decisions | `docs/decisions/README.md` |
 | Compliance starter | `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md` |
