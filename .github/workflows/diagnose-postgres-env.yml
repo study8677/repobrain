@@ -1,0 +1,74 @@
+name: Diagnose Vercel Postgres env (no values)
+
+# One-shot manual diagnostic. NEVER scheduled. NEVER mutates env. Only reads
+# Vercel project env names + value-shape booleans (see
+# scripts/diagnose-vercel-postgres-env.mjs). Output is JSON; no secret values
+# are printed.
+#
+# Source of truth doc: docs/operations/POSTGRES_PROVIDER.md §1.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diagnose-postgres-env
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: '20'
+
+      - name: Show optional integration status (no secret values printed)
+        run: |
+          set -e
+          echo "vercel-token: $([ -n "$VERCEL_TOKEN" ] && echo configured || echo unset)"
+          echo "vercel-project-id: $([ -n "$VERCEL_PROJECT_ID" ] && echo configured || echo unset)"
+          echo "vercel-team-id: $([ -n "$VERCEL_TEAM_ID$VERCEL_ORG_ID" ] && echo configured || echo unset)"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Diagnose Vercel Postgres env (read-only, no values)
+        id: diag
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          set +e
+          node scripts/diagnose-vercel-postgres-env.mjs > diag.json 2> diag.err
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::diagnose-vercel-postgres-env exited $rc"
+            cat diag.err
+            exit "$rc"
+          fi
+          # Print verdict line for at-a-glance reading; full JSON is uploaded as artifact.
+          node -e "const j=JSON.parse(require('fs').readFileSync('diag.json','utf8'));console.log('::notice::verdict='+j.summary.verdict);console.log('db_var_count='+j.summary.db_var_count+' sensitive='+j.summary.sensitive_count+' any_prisma_proto='+j.summary.any_prisma_proto+' any_prisma_io_host='+j.summary.any_prisma_io_host+' all_decrypted_are_neon='+j.summary.all_decrypted_are_neon);"
+          # Print row table (names + booleans only).
+          node -e "const j=JSON.parse(require('fs').readFileSync('diag.json','utf8'));for(const r of j.rows){const f=Object.entries(r).filter(([k])=>k!=='key').map(([k,v])=>k+'='+v).join(' ');console.log(r.key+' '+f);}"
+
+      - name: Upload diagnostic JSON
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: diagnose-vercel-postgres-env
+          path: diag.json
+          if-no-files-found: warn
+          retention-days: 7

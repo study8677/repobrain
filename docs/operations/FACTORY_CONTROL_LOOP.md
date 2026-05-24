@@ -28,6 +28,8 @@ Detect drift between four control points without operator action:
 
 If any step fails, the workflow exits non-zero and (when configured) posts a Telegram alert.
 
+> **Important — `/api/factory/health` is not a database connectivity check.** The endpoint reports `database_configured: true` whenever `POSTGRES_URL` is non-empty; it does **not** open a connection. A `healthy` response from this loop does **not** prove Postgres is reachable. If you suspect DB drift (apex content served on tenant domains, tenant resolution falling back, `db.prisma.io:5432` errors), use the **production-pulse runtime** endpoint and the live tenant marketing surface instead — see `docs/operations/POSTGRES_PROVIDER.md` §4b *Known drift symptoms*. **Neon is the sole approved Postgres provider; any `db.prisma.io` reference is configuration drift.**
+
 ## Required GitHub repo secrets
 
 All optional — workflow degrades gracefully with each missing one.

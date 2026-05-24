@@ -12,7 +12,7 @@ The agent in Cursor **cannot** stay “awake” on your machine after you close 
 ## What you already have (use to the max)
 
 - **Vercel** — APIs, static sites, `vercel.json` crons (e.g. billing sentinel, overseer).
-- **Postgres** — system of record, automation event log, CMP.
+- **Postgres** — system of record, automation event log, CMP. **Neon is the sole approved provider; Prisma Accelerate / `db.prisma.io` is deprecated.** When DB env drift is suspected, the brain → hands path is `docs/operations/POSTGRES_PROVIDER.md` (canonical) plus the diagnostic workflow `.github/workflows/diagnose-postgres-env.yml` (read-only, names + booleans only).
 - **GitHub** — Actions (build, test, CMP workflows), webhooks, `repository_dispatch`.
 - **n8n** — forward from `CORPFLOW_AUTOMATION_FORWARD_URL`, password reset webhook, lead intake.
 - **Google Workspace / GCP** — mail relay, optional Cloud Scheduler, Secret Manager, Cloud Run later.

@@ -319,6 +319,36 @@ This is the **live queue** of approved or pending packets for autonomous executi
 
 ---
 
+### Packet 3.3 — Eliminate Prisma/Postgres provider ambiguity (Neon-only mandate + diagnostic + drift playbook)
+
+- **Goal:** Permanently end the recurrence of the 2026-05-22 / 2026-05-25 drift class (Vercel Production env regressing to `db.prisma.io:5432`) by codifying **Neon as the sole approved Postgres provider**, shipping a read-only diagnostic that surfaces drift before it's customer-visible, and writing the operator playbook so the next agent fixes it without re-debugging.
+- **Definition of Done:**
+  - [x] `docs/operations/POSTGRES_PROVIDER.md` rewritten with top-of-file Neon-only architectural decision; new §4a *Source of truth — Infisical, never edit Vercel directly first*; new §4b *Known drift symptoms* (the exact triple of pulse-`database_reachable:false` + tenant-site `db.prisma.io:5432` + UI-context fallback); new §5b *Incident: 2026-05-25* with the operator playbook.
+  - [x] `AGENTS.md` Must-read row for the Postgres provider doc explicitly mentions the Neon-only mandate and references §4a/§4b/§5b.
+  - [x] `docs/operations/FACTORY_CONTROL_LOOP.md` calls out that `/api/factory/health` is not a DB connectivity check.
+  - [x] `docs/EXECUTION_BRAIN_VS_HANDS.md` Postgres line marks Prisma Accelerate as deprecated and points the brain→hands path through the canonical doc + diagnostic workflow.
+  - [x] `scripts/diagnose-vercel-postgres-env.mjs` ships — enumerates every DB-related Vercel env name on the Production target and tags each with strict booleans (`value_starts_with_prisma_proto`, `value_host_contains_prisma_io`, `value_host_contains_neon_tech`, `value_host_contains_pooler`); never prints values, hostnames, userinfo, or URL substrings.
+  - [x] `.github/workflows/diagnose-postgres-env.yml` ships — `workflow_dispatch` only (no schedule, no env mutation, no Telegram); reads via existing `VERCEL_TOKEN`/`VERCEL_PROJECT_ID`/`VERCEL_TEAM_ID` repo secrets; emits a verdict line + JSON artifact.
+  - [x] `node-tests/diagnose-vercel-postgres-env.test.mjs` ships — 12 unit tests covering key-pattern matching, value-shape booleans, secret-leak prevention; passes with the existing suite (373/373 total).
+  - [x] `npm test` passes; `npm run build` passes.
+  - [x] PR opened against `main`, CI green.
+  - [ ] After merge: workflow dispatched on `main`; verdict line + JSON artifact uploaded; Stage 5 final probes captured in chat_history.
+- **Scope:**
+  - In: docs (`POSTGRES_PROVIDER.md`, `AGENTS.md`, `FACTORY_CONTROL_LOOP.md`, `EXECUTION_BRAIN_VS_HANDS.md`, `chat_history.md`), diagnostic script + workflow, unit tests.
+  - Out: writing values to Vercel or Infisical, deploying production, rotating secrets, mutating any tenant data, rolling back PR #222 (separate decision in the Stage 6 recommendation; #223 stays closed).
+- **Constraints:** No values printed. No env writes from Cursor. No `tenant_id` mutation. No DB migration. No new secrets created (uses existing `VERCEL_TOKEN`/`VERCEL_PROJECT_ID`/`VERCEL_TEAM_ID`). No client-facing email. No new dependencies.
+- **Risks:**
+  - The diagnostic workflow can only be dispatched after merge to `main` (GitHub Actions requires `workflow_dispatch` workflows to live on the default branch). Mitigated by independently confirming the root cause from the production error (`db.prisma.io:5432`) and shipping the documented remediation playbook so Anton can act before the workflow runs.
+  - If `VERCEL_TOKEN` lacks env-decrypt permission, the diagnostic returns `INDETERMINATE — all DB envs are Sensitive (values not readable). Inspect via Vercel UI.` This is acceptable; the §3 / §4b live-endpoint checks are the source of truth for connectivity.
+- **Allowed actions:** docs, diagnostic script + workflow, unit tests, PR open, run on `main` after merge, public-endpoint probes.
+- **Approval gates:** **production deploy / Vercel env writes / Infisical writes are Anton-only** — Cursor only ships docs + diagnostic; the actual restore/redeploy is in §5b's operator playbook.
+- **Verification evidence:** PR URL, `npm test` 373/373, `npm run build` green, live probes captured in chat_history under 2026-05-25, post-merge diagnostic JSON artifact + verdict line.
+- **Rollback plan:** revert the merge commit. No data persistence, no schema change, no secret rotation. The diagnostic workflow is `workflow_dispatch`-only; removing it is a clean delete.
+- **Owner:** Approver = Anton (production deploy / env writes). Executor = Cursor (docs + diagnostic). Reviewer = Anton.
+- **Status:** AWAITING ANTON MERGE — branch `fix/postgres-neon-only-2026-05-25`, PR opening next. **Stage 2 (Neon restoration) is gated on Anton — see `POSTGRES_PROVIDER.md` §5b operator playbook.**
+
+---
+
 ### Packet 3.2 — Lux SEO + accessibility + 404 + robots + sitemap fix
 
 - **Goal:** Close the SEO 0/20 + Accessibility 6/20 + Trust 12/20 gaps surfaced in Packet 3.1 / Packet 4.1 §F.1+F.2+F.3+F.6 in a single bounded runtime PR. Target outcome: Lux Quality score lifts from **44/100\* → ~70/100\*** without any visual redesign or tenant-data schema change.

@@ -1,8 +1,14 @@
-# Postgres provider — Neon (canonical)
+# Postgres provider — Neon (canonical, sole approved provider)
+
+**Authoritative architectural decision (2026-05-25):**
+
+> **Neon is the sole approved Postgres provider for CorpFlowAI production.**
+>
+> **Prisma Accelerate / `db.prisma.io` is deprecated and must not be used in active runtime configuration.** Any `db.prisma.io` reference (host, URL, env value, Infisical secret, Vercel env, code path, doc snippet, or commit) should be treated as **configuration drift or legacy residue** and removed or explicitly marked deprecated. Dual-provider runtime logic, "Prisma as fallback" patterns, and any new env var that introduces a non-Neon Postgres are explicitly **out of scope** of this codebase.
 
 **Production data store:** **Neon Postgres** (https://neon.tech), accessed by the app through **Prisma Client** (the ORM library). Local development uses the same Neon project; there is currently no separate dev/staging Postgres.
 
-> **Naming hazard (read once).** Prisma Inc. also sells a managed Postgres product called **Prisma Postgres** (hostname pattern `*.prisma.io`). That is **a different product** from the Prisma ORM. We use **Prisma ORM** to talk to **Neon** — we do **not** use Prisma Postgres. If you ever see `db.prisma.io` in our env vars, that is a misconfiguration (see *Incident: 2026-05-22* below).
+> **Naming hazard (read once).** Prisma Inc. also sells a managed Postgres product called **Prisma Postgres** (hostname pattern `*.prisma.io`). That is **a different product** from the Prisma ORM. We use **Prisma ORM** to talk to **Neon** — we do **not** use Prisma Postgres. If you ever see `db.prisma.io` in our env vars, that is a misconfiguration (see *Incidents* below; the symptom set has now been observed twice — 2026-05-22 and 2026-05-25 — so treat it as a recurring drift class, not a one-off).
 
 ---
 
@@ -71,6 +77,35 @@ If credentials are compromised, the Neon project is migrated, or the URLs are ot
 
 ---
 
+## 4a. Source of truth — Infisical, **never** edit Vercel directly first
+
+When DB URLs change, the canonical write path is:
+
+1. Edit the value in **Infisical** under the production environment slug.
+2. Sync from Infisical to Vercel (Infisical → Vercel sync workflow, or manual upsert via the §4 REST API path using values pulled from Infisical).
+3. Trigger a fresh Production deploy.
+4. Verify against §3 endpoints **and** the live tenant marketing surfaces (`https://lux.corpflowai.com/`, `https://lux.corpflowai.com/api/tenant/site`).
+
+If the values diverge between Infisical and Vercel, **Infisical wins** by definition. Reset Vercel from Infisical; do **not** copy bad Vercel values back into Infisical.
+
+A drift between Infisical (Neon) and Vercel (Prisma Postgres residue) is the exact failure pattern of the 2026-05-22 and 2026-05-25 incidents. Any time DB env editing happens outside this Infisical-first path, document the deviation in `artifacts/chat_history.md` so the next agent does not re-introduce drift.
+
+---
+
+## 4b. Known drift symptoms (recognise these without re-debugging)
+
+The following triple signature **always** points at "one of the six DB env keys references Prisma Postgres / `db.prisma.io` instead of Neon", regardless of which key drifted:
+
+- `https://core.corpflowai.com/api/factory/health` — `status: healthy`, `database_configured: true`. **(Misleading; see §3 — it does not open a connection.)**
+- `https://core.corpflowai.com/api/factory/production-pulse/runtime` — top-level `ok: true` and `monitoring.ok: true`, **but** `core.database_reachable: false`.
+- `https://lux.corpflowai.com/api/tenant/site` — HTTP 500 with body containing `Can't reach database server at \`db.prisma.io:5432\``.
+- `https://lux.corpflowai.com/api/ui/context` — `tenant_id: "lux"` (hostname-derived fallback), `tenant_registered: false`, `login_route: "onboarding"` (instead of the canonical `tenant_id: "luxe-maurice"`, `login_route: "client"`). This happens because the `tenant_hostnames` lookup fails when the DB is unreachable, and the resolver falls through to subdomain inference.
+- `https://lux.corpflowai.com/` — serves a 200 but renders apex-shaped content (no Lux branding) because the tenant payload never loaded.
+
+If any one of these is observed, **assume drift first**, run the §2 inspection (or the diagnostic workflow `.github/workflows/diagnose-postgres-env.yml`), and apply §4 / §4a.
+
+---
+
 ## 5. Incident: 2026-05-22 — Vercel Production was on Prisma Postgres, local on Neon
 
 **Symptom 1 (build):** `scripts/apply-ensure-schema-build.mjs` failed in Vercel build with `Can't reach database server at db.prisma.io:5432`.
@@ -82,6 +117,46 @@ If credentials are compromised, the Neon project is migrated, or the URLs are ot
 **Fix:** Repointed all six env keys at the Neon project (§1 table) via the Vercel REST API. Production deployment `dpl_G9hkABzYuEp1Nb2EhWZ5T9BDafAg` (Ready, aliased to `https://corpflowai.com`) built in 20 s with no DB error, and the three §3 endpoints returned the expected payloads. No code change required.
 
 **Follow-up that landed with this doc:** named **Neon** explicitly in `SYSTEM_MANIFEST.md`, `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md`, `.env.template`, `docs/CORPFLOW_SHARED_TODO.md`, and added a must-read pointer in `AGENTS.md` so an agent that touches Postgres env vars reads this file first.
+
+---
+
+## 5b. Incident: 2026-05-25 — drift recurred (Lux tenant resolution failed; same `db.prisma.io:5432` host)
+
+**Symptom 1 (production-pulse):** `core.database_reachable: false` while `monitoring.ok: true` and top-level `ok: true`. (Pulse top-line is signal-noise without `database_reachable`.)
+**Symptom 2 (tenant resolution):** `https://lux.corpflowai.com/api/tenant/site` → HTTP 500, body `Can't reach database server at db.prisma.io:5432`.
+**Symptom 3 (UI fallback):** `https://lux.corpflowai.com/api/ui/context` → `tenant_id: "lux"` (hostname-derived), `tenant_registered: false`, `login_route: "onboarding"`. Lux marketing surface served apex-shaped content because the tenant payload never loaded.
+**Symptom 4 (false positive again):** `/api/factory/health` continued to report `healthy`. **Same blind spot as 5/22**, by-design (§3).
+
+**Root cause:** Drift recurrence. One or more of the six Vercel Production DB env keys returned to (or was set with) a Prisma Accelerate / `db.prisma.io:5432` value, while local development and Infisical still held the correct Neon values. **No code change caused the regression** — it tracks an env / sync event between 5/22 and 5/25.
+
+**Fix path (operator playbook for Anton — written 2026-05-25):**
+
+1. **Confirm Infisical is canonical and Neon-only.** In Infisical under the production environment, every DB-key value should host on `*.neon.tech`. If any value still references `db.prisma.io`, **fix it in Infisical first**.
+   - Pooled keys (`POSTGRES_URL`, `DATABASE_URL`, `PRISMA_DATABASE_URL`, `POSTGRES_PRISMA_URL`) → host pattern `<endpoint>-pooler.<region>.aws.neon.tech` (note the `-pooler.` segment).
+   - Non-pooled keys (`DIRECT_URL`, `POSTGRES_URL_NON_POOLING`) → same endpoint **without** `-pooler.`.
+2. **Sync Infisical → Vercel** for the production environment. (Manual upsert via Vercel REST API per §4 if the sync hasn't run; values pulled from Infisical, not pasted from anywhere else.)
+3. **Trigger a fresh production deploy** (Vercel → Deployments → Redeploy, or a no-op commit on `main`). Env-var changes only take effect on the next build.
+4. **Verify §3 endpoints** plus the §4b symptom-set inverted: `tenant_site` should return `tenant_id: "luxe-maurice"`; `ui/context` should return `tenant_registered: true`, `login_route: "client"`; pulse should return `database_reachable: true`.
+5. **Then** run the diagnostic workflow `.github/workflows/diagnose-postgres-env.yml` (manual dispatch) — its verdict line should read `CLEAN` with `all_decrypted_are_neon: true`. If it reports `INDETERMINATE` because all keys are Sensitive, that is acceptable as long as §3 / §4b checks pass.
+6. **Hygiene:** delete any Vercel env entry that does not appear in the §1 table — there should be no Prisma Accelerate keys, no leftover dual-provider names, no stray `*_PRISMA_*` variants pointing at `db.prisma.io`.
+7. **Record** deployment ID + commit + verified URLs in `artifacts/chat_history.md` per `.cursor/rules/delivery-reality.mdc`.
+
+**Anton-only steps** (Cursor cannot perform these autonomously because Infisical/Vercel write credentials are not present in agent sessions):
+
+- Step 1 — edit Infisical values.
+- Step 2 — Vercel REST upsert.
+- Step 3 — production redeploy.
+- Step 6 — Vercel env entry cleanup.
+
+**Cursor-side steps** (already automated or queued):
+
+- Step 4 — public endpoint probes (`scripts/diagnose-vercel-postgres-env.mjs` + `.github/workflows/diagnose-postgres-env.yml`; live curl checks).
+- Step 5 — diagnostic workflow dispatch + JSON artifact.
+- Step 7 — chat-history entry by the agent that closes the incident.
+
+**Provenance discipline (do not autonomously delete):**
+
+Before any env entry is deleted from Vercel or Infisical, search the repo for the literal env-key name (`rg '<KEY>' -- repo`). If any code path still reads the key, surface the finding to Anton before removal. The aliases listed in `lib/server/postgres-ensure-schema-connection.js` (`DATABASE_URL_UNPOOLED`, `POSTGRES_URL_UNPOOLED`, `PRISMA_DATABASE_URL_UNPOOLED`, `POSTGRES_PRISMA_URL_NON_POOLING`) and `lib/server/runtime-config.js` `cfg('POSTGRES_URL')` (`POSTGRES_PRISMA_URL`, `PRISMA_DATABASE_URL`) are **expected** alias names — they may exist with Neon values; they should never reference Prisma.
 
 ---
 

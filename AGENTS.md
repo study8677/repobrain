@@ -68,7 +68,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Delivery reality (live prod = done) | `.cursor/rules/delivery-reality.mdc`, `.cursor/rules/predeploy-decision-checks.mdc` |
 | Production bar (reliable, secure, observable) | `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md` |
 | Host / apex / login / tenancy | `docs/operations/TENANT_CLIENT_LOGIN.md` |
-| Postgres provider (Neon) — required when touching DB env vars or diagnosing DB issues | `docs/operations/POSTGRES_PROVIDER.md` |
+| **Postgres provider (Neon — sole approved)** — required when touching DB env vars or diagnosing DB issues. **Neon is the only approved Postgres provider for production. Prisma Accelerate / `db.prisma.io` is deprecated and must not appear in active runtime configuration. Any `db.prisma.io` reference is configuration drift; see `docs/operations/POSTGRES_PROVIDER.md` §4a/§4b/§5b for the playbook.** | `docs/operations/POSTGRES_PROVIDER.md` |
 | Outbound email / communications — required when adding any send-mail capability or comms event | `docs/communications/CORPFLOW_COMMUNICATIONS_V1.md` |
 | Security review triggers | `docs/operations/SECURITY_REVIEW_CHECKLIST.md` |
 | Incident / rotation stub | `docs/runbooks/SECURITY_OR_INCIDENT.md` |
