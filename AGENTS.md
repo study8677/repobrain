@@ -78,6 +78,9 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Vercel / cron / Technical Lead / Bugbot | `docs/VERCEL_DEPLOYMENT.md` |
 | Factory control loop (off-laptop drift monitor) | `docs/operations/FACTORY_CONTROL_LOOP.md` |
 | Analytics / Search Console / indexing — operational rollout plan (apex → Lux → future tenants) | `docs/operations/ANALYTICS_SEARCH_CONSOLE_ROLLOUT_PLAN.md` |
+| **Analytics v1 (Plausible) — canonical doc + adapter design** | **`docs/analytics/CORPFLOW_ANALYTICS_V1.md`** |
+| **Search Console + indexing operator playbook** | **`docs/operations/SEARCH_CONSOLE_INDEXING_ROLLOUT.md`** |
+| **Website quality reporting standard (cadence, thresholds, client-facing wording)** | **`docs/operations/WEBSITE_QUALITY_REPORTING_STANDARD.md`** |
 | Env placeholders | `.env.template` |
 | ADR-lite decisions | `docs/decisions/README.md` |
 | Compliance starter | `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md` |

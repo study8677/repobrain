@@ -29,9 +29,9 @@ Order is deliberate — apex first because it is the public storefront, Lux seco
 
 ## 3. Decision: analytics provider
 
-The **default** is privacy-first (Plausible / Fathom / self-hosted Umami), per the checklist §3.1. **GA4** is a *conditional* add-on the client must explicitly request.
+**Resolved (2026-05-25):** **Plausible** is the v1 provider. Decision recorded in `docs/decisions/20260525-plausible-analytics-v1.md`; canonical implementation contract + adapter design in `docs/analytics/CORPFLOW_ANALYTICS_V1.md`.
 
-For **CorpFlow apex** and **Lux**, default = privacy-first. Switching to GA4 (or adding both) is an **Anton-approved gate** because it changes the cookie-consent and processor surface area (`docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md`).
+GA4 remains an **Anton-approved exception** for any future tenant that explicitly demands it (changes cookie-consent + processor surface area, `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md`).
 
 ## 4. Sequenced rollout — apex (`corpflowai.com`)
 
@@ -39,7 +39,7 @@ Each step lists **owner**, **evidence shipped**, and the **gate** that blocks th
 
 | Step | Action | Owner | Evidence | Gate |
 |------|--------|-------|----------|------|
-| 4.1 | Decide analytics provider (privacy-first vs GA4 vs both). Record decision under `docs/decisions/`. | Anton | New ADR-lite file. | Anton approves provider; until then steps 4.2–4.6 do not start. |
+| 4.1 | Decide analytics provider (privacy-first vs GA4 vs both). Record decision under `docs/decisions/`. | Anton | ✅ `docs/decisions/20260525-plausible-analytics-v1.md` (Plausible chosen). | **Closed 2026-05-25.** |
 | 4.2 | Create the analytics property. **Do not** install the snippet yet. | Anton | Property ID captured in the rollout audit doc only — never in the repo. | None. |
 | 4.3 | Install the analytics snippet via the existing Next.js head pattern. PR docs-only first; runtime change in a *separate* PR with explicit review. | Cursor (PR) | PR diff; preview screenshot showing the snippet present and conditional on consent (where relevant). | **Anton must approve the runtime PR before merge** — this changes what every visitor downloads. |
 | 4.4 | Verify Google Search Console ownership using the **DNS TXT** method (apex is `corpflowai.com`, root-level). | Anton (DNS only Anton can change) | SC verification screenshot stored under `artifacts/audits/`. | **Anton-only step** — DNS change. |
@@ -106,7 +106,7 @@ CorpFlowAI blocker: <short blocker>. Approval needed for: <DNS change|analytics 
 
 | Surface | Step | State |
 |---------|------|-------|
-| `corpflowai.com` | All | Not started — awaiting §4.1 (provider decision). |
+| `corpflowai.com` | 4.1 | ✅ Closed 2026-05-25 — Plausible (`docs/analytics/CORPFLOW_ANALYTICS_V1.md`). 4.2 onward unblocked; awaiting Anton's Plausible site creation gate. |
 | `lux.corpflowai.com` | All | Blocked on apex COMPLETE. |
 | Future tenants | All | Blocked on apex + Lux COMPLETE. |
 

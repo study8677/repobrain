@@ -381,6 +381,25 @@ This is the **live queue** of approved or pending packets for autonomous executi
 
 ---
 
+### Packet 3.4 — Lux post-fix quality audit re-run (Track 2 WP A)
+
+- **Goal:** Re-score `lux.corpflowai.com` after PR #222 (SEO/a11y/404/robots/sitemap) merged and the 2026-05-25 Postgres-drift incident closed. Quantify the actual gain vs the predicted ~+25 in Packet 3.2.
+- **Definition of Done:**
+  - [x] Public probes captured for home, robots, sitemap, tenant-resolution APIs, sample property page, 404 probe, favicon.
+  - [x] All confirmation items in WP A §2 binary-checked (tenant resolves as `luxe-maurice`, host-aware sitemap, branded 404, no `db.prisma.io` errors, etc.).
+  - [x] Score recomputed against `WEBSITE_QUALITY_MEASUREMENT_FRAMEWORK.md` v1.
+  - [x] Report at `artifacts/quality-audits/2026-05-25-luxe-maurice-postfix/README.md` with previous score, new score, Δ, top-5 remaining fixes, framework-revision notes.
+- **Scope:** read-only audit. No tenant content edits. No analytics install. No DNS work.
+- **Constraints:** docs/audit-only PR. No fixes shipped in the same packet.
+- **Allowed actions:** anonymous probes, save report, `npm test`, `npm run build`.
+- **Approval gates:** pre-merge.
+- **Verification evidence:** the audit report and its embedded probe table are the evidence.
+- **Rollback plan:** revert PR; the audit is informational.
+- **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
+- **Status:** COMPLETE in this PR. **Score: 59/100\*** (Conversion 18/20, Performance 8/20\*, Accessibility 6/20\*, **SEO 12/20\* (+12)**, Trust 15/20 (+3)). Δ vs 2026-05-23 baseline = **+15**. Verdict: *Substantive gaps closing toward Operational* — ceiling ~78–80/100\* once Lighthouse + Search Console land.
+
+---
+
 ## Goal 4 — Current-client migration audit (Lux first)
 
 **Why this goal:** Use the new `CURRENT_CLIENT_MIGRATION_AUDIT_TEMPLATE.md` for the first real per-tenant audit. Lux is the only active production tenant today; auditing Lux exercises every section A–F of the template.
@@ -435,7 +454,60 @@ This is the **live queue** of approved or pending packets for autonomous executi
 - **Verification evidence:** PR URL, plan doc, list of explicitly-gated implementation steps.
 - **Rollback plan:** revert PR.
 - **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
-- **Status:** PENDING.
+- **Status:** PENDING (this packet remains the **apex** plan, distinct from Track 2 below).
+
+---
+
+### Packet 5.2 — Plausible Analytics v1 doc + adapter design (Track 2 WP B)
+
+- **Goal:** Convert the open Step 4.1 (analytics provider decision) into a recorded ADR + canonical doc + adapter design, so the eventual runtime PR has zero design ambiguity. **Docs/design only — no runtime install.**
+- **Definition of Done:**
+  - [x] ADR at `docs/decisions/20260525-plausible-analytics-v1.md` (Plausible chosen; rationale; reversibility note).
+  - [x] Canonical doc at `docs/analytics/CORPFLOW_ANALYTICS_V1.md` covering tenant-aware approach, event taxonomy, allow/deny lists, adapter contract, env placeholders, approval gates, rollout order, privacy posture.
+  - [x] `docs/operations/ANALYTICS_SEARCH_CONSOLE_ROLLOUT_PLAN.md` Step 4.1 marked closed; status table updated.
+  - [x] `AGENTS.md` Must-read row added.
+- **Scope:** docs only. Out: any third-party script in `pages/_app.js`; any new `lib/analytics/*` module; `DATA_MAP_AND_SUBPROCESSORS.md` Plausible row (deferred to a separate small docs PR before runtime install per ADR §6 gate 3).
+- **Constraints:** No new secrets. No DNS work. No analytics account creation. No GA4. No tracking on `/change`, `/admin`, factory routes, or any auth/reset URL.
+- **Allowed actions:** docs, ADR, link updates, `npm test`, `npm run build`.
+- **Approval gates:** pre-merge. **Runtime install remains an explicit Anton-approved gate** per `CORPFLOW_AUTONOMOUS_ACTIONS_POLICY.md` §3.
+- **Verification evidence:** the ADR, the canonical doc, and the rollout-plan status update.
+- **Rollback plan:** revert PR.
+- **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
+- **Status:** COMPLETE in this PR.
+
+---
+
+### Packet 5.3 — Search Console + indexing operator playbook (Track 2 WP C)
+
+- **Goal:** Split the Search Console verification + indexing-request operator path out of the mixed analytics-and-SC rollout plan into a standalone playbook Anton can run step-by-step.
+- **Definition of Done:**
+  - [x] `docs/operations/SEARCH_CONSOLE_INDEXING_ROLLOUT.md` covering target domains, verification methods (DNS TXT preferred + HTML file fallback), apex playbook, Lux playbook, future-tenant playbook, common failure modes, indexing-request pace, owner table, evidence shape, status table.
+  - [x] `AGENTS.md` Must-read row added.
+- **Scope:** docs only. Out: any DNS change, any sitemap submission, any URL inspection (those are Anton-only operator actions).
+- **Constraints:** No DNS work. No new secrets. No automation against the Search Console API in v1.
+- **Allowed actions:** docs, link updates, `npm test`, `npm run build`.
+- **Approval gates:** pre-merge. **Search Console verification + indexing requests are Anton-only operator gates.**
+- **Verification evidence:** the playbook itself + the §10 evidence-folder convention.
+- **Rollback plan:** revert PR.
+- **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
+- **Status:** COMPLETE in this PR.
+
+---
+
+### Packet 5.4 — Website quality reporting standard (Track 2 WP D)
+
+- **Goal:** Codify cadence, thresholds, evidence shape, client-facing wording, improvement-backlog format, and "launch-ready" definition so every future tenant audit reads the same.
+- **Definition of Done:**
+  - [x] `docs/operations/WEBSITE_QUALITY_REPORTING_STANDARD.md` covering acceptance thresholds (75 / 85 / <60), surface-type targets, doctrine override, asterisk discipline, reporting cadence, audit procedure, internal report template, client-facing template, improvement-backlog format, launch-ready definition, anti-patterns, status.
+  - [x] `AGENTS.md` Must-read row added.
+- **Scope:** docs only. Does not change the framework rubric (that's `WEBSITE_QUALITY_MEASUREMENT_FRAMEWORK.md`); this standard is *operationalised on top of* the framework.
+- **Constraints:** No tenant data. No new secrets.
+- **Allowed actions:** docs, link updates, `npm test`, `npm run build`.
+- **Approval gates:** pre-merge.
+- **Verification evidence:** the standard itself.
+- **Rollback plan:** revert PR.
+- **Owner:** Approver = Anton; Executor = Cursor; Reviewer = Anton.
+- **Status:** COMPLETE in this PR.
 
 ---
 
@@ -455,8 +527,12 @@ This is the **live queue** of approved or pending packets for autonomous executi
 | 3.1 | First quality audit (Lux) | 3 | PENDING | Lighthouse variance | None |
 | 4.1 | First migration audit (`luxe-maurice`) | 4 | PENDING | Operator-required gaps | Items B.2/B.3/B.6/B.7 require Anton evidence |
 | 5.1 | Analytics + SC + indexing plan (apex) | 5 | PENDING | Plan/impl divergence | Implementation packet hits §3.1 + §3.3 |
+| 3.4 | Lux post-fix quality re-audit (Track 2 WP A) | 3 | COMPLETE | None — read-only | None |
+| 5.2 | Plausible Analytics v1 doc + adapter design (Track 2 WP B) | 5 | COMPLETE | Doc/design divergence on runtime install | Runtime install remains Anton-only |
+| 5.3 | Search Console operator playbook (Track 2 WP C) | 5 | COMPLETE | None | DNS TXT + indexing requests remain Anton-only |
+| 5.4 | Website quality reporting standard (Track 2 WP D) | 3 | COMPLETE | Standard ↔ framework drift | None |
 
-**All 12 packets are docs-only or read-only by design.** Packet 2.2 introduces a workflow file but that file is a docs/automation surface, not a runtime code change; it does not run until merged and the merge is Anton's gate.
+**All 16 packets are docs-only or read-only by design.** The four Track 2 packets (3.4 / 5.2 / 5.3 / 5.4) are entirely documentation and audit; no runtime code changes, no third-party scripts, no DNS, no secrets.
 
 ---
 
