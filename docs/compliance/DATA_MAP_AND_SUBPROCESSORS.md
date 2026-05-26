@@ -28,6 +28,7 @@ Review quarterly or before signing a DPA. Replace placeholders with your actual 
 | GitHub | Code, Actions, dispatch | Repo, workflow metadata | If CMP uses GitHub |
 | n8n (self/hosted) | Workflow automation | Event payloads forwarded from CorpFlow | Your deployment |
 | Resend (if used) | Transactional email | Email addresses, reset URLs | Per Resend DPA |
+| **Plausible Insights** | Privacy-friendly web analytics on **CorpFlow-owned** public marketing surfaces (umbrella site: `corpflowai.com` apex + `aileadrescue.corpflowai.com`; future CorpFlow marketing subdomains join the same site). | Aggregate, non-personal traffic data only — page views, hostname, path, referrer, UTM. **No cookies, no fingerprinting, no PII.** Tenant `<host>.corpflowai.com` working surfaces and operator routes (`/change`, `/admin`, `/login`, `/api/*`, etc.) are explicitly denied; the script does not load there. | EU-hosted (Plausible default). Canonical model: `docs/analytics/CORPFLOW_ANALYTICS_V1.md`. Boundary rule: `docs/decisions/20260526-plausible-internal-vs-client-facing-boundary.md`. Tenant client domains (e.g. `luxemaurice.com`) run **their own** Plausible registration on their own domain — CorpFlow's umbrella does not track them. |
 
 **Action:** When you add a new integration that stores or processes tenant data, add a row and link the operator runbook.
 
@@ -35,6 +36,9 @@ Review quarterly or before signing a DPA. Replace placeholders with your actual 
 
 - `docs/operations/POSTGRES_PROVIDER.md` (Neon — canonical for the database)
 - `docs/communications/CORPFLOW_COMMUNICATIONS_V1.md` (outbound email model — canonical for which events, which aliases, which approval rules)
+- `docs/analytics/CORPFLOW_ANALYTICS_V1.md` (analytics — canonical for which surfaces, which events, which deny-list)
+- `docs/decisions/20260525-plausible-analytics-v1.md` (Plausible-vs-alternatives ADR)
+- `docs/decisions/20260526-plausible-internal-vs-client-facing-boundary.md` (host/path boundary ADR)
 - `docs/operations/TENANT_CLIENT_LOGIN.md`  
 - `docs/operations/SECURITY_REVIEW_CHECKLIST.md`  
 - `docs/runbooks/SECURITY_OR_INCIDENT.md`  
