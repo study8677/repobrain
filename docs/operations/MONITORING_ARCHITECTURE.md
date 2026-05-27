@@ -130,43 +130,13 @@ This contract is what `docs/automation-framework.md` § "Optional forward to n8n
 | #11 vercel.json cron self-validation | ✅ direct (rolled into #1) | — | shares #1's alert |
 | #12 corpflow-exec-01 | — | — | no scheduled jobs to alert about (yet) |
 
-### 4.4 Inbound webhook — Telegram → repo (operationally separate from outbound)
+### 4.4 Inbound webhook — Telegram -> repo (operationally separate from outbound)
 
 <!-- TELEGRAM_INBOUND_WEBHOOK_4.4 -->
 
-Telegram inbound webhook registration is **external Telegram-side configuration**, not repo-owned code. The bot whose token powers outbound alerts in § 4.1 also has an **inbound** webhook registered on Telegram's servers against the same `TELEGRAM_BOT_TOKEN`.
+**Canonical home (moved 2026-05-27):** `docs/operations/TELEGRAM_ALERT_WIRING_PACKET_V1.md` § 7 — production URL `https://corpflowai.com/api/webhook`, repo path (`vercel.json` -> `api/factory_router.js` -> `lib/server/webhook.js`), token-rotation `setWebhook` invariant, and inbound-vs-outbound separation.
 
-**Current registration** (as reported by Telegram's `getWebhookInfo` against the active token):
-
-`https://corpflowai.com/api/webhook`
-
-**Repo-serving path** (the only side this codebase owns):
-
-```text
-Telegram POST → /api/webhook
-              ↓ Vercel `/api/(.*)` rewrite (vercel.json)
-              ↓ /api/factory_router?__path=webhook
-              ↓ api/factory_router.js → case 'webhook'
-              ↓ lib/server/webhook.js  (today: liveness/status pinger)
-```
-
-**Operational invariants — do not violate without an explicit packet:**
-
-1. **Registration is external.** No repo script calls `setWebhook` (confirmed: `rg 'setWebhook|deleteWebhook' --glob '!*.md'` returns zero hits at the time this section was written). The URL above was set manually against Telegram's bot API; it is *not* re-asserted by any CI job or deploy step.
-2. **Token rotation is a two-step operation.** Rotating `TELEGRAM_BOT_TOKEN` does **not** carry the webhook registration over — the new bot starts with an empty webhook config on Telegram's side. After every rotation, the operator must re-run the equivalent of:
-
-   `curl -F "url=https://corpflowai.com/api/webhook" "https://api.telegram.org/bot<NEW_TOKEN>/setWebhook"`
-
-   This is a hand-action, not a CI step. § 7 (Roles and ownership) reflects this in the `Rotate TELEGRAM_BOT_TOKEN` row.
-3. **Inbound and outbound are operationally separate.** Both surfaces use the same `TELEGRAM_BOT_TOKEN`, but they fail independently — fix each independently, verify each independently. Outbound senders also use `TELEGRAM_ALERT_CHAT_ID`; inbound has no chat-id env (the chat id is learned from each incoming message).
-4. **Env vars are unchanged.** Use only the names already declared in `.env.template` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALERT_CHAT_ID`. Do not introduce parallel names for inbound vs outbound.
-5. **Current `lib/server/webhook.js` behavior is a liveness/status pinger.** A Telegram message containing exactly `.` triggers a Sentry status reply; all other messages return `200 OK` and are ignored. No state is persisted, no extra auth beyond the obscurity of the bot token. Any change that gives the handler richer responsibilities (operator commands, deploy triggers, etc.) must be a separate runtime packet with its own threat model.
-
-**Why this lives in § 4 (alert routing):** the inbound webhook is the only externally-registered surface in the alert wiring; if it drifts after a token rotation, **no monitor in § 2 detects it**. Operator-initiated `getWebhookInfo` against the current token is the only canary today. A future packet may add a bounded read-only check that calls `getWebhookInfo` and asserts the URL equals the value above — explicitly **no** `setWebhook` automation belongs in this repo.
-
-> **Companion design (PR #238, not yet on `main`):** `docs/operations/TELEGRAM_ALERT_WIRING_PACKET_V1.md` is the natural home for an equivalent operator-facing note. After PR #238 merges, a small follow-up will port this § 4.4 content into the packet doc and leave a cross-link here. Until then, this section is the canonical source.
-
----
+This sub-section is preserved as the stable anchor for cross-references from § 6 (known blind spots), § 7 (roles and ownership rotation row), and § 10 (cross-links). The anchor `<!-- TELEGRAM_INBOUND_WEBHOOK_4.4 -->` above is intentionally retained so any tooling or doc-graph check that looks for it continues to resolve.
 
 ## 5. Live-endpoint floor
 
