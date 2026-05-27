@@ -13,6 +13,7 @@
 - `docs/EXECUTION_BRAIN_VS_HANDS.md` — high-level "brain on laptop, hands 24/7" policy. This doc is its concrete component map.
 - `docs/communications/CORPFLOW_COMMUNICATIONS_V1.md` — outbound email model; `operator_escalation` event used by ops alerts.
 - `docs/automation-framework.md` — automation forward (n8n) envelope contract used by ops alerts.
+- `docs/quality/CORPFLOW_WEBSITE_QUALITY_SYSTEM_V1.md` — v1 quality system; § 3.8 *Monitoring / runtime health* consumes this doc's § 2 / § 3 / § 5 evidence.
 
 ---
 
@@ -332,7 +333,7 @@ The state of each monitor + each known future packet. When a future packet gradu
 |---|---|---|
 | `cmp-internal-cron-alerts` | Wire #5 / #6 / #8 through `lib/server/ops-alerts.js` with typed `kind` for n8n routing. | (none — pure code change). |
 | `exec01-cron-pulse` | Run `scripts/production-pulse.mjs` on a 30-min cron from `corpflow-exec-01` with Telegram alerts; diversifies alert path away from GitHub Actions. | A separate Telegram bot/chat (independent of GitHub's), narrow-scope. Box has only the public pulse URL. |
-| `exec01-quality-audit-runner` | Schedule the read-only quality-audit probe (`docs/execution/WEBSITE_QUALITY_MEASUREMENT_FRAMEWORK.md`) to run weekly per tenant and write evidence under `~/audits/`. | Probe scripts are read-only; no auth required for tenant marketing surfaces. |
+| `exec01-quality-audit-runner` | Schedule the read-only quality-audit probe (`docs/quality/CORPFLOW_WEBSITE_QUALITY_SYSTEM_V1.md`; the older `docs/execution/WEBSITE_QUALITY_MEASUREMENT_FRAMEWORK.md` 5-dim rubric remains readable) to run weekly per tenant and write evidence under `~/audits/`. | Probe scripts are read-only; no auth required for tenant marketing surfaces. |
 | `diagnose-postgres-env-scheduled` | Promote #9 from manual to weekly with a checked-in expected-shape baseline; alert on drift. | Decide where the baseline lives (in-repo JSON or env var). |
 | `domain-routing-guard-scheduled` | Promote `domain-routing-guard.yml` from manual to daily; surface as a new monitor row in § 2. | Confirm `CORPFLOW_*_BASE_URL` secrets are set in production. |
 | `n8n-on-exec01` | Migrate the n8n host onto `corpflow-exec-01` (or sibling Elestio VM). | Threat model + DPA review; n8n holds Gmail OAuth tokens. Probably a sibling VM, not the 2 GB box. |

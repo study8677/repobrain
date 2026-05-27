@@ -536,6 +536,134 @@ This is the **live queue** of approved or pending packets for autonomous executi
 
 ---
 
+## Goal 6 — Website quality & client performance system v1
+
+**Why this goal:** Goals 1–5 stabilised the platform, shipped the first quality framework + reporting standard + analytics decision + Search Console playbook, and produced two Lux audits. Goal 6 turns those building blocks into **a single canonical quality system** (10 dimensions × 10 points), **the first client-facing reporting model design**, and **the first bounded operator packet for Search Console** — so future per-tenant audits are repeatable and the path to a real client report is named.
+
+### Packet 6.1 — Website Quality System v1 (canonical 10-dim scoring)
+
+- **Goal:** Codify the v1 quality system as a 10-dimension × 10-points rubric that supersedes the 5-dimension framework for new audits from 2026-05-27 forward; explicitly surface dimensions previously hidden in the "Trust + governance" bucket (Monitoring, Tenant routing, Analytics, Content completeness, Mobile usability).
+- **Definition of Done:**
+  - [x] `docs/quality/CORPFLOW_WEBSITE_QUALITY_SYSTEM_V1.md` exists with §§1–12 (purpose, scope, 10 dimensions, thresholds, evidence requirements, mapping back to v1 framework, doctrine ties, remediation workflow, reporting cadence, launch-readiness criteria, anti-patterns, cross-references, status).
+  - [x] Cross-linked from `AGENTS.md` Must-read table, `docs/operations/MONITORING_ARCHITECTURE.md` (companions + §11 future-packet row), `docs/execution/WEEKEND_EXECUTION_QUEUE.md` (this Goal 6), `artifacts/chat_history.md`.
+  - [x] `npm test` passes; `npm run build` passes.
+  - [x] Branch `docs/quality-system-v1`, PR opened against `main`, CI green.
+- **Scope:** docs only. Out: any runtime code, any audit script, any new monitor, any tenant data mutation.
+- **Constraints:** No secrets. No tenant data. No DNS. No `tenant_id` mutation. No DB writes. No production deploy (docs-only auto-deploy via Vercel is acceptable).
+- **Risks:** rubric drift across the framework / system transition — mitigated by §6.1 *Mapping back to v1 framework* in the new doc, and by carrying forward the asterisk discipline.
+- **Allowed actions:** docs, link updates, `npm test`, `npm run build`, PR open.
+- **Approval gates:** pre-merge.
+- **Verification evidence:** PR URL, CI status, the new doc visible in the AGENTS Must-read table.
+- **Rollback plan:** revert PR.
+- **Owner:** Approver = Anton. Executor = Cursor. Reviewer = Anton.
+- **Status:** COMPLETE in this PR.
+
+### Packet 6.2 — Lux Quality Report v1 (first audit under the v1 system)
+
+- **Goal:** Re-score Lux against the new v1 10-dim system and ship the first audit folder using the v1 system suffix convention. Establish the v1-system baseline for Lux.
+- **Definition of Done:**
+  - [x] Audit folder `artifacts/quality-audits/2026-05-27-luxe-maurice-quality-v1.md` exists with full §§1–12 per the system's report template.
+  - [x] Score recorded against the 10-dim rubric with per-row notes.
+  - [x] Reconciliation table mapping the 10-dim score back to the 5-dim score (§6 of the audit).
+  - [x] Top-10 fixes ordered by point gain.
+  - [x] Operator-required follow-ups named.
+  - [x] Whether Lux is client-ready answered explicitly.
+  - [x] Whether analytics / Search Console are still blockers answered.
+- **Scope:** read-only audit. Out: any tenant content edit; any analytics expansion; any DNS work.
+- **Constraints:** read-only public probes only. No DB writes. No `tenant_id` mutation. No production changes. No new analytics. No Plausible env touched.
+- **Risks:** TTFB cold-MISS variance misread as a regression — mitigated by audit §2.2 noting cold vs warm.
+- **Allowed actions:** anonymous public probes from `corpflow-exec-01`, save audit doc, `npm test`, `npm run build`.
+- **Approval gates:** pre-merge.
+- **Verification evidence:** the audit report itself + the embedded probe table.
+- **Rollback plan:** revert PR.
+- **Owner:** Approver = Anton. Executor = Cursor. Reviewer = Anton.
+- **Status:** COMPLETE in this PR. **Score: 59/100\*** (10-dim v1; Δ +15 vs 2026-05-23 framework baseline). Verdict: *Remediation required (<60); ceiling ~75/100\* once Lighthouse + Search Console land*. Doctrine PASS.
+
+### Packet 6.3 — Search Console execution packet (apex first)
+
+- **Goal:** Stand up the bounded operator packet for the first Search Console rollout (`corpflowai.com` apex), with explicit per-step DNS / UI / evidence requirements and Cursor verifier handoff. Lux deferred until apex COMPLETE.
+- **Definition of Done:**
+  - [x] `docs/operations/SEARCH_CONSOLE_EXECUTION_PACKET.md` exists with §§1–9 (why separate, packet metadata, operator action checklist, Cursor verifier steps, evidence requirements, common pitfalls, after-COMPLETE plan, why Cursor cannot execute, cross-references).
+  - [x] Cross-linked from `AGENTS.md` Must-read table, `docs/quality/CORPFLOW_WEBSITE_QUALITY_SYSTEM_V1.md`, `docs/quality/CLIENT_PERFORMANCE_REPORTING_MODEL.md`.
+  - [ ] Anton executes §3.1–§3.7 of the packet (DNS, verify, sitemap, indexing requests). **OPERATOR-OWNED.**
+  - [ ] Cursor runs §4.1 / §4.2 / §4.3 verifier steps after Anton completes operator steps.
+- **Scope:** docs only in this PR; operator action is the next packet phase.
+- **Constraints:** No DNS change from Cursor. No Search Console API automation. No new secrets. No `tenant_id` mutation. No production deploy.
+- **Risks:** Apex DNS TXT placed in wrong zone — mitigated by §6.1 of the packet.
+- **Allowed actions:** docs, link updates, `npm test`, `npm run build`, PR open.
+- **Approval gates:** pre-merge for the docs PR. **DNS + Search Console account verification are §3 Anton-only operator gates** per `CORPFLOW_AUTONOMOUS_ACTIONS_POLICY.md`.
+- **Verification evidence:** the packet doc itself + after-operator-action evidence folder `artifacts/audits/<YYYY-MM-DD>-corpflowai-search-console/`.
+- **Rollback plan:** revert PR (docs-only); remove TXT record + remove Search Console property if operator action started.
+- **Owner:** Approver = Anton. Executor = Anton (operator steps) + Cursor (verifier + docs). Reviewer = Anton.
+- **Status:** COMPLETE for the packet doc; PENDING for the operator execution (Anton-owned).
+
+### Packet 6.4 — Client Performance Reporting Model v1 (design-only)
+
+- **Goal:** Define what clients should eventually see in a monthly performance report, what the internal monthly review carries that the external report does not, and what data sources feed each category. **Design only — no implementation in this PR.**
+- **Definition of Done:**
+  - [x] `docs/quality/CLIENT_PERFORMANCE_REPORTING_MODEL.md` exists with §§1–12 (why separate, frequency / surface / delivery, internal vs external, five metric categories with source-of-truth + pull mechanisms, recommended-actions structure, trend-summary shape, explicit non-measurements, quality-score → report mapping, implementation gates, v2 candidates, cross-references, status).
+  - [x] Cross-linked from `AGENTS.md` Must-read table, `docs/quality/CORPFLOW_WEBSITE_QUALITY_SYSTEM_V1.md`, `docs/operations/SEARCH_CONSOLE_EXECUTION_PACKET.md`.
+- **Scope:** design only. Out: any `lib/server/reports/` skeleton; any cron; any PDF generator; any client-side dashboard.
+- **Constraints:** No new secrets. No new Comms event implemented (only named in §9 implementation gates). No analytics expansion. No DB writes.
+- **Risks:** design diverges from eventual implementation — mitigated by §9 gate naming + §10 v2 candidates explicitly listed.
+- **Allowed actions:** docs, link updates, `npm test`, `npm run build`, PR open.
+- **Approval gates:** pre-merge. **Implementation** packet (when it comes) hits multiple §3 Anton-only gates (Comms event approval, Search Console API service account creation, client-facing email auto-send policy).
+- **Verification evidence:** the design doc itself.
+- **Rollback plan:** revert PR.
+- **Owner:** Approver = Anton. Executor = Cursor. Reviewer = Anton.
+- **Status:** COMPLETE in this PR (design-only by definition).
+
+### Packet 6.5 — Telegram alert wiring (operator-only)
+
+- **Goal:** Close the named-blocker from the 2026-05-24 audit + the v1 system §3.8 row 6: set `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ALERT_CHAT_ID` repo secrets so factory-control-loop failure alerts fire off-laptop.
+- **Definition of Done:**
+  - [ ] `TELEGRAM_BOT_TOKEN` set as GitHub repo secret (value only known to Anton).
+  - [ ] `TELEGRAM_ALERT_CHAT_ID` set as GitHub repo secret (value only known to Anton).
+  - [ ] A failing manual `workflow_dispatch` run of `factory-control-loop.yml` produces a Telegram message in the alert chat (forced-fail dry-run, e.g. point health URL at a known-404 fixture for one run, then revert).
+  - [ ] Status row updated in `docs/operations/MONITORING_ARCHITECTURE.md` §11.1 (monitor #1 Telegram-alert column flips from `⚠️ active-no-alert` to `✅ active`).
+- **Scope:** GitHub repo secret set + one forced-fail evidence run + one status-table doc edit.
+- **Constraints:** Anton-only secret values (per `CORPFLOW_AUTONOMOUS_ACTIONS_POLICY.md` §3). No code change required.
+- **Risks:** secret typo → Telegram POST returns 401; mitigated by the forced-fail test run.
+- **Allowed actions:** Anton sets secrets; Cursor drafts the status-table doc PR after evidence.
+- **Approval gates:** §3 Anton-only (secret values).
+- **Verification evidence:** evidence chat-message screenshot (Telegram channel name only — no message body that contains secrets); workflow run URL with the forced-fail outcome.
+- **Rollback plan:** unset the two secrets; the alert path silently no-ops as today.
+- **Owner:** Approver = Anton. Executor = Anton (secret + force-fail). Reviewer = Cursor (status-table PR).
+- **Status:** PENDING — operator-only.
+
+### Packet 6.6 — Publication engine v1 (design-only)
+
+- **Goal:** Frame the design of CorpFlow's first "publication engine" — the path from CMP ticket Approved/Build → Preview → Anton's per-tenant approval → Production deploy → live verification → tenant signoff → client-visible "Published" badge. Today this path is implicit across multiple docs (`docs/runbooks/CHANGE_CONSOLE_INSPECTION.md`, `docs/operations/CMP_PR_DELIVERY_GATE.md`, `docs/operations/DELIVERY_VERDICT_AND_ALERTS.md`, the `change-workflow-state` derivation logic). The v1 design doc names the canonical end-to-end flow so future automation packets have a single reference. **Design only — no runtime change.**
+- **Definition of Done:**
+  - [ ] `docs/publication/CORPFLOW_PUBLICATION_ENGINE_V1.md` exists with §§ purpose / states / state-machine diagram / inputs per state / who-decides per state / SLA per state / evidence shape per transition / failure modes / per-tenant overrides / v2 candidates / cross-references / status.
+  - [ ] States named (draft → in-review → approved → build → preview → tenant-uat → published; with explicit terminal states).
+  - [ ] Inputs/decision-makers/SLAs per state captured.
+  - [ ] Cross-linked from `AGENTS.md` Must-read.
+- **Scope:** design only. Out: any code change, any state-machine implementation, any database schema, any CMP change.
+- **Constraints:** No new state on `cmp_tickets`. No new event in `automation_events`. No new Comms event. No `tenant_id` mutation.
+- **Risks:** design diverges from existing runtime — mitigated by naming the existing docs as the substrate and citing the relevant logic files.
+- **Allowed actions:** docs, link updates, `npm test`, `npm run build`, PR open.
+- **Approval gates:** pre-merge. Implementation packets (when they come) hit multiple §3 Anton-only gates.
+- **Verification evidence:** the design doc itself.
+- **Rollback plan:** revert PR.
+- **Owner:** Approver = Anton. Executor = Cursor. Reviewer = Anton.
+- **Status:** PENDING — not in this PR (design-only future packet).
+
+---
+
+### Queue summary (Goal 6 packets)
+
+| # | Packet | Goal | State | Risk | Approval gates beyond pre-merge |
+|---|--------|------|-------|------|---------------------------------|
+| 6.1 | Website Quality System v1 (10-dim canonical) | 6 | COMPLETE | None — docs-only | None |
+| 6.2 | Lux Quality Report v1 | 6 | COMPLETE | TTFB cold-MISS variance | None (read-only audit) |
+| 6.3 | Search Console execution packet (apex first) | 6 | COMPLETE (doc) / PENDING (operator) | DNS placement | §3 Anton-only (DNS + SC verification) |
+| 6.4 | Client Performance Reporting Model v1 | 6 | COMPLETE (design-only) | Design/impl divergence | Implementation packet hits §3 multiple times |
+| 6.5 | Telegram alert wiring | 6 | PENDING | Secret typo | §3 Anton-only (secret values) |
+| 6.6 | Publication engine v1 (design-only) | 6 | PENDING | Design/runtime divergence | None for design; impl future-gated |
+
+---
+
 ## Archive
 
 (Empty — first queue, started 2026-05-23.)

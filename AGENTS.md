@@ -84,6 +84,9 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | **Analytics v1 (Plausible) — canonical doc + adapter design** | **`docs/analytics/CORPFLOW_ANALYTICS_V1.md`** |
 | **Search Console + indexing operator playbook** | **`docs/operations/SEARCH_CONSOLE_INDEXING_ROLLOUT.md`** |
 | **Website quality reporting standard (cadence, thresholds, client-facing wording)** | **`docs/operations/WEBSITE_QUALITY_REPORTING_STANDARD.md`** |
+| **Website quality system v1 (canonical scoring — 10 dimensions × 10 points; supersedes the 5-dim framework as of 2026-05-27)** | **`docs/quality/CORPFLOW_WEBSITE_QUALITY_SYSTEM_V1.md`** |
+| **Client performance reporting model (design-only v1 — what clients eventually see monthly; gated on apex SC + Plausible + first client-facing surface)** | **`docs/quality/CLIENT_PERFORMANCE_REPORTING_MODEL.md`** |
+| **Search Console execution packet — apex first (bounded operator packet; Lux deferred)** | **`docs/operations/SEARCH_CONSOLE_EXECUTION_PACKET.md`** |
 | Env placeholders | `.env.template` |
 | ADR-lite decisions | `docs/decisions/README.md` |
 | Compliance starter | `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md` |
