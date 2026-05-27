@@ -1,5 +1,7 @@
 # Brain on laptop, execution 24/7 (inexpensive)
 
+> **Concrete component map:** This doc is the **policy** ("brain on laptop, hands 24/7", security note, cost patterns). For the **specific list** of monitoring surfaces, scheduled jobs, alert paths, and the role of the `corpflow-exec-01` execution node, see **`docs/operations/MONITORING_ARCHITECTURE.md`** — single source of truth, updated in the same PR as any new monitor.
+
 ## Mental model
 
 | Layer | Where it lives | Role |

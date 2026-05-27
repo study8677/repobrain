@@ -52,6 +52,8 @@ Expected: every host ends with `.neon.tech`. Pooled keys include `-pooler.`; non
 
 ## 3. How `/api/factory/health` lies about this (and what to use instead)
 
+> Cross-reference: this section (and § 4b below) is the canonical wording cited by **`docs/operations/MONITORING_ARCHITECTURE.md`** § 6.1 (the first entry in "Known blind spots") and Monitor #2 in § 2. When you hit a "green health, broken DB" symptom, read both this section and § 6.1 of the monitoring doc together.
+
 `GET https://core.corpflowai.com/api/factory/health` reports `database_configured: true` if `POSTGRES_URL` is **non-empty**. It does **not** open a connection. It will say `healthy` while the database is unreachable.
 
 Real connectivity is proven by any endpoint that runs a query:
@@ -181,6 +183,8 @@ Before any env entry is deleted from Vercel or Infisical, search the repo for th
 
 ## 6. Related
 
+- `docs/operations/MONITORING_ARCHITECTURE.md` — canonical component map for every monitor in the stack. § 2 monitor #9 names `diagnose-postgres-env.yml` (this doc's § 4b/§ 5b playbook); § 6.1 (known blind spots) is built on top of this doc's § 3 wording; live-endpoint floor for DB connectivity proofs is § 5.
+- `docs/operations/PRODUCTION_PULSE_V1.md` — the `/api/factory/production-pulse/runtime` endpoint named throughout § 4b as the "real DB connectivity" probe.
 - `docs/operations/ENSURE_POSTGRES_SCHEMA.md` — running `ensure-schema` against the live DB (idempotent DDL).
 - `docs/operations/TENANT_CLIENT_LOGIN.md` — how `tenant_hostnames` participates in host → tenant resolution.
 - `prisma/schema.prisma` — `datasource.url = env("POSTGRES_URL")`.

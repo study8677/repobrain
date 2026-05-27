@@ -2,6 +2,8 @@
 
 Production Pulse is a **read-only** JSON surface for operators and automation (for example n8n) to verify that the **CorpFlow factory deployment** is wired the way we expect, **without** exposing secret values.
 
+> **Where this fits in the wider monitoring picture:** `docs/operations/MONITORING_ARCHITECTURE.md` is the **single component map** for everything that monitors the factory deployment (this endpoint, the factory control loop, Vercel in-app crons, alert paths, the `corpflow-exec-01` execution node). Read that doc first if you need the bird's-eye view; this doc stays the canonical detail for the pulse endpoint itself.
+
 ## Principles
 
 1. **Core / factory readiness first** — database config, session secret, operator admin credentials, and runtime JSON validity (same spirit as `GET /api/factory/health`).

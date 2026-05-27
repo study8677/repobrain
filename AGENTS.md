@@ -77,6 +77,9 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | CMP API surface | `lib/cmp/README.md` |
 | Vercel / cron / Technical Lead / Bugbot | `docs/VERCEL_DEPLOYMENT.md` |
 | Factory control loop (off-laptop drift monitor) | `docs/operations/FACTORY_CONTROL_LOOP.md` |
+| **Monitoring & 24/7 execution architecture (canonical single component map — § 2 surface table of all 12 monitors, § 3 schedule grid, § 4 alert routing, § 5 live-endpoint floor, § 6 known blind spots, § 8 incident decision tree, § 9 add-a-monitor recipe, § 11 status + future packets + `corpflow-exec-01` posture)** | **`docs/operations/MONITORING_ARCHITECTURE.md`** |
+| Delivery verdict + 24/7 alerts (CMP per-ticket) | `docs/operations/DELIVERY_VERDICT_AND_ALERTS.md` |
+| Production pulse runtime endpoint (DB reachability JSON) | `docs/operations/PRODUCTION_PULSE_V1.md` |
 | Analytics / Search Console / indexing — operational rollout plan (apex → Lux → future tenants) | `docs/operations/ANALYTICS_SEARCH_CONSOLE_ROLLOUT_PLAN.md` |
 | **Analytics v1 (Plausible) — canonical doc + adapter design** | **`docs/analytics/CORPFLOW_ANALYTICS_V1.md`** |
 | **Search Console + indexing operator playbook** | **`docs/operations/SEARCH_CONSOLE_INDEXING_ROLLOUT.md`** |

@@ -91,6 +91,8 @@ These reuse the same optional **forward** to n8n as manual ingest. See `docs/n8n
 
 After a successful ingest, the server **POSTs** a JSON envelope to `CORPFLOW_AUTOMATION_FORWARD_URL` (if set). Optional header `x-corpflow-automation-forward-secret` when `CORPFLOW_AUTOMATION_FORWARD_SECRET` is set.
 
+> **Used by ops alerts.** The CMP delivery monitor (**Monitor #4** in the monitoring architecture) and any future operator-routed alert use this forward to emit `corpflow.ops_alert.v1` envelopes — see **`docs/operations/MONITORING_ARCHITECTURE.md`** § 2 (Monitor #4 alert-path column) and § 4.2 (n8n forward routing contract) for the full mechanism, and **`docs/communications/CORPFLOW_COMMUNICATIONS_V1.md`** § 4 for the `operator_escalation` event type that governs sender + audience.
+
 ## Database
 
 Run after deploy (or on fresh Postgres):
