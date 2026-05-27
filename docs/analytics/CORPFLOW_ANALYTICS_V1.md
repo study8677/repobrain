@@ -133,18 +133,17 @@ The runtime install is a **separate PR** Anton must approve per surface (`docs/e
 
 ```
 lib/analytics/
-  index.js                  # public API: trackEvent, isAnalyticsEnabledForPath, getProvider
-  providers/
-    plausible.js            # Plausible-specific snippet + window.plausible() wrapper
-    null-provider.js        # used when analytics is disabled (no-op, logs in dev)
-  config.js                 # surface allow/deny lists, per-host site IDs, env reads
-  events/
-    apex.js                 # apex event helpers (typed)
-    lux.js                  # lux event helpers (typed)
-components/
-  analytics/
-    PlausibleScript.js      # next/script tag; conditionally rendered in pages/_app.js
+  index.js                  # public API: isHostAllowed, isPathAllowed,
+                            # isAnalyticsEnabledForHostPath, isAnalyticsEnabledByEnv,
+                            # resolveAnalyticsForRequest (used by pages/_document.js)
+  config.js                 # surface allow/deny lists, env-name conventions
+pages/
+  _document.js              # SSR-injects the canonical Plausible <script> tag in <Head>
+                            # via Document.getInitialProps + resolveAnalyticsForRequest
+  _app.js                   # baseline viewport meta only (no analytics mount)
 ```
+
+The previous client-side mount (`components/analytics/PlausibleScript.js` + a `next/script` tag in `pages/_app.js`) was removed on 2026-05-27 in favour of SSR injection from `_document.js` so Plausible's `Verify your installation` step sees the snippet in the initial HTML response. See §4.5.
 
 ### 4.2 Adapter contract
 
@@ -181,16 +180,16 @@ Adding a new CorpFlow client-facing host is two lines: append to `ALLOW_HOSTS`, 
 
 Tenant client-facing domains (`luxemaurice.com`, etc.) are **not added here** — they're outside CorpFlow's site. See §2.
 
-### 4.5 Snippet load strategy (standard Plausible script + `data-domain`)
+### 4.5 Snippet load strategy — canonical SSR install (2026-05-27)
 
-- **Where:** `pages/_app.js`, conditionally rendered after `<Head>`. The mount uses `next/script` with `strategy="afterInteractive"`. Never inlined; never blocking.
-- **When:** only when **all** of these are true:
-  1. `process.env.NEXT_PUBLIC_PLAUSIBLE_ENABLED === 'true'` (kill switch on),
-  2. `host` is in `ALLOW_HOSTS` (resolved client-side from `window.location.hostname`),
-  3. `path` is not in any deny-list (`DENY_PATH_PREFIXES`, `APEX_DENY_PATH_PREFIXES` if apex, `DENY_PATH_SUBSTRINGS`, `DENY_QUERY_KEYS`).
-- **Standard Plausible script (not Auto):** the Plausible site for `corpflowai.com` was registered as a standard site (verification expects `<script src=".../script.js" data-domain="…">`). The script URL is read from `NEXT_PUBLIC_PLAUSIBLE_SRC` (default `https://plausible.io/js/script.js`); the site identity is read from `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (default `corpflowai.com`) and emitted as the `data-domain` attribute. This matches the Plausible verification probe exactly.
-- **Two `<Script>` tags:** the loader (`script.js`) and a tiny init shim that attaches `window.plausible` so callers can fire custom events. Both `afterInteractive`.
-- **SSR safety:** the conditional mount only renders client-side (host comes from `window.location.hostname` after hydration). The SSR HTML never contains the script tags — so a misconfigured Vercel build never leaks the snippet into a denied environment.
+- **Where:** `pages/_document.js` `<Head>`, emitted as a plain `<script defer data-domain="…" src="…">` tag. The decision lives in the pure helper `resolveAnalyticsForRequest({ host, path })` in `lib/analytics/index.js`; the Document just calls it and renders.
+- **When:** the helper returns `enabled: true` only when **all** of these are true:
+  1. `process.env.NEXT_PUBLIC_PLAUSIBLE_ENABLED === 'true'` (kill switch on, strict-string match),
+  2. `host` (read from `ctx.req.headers.host` in `Document.getInitialProps`) is in `ALLOW_HOSTS` and not in any deny list,
+  3. `path` (read from `ctx.asPath`/`ctx.pathname`) is not in any deny list (`DENY_PATH_PREFIXES`, `APEX_DENY_PATH_PREFIXES` if apex, `DENY_PATH_SUBSTRINGS`, `DENY_QUERY_KEYS`).
+- **Why SSR-side:** Plausible's `Verify your installation` step inspects the *initial server response* for the snippet. The previous adapter mounted via `next/script` `strategy="afterInteractive"` only on the client after React hydration, which let real browsers see the snippet but failed the verifier (and was invisible to `curl`). Moving the tag into the SSR `<head>` matches the canonical Plausible install verbatim.
+- **Canonical tag, exactly one:** `<script defer data-domain="corpflowai.com" src="https://plausible.io/js/script.js"></script>`. No init shim; custom events (e.g. Lead Rescue CTAs) are wired in a separate follow-up packet that adds the queue shim alongside event call sites — they are out of scope for step-1 page-view tracking.
+- **Static-export caveat:** `Document.getInitialProps` runs at request time on every SSR page (the apex root `/` is `getServerSideProps` — see `pages/index.js` — so per-request rendering applies). On any path that ends up statically optimised, `ctx.req` is undefined; the helper returns `enabled: false` (host empty) and the tag is omitted. That is the safe-by-default outcome — it is better to skip the tag on a build-time render than to risk leaking the snippet to a host the build does not know about.
 - **No analytics on private routes by default:** even with the env on, the deny-list in `config.js` early-returns. The deny-list is shipped in code, not env, so it cannot drift.
 
 ### 4.6 Env contract (step-1, set in Vercel Production)
@@ -276,7 +275,7 @@ Hard gates per `docs/execution/CORPFLOW_AUTONOMOUS_ACTIONS_POLICY.md` §3 — Cu
 1. **Plausible-account / site creation** — Anton must create the Plausible site for each host before any runtime PR opens.
 2. **Custom-domain proxy DNS record** — only if Anton wants the ad-blocker-resilient subdomain proxy (`script.<host>.com`). Pure DNS change → Anton-only.
 3. **`docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md` update** — must list Plausible Insights as a subprocessor before any runtime PR merges. Cursor can ship the doc-update PR, Anton merges it, then the runtime PR can land.
-4. **Runtime snippet PR** — explicit Anton-approved merge per surface. The runtime PR ships only the adapter + the conditional `<PlausibleScript />` mount, with the `NEXT_PUBLIC_PLAUSIBLE_ENABLED` flag defaulting OFF until Anton flips it in Vercel.
+4. **Runtime snippet PR** — explicit Anton-approved merge per surface. The runtime PR ships the policy adapter (`lib/analytics/`) and the canonical SSR `<script>` tag emitted from `pages/_document.js`, with the `NEXT_PUBLIC_PLAUSIBLE_ENABLED` flag defaulting OFF until Anton flips it in Vercel.
 5. **Per-host enablement (env flip)** — once merged, Anton flips `NEXT_PUBLIC_PLAUSIBLE_ENABLED=true` and the per-host Plausible site IDs. Each flip is one operator action and is reversible.
 
 If any gate is open, this doc is the source of truth for **what work is ready to land** and **what is blocked**. The current state (2026-05-25) is **all five gates open** — Plausible decision is recorded; nothing is shipped.
@@ -327,12 +326,14 @@ The adapter in §4 is the reason this is one-PR work, not a re-write.
 | Canonical doc (this file) | ✅ scoped 2026-05-27 (apex-only step-1) | done |
 | Plausible site for `corpflowai.com` registered | ✅ Anton (apex; standard script + `data-domain`) | done |
 | `DATA_MAP_AND_SUBPROCESSORS.md` Plausible row | ✅ #229 | done |
-| `lib/analytics/` adapter + `<PlausibleScript />` mount | ✅ #229 | done |
-| `node-tests/analytics-policy.test.mjs` | ✅ #229 (15 tests; 395/395 total) | done |
+| `lib/analytics/` policy adapter | ✅ #230 | done |
+| Mount mechanism = SSR `<script>` from `pages/_document.js` | ✅ canonical install | done |
+| Hydration-only mount removed (was `<PlausibleScript />` in `_app.js`) | ✅ replaced by SSR injection | done |
+| `node-tests/analytics-policy.test.mjs` | ✅ policy + `resolveAnalyticsForRequest` covered | done |
 | Kill-switch envs (`_ENABLED`, `_DOMAIN`, `_SRC`) in `.env.template` | ✅ #229 | done |
-| Vercel Production env set (apex step-1) | ⏳ awaits #229 merge + Anton's env paste | Anton |
-| Live HTML on `https://corpflowai.com/` contains the snippet | ⏳ post-merge + post-env-flip verification | Cursor (verifies) |
-| Plausible apex verification passes | ⏳ Plausible side — auto once snippet is live | Anton |
+| Vercel Production env set (apex step-1) | ✅ Anton (Infisical Production, picked up by `4ea2c8b5`) | done |
+| Live HTML on `https://corpflowai.com/` contains the snippet (curl) | ⏳ post-SSR-PR merge + redeploy | Cursor (verifies) |
+| Plausible apex verification passes | ⏳ should succeed once snippet is in initial HTML | Anton (clicks Verify) |
 | Step-2: add `aileadrescue.corpflowai.com` | ⏳ separate packet | Anton + Cursor |
 | Custom event wiring (Lead Rescue CTAs etc.) | ⏳ separate follow-up packet | Cursor |
 

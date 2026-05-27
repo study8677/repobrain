@@ -30,7 +30,7 @@ The 2026-05-26 ADR put `/lead-rescue` in `APEX_DENY_PATH_PREFIXES` because that 
 
 ### 3. Standard Plausible flow (script + `data-domain`)
 
-`components/analytics/PlausibleScript.js` emits the **standard** Plausible script tag:
+`pages/_document.js` emits the **standard** Plausible script tag directly into the SSR `<head>`:
 
 ```html
 <script
@@ -71,11 +71,30 @@ Each addition is a small one-file diff + one operator click. The 2026-05-26 ADR'
   - The 2026-05-26 ADR's "umbrella site with multiple domains" remains the destination architecture but is now a step-2 packet — a separate small PR + ADR amendment when Anton is ready.
   - If Anton later wants `/lead-rescue` to **stop** being measured under the apex (e.g. once `aileadrescue.corpflowai.com` goes live), that's a one-line config change.
 
+## Addendum 2026-05-27 (same day) — canonical SSR install
+
+The first runtime PR (#230) shipped the standard `script.js` + `data-domain` tag *correctly*, but mounted it via `next/script` `strategy="afterInteractive"` from `pages/_app.js` behind a client-side `window.location.hostname` check in `useEffect`. That has two consequences:
+
+1. The SSR HTML never contains the snippet — only post-hydration the script tag appears in the DOM. `curl https://corpflowai.com/` returns zero `plausible` matches, even though real browsers see the script load.
+2. Plausible's `Verify your installation` step inspects the *initial server response*. With a hydration-only mount, verification fails on a Production deployment that is otherwise correctly configured.
+
+To make the install verifiable and match Plausible's canonical `Tracker setup` instructions, the runtime mount moves from `pages/_app.js` (client-side hydration) to `pages/_document.js` (server-side render):
+
+- `pages/_document.js` defines `Document.getInitialProps` that reads `host` from `ctx.req.headers.host` and `path` from `ctx.asPath`/`ctx.pathname`, then calls a new pure helper `resolveAnalyticsForRequest({ host, path })` exported from `lib/analytics/index.js`. The helper composes the existing `isAnalyticsEnabledByEnv()` kill-switch and `isAnalyticsEnabledForHostPath()` policy and returns `{ enabled, src, domain }`.
+- `Document.render()` emits exactly one `<script defer data-domain={domain} src={src} />` tag inside `<Head>` when `enabled === true`.
+- `pages/_app.js` no longer mounts analytics. It still owns the canonical viewport meta. The component `components/analytics/PlausibleScript.js` is removed (no consumers).
+- The `lib/analytics/config.js` deny lists are unchanged: Lux + tenant subdomains, factory/master/lux-editor/admin/login/change/change-v2, password-reset, token-bearing query keys, apex-only `/concierge`/`/properties`/`/property` — all stay excluded.
+- Static-export caveat: `Document.getInitialProps` runs at request time on every SSR page (the apex root `/` is `getServerSideProps` — see `pages/index.js`). For statically-optimised pages, `ctx.req` is undefined and the helper returns `enabled: false` (host empty). Plausible verification only needs the apex root, which is SSR — so the caveat doesn't block step-1.
+
+Reversibility unchanged: `NEXT_PUBLIC_PLAUSIBLE_ENABLED=false` in Vercel + redeploy stops the script. There is no separate code revert needed for the SSR move; the policy adapter is the same.
+
+Tests added in `node-tests/analytics-policy.test.mjs` cover `resolveAnalyticsForRequest` for: apex `/` enabled with kill-switch on, all four protected route families denied (`/change`, `/change-v2`, `/admin`, `/login` etc.), Lux excluded, password-reset and token-bearing queries denied, `/lead-rescue` allowed in step-1, host empty / kill-switch off / preview hosts all denied, env overrides honoured.
+
 ## Links
 
-- Canonical analytics doc: `docs/analytics/CORPFLOW_ANALYTICS_V1.md` (§3 / §5 updated to reflect step-1 scope).
+- Canonical analytics doc: `docs/analytics/CORPFLOW_ANALYTICS_V1.md` (§4.5 rewritten for SSR injection).
 - Companion plan: `docs/operations/ANALYTICS_SEARCH_CONSOLE_ROLLOUT_PLAN.md`.
 - Search Console operator playbook: `docs/operations/SEARCH_CONSOLE_INDEXING_ROLLOUT.md`.
 - Quality reporting: `docs/operations/WEBSITE_QUALITY_REPORTING_STANDARD.md`.
-- Adapter code: `lib/analytics/config.js`, `lib/analytics/index.js`, `components/analytics/PlausibleScript.js`, `pages/_app.js`.
+- Adapter code: `lib/analytics/config.js`, `lib/analytics/index.js`, `pages/_document.js`, `pages/_app.js`.
 - Tests: `node-tests/analytics-policy.test.mjs`.

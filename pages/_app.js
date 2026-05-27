@@ -1,58 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
-
-import PlausibleScript from '../components/analytics/PlausibleScript.js';
-import {
-  isAnalyticsEnabledByEnv,
-  isAnalyticsEnabledForHostPath,
-} from '../lib/analytics/index.js';
 
 /**
- * Custom App for SEO + accessibility baseline (Packet 4.1 / Lux SEO fix)
- * + the analytics mount point (CorpFlow Analytics v1).
+ * Custom App for SEO + accessibility baseline (Packet 4.1 / Lux SEO fix).
  *
  * Why this exists:
- * - Next.js default viewport meta is `width=device-width` only (no `initial-scale=1`).
- *   That fails Lighthouse SEO + can cause iOS double-tap-to-zoom artifacts.
- * - We set a single canonical viewport for every page here so individual page
- *   components (CorpFlowPublicHome, LuxeMauriceTenantPresentation,
- *   AiLeadRescueLanding, …) don't have to repeat it.
- * - Plausible Auto snippet is conditionally mounted from this file so the
- *   host/path policy in `lib/analytics/config.js` is the single decision
- *   surface — no per-page repetition, no risk of leaking analytics into
- *   factory/operator routes (`/change`, `/admin`, `/login`, `/api/*`),
- *   tenant working surfaces (`<tenant>.corpflowai.com`), or apex internal
- *   product paths (`/lead-rescue`, `/concierge`, `/properties`, `/property`).
+ *  - Next.js default viewport meta is `width=device-width` only (no
+ *    `initial-scale=1`). That fails Lighthouse SEO and can cause iOS
+ *    double-tap-to-zoom artefacts. We set a single canonical viewport
+ *    here so individual page components don't have to repeat it.
+ *  - Per-page `<Head>` (title, description, canonical, OG, Twitter)
+ *    is unchanged and lives in each page's component.
  *
- * Per-page `<Head>` (title, description, canonical, OG, Twitter) is unchanged
- * and lives in each page's component.
+ * Why analytics is NOT mounted here anymore (2026-05-27):
+ *  - The Plausible script is now injected SSR-side from
+ *    `pages/_document.js` so it appears in the initial HTML response
+ *    that Plausible's `Verify your installation` step inspects. The
+ *    apex-only allow list, operator-surface deny list, kill-switch,
+ *    and host/path policy still live in `lib/analytics/`. The Document
+ *    just calls `resolveAnalyticsForRequest({ host, path })` and emits
+ *    the canonical `<script defer data-domain="…" src="…">` tag.
+ *  - Removing the hydration-only mount also removes the small race
+ *    where `window.location.hostname` was read in `useEffect` before
+ *    the script could fire — which is why `curl` showed zero Plausible
+ *    matches even though the bundle shipped the JSX.
  *
- * Scope: no runtime behavior change beyond the analytics mount; no data
- * fetching; no tenant-data access. The analytics decision is host + path
- * only — see `docs/analytics/CORPFLOW_ANALYTICS_V1.md` § 5.
+ * Scope: no runtime behaviour change beyond moving the analytics
+ * mount from client-side hydration to server-side render. No data
+ * fetching, no tenant-data access. See
+ * `docs/analytics/CORPFLOW_ANALYTICS_V1.md` § 4.5.
  */
 export default function CorpFlowApp({ Component, pageProps }) {
-  const router = useRouter();
-  const [host, setHost] = useState('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setHost(window.location.hostname || '');
-    }
-  }, []);
-
-  const analyticsOn =
-    isAnalyticsEnabledByEnv() &&
-    Boolean(host) &&
-    isAnalyticsEnabledForHostPath(host, router.asPath);
-
   return (
     <>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      {analyticsOn ? <PlausibleScript /> : null}
       <Component {...pageProps} />
     </>
   );

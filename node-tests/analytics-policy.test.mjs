@@ -2,12 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  DEFAULT_PLAUSIBLE_DOMAIN,
+  DEFAULT_PLAUSIBLE_SRC,
   getMarketingSurface,
   isAnalyticsEnabledByEnv,
   isAnalyticsEnabledForHostPath,
   isHostAllowed,
   isPathAllowed,
   normalizeHost,
+  resolveAnalyticsForRequest,
 } from '../lib/analytics/index.js';
 
 test('normalizeHost lowercases, trims, and strips port', () => {
@@ -184,4 +187,204 @@ test('isAnalyticsEnabledByEnv reads NEXT_PUBLIC_PLAUSIBLE_ENABLED with strict "t
       process.env.NEXT_PUBLIC_PLAUSIBLE_ENABLED = before;
     }
   }
+});
+
+/**
+ * SSR injection helper — covers the contract that `pages/_document.js`
+ * relies on. We test the policy outcome only (no React render) so the
+ * decision surface stays unit-testable without Next.js.
+ *
+ * Each test snapshots and restores the three env vars it touches so the
+ * suite stays order-independent.
+ */
+function withPlausibleEnv(envOverrides, fn) {
+  const before = {
+    NEXT_PUBLIC_PLAUSIBLE_ENABLED: process.env.NEXT_PUBLIC_PLAUSIBLE_ENABLED,
+    NEXT_PUBLIC_PLAUSIBLE_DOMAIN: process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN,
+    NEXT_PUBLIC_PLAUSIBLE_SRC: process.env.NEXT_PUBLIC_PLAUSIBLE_SRC,
+  };
+  try {
+    for (const [k, v] of Object.entries(envOverrides)) {
+      if (v === undefined) {
+        delete process.env[k];
+      } else {
+        process.env[k] = v;
+      }
+    }
+    return fn();
+  } finally {
+    for (const k of Object.keys(before)) {
+      if (before[k] === undefined) {
+        delete process.env[k];
+      } else {
+        process.env[k] = before[k];
+      }
+    }
+  }
+}
+
+test('resolveAnalyticsForRequest enables on apex root with kill-switch on', () => {
+  withPlausibleEnv(
+    {
+      NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true',
+      NEXT_PUBLIC_PLAUSIBLE_DOMAIN: undefined,
+      NEXT_PUBLIC_PLAUSIBLE_SRC: undefined,
+    },
+    () => {
+      const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path: '/' });
+      assert.equal(r.enabled, true);
+      assert.equal(r.domain, DEFAULT_PLAUSIBLE_DOMAIN);
+      assert.equal(r.src, DEFAULT_PLAUSIBLE_SRC);
+    },
+  );
+});
+
+test('resolveAnalyticsForRequest disables when kill-switch is off', () => {
+  withPlausibleEnv(
+    {
+      NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'false',
+      NEXT_PUBLIC_PLAUSIBLE_DOMAIN: undefined,
+      NEXT_PUBLIC_PLAUSIBLE_SRC: undefined,
+    },
+    () => {
+      const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path: '/' });
+      assert.equal(r.enabled, false);
+      assert.equal(r.domain, null);
+      assert.equal(r.src, null);
+    },
+  );
+});
+
+test('resolveAnalyticsForRequest disables when kill-switch is unset', () => {
+  withPlausibleEnv(
+    {
+      NEXT_PUBLIC_PLAUSIBLE_ENABLED: undefined,
+      NEXT_PUBLIC_PLAUSIBLE_DOMAIN: undefined,
+      NEXT_PUBLIC_PLAUSIBLE_SRC: undefined,
+    },
+    () => {
+      const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path: '/' });
+      assert.equal(r.enabled, false);
+    },
+  );
+});
+
+test('resolveAnalyticsForRequest excludes lux.corpflowai.com regardless of path', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const path of ['/', '/about', '/lead-rescue', '/property/lm-nc-ridge']) {
+      const r = resolveAnalyticsForRequest({ host: 'lux.corpflowai.com', path });
+      assert.equal(r.enabled, false, `lux ${path} should be excluded`);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest excludes operator/admin/login/change/change-v2 on apex', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const path of [
+      '/change',
+      '/change/queue',
+      '/change-v2',
+      '/change-v2/anything',
+      '/admin',
+      '/admin/users',
+      '/login',
+      '/login/recover',
+      '/master',
+      '/lux-editor',
+      '/sovereign-intake',
+      '/api/factory/health',
+    ]) {
+      const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path });
+      assert.equal(r.enabled, false, `apex ${path} should be excluded`);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest excludes password-reset paths and token-bearing query strings', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const path of [
+      '/reset-password',
+      '/auth/reset-password',
+      '/forgot-password',
+      '/?token=abcd',
+      '/?reset=xyz',
+      '/?ticket=12345',
+      '/foo?bar=1&token=abcd',
+    ]) {
+      const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path });
+      assert.equal(r.enabled, false, `apex ${path} should be excluded`);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest enables apex marketing pages including /lead-rescue (step-1)', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const path of [
+      '/',
+      '/about',
+      '/process',
+      '/standards',
+      '/onboarding',
+      '/contact',
+      '/lead-rescue',
+      '/lead-rescue/details',
+    ]) {
+      const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path });
+      assert.equal(r.enabled, true, `apex ${path} should be enabled`);
+      assert.equal(r.domain, DEFAULT_PLAUSIBLE_DOMAIN);
+      assert.equal(r.src, DEFAULT_PLAUSIBLE_SRC);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest disables when host is empty (covers SSG / no-req case)', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const host of ['', null, undefined]) {
+      const r = resolveAnalyticsForRequest({ host, path: '/' });
+      assert.equal(r.enabled, false, `empty host (${String(host)}) should disable analytics`);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest tolerates host:port and Host header capitalisation', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    assert.equal(
+      resolveAnalyticsForRequest({ host: 'CorpFlowAI.com:443', path: '/' }).enabled,
+      true,
+    );
+    assert.equal(
+      resolveAnalyticsForRequest({ host: 'CORPFLOWAI.COM', path: '/' }).enabled,
+      true,
+    );
+  });
+});
+
+test('resolveAnalyticsForRequest honours NEXT_PUBLIC_PLAUSIBLE_DOMAIN and _SRC overrides', () => {
+  withPlausibleEnv(
+    {
+      NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true',
+      NEXT_PUBLIC_PLAUSIBLE_DOMAIN: 'corpflowai.com',
+      NEXT_PUBLIC_PLAUSIBLE_SRC: 'https://plausible.io/js/script.outbound-links.js',
+    },
+    () => {
+      const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path: '/' });
+      assert.equal(r.enabled, true);
+      assert.equal(r.domain, 'corpflowai.com');
+      assert.equal(r.src, 'https://plausible.io/js/script.outbound-links.js');
+    },
+  );
+});
+
+test('resolveAnalyticsForRequest excludes preview / vercel.app hosts', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const host of [
+      'preview-abc.vercel.app',
+      'corpflow-ai-command-center-abc-corpflowai.vercel.app',
+      'localhost',
+      'localhost:3000',
+    ]) {
+      const r = resolveAnalyticsForRequest({ host, path: '/' });
+      assert.equal(r.enabled, false, `preview-like host ${host} should be excluded`);
+    }
+  });
 });
