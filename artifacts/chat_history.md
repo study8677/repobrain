@@ -44,6 +44,27 @@
 
 ---
 
+## 2026-05-27 — Packet 6.9 live-verified: Lux concierge SEO `<Head>` in production
+
+<!-- CONCIERGE_SEO_HEAD_VERIFIED_2026_05_27_HIST -->
+
+**Status:** COMPLETE (live-verified). First runtime packet from the Lux v1 quality audit's top-10 fix list (fix #2) is now serving correct SEO metadata in production.
+
+- **PR:** [#239](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/239) — `feat(seo): add Lux concierge SEO metadata` — merged via squash commit `eacb8d3fb2` at `2026-05-27T07:08:52Z`.
+- **Vercel Production deployment:** **`4831280707`** (commit `eacb8d3fb2`, status `success` at `2026-05-27T07:09:44Z`).
+- **Live verification (from `corpflow-exec-01` at `2026-05-27T07:12:16Z`):**
+  - `lux.corpflowai.com/concierge` → 200; `<title>Private concierge · Luxurious Mauritius</title>`, description, `robots=index,follow`, canonical `https://lux.corpflowai.com/concierge`, full `og:*` (title/description/url/type=website/site_name=Luxurious Mauritius), full `twitter:*` (card=summary_large_image/title/description). All 12 SEO tags present in initial SSR HTML.
+  - `corpflowai.com/concierge` (apex) → 200; canonical and `og:url` correctly collapse to `https://lux.corpflowai.com/concierge` — apex serves Lux content under Lux canonical, no duplicate-content split.
+  - `lux.corpflowai.com/` and `corpflowai.com/` → 200, titles unchanged — no homepage regression.
+  - `core.corpflowai.com/api/factory/health` → 200, `ok:true`, all sub-checks pass — no factory regression.
+- **Files merged (5):** `lib/client/concierge-seo.js` (new, pure SSR-callable helper), `pages/concierge.js` (added `getServerSideProps` + `useMemo` + complete SEO `<Head>`), `node-tests/concierge-seo.test.mjs` (new, 12 unit tests; 418/418 PASS on PR), `docs/execution/WEEKEND_EXECUTION_QUEUE.md`, `artifacts/chat_history.md`.
+- **Tenant-safety stance:** `/concierge` is Lux-only today; the helper documents this and collapses canonical for any non-Lux host to `https://lux.corpflowai.com/concierge`. When `lux-trust-policy-impl-v1` adds host-aware rendering, the helper's `isLuxHost` branch becomes the per-tenant SEO extension point.
+- **Known v1 scope (intentional):** `og:url` for `/concierge?property=…` collapses to canonical under SSR (property ref is React state, not in `getServerSideProps`). Helper already supports a property-aware variant — small follow-up to thread the query through if buyer-marketing wants social previews per property.
+- **Expected Lux audit movement:** **59/100\* → ~61.5/100\*** (§3.1 SEO/indexing +1.5; §3.9 Content completeness +1). The trajectory line will be appended to `artifacts/quality-audits/2026-05-27-luxe-maurice-quality-v1.md` *after* PR #237 merges (that file lives only on #237 today).
+- **Discipline:** Per `delivery-reality.mdc`, this packet went from **OPEN PR → MERGED → DEPLOYED → LIVE-VERIFIED** with deployment ID + commit SHA + live URLs captured before flipping to COMPLETE. No DB, env, secret, analytics, Plausible, Search Console, or tenant_id mutation in the packet.
+
+---
+
 ## Timeline (key themes)
 
 ### 2025–2026 — Cloud factory, governance, and Vercel hardening
