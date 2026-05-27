@@ -28,24 +28,19 @@
 
 ---
 
-## 2026-05-27 — Packet 6.9 live-verified: Lux concierge SEO `<Head>` in production
+## 2026-05-27 — Telegram inbound webhook documented (PR #241 merged)
 
-<!-- CONCIERGE_SEO_HEAD_VERIFIED_2026_05_27_HIST -->
+<!-- TELEGRAM_WEBHOOK_DOCS_MERGED_HIST -->
 
-**Status:** COMPLETE (live-verified). First runtime packet from the Lux v1 quality audit's top-10 fix list (fix #2) is now serving correct SEO metadata in production.
+**Status:** COMPLETE (docs-only — no runtime / production surface change).
 
-- **PR:** [#239](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/239) — `feat(seo): add Lux concierge SEO metadata` — merged via squash commit `eacb8d3fb2` at `2026-05-27T07:08:52Z`.
-- **Vercel Production deployment:** **`4831280707`** (commit `eacb8d3fb2`, status `success` at `2026-05-27T07:09:44Z`).
-- **Live verification (from `corpflow-exec-01` at `2026-05-27T07:12:16Z`):**
-  - `lux.corpflowai.com/concierge` → 200; `<title>Private concierge · Luxurious Mauritius</title>`, description, `robots=index,follow`, canonical `https://lux.corpflowai.com/concierge`, full `og:*` (title/description/url/type=website/site_name=Luxurious Mauritius), full `twitter:*` (card=summary_large_image/title/description). All 12 SEO tags present in initial SSR HTML.
-  - `corpflowai.com/concierge` (apex) → 200; canonical and `og:url` correctly collapse to `https://lux.corpflowai.com/concierge` — apex serves Lux content under Lux canonical, no duplicate-content split.
-  - `lux.corpflowai.com/` and `corpflowai.com/` → 200, titles unchanged — no homepage regression.
-  - `core.corpflowai.com/api/factory/health` → 200, `ok:true`, all sub-checks pass — no factory regression.
-- **Files merged (5):** `lib/client/concierge-seo.js` (new, pure SSR-callable helper), `pages/concierge.js` (added `getServerSideProps` + `useMemo` + complete SEO `<Head>`), `node-tests/concierge-seo.test.mjs` (new, 12 unit tests; 418/418 PASS on PR), `docs/execution/WEEKEND_EXECUTION_QUEUE.md`, `artifacts/chat_history.md`.
-- **Tenant-safety stance:** `/concierge` is Lux-only today; the helper documents this and collapses canonical for any non-Lux host to `https://lux.corpflowai.com/concierge`. When `lux-trust-policy-impl-v1` adds host-aware rendering, the helper's `isLuxHost` branch becomes the per-tenant SEO extension point.
-- **Known v1 scope (intentional):** `og:url` for `/concierge?property=…` collapses to canonical under SSR (property ref is React state, not in `getServerSideProps`). Helper already supports a property-aware variant — small follow-up to thread the query through if buyer-marketing wants social previews per property.
-- **Expected Lux audit movement:** **59/100\* → ~61.5/100\*** (§3.1 SEO/indexing +1.5; §3.9 Content completeness +1). The trajectory line will be appended to `artifacts/quality-audits/2026-05-27-luxe-maurice-quality-v1.md` *after* PR #237 merges (that file lives only on #237 today).
-- **Discipline:** Per `delivery-reality.mdc`, this packet went from **OPEN PR → MERGED → DEPLOYED → LIVE-VERIFIED** with deployment ID + commit SHA + live URLs captured before flipping to COMPLETE. No DB, env, secret, analytics, Plausible, Search Console, or tenant_id mutation in the packet.
+- **PR:** [#241](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/241) — `docs(monitoring): document existing Telegram inbound webhook registration` — merged via squash commit `c16e1a5d` at `2026-05-27T11:00:47Z`.
+- **What it documents:** the Telegram bot at `https://corpflowai.com/api/webhook` is registered **on Telegram's servers** against the active `TELEGRAM_BOT_TOKEN`. No repo script calls `setWebhook` — verified via `grep` across all committed runtime / script / workflow / shell files. The registration was set manually and lives outside any GitHub diff or CI gate.
+- **Canonical home:** new § 4.4 *Inbound webhook — Telegram → repo (operationally separate from outbound)* in `docs/operations/MONITORING_ARCHITECTURE.md`. Cross-references in `FACTORY_INVENTORY.md` (the `/api/webhook` row), § 6 blind-spot bullet 4, and § 7 roles-and-ownership rotation row.
+- **Operational invariant locked in:** rotating `TELEGRAM_BOT_TOKEN` **does not** carry the inbound webhook over — the new bot starts with empty webhook config on Telegram's side. After every token rotation the operator must re-run the equivalent of `curl -F "url=https://corpflowai.com/api/webhook" "https://api.telegram.org/bot<NEW_TOKEN>/setWebhook"`. This is now stated in § 4.4 (invariant 2), § 6 (blind spot 4), and § 7 (rotation row).
+- **Inbound vs outbound:** both surfaces use the same `TELEGRAM_BOT_TOKEN`, but they fail independently. Outbound senders also use `TELEGRAM_ALERT_CHAT_ID`; inbound has no chat-id env (it learns the chat id per incoming message). Documented to prevent future packets accidentally conflating the two.
+- **Pending follow-up (queued, not yet ready):** `docs/operations/TELEGRAM_ALERT_WIRING_PACKET_V1.md` (currently on the still-open PR #238) is the natural operator-facing home for an equivalent note. After PR #238 merges, a separate small docs PR will port § 4.4 into the packet doc and leave a one-line cross-link in `MONITORING_ARCHITECTURE.md`. Until then, § 4.4 is the canonical source.
+- **Discipline:** Per `.cursor/rules/delivery-reality.mdc`, this packet is docs-only and therefore did not require a live production probe. The verdict flipped to COMPLETE only after the merge SHA, the `main` HEAD advance, and the on-disk sentinel + marker were all confirmed on `corpflow-exec-01` (no placeholder values; no premature COMPLETE).
 
 ---
 
