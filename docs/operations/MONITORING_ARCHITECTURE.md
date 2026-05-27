@@ -126,6 +126,42 @@ This contract is what `docs/automation-framework.md` § "Optional forward to n8n
 | #11 vercel.json cron self-validation | ✅ direct (rolled into #1) | — | shares #1's alert |
 | #12 corpflow-exec-01 | — | — | no scheduled jobs to alert about (yet) |
 
+### 4.4 Inbound webhook — Telegram → repo (operationally separate from outbound)
+
+<!-- TELEGRAM_INBOUND_WEBHOOK_4.4 -->
+
+Telegram inbound webhook registration is **external Telegram-side configuration**, not repo-owned code. The bot whose token powers outbound alerts in § 4.1 also has an **inbound** webhook registered on Telegram's servers against the same `TELEGRAM_BOT_TOKEN`.
+
+**Current registration** (as reported by Telegram's `getWebhookInfo` against the active token):
+
+`https://corpflowai.com/api/webhook`
+
+**Repo-serving path** (the only side this codebase owns):
+
+```text
+Telegram POST → /api/webhook
+              ↓ Vercel `/api/(.*)` rewrite (vercel.json)
+              ↓ /api/factory_router?__path=webhook
+              ↓ api/factory_router.js → case 'webhook'
+              ↓ lib/server/webhook.js  (today: liveness/status pinger)
+```
+
+**Operational invariants — do not violate without an explicit packet:**
+
+1. **Registration is external.** No repo script calls `setWebhook` (confirmed: `rg 'setWebhook|deleteWebhook' --glob '!*.md'` returns zero hits at the time this section was written). The URL above was set manually against Telegram's bot API; it is *not* re-asserted by any CI job or deploy step.
+2. **Token rotation is a two-step operation.** Rotating `TELEGRAM_BOT_TOKEN` does **not** carry the webhook registration over — the new bot starts with an empty webhook config on Telegram's side. After every rotation, the operator must re-run the equivalent of:
+
+   `curl -F "url=https://corpflowai.com/api/webhook" "https://api.telegram.org/bot<NEW_TOKEN>/setWebhook"`
+
+   This is a hand-action, not a CI step. § 7 (Roles and ownership) reflects this in the `Rotate TELEGRAM_BOT_TOKEN` row.
+3. **Inbound and outbound are operationally separate.** Both surfaces use the same `TELEGRAM_BOT_TOKEN`, but they fail independently — fix each independently, verify each independently. Outbound senders also use `TELEGRAM_ALERT_CHAT_ID`; inbound has no chat-id env (the chat id is learned from each incoming message).
+4. **Env vars are unchanged.** Use only the names already declared in `.env.template` — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALERT_CHAT_ID`. Do not introduce parallel names for inbound vs outbound.
+5. **Current `lib/server/webhook.js` behavior is a liveness/status pinger.** A Telegram message containing exactly `.` triggers a Sentry status reply; all other messages return `200 OK` and are ignored. No state is persisted, no extra auth beyond the obscurity of the bot token. Any change that gives the handler richer responsibilities (operator commands, deploy triggers, etc.) must be a separate runtime packet with its own threat model.
+
+**Why this lives in § 4 (alert routing):** the inbound webhook is the only externally-registered surface in the alert wiring; if it drifts after a token rotation, **no monitor in § 2 detects it**. Operator-initiated `getWebhookInfo` against the current token is the only canary today. A future packet may add a bounded read-only check that calls `getWebhookInfo` and asserts the URL equals the value above — explicitly **no** `setWebhook` automation belongs in this repo.
+
+> **Companion design (PR #238, not yet on `main`):** `docs/operations/TELEGRAM_ALERT_WIRING_PACKET_V1.md` is the natural home for an equivalent operator-facing note. After PR #238 merges, a small follow-up will port this § 4.4 content into the packet doc and leave a cross-link here. Until then, this section is the canonical source.
+
 ---
 
 ## 5. Live-endpoint floor
@@ -163,7 +199,7 @@ These are **deliberately listed** so they cannot drift back into "we thought we 
 1. **`/api/factory/health` is not a database connectivity check.** Returns `database_configured:true` whenever `POSTGRES_URL` is non-empty. Caused the 2026-05-25 incident where `db.prisma.io` drift returned a green `/health` while tenant resolution fell back to apex. **Fix path:** use #3 (`production-pulse/runtime` — opens a query) for connectivity; use #9 (`diagnose-postgres-env`) to inspect drift in env value shape; use § 5 live tenant URLs to confirm clients can actually use the site. See `POSTGRES_PROVIDER.md` § 3.
 2. **Vercel marketplace integrations can auto-install env vars in seconds.** A teammate clicking "install Prisma Accelerate" in the Vercel dashboard re-introduces `db.prisma.io` env values without a Git diff. None of monitors #1, #2, or #4 catch this. Only #9 (`diagnose-postgres-env`) does — and it's `workflow_dispatch` only. **Mitigation today:** run #9 as part of any delivery audit that touches DB env vars (see `POSTGRES_PROVIDER.md` § 5b). **Future packet:** schedule #9 weekly with a comparison against a checked-in expected-shape baseline.
 3. **Tenant resolution failure looks like apex 200.** When tenant host mapping breaks, `lux.corpflowai.com/` 200s with apex HTML instead of Lux HTML. `/api/factory/health` is happy. Only the live tenant URL check in § 5 (with content marker assertion) catches it. **Fix path:** never claim `COMPLETE` on a tenancy-touching change without a live `lux.corpflowai.com/` content check (Lux markers like `Mauritius`, `concierge`, `luxe-maurice`).
-4. **Telegram silently no-ops without secrets.** If `TELEGRAM_BOT_TOKEN` or `TELEGRAM_ALERT_CHAT_ID` is missing or rotated, both senders (§ 4.1) skip silently. The `loop.json` artifact + workflow exit code still indicate failure, but the operator may not see the alert. **Mitigation:** the periodic #10 (weekly factory health ping) catches the case where #1 silently never runs. There is no equivalent canary for #4's alert path — relies on the n8n forward (§ 4.2) being independently healthy.
+4. **Telegram silently no-ops without secrets.** If `TELEGRAM_BOT_TOKEN` or `TELEGRAM_ALERT_CHAT_ID` is missing or rotated, both senders (§ 4.1) skip silently. The `loop.json` artifact + workflow exit code still indicate failure, but the operator may not see the alert. **Mitigation:** the periodic #10 (weekly factory health ping) catches the case where #1 silently never runs. There is no equivalent canary for #4's alert path — relies on the n8n forward (§ 4.2) being independently healthy. **Additionally:** rotating `TELEGRAM_BOT_TOKEN` breaks the **inbound** webhook (§ 4.4) until Telegram's `setWebhook` is re-run against the new token — there is no automated canary for that drift today either.
 5. **Monitors #5, #6, #8 do not alert today.** CMP overseer sweep (#5), CMP stuck self-repair (#6), and billing sentinel (#8) run on schedule but emit no automated alert when they detect a problem. Operator inspection via `/change` or `automation_events` is required. **Fix path (future packet `cmp-internal-cron-alerts`):** wire each through `lib/server/ops-alerts.js` with a typed `kind` so n8n can route distinctly.
 6. **Hobby-tier cron limits.** Vercel Hobby tier requires fixed minute + fixed hour per cron entry; #11 enforces this structurally. If we move to Pro / Enterprise and want sub-daily crons, #11's logic must be relaxed (or it will fail-on-success). Documented in `docs/VERCEL_DEPLOYMENT.md`.
 7. **No third-location uptime.** Today, the only external pager-style probe is GitHub Actions (#1, #10) hitting Vercel. If GitHub Actions has an outage at the same time as Vercel, we have no independent evidence. Future packet `exec01-cron-pulse` (run #3 from `corpflow-exec-01`) and / or a third-party SaaS uptime probe are the named mitigations — neither implemented today.
@@ -176,7 +212,7 @@ These are **deliberately listed** so they cannot drift back into "we thought we 
 | Action | Anton (operator) | Cursor (agent / repo) | CI (GitHub Actions / Vercel cron) |
 |---|---|---|---|
 | Add a new monitor (workflow / cron) | approves the packet | writes the workflow + this doc § 2 row in same PR | runs the workflow once merged |
-| Rotate `TELEGRAM_BOT_TOKEN` or `TELEGRAM_ALERT_CHAT_ID` | runs rotation; updates GitHub repo secret + Vercel env | updates the runbook entry if behavior changed | picks up new secret on next run |
+| Rotate `TELEGRAM_BOT_TOKEN` or `TELEGRAM_ALERT_CHAT_ID` | runs rotation; updates GitHub repo secret + Vercel env; **after any `TELEGRAM_BOT_TOKEN` rotation, also re-runs Telegram `setWebhook` for the new token (§ 4.4)** | updates the runbook entry if behavior changed | **outbound** senders pick up the new secret on next run; **inbound** webhook (§ 4.4) does *not* auto-recover — requires the operator step above |
 | Investigate a #1 failure | reads the alert; runs #9 if DB-env-shaped | drafts the fix on a branch; opens PR | re-runs #1 manually (`workflow_dispatch`) after fix |
 | Investigate a #4 blocked verdict | opens `/change` to read verdict + Telegram body | (often nothing — operator lane); on tenant-side, reads the PR + preview | re-runs #4 on next cron tick |
 | Update Vercel Production env (factory health URL, monitoring chain) | does the env edit | updates `.env.template` in same PR | enforced via `vercel-env-check.yml` on PRs |
@@ -258,6 +294,7 @@ If the new monitor adds a scheduled job to **`corpflow-exec-01`** (#12), additio
 
 - `GET /api/factory/health` — #2
 - `GET /api/factory/production-pulse/runtime` — #3
+- `POST /api/webhook` — § 4.4 (inbound Telegram webhook; externally registered)
 
 **Scripts (operator-runnable equivalents):**
 

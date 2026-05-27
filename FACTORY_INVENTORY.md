@@ -99,7 +99,7 @@ Tools are auto-discovered by the agent from `core/engine/src/tools/*.py` (public
 | `lib/factory/attribution.js` | Request/header attribution for factory actions | Imported where wired; paths relative to `lib/factory/` |
 | `lib/server/provision.js` | Tenant provisioning (Postgres) | `POST /api/provision` |
 | `lib/server/audit.js` | Audit / DB stability handler (Prisma) | `POST /api/audit` |
-| `lib/server/webhook.js` | Incoming webhook (Telegram via bot token) | `POST /api/webhook` |
+| `lib/server/webhook.js` | Incoming Telegram webhook (registration is Telegram-side against `TELEGRAM_BOT_TOKEN`; re-run `setWebhook` after token rotation — see `docs/operations/MONITORING_ARCHITECTURE.md` § 4.4) <!-- inbound-webhook-rotation-note --> | `POST /api/webhook` |
 | `lib/server/main.js` | Lead handoff / n8n intake | `POST /api/main` (and `POST /api/intake` — aliased in router) |
 | `lib/server/config.js` | `getN8nWebhookUrl()` — `cfg('N8N_WEBHOOK_URL')` (env or `CORPFLOW_RUNTIME_CONFIG_JSON`) | Imported by `lib/server/main.js` |
 | `lib/server/admin-leads.js` | Admin leads listing (Prisma) | `GET /api/admin-leads` |
