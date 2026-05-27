@@ -19,6 +19,11 @@ Treat this as part of **definition of done** whenever work is **committed and pu
 
 4. **Repository hygiene (Git):** Never add a **tracked file or folder named `main`** at the **repository root** — it makes `git log main` / `git diff main` ambiguous with the default branch. Removed once; see **`docs/operations/GIT_AND_MAIN_BRANCH.md`**. (No GitHub/Vercel access change required.)
 
+
+### Coordination protocol — Operator Bridge v1
+
+For routine packet handoffs between ChatGPT (planning author), Anton (operator), and Cursor (in-repo executor), see **`docs/operations/OPERATOR_BRIDGE_V1.md`**. The bridge is a **coordination layer only**: Anton still owns merges, secrets, DNS, billing, and external accounts; Cursor still **HOLDS** at every forbidden surface; ChatGPT still instructs through Anton. `main` remains the source of truth over any issue comment. <!-- OPERATOR_BRIDGE_V1_TODO_LINK -->
+
 ---
 
 ## Partner charter — breathtaking client experience (technical)

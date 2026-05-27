@@ -64,6 +64,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | **Website quality scoring (per-tenant audit)** | **`docs/execution/WEBSITE_QUALITY_MEASUREMENT_FRAMEWORK.md`** |
 | **Analytics / Search Console / indexing per surface** | **`docs/execution/ANALYTICS_SEARCH_CONSOLE_INDEXING_CHECKLIST.md`** |
 | **Per-client migration audit (identity, login, marketing, off-laptop)** | **`docs/execution/CURRENT_CLIENT_MIGRATION_AUDIT_TEMPLATE.md`** |
+| **Operator Bridge v1 — coordination protocol (ChatGPT ↔ Anton ↔ Cursor)** | **`docs/operations/OPERATOR_BRIDGE_V1.md`** |
 | Marketing / conversion doctrine | `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` |
 | Delivery reality (live prod = done) | `.cursor/rules/delivery-reality.mdc`, `.cursor/rules/predeploy-decision-checks.mdc` |
 | Production bar (reliable, secure, observable) | `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md` |
