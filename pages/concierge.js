@@ -5,12 +5,13 @@ import { useRouter } from 'next/router';
 
 import { LUXE_MAURICE_BRAND_TOKENS as T } from '../lib/client/luxe-maurice-brand-theme.js';
 import { resolveLuxPropertyRef } from '../lib/client/luxe-maurice-property-resolve.js';
+import { buildConciergeSeo } from '../lib/client/concierge-seo.js';
 
 function str(v) {
   return v != null ? String(v) : '';
 }
 
-export default function ConciergePage() {
+export default function ConciergePage({ seoHost = '' } = {}) {
   const router = useRouter();
   const showDebugPayload = router.query?.debug === '1';
 
@@ -88,6 +89,16 @@ export default function ConciergePage() {
     });
   }, [propertyInterest?.ref]);
 
+  const seo = useMemo(
+    () =>
+      buildConciergeSeo({
+        host: seoHost,
+        propertyTitle: propertyInterest ? propertyInterest.title : '',
+        propertyRef: propertyInterest ? propertyInterest.ref : '',
+      }),
+    [seoHost, propertyInterest],
+  );
+
   const canSubmit = useMemo(
     () => name.trim().length > 1 && contact.trim().length > 2 && message.trim().length > 2,
     [name, contact, message],
@@ -139,7 +150,18 @@ export default function ConciergePage() {
       }}
     >
       <Head>
-        <title>Private concierge · Luxurious Mauritius</title>
+        <title>{seo.title}</title>
+        <meta name="description" content={seo.description} />
+        <meta name="robots" content={seo.robots} />
+        <link rel="canonical" href={seo.canonical} />
+        <meta property="og:title" content={seo.ogTitle} />
+        <meta property="og:description" content={seo.ogDescription} />
+        <meta property="og:url" content={seo.ogUrl} />
+        <meta property="og:type" content={seo.ogType} />
+        <meta property="og:site_name" content={seo.ogSiteName} />
+        <meta name="twitter:card" content={seo.twitterCard} />
+        <meta name="twitter:title" content={seo.twitterTitle} />
+        <meta name="twitter:description" content={seo.twitterDescription} />
       </Head>
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '48px 28px 64px' }}>
         <div style={{ marginBottom: 28 }}>
@@ -404,4 +426,27 @@ export default function ConciergePage() {
       </main>
     </div>
   );
+}
+
+
+// __concierge_gssp_v1__
+// Server-side capture of the request host so the SEO canonical + og:url
+// reflect the host the visitor actually arrived on (vs. always hard-coding
+// the primary host). This runs in `getServerSideProps` because the value
+// must be in the SSR'd HTML for crawlers and social-preview generators
+// that do not execute client JS.
+//
+// Today the `/concierge` route renders Lux-branded content regardless of
+// host (see `lib/client/concierge-seo.js` header). When the host-aware
+// tenant rendering described in `docs/quality/LUX_TRUST_AND_POLICY_REMEDIATION_PLAN.md`
+// ships, this function gains the tenant lookup; today it stays minimal.
+export async function getServerSideProps({ req }) {
+  let seoHost = '';
+  try {
+    const raw = (req?.headers?.['x-forwarded-host'] || req?.headers?.host || '').toString();
+    seoHost = raw.split(',')[0].trim().toLowerCase().replace(/:\d+$/, '');
+  } catch {
+    seoHost = '';
+  }
+  return { props: { seoHost } };
 }

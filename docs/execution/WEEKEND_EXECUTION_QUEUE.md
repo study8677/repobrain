@@ -539,3 +539,45 @@ This is the **live queue** of approved or pending packets for autonomous executi
 ## Archive
 
 (Empty — first queue, started 2026-05-23.)
+
+
+<!-- CONCIERGE_SEO_HEAD_2026_05_27 -->
+
+### Goal 6 follow-up — 2026-05-27 — Lux concierge SEO `<Head>` fix (RUNTIME packet — first to ship)
+
+First runtime packet derived from the Lux quality audit's top-10 fix list (fix #2). Shipped as a separate PR on top of `main` (independent of #237 / #238 — touches different files so no merge conflict).
+
+#### Packet `lux-concierge-seo-head` (RUNTIME COMPLETE in PR; awaiting Vercel Production verification)
+
+- **Branch:** `feat/lux-concierge-seo-head` (off `main`).
+- **PR title:** `feat(seo): add Lux concierge SEO metadata`.
+- **Files (3):**
+  - `lib/client/concierge-seo.js` (new) — pure SSR-callable helper.
+  - `pages/concierge.js` (modified) — `getServerSideProps` + `useMemo` + full SEO `<Head>`.
+  - `node-tests/concierge-seo.test.mjs` (new) — 12 unit tests.
+- **What changed:** The `/concierge` page now emits `<title>` + `<meta name="description">` + `<meta name="robots" content="index, follow">` + `<link rel="canonical">` + 5 `og:*` tags + 3 `twitter:*` tags on every request, with host-aware canonical URL.
+- **Tenant-safety stance:** the page is Lux-only today (imports `LUXE_MAURICE_*` brand tokens). The helper documents this explicitly and collapses canonical to `https://lux.corpflowai.com/concierge` for any non-Lux host. When `lux-trust-policy-impl-v1` ships host-aware rendering, the helper's `isLuxHost` branch becomes the extension point for per-tenant SEO.
+- **No DB / no tenant_id / no env / no analytics / no Plausible / no Search Console / no DNS** changes.
+- **Verification:** `npm test` **418/418 PASS** locally on `corpflow-exec-01` (+12 over the 406 baseline). `npm run build` deliberately skipped (heavy for 2 GB box); Vercel Preview build handles the next gate.
+- **Expected Lux audit score impact:** §3.1 *SEO/indexing* +1.5 (concierge head meta complete), §3.9 *Content completeness* +1 (sitemap-listed surface gains complete head). **Total: ~+2.5 on the next Lux audit** (closes the audit's fix #2 row).
+- **Live-verification checklist (after Vercel Production deploys the merged PR, per `delivery-reality.mdc`):**
+  - [ ] `https://lux.corpflowai.com/concierge` returns 200 with `<meta name="description">`, `<link rel="canonical" href="https://lux.corpflowai.com/concierge">`, `og:title`, `og:description`, `og:url`, `og:type=website`, `og:site_name=Luxurious Mauritius`, `twitter:card=summary_large_image`.
+  - [ ] `https://corpflowai.com/concierge` (apex) returns 200 with the same metadata BUT canonical pointing back to `https://lux.corpflowai.com/concierge` (intentional — Lux brand owns the page).
+  - [ ] `https://corpflowai.com/` (apex marketing) unaffected — still serves CorpFlowAI public home.
+  - [ ] `https://lux.corpflowai.com/` (Lux static landing rewrite) unaffected.
+- **Verdict:** RUNTIME COMPLETE in repo (tests + helper + page edit + docs all landed); pending Vercel Production deploy + live verification per `delivery-reality.mdc`. Treat as PARTIAL until the live-verification checklist above is signed off.
+
+### Status table (Goal 6, cumulative — refreshed 2026-05-27)
+
+| Packet | Status |
+|---|---|
+| 6.1 quality-system-v1 | COMPLETE (PR #237). |
+| 6.2 lux-quality-report-v1 | COMPLETE (PR #237). |
+| 6.3 search-console-apex | DOC COMPLETE (PR #237) + PREFLIGHT COMPLETE (PR #238). Operator §3 PENDING. |
+| 6.4 client-performance-reporting-model | COMPLETE design-only (PR #237). |
+| 6.5 telegram-alert-wiring | DESIGN COMPLETE (PR #238). Operator Gate 0 PENDING. |
+| 6.6 lux-trust-policy-remediation | DESIGN COMPLETE (PR #238). Implementation packet PENDING. |
+| 6.7 quality-score-evolution-v2 | DESIGN COMPLETE (PR #238). Cutover gated on G1–G5. |
+| 6.8 publication-engine-v1-design | PENDING (future design). |
+| **6.9 lux-concierge-seo-head** | **RUNTIME COMPLETE (this PR); pending Vercel Prod + live verify.** |
+
