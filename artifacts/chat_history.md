@@ -65,6 +65,33 @@
 
 ---
 
+## 2026-05-27 — Lux quality audit trajectory note appended (PR #244 merged)
+
+<!-- TRAJECTORY_NOTE_RECORDED_2026_05_27_HIST -->
+
+**Status:** COMPLETE (docs-only — no client/runtime surface change; the artifact it amends is internal evidence, not a public surface).
+
+- **PR:** [#244](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/244) — `docs(quality): record Lux trajectory note (59 -> ~61.5) post-concierge SEO` — merged via squash commit `95947ad4fdf7` at `2026-05-27T12:12:21Z`.
+- **What it documents:** the projected Lux website quality score movement from **59/100\* → ~61.5/100\*** following the Lux concierge SEO `<Head>` fix (PR #239 / Packet 6.9). Δ = **+2.5** (§3.1 SEO/indexing +1.5; §3.9 Content completeness +1). All other rubric rows unchanged; same PENDING discipline.
+- **File touched:** `artifacts/quality-audits/2026-05-27-luxe-maurice-quality-v1.md` (+45 lines, 1 file). Internal sentinel `<!-- TRAJECTORY_POST_CONCIERGE_SEO -->` placed at the trajectory section so future audit re-runs can locate it deterministically.
+- **Cross-link:** the Packet 6.9 closure entry above (`CONCIERGE_SEO_HEAD_VERIFIED_2026_05_27_HIST`) already named this trajectory line as a follow-up; this PR satisfies that pending item without re-opening Packet 6.9.
+- **Discipline:** no rubric change, no thresholds moved, no PENDING items re-graded as measured. The next full re-audit (after Lighthouse + Search Console land) will replace the projected number with an evidence-based score. No env, secret, DNS, DB, `tenant_id`, analytics, Plausible, Search Console, Telegram behavior, Vercel config, GitHub settings, or deployment settings touched.
+
+---
+
+## 2026-05-27 — Audit fix #3 shipped: `vercel.json` dead rewrites retired + guardrail test (PR #242 merged)
+
+<!-- VERCEL_REWRITES_CLEANUP_2026_05_27_HIST -->
+
+**Status:** COMPLETE (LOW-scope cleanup; no runtime behavior change — only deterministically dead rewrites removed).
+
+- **PR:** [#242](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/242) — `chore(routing): retire dead rewrites in vercel.json` — merged via squash commit `2cfbf869c227` at `2026-05-27T11:03:42Z`.
+- **Scope:** removed exactly the rewrites whose destinations did not resolve to existing files or known valid routes on the working tree. `vercel.json` lost 5 lines; no rewrite still in use was touched.
+- **Guardrail:** new `node-tests/vercel-rewrites.test.mjs` (+147 lines) asserts every remaining rewrite destination resolves to an actual file or known route, so future drift fails CI rather than silently re-introducing dead rewrites.
+- **Discipline:** no runtime route changed for clients; the removed entries were already dead (overridden by Next.js page routes or pointed at deleted assets). No env, secret, DNS, DB, `tenant_id`, analytics, Plausible, Search Console, Telegram behavior, Vercel env, GitHub settings, or deployment settings touched. Pure repo hygiene.
+- **Verification:** floor URLs unchanged post-merge (apex, Lux home, Lux `/change`, factory health all 200). Per `.cursor/rules/delivery-reality.mdc`, since the dead rewrites had no client-visible effect, this packet did not require an additional live probe beyond the standard floor.
+
+---
 ## Timeline (key themes)
 
 ### 2025–2026 — Cloud factory, governance, and Vercel hardening
