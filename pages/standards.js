@@ -26,7 +26,7 @@ const PILLARS = [
   },
   {
     label: 'Payment after review',
-    body: 'No card or banking details are collected on this website. After intake review, we send the appropriate invoice route (MUR for Mauritius, USD for international clients). The cancellation window before pilot setup begins is published separately on the refund-policy page.',
+    body: 'No card or banking details are collected on this website. After intake review, we issue a USD invoice for the pilot. The cancellation window before pilot setup begins is published separately on the refund-policy page.',
   },
   {
     label: 'No revenue guarantees',
@@ -126,8 +126,8 @@ export default function StandardsPage() {
           </li>
           <li>
             <strong style={{ color: '#dbe7f5' }}>Intake first, payment second.</strong> The
-            public website does not capture card or banking details. Payment routes are
-            issued only after intake review, on the appropriate currency channel.
+            public website does not capture card or banking details. A USD invoice is
+            issued only after intake review, off-site.
           </li>
           <li>
             <strong style={{ color: '#dbe7f5' }}>Least-access pilots.</strong> A pilot

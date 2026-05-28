@@ -29,7 +29,7 @@ const STAGES = [
     n: 2,
     title: 'Pilot scope',
     duration: 'half a day to one day',
-    body: "We confirm in writing exactly what the pilot will and will not include. Out-of-scope items are listed explicitly. We then send the appropriate invoice route (MUR for Mauritius, USD for international clients).",
+    body: 'We confirm in writing exactly what the pilot will and will not include. Out-of-scope items are listed explicitly. We then issue a USD invoice for the pilot.',
   },
   {
     n: 3,
@@ -160,11 +160,9 @@ export default function ProcessPage() {
         <h2 style={ps.h2}>Payment after review</h2>
         <p style={ps.p}>
           We do not take payment before intake review. After a CorpFlowAI operator confirms
-          we can help, you receive an invoice for the relevant route &mdash; MUR for clients
-          based in Mauritius, USD for international clients. Payment is processed off-site
-          through the appropriate channel; this site does not collect card or banking
-          details. The refund window for cancellation before pilot setup begins is published
-          separately on{' '}
+          we can help, you receive a USD invoice for the pilot. Payment is processed
+          off-site; this site does not collect card or banking details. The refund window
+          for cancellation before pilot setup begins is published separately on{' '}
           <Link href="/refund-policy" style={{ color: '#7dd3fc' }}>
             the refund policy page
           </Link>

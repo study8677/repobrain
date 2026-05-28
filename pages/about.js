@@ -37,7 +37,7 @@ const PRINCIPLES = [
   },
   {
     title: 'Intake first, payment after review.',
-    body: 'No card or banking details are collected on this website. Payment routes (MUR for Mauritius, USD for international clients) are sent only after a CorpFlowAI operator reviews your intake and confirms the work fits.',
+    body: 'No card or banking details are collected on this website. A USD invoice is issued only after a CorpFlowAI operator reviews your intake and confirms the work fits.',
   },
   {
     title: 'No revenue guarantees.',
@@ -100,9 +100,9 @@ export default function AboutPage() {
           </p>
           <p style={{ margin: '0 0 14px' }}>
             We are based in Mauritius and work with clients in Mauritius and internationally.
-            Pricing is split on purpose: MUR for local SMBs, USD for international clients.
-            The technical setup is the same in both cases. The split exists because billing
-            in the right currency is part of the calm we are trying to install
+            Pilots are priced in USD so the offer reads the same to every prospect on this
+            website. After intake review we issue a single USD invoice, regardless of where
+            you sit. Billing in one currency is part of the calm we are trying to install
             {' \u2014 '}not a negotiation point.
           </p>
           <p style={{ margin: 0 }}>

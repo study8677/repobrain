@@ -4,7 +4,7 @@
   "surface": "lead-rescue",
   "kind": "illustration",
   "title": "AI Lead Rescue trust band",
-  "description": "Quiet horizontal trust band illustration with five small geometric markers reinforcing the AI Lead Rescue operating principles: 48-hour pilot setup, intake-first review, no card details on this site, no CRM rebuild needed, MUR & USD payment routes. Hand-crafted SVG — no people, no logos, no testimonial photos, no fake claims.",
+  "description": "Quiet horizontal trust band illustration with five small geometric markers reinforcing the AI Lead Rescue operating principles: 48-hour pilot setup, intake-first review, no card details on this site, no CRM rebuild needed, USD invoice issued after intake review. Hand-crafted SVG — no people, no logos, no testimonial photos, no fake claims.",
   "source": {
     "type": "repo",
     "path": "/assets/visuals/lead-rescue-trust.svg",
@@ -17,7 +17,7 @@
     "terms": "Original CorpFlowAI mark. Free to reuse across CorpFlowAI surfaces; do not redistribute as stock or use in third-party marketing without written agreement."
   },
   "accessibility": {
-    "alt": "Horizontal trust band with five small geometric markers for the AI Lead Rescue principles: 48-hour pilot setup, intake-first review, no card details on this site, no CRM rebuild needed, MUR and USD payment routes.",
+    "alt": "Horizontal trust band with five small geometric markers for the AI Lead Rescue principles: 48-hour pilot setup, intake-first review, no card details on this site, no CRM rebuild needed, USD invoice issued after intake review.",
     "lang": "en",
     "decorative": false
   },
@@ -28,7 +28,7 @@
   "lifecycle": {
     "state": "vetted",
     "created_at": "2026-05-21",
-    "reviewed_at": "2026-05-21",
-    "review_due": "2027-05-21"
+    "reviewed_at": "2026-05-28",
+    "review_due": "2027-05-28"
   }
 }
