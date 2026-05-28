@@ -5,11 +5,17 @@ alwaysApply: true
 
 # Brand and conversion doctrine
 
-When work touches public marketing pages, landing pages, intake pages, pricing presentation, CTA wording, productized service offers, AI Lead Rescue, buyer-facing copy, or buyer-facing visual design, read and apply:
+When work touches public marketing pages, landing pages, intake pages, pricing presentation, CTA wording, productized service offers, AI Lead Rescue, buyer-facing copy, or buyer-facing visual design, read and apply both the brand/conversion doctrine and the broader marketing execution standards:
 
-- `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`
+- `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` — brand / conversion specifics (single offer rule, route after intent, AI Lead Rescue).
+- `docs/marketing/00_NON_NEGOTIABLE_MARKETING_COMMUNICATION_STANDARD.md` — Hook / Proof / Depth doctrine, dual-asset pattern, aesthetic standard.
+- `docs/marketing/01_AGENT_OUTPUT_CONTRACT.md` — required output header + content structure for every external-facing agent response.
+- `docs/marketing/02_MULTIMODAL_CONTENT_PLAYBOOK.md` — attention / validation asset pairing, video / visual rules, proof density by funnel stage.
+- `docs/marketing/03_CONTENT_ATOM_SCHEMA.md` — reusable structured marketing knowledge for AI retrieval.
+- `docs/marketing/04_DELIVERY_QUALITY_GATE.md` — preflight checklist + 12/14 scoring model + handoff format.
+- `docs/marketing/05_AGENT_COMPULSION_MECHANISM.md` — four-layer enforcement (source-of-truth, prompt preamble, PR checklist, automated check).
 
-This doctrine is canonical unless a newer in-repo decision explicitly supersedes it.
+These are canonical unless a newer in-repo decision explicitly supersedes them. The brand/conversion doctrine and the execution standards are complementary, not alternatives — the brand doctrine governs the offer; the execution standards govern how the offer is communicated.
 
 ## Non-negotiable summary
 
@@ -20,6 +26,9 @@ This doctrine is canonical unless a newer in-repo decision explicitly supersedes
 - Primary CTAs must describe buyer intent, not internal process.
 - Payment/routing complexity must come after buyer intent.
 - For AI Lead Rescue, do not use `Choose payment path` as the primary CTA.
+- Every external communication must combine attention + comprehension + proof + aesthetic discipline + a clear next action (Hook / Proof / Depth doctrine).
+- Every attention asset must point to a validation asset (dual-asset pattern). Standalone hooks without a depth path are not shipped.
+- No prospect-facing or client-facing work is shipped without a visible quality-gate statement (target score ≥ 12/14 per `docs/marketing/04_DELIVERY_QUALITY_GATE.md`).
 
 ## Required review before merge
 
@@ -31,4 +40,6 @@ Before merging buyer-facing marketing work, verify:
 - Payment, region, and routing complexity appears only after buyer intent.
 - The page avoids unsupported revenue guarantees and exaggerated AI claims.
 - The buyer knows the next step.
+- The asset has Hook / Proof / Depth and a validation path (per the Agent Output Contract).
+- Claims are supported or explicitly flagged as hypotheses (per the Delivery Quality Gate).
 - Live production verification is recorded for customer-visible routes, following `.cursor/rules/delivery-reality.mdc`.

@@ -35,7 +35,13 @@ This repository is the **CorpFlow AI Command Center**: **Next.js** (pages router
 
 When work touches public marketing pages, landing pages, intake pages, pricing presentation, CTA wording, productized service offers, AI Lead Rescue, buyer-facing copy, or buyer-facing visual design, read and apply:
 
-- **`docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`**
+- **`docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`** — brand / conversion doctrine (single offer rule, route after intent, AI Lead Rescue specifics).
+- **`docs/marketing/00_NON_NEGOTIABLE_MARKETING_COMMUNICATION_STANDARD.md`** — Hook / Proof / Depth doctrine, dual-asset pattern, aesthetic standard.
+- **`docs/marketing/01_AGENT_OUTPUT_CONTRACT.md`** — required output header + content structure for every external-facing agent response.
+- **`docs/marketing/02_MULTIMODAL_CONTENT_PLAYBOOK.md`** — attention/validation asset pairing, video/visual rules, proof density by funnel stage.
+- **`docs/marketing/03_CONTENT_ATOM_SCHEMA.md`** — reusable structured marketing knowledge for AI retrieval.
+- **`docs/marketing/04_DELIVERY_QUALITY_GATE.md`** — preflight checklist + 12/14 scoring model + handoff format.
+- **`docs/marketing/05_AGENT_COMPULSION_MECHANISM.md`** — four-layer enforcement (source-of-truth, prompt preamble, PR checklist, automated check).
 
 Non-negotiable summary:
 
@@ -45,8 +51,16 @@ Non-negotiable summary:
 - Primary CTAs must describe buyer intent, not internal process.
 - Payment/routing complexity must come after buyer intent.
 - For AI Lead Rescue, do not use **“Choose payment path”** as the primary CTA.
+- Every external communication must combine attention + comprehension + proof + aesthetic discipline + a clear next action (Hook / Proof / Depth doctrine).
+- Every attention asset must point to a validation asset (dual-asset pattern). Standalone hooks without a depth path are not shipped.
 
 If a marketing surface looks polished but the intended buyer does not understand the offer, trust the path, and know exactly what to do next, the change is **PARTIAL**, not complete.
+
+### Marketing, sales, and client-facing delivery standard
+
+Any workstream that affects prospect-facing or client-facing communication must apply the mandatory standards in `docs/marketing/`. This includes websites, landing pages, social copy, email, proposals, decks, onboarding, help content, and client updates.
+
+Agents and contributors must enforce the Hook / Proof / Depth doctrine, the dual-asset pattern, the Agent Output Contract, and the Delivery Quality Gate before handoff or release.
 
 ## Git note (default branch `main`)
 
@@ -68,6 +82,8 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | **Operator Bridge — day-to-day runbook (how Cursor / Codex Cloud post STATUS to #249)** | **`docs/runbooks/OPERATOR_BRIDGE.md`** |
 | **Delivery Acceleration v1 — multi-executor protocol (Cursor + Codex Cloud + future internal agent)** | **`docs/execution/DELIVERY_ACCELERATION_V1.md`** |
 | **Codex Cloud install — operator playbook (Packet 7.2: pre-flight, OpenAI key, GitHub App least-privilege, bot username, first-packet smoke, rollback)** | **`docs/runbooks/CODEX_CLOUD_INSTALL.md`** |
+| Marketing / conversion doctrine (brand, single-offer rule, AI Lead Rescue) | `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` |
+| **Marketing execution standards (mandatory for all prospect/client-facing work — Hook / Proof / Depth + Agent Output Contract + Delivery Quality Gate)** | **`docs/marketing/00_NON_NEGOTIABLE_MARKETING_COMMUNICATION_STANDARD.md`**, **`docs/marketing/01_AGENT_OUTPUT_CONTRACT.md`**, **`docs/marketing/02_MULTIMODAL_CONTENT_PLAYBOOK.md`**, **`docs/marketing/03_CONTENT_ATOM_SCHEMA.md`**, **`docs/marketing/04_DELIVERY_QUALITY_GATE.md`**, **`docs/marketing/05_AGENT_COMPULSION_MECHANISM.md`** |
 | Marketing / conversion doctrine | `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` |
 | Delivery reality (live prod = done) | `.cursor/rules/delivery-reality.mdc`, `.cursor/rules/predeploy-decision-checks.mdc` |
 | Production bar (reliable, secure, observable) | `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md` |

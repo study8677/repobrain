@@ -79,6 +79,15 @@ jobs:
         npm ci
         npm test
 
+    # Marketing execution standards integrity check.
+    # Per docs/marketing/05_AGENT_COMPULSION_MECHANISM.md Layer 4 — fails only if the
+    # six required marketing-standard documents are missing or lose required enforcement
+    # terms (Hook / Proof / Depth, Delivery Quality Gate, Agent Output Contract, dual-asset
+    # pattern). It does NOT inspect production-page changes (that aggressive variant is a
+    # separate decision per Anton's scope choice when this script was wired in).
+    - name: Marketing standards integrity check
+      run: npm run check:marketing-quality-gate
+
     # When POSTGRES_URL is set (e.g. from Infisical OIDC), try to apply pending migrations.
     # P3005 on non-baselined DBs is migrate history hygiene, not secret-delivery failure — step uses continue-on-error.
     - name: Prisma migrate deploy (optional)

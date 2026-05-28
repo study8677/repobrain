@@ -4,6 +4,19 @@
 **Applies to:** CorpFlowAI, AI Lead Rescue, productized services, marketing pages, landing pages, intake pages, sales pages, public demos, and buyer-facing copy.  
 **Audience:** AI agents, developers, designers, marketers, contractors, and operators.
 
+## Companion execution standards
+
+This doctrine governs **the offer** — how CorpFlowAI's products are positioned, priced, and routed. The companion documents in `docs/marketing/` govern **how the offer is communicated** across every prospect-facing and client-facing surface. Read both before producing external-facing work:
+
+- **`docs/marketing/00_NON_NEGOTIABLE_MARKETING_COMMUNICATION_STANDARD.md`** — Hook / Proof / Depth doctrine, dual-asset pattern, aesthetic standard, copy standard, decision-stage rules, final test.
+- **`docs/marketing/01_AGENT_OUTPUT_CONTRACT.md`** — required output header + channel-specific content structure for every external-facing agent response, plus the Agent quality-gate self-check.
+- **`docs/marketing/02_MULTIMODAL_CONTENT_PLAYBOOK.md`** — attention / validation asset pairing, video and visual rules, scannability rules, proof density by funnel stage, content reuse model.
+- **`docs/marketing/03_CONTENT_ATOM_SCHEMA.md`** — reusable structured units of marketing/sales truth for AI retrieval.
+- **`docs/marketing/04_DELIVERY_QUALITY_GATE.md`** — preflight checklist + 12/14 scoring model + mandatory handoff format.
+- **`docs/marketing/05_AGENT_COMPULSION_MECHANISM.md`** — four-layer enforcement (source-of-truth, prompt preamble, PR checklist, automated check at `scripts/check-marketing-quality-gate.mjs`).
+
+The auto-applied rule **`.cursor/rules/brand-conversion-doctrine.mdc`** treats this doctrine and the six companion standards as a single canonical set. Future decisions may supersede individual sections; they may not silently contradict the set.
+
 ## Non-negotiable rule
 
 CorpFlowAI marketing work must optimize for the buyer action first and visual polish second.

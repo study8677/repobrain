@@ -30,7 +30,8 @@
     "vercel:env:push": "node scripts/vercel-env.mjs push --backend=auto --force",
     "vercel:env:push:cli": "node scripts/vercel-env.mjs push --backend=cli --force",
     "production:pulse": "node scripts/production-pulse.mjs",
-    "production:pulse:test": "node --test node-tests/production-pulse.test.mjs"
+    "production:pulse:test": "node --test node-tests/production-pulse.test.mjs",
+    "check:marketing-quality-gate": "node scripts/check-marketing-quality-gate.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
