@@ -236,6 +236,48 @@ Verification:
 
 Closure verdict: docs-only; final Delivery Reality Audit verdict = COMPLETE after merge.
 
+## 2026-05-29 — ERPNext implementation Phase A1: install runbook landed; Phase B held on `corpflow-exec-01` capacity
+
+<!-- ERPNEXT_IMPL_PHASE_A_RUNBOOK_2026_05_29_HIST -->
+
+**Status:** Phase A1 of multi-phase ERPNext implementation (Phase A docs → Phase B install → Phase C §3–§7 test plan → Phase D §10 go/no-go). Docs-only. Phase B (install) is HELD until Anton resolves capacity per `JE-2026-05-29-2` (path A resize / B fresh VM / C Frappe Cloud).
+
+Operator decisions captured in chat (2026-05-29 ~08:00 UTC, mirrored to bridge issue #249 [issuecomment-4572526955](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4572526955)):
+- Sandbox host = `corpflow-exec-01` (self-host on the existing Hetzner / Elestio VM).
+- Scope of "complete implementation" = full Phase A → Phase D.
+- Cursor's role during install = SSH-driven on the chosen host; secrets / billing / DNS still operator-only.
+
+Pre-flight finding on `corpflow-exec-01` (read-only, no installs):
+- **RAM total 1.9 GB** vs Frappe Docker minimum 4 GB / comfortable 8 GB → **capacity HOLD** on Phase B.
+- Disk 31 GB on `/` (sufficient), 2 CPU cores (sufficient), no Docker installed yet (expected), no existing CorpFlowAI workloads on the box (no factory processes, no containers, no cron, only sshd / systemd-resolved listening).
+- Egress to `ghcr.io`, `hub.docker.com`, `github.com/frappe/frappe_docker` reachable.
+
+PR landed in Phase A1 (4 files; docs-only):
+- NEW `docs/runbooks/ERPNEXT_SANDBOX_INSTALL.md` — 17-section install runbook for `corpflow-exec-01` via Frappe Docker; §0.1 capacity HOLD documented with three operator-only resolution paths; SSH-tunnel UI access (no DNS / no firewall change); sandbox credentials at `~/.erpnext-sandbox-credentials` (`chmod 600`, never committed); §13 Phase B exit criteria binding before Phase C begins; §17 honest limits.
+- EDIT `docs/decisions/JOURNAL.md` — adds `JE-2026-05-29-1` (host decision = `corpflow-exec-01`; scope = full Phase A → D; Cursor SSH-driven install authorised; Phase B blocked until `JE-2026-05-29-2`) and `JE-2026-05-29-2` (capacity finding 1.9 GB; three paths offered; Phase B held until Anton records the chosen path).
+- EDIT `AGENTS.md` Must-read table — adds row for the install runbook (task-conditional reading; describes operator vs Cursor ownership; flags Phase B HOLD).
+- EDIT `artifacts/chat_history.md` — this section.
+
+Hard limits honoured (carried from `ERPNEXT_SANDBOX_PLAN_V1.md` §0 + `.cursor/rules/*`):
+- Zero runtime CorpFlowAI changes (no `lib/`, `api/`, `pages/`, `prisma/`, `scripts/`).
+- Zero env / secrets / DNS / DB / `tenant_id` / Plausible / Search Console / Telegram / Vercel-config / GitHub-settings / deployment-settings touched.
+- ERPNext sandbox credentials (when Phase B runs) stay on the host at `~/.erpnext-sandbox-credentials` and are never committed.
+- No real Mauritius bank, PayPal, or Wise credentials anywhere.
+- No production CorpFlowAI surface affected; no client-facing URL changed.
+
+Verification (docs-only Delivery Reality Audit shape):
+- Local fix exists: YES.
+- Merged to main: pending Anton's merge.
+- Production deployment ID: n/a (docs-only).
+- Live URLs tested: n/a (docs-only).
+- Client-facing flow usable: YES (no surface changed).
+- Final verdict (pre-merge): PARTIAL; will flip to COMPLETE on merge.
+
+Open question for Anton (gates Phase B; does not gate Phase A1 merge):
+- Pick path A (resize `corpflow-exec-01` via Elestio / Hetzner panel) / B (provision new Hetzner CX22 or CX32) / C (Frappe Cloud trial). Record the choice as a new `JE-2026-MM-DD-n` row. Phase B install does not start until that row exists.
+
+---
+
 ## Timeline (key themes)
 
 ### 2025–2026 — Cloud factory, governance, and Vercel hardening

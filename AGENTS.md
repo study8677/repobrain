@@ -112,6 +112,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | ADR-lite decisions | `docs/decisions/README.md` |
 | Compliance starter | `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md` |
 | **ERPNext accounting sandbox plan v1** — consulted when ERPNext / invoicing / bank-reconciliation / VAT work is in scope. **Task-conditional reading**, not mandatory per task. Plan-only — no install, no production setup. | `docs/finance/ERPNEXT_SANDBOX_PLAN_V1.md` |
+| **ERPNext sandbox install runbook** — consulted alongside the plan when actually installing the sandbox. Operator owns capacity-resize, billing, secrets, DNS, ERPNext admin password; Cursor owns SSH-driven install per `JE-2026-05-29-1`. Phase B is HELD on `corpflow-exec-01` capacity until `JE-2026-05-29-2` is resolved. | `docs/runbooks/ERPNEXT_SANDBOX_INSTALL.md` |
 
 ## Autonomous execution framework (v1)
 
