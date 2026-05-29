@@ -1,0 +1,34 @@
+{
+  "walkthrough_id": "CF-VID-0001",
+  "output_basename": "lead-rescue-walkthrough-v1",
+  "walkthrough_yaml_path": "data/walkthroughs/lead-rescue-walkthrough-v1.yml",
+  "walkthrough_yaml_sha256": "1dc700ad350054595307fbc35382ceedec6da0dbe55468fad3f760af5364ded4",
+  "repo_commit_sha": "b3a0728471d17666e2b3405caf90e16067ed2d45",
+  "workflow_run_id": "26621869636",
+  "workflow_run_url": "https://github.com/antonvdberg-bit/corpflow-ai-command-center/actions/runs/26621869636",
+  "playwright_version": "^1.59.1",
+  "chromium_version": "Version 1.59.1",
+  "ffmpeg_version": "6.1.1-3ubuntu5",
+  "node_version": "v22.22.3",
+  "generated_at_iso": "2026-05-29T06:28:46.958Z",
+  "artifact": {
+    "mp4_path": "public/assets/video/lead-rescue/lead-rescue-walkthrough-v1.mp4",
+    "mp4_size_bytes": 665092,
+    "mp4_sha256": "8a465fbef40deddb4467f9cc560bec1697ad62f4091f3580a9bb1667f4e158dc",
+    "vtt_path": "public/assets/video/lead-rescue/lead-rescue-walkthrough-v1.vtt",
+    "vtt_size_bytes": 450,
+    "vtt_sha256": "166d0511a329f04f94226bd0d40ef8e74db8032ddb710a67e79421be86c2560d"
+  },
+  "safety_assertions": {
+    "ai_tooling_disclosed": true,
+    "human_review_required": true,
+    "real_tenant_used": false,
+    "real_telegram_used": false,
+    "real_pii_present": false
+  },
+  "sign_off": {
+    "final_cut_signed_off_by": "anton",
+    "final_cut_signed_off_at_iso": "2026-05-29T07:00:00Z",
+    "phase_2_authorisation_comment_url": "https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4571978590"
+  }
+}

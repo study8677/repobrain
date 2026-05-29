@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "id": "lead-rescue-walkthrough-v1",
+  "surface": "lead-rescue",
+  "kind": "video",
+  "title": "AI Lead Rescue daily operator walkthrough — silent v1 (representational, AI-rendered)",
+  "description": "45-60 second silent walkthrough of the AI Lead Rescue daily operator view. Shows: morning summary, an enquiry captured overnight, a redacted Telegram-style alert, the one outstanding follow-up, and the full daily summary. Burned-in captions plus a companion WebVTT track carry the whole message; no audio. Synthetic data only — no real client data, no real tenant_id, no real Telegram resources. Final frame is a disclosure card stating 'Representational example only', 'No real client data', 'Visual generated and assisted by AI tooling, reviewed by humans'. Source-of-truth YAML lives at data/walkthroughs/lead-rescue-walkthrough-v1.yml; rendered server-side via the Playwright + FFmpeg pipeline at scripts/video/ and the workflow at .github/workflows/generate-walkthrough-video.yml.",
+  "source": {
+    "type": "repo",
+    "path": "/assets/video/lead-rescue/lead-rescue-walkthrough-v1.mp4",
+    "captions_url": "/assets/video/lead-rescue/lead-rescue-walkthrough-v1.vtt",
+    "controls": true,
+    "loop": false,
+    "autoplay": false,
+    "width": 1280,
+    "height": 720,
+    "content_hash": "sha256:8a465fbef40deddb4467f9cc560bec1697ad62f4091f3580a9bb1667f4e158dc"
+  },
+  "licence": {
+    "tier": "ai_generated",
+    "owner": "CorpFlowAI",
+    "terms": "AI-rendered representational walkthrough. CorpFlowAI-owned. Free to reuse across CorpFlowAI surfaces; do not relabel as a live screenshot, do not redistribute as stock, and do not use in third-party marketing without written agreement. Synthetic data only — never present as a real client view."
+  },
+  "accessibility": {
+    "alt": "Silent 52-second walkthrough of the AI Lead Rescue morning view: 3 enquiries captured overnight, 1 still awaiting reply, with a redacted alert overlay and a representational-data disclosure card. Burned-in captions plus an English caption track describe each beat.",
+    "lang": "en",
+    "decorative": false
+  },
+  "usage": {
+    "allowed_surfaces": ["lead-rescue"],
+    "notes": "slot:lead_rescue_dashboard. Replaces the static SVG mockup (lead-rescue-dashboard) in the 'What you see every morning' section with a moving, accessible walkthrough. Plays click-to-play with controls (no autoplay) so the buyer chooses when to engage. Captions are burned-in AND available via the WebVTT track for screen-reader users. Names, counts, and channels are synthetic; the asset must never be relabelled as a live screenshot."
+  },
+  "lifecycle": {
+    "state": "vetted",
+    "created_at": "2026-05-29",
+    "reviewed_at": "2026-05-29",
+    "review_due": "2026-11-29"
+  },
+  "prompt_provenance": {
+    "prompt_id": "cf-vid-0001-lead-rescue-walkthrough-v1",
+    "model": "playwright-chromium-ffmpeg-server-render",
+    "model_version": "playwright@1.59.1+ffmpeg@6.1.1",
+    "generated_at": "2026-05-29T06:28:46Z",
+    "reviewed_by": "anton (final cut sign-off 2026-05-29 07:00 UTC)"
+  }
+}

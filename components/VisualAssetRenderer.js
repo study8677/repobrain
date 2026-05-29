@@ -14,9 +14,15 @@ import { isAiGeneratedManifest } from '../lib/visualAssets/aiProvenance.js';
  *   - `image`         → `<img>` tag, lazy-loaded, responsive
  *   - `illustration`  → same as image (a stylised image)
  *   - `icon`          → `<img>` rendered at icon scale
- *   - `video`         → `<video>` for short-loop video assets
- *                       (autoplay/muted/loop/playsInline; respects
- *                       `prefers-reduced-motion` via `disableAutoplay`)
+ *   - `video`         → `<video>` for video assets. Two shapes:
+ *                       (a) short-loop (default): autoplay+muted+loop+playsInline;
+ *                           respects `prefers-reduced-motion` via `disableAutoplay`.
+ *                       (b) educational walkthrough: opt in by setting
+ *                           `manifest.source.controls: true` (and typically
+ *                           `loop: false`, `autoplay: false`). When
+ *                           `manifest.source.captions_url` is present, a
+ *                           `<track kind="captions">` is rendered for
+ *                           accessibility (HTML5 caption track).
  *   - `social_card`   → `<img>` (used as block image when surfaced)
  *   - `lottie`        → falls back to a static image if a poster URL
  *                       is provided, otherwise renders nothing
@@ -145,13 +151,28 @@ export default function VisualAssetRenderer(props) {
   const ariaHidden = decorative ? { 'aria-hidden': 'true' } : {};
 
   if (kind === 'video') {
+    const v = (manifest.source && typeof manifest.source === 'object') ? manifest.source : {};
+    const wantsControls = v.controls === true;
+    const wantsLoop = v.loop !== false;
+    const wantsAutoplay = v.autoplay !== false && !disableAutoplay;
+    const captionsUrl = (typeof v.captions_url === 'string'
+      && (v.captions_url.startsWith('/') || /^https:\/\//.test(v.captions_url)))
+      ? v.captions_url
+      : null;
+    const posterUrl = (typeof v.poster_url === 'string'
+      && (v.poster_url.startsWith('/') || /^https:\/\//.test(v.poster_url)))
+      ? v.poster_url
+      : undefined;
+    const captionsLang = (typeof a11y.lang === 'string' && a11y.lang) ? a11y.lang : 'en';
     return (
       <video
         src={src}
         muted
-        loop
+        loop={wantsLoop}
         playsInline
-        autoPlay={!disableAutoplay}
+        autoPlay={wantsAutoplay}
+        controls={wantsControls}
+        poster={posterUrl}
         preload={eager ? 'auto' : 'metadata'}
         width={intrinsicWidth}
         height={intrinsicHeight}
@@ -160,7 +181,17 @@ export default function VisualAssetRenderer(props) {
         style={mergedStyle}
         {...langAttr}
         {...ariaHidden}
-      />
+      >
+        {captionsUrl ? (
+          <track
+            kind="captions"
+            src={captionsUrl}
+            srcLang={captionsLang}
+            label="English captions"
+            default
+          />
+        ) : null}
+      </video>
     );
   }
 

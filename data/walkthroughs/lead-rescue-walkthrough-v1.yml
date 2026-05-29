@@ -15,7 +15,7 @@
 
 walkthrough:
   id: "CF-VID-0001"
-  status: "draft"
+  status: "approved"
   owner: "Anton"
   last_reviewed: "2026-05-29"
   next_review_due: "2026-06-29"
@@ -141,17 +141,19 @@ walkthrough:
         type: "show_disclosure_card"
 
   provenance:
-    walkthrough_yaml_sha: "<filled at runtime by write-provenance.mjs>"
-    workflow_run_id: "<filled at runtime>"
-    workflow_run_url: "<filled at runtime>"
-    repo_commit_sha: "<filled at runtime>"
-    playwright_version: "<filled at runtime>"
-    chromium_version: "<filled at runtime>"
-    ffmpeg_version: "<filled at runtime>"
-    node_version: "<filled at runtime>"
-    generated_at_iso: "<filled at runtime>"
+    walkthrough_yaml_sha: "1dc700ad350054595307fbc35382ceedec6da0dbe55468fad3f760af5364ded4"
+    workflow_run_id: "26621869636"
+    workflow_run_url: "https://github.com/antonvdberg-bit/corpflow-ai-command-center/actions/runs/26621869636"
+    repo_commit_sha: "b3a0728471d17666e2b3405caf90e16067ed2d45"
+    playwright_version: "1.59.1"
+    chromium_version: "1.59.1"
+    ffmpeg_version: "6.1.1-3ubuntu5"
+    node_version: "v22.22.3"
+    generated_at_iso: "2026-05-29T06:28:46.958Z"
     ai_tooling_disclosed: true
     human_review_required: true
-    final_cut_signed_off_by: null
-    final_cut_signed_off_at_iso: null
-    phase_2_authorisation_comment_url: null
+    final_cut_signed_off_by: "anton"
+    final_cut_signed_off_at_iso: "2026-05-29T07:00:00Z"
+    final_cut_mp4_sha256: "8a465fbef40deddb4467f9cc560bec1697ad62f4091f3580a9bb1667f4e158dc"
+    phase_2_authorisation_comment_url: "https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4571978590"
+    sign_off_notes: "v1 silent cut approved as-is. Music / TTS deferred to a future packet. Phase 2 PR commits the binary to public/assets/video/lead-rescue/ and wires it into the lead_rescue_dashboard slot via the lead-rescue-walkthrough-v1 manifest."
