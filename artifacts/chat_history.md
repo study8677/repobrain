@@ -209,6 +209,33 @@ Verification:
 
 Closure verdict: docs-only; final Delivery Reality Audit verdict = COMPLETE after merge.
 
+## 2026-05-29 — ERPNext Accounting Sandbox Plan v1 (docs-only)
+
+<!-- ERPNEXT_SANDBOX_PLAN_V1_2026_05_29_HIST -->
+
+ERPNext Accounting Sandbox Plan v1 — landed docs-only.
+
+Surface created: `docs/finance/` (new folder; first canonical accounting doc). Plan covers the minimum safe sandbox needed to test invoicing, recurring billing, payment requests, manual PayPal / Wise / domestic-bank handling, CSV-based reconciliation against a Mauritius bank, PDF-as-evidence rule, deferred VAT readiness, and go/no-go criteria for production adoption.
+
+Scope honoured:
+- Docs-only. No install. No production setup. No API keys, no bank credentials, no secrets.
+- No payment automation. No runtime CorpFlowAI changes.
+- No env vars, secrets, DNS, DB, tenant_id, analytics, Plausible, Search Console, Telegram, Vercel config, GitHub Actions, or deployment-settings changes.
+- VAT activation explicitly deferred until turnover threshold or accountant review.
+
+Honest limits recorded inside the doc (§12):
+- Cursor has not deployed ERPNext.
+- Mauritius VAT specifics are not pinned to numbers; accountant review required before any go-live.
+- PayPal API and Wise verified integration are out of v1 scope.
+
+Verification:
+- Files changed: 3 (1 NEW + 2 EDIT). Diff scope verified.
+- npm test passed locally on `corpflow-exec-01` before push.
+- No doctrine file touched. No runtime / security / payment surface touched.
+- AGENTS.md row carries task-conditional guardrail wording (consulted only when ERPNext / accounting / VAT work is in scope).
+
+Closure verdict: docs-only; final Delivery Reality Audit verdict = COMPLETE after merge.
+
 ## Timeline (key themes)
 
 ### 2025–2026 — Cloud factory, governance, and Vercel hardening

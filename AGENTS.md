@@ -111,6 +111,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Env placeholders | `.env.template` |
 | ADR-lite decisions | `docs/decisions/README.md` |
 | Compliance starter | `docs/compliance/DATA_MAP_AND_SUBPROCESSORS.md` |
+| **ERPNext accounting sandbox plan v1** — consulted when ERPNext / invoicing / bank-reconciliation / VAT work is in scope. **Task-conditional reading**, not mandatory per task. Plan-only — no install, no production setup. | `docs/finance/ERPNEXT_SANDBOX_PLAN_V1.md` |
 
 ## Autonomous execution framework (v1)
 
