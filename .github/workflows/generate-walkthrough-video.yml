@@ -116,3 +116,10 @@ jobs:
           path: .artifacts/
           retention-days: 90
           if-no-files-found: error
+          # Render outputs land in `.artifacts/` (leading dot to match `.gitignore`
+          # convention). actions/upload-artifact@v4 defaults to skipping any path
+          # whose top-level segment starts with `.` (treated as "hidden"); without
+          # this flag the upload step fails with "No files were found" even when
+          # the directory is populated. See run 26620830001 for the regression that
+          # motivated this flag.
+          include-hidden-files: true
