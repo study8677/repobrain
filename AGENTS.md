@@ -85,6 +85,7 @@ If Git says **`ambiguous argument 'main'`**, a tracked path named **`main`** may
 | Marketing / conversion doctrine (brand, single-offer rule, AI Lead Rescue) | `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` |
 | **Marketing execution standards (mandatory for all prospect/client-facing work — Hook / Proof / Depth + Agent Output Contract + Delivery Quality Gate)** | **`docs/marketing/00_NON_NEGOTIABLE_MARKETING_COMMUNICATION_STANDARD.md`**, **`docs/marketing/01_AGENT_OUTPUT_CONTRACT.md`**, **`docs/marketing/02_MULTIMODAL_CONTENT_PLAYBOOK.md`**, **`docs/marketing/03_CONTENT_ATOM_SCHEMA.md`**, **`docs/marketing/04_DELIVERY_QUALITY_GATE.md`**, **`docs/marketing/05_AGENT_COMPULSION_MECHANISM.md`** |
 | Marketing / conversion doctrine | `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` |
+| **Strategy source captures** — index for distilled external strategy material (videos, podcasts, essays). The README itself is the index; individual captures are **task-conditional reading**, not mandatory for every task. Read a capture only when working on the area it informs, or when proposing a doctrine change. Doctrine changes never happen inside a capture. | `docs/strategy/sources/README.md` |
 | Delivery reality (live prod = done) | `.cursor/rules/delivery-reality.mdc`, `.cursor/rules/predeploy-decision-checks.mdc` |
 | Production bar (reliable, secure, observable) | `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md` |
 | Host / apex / login / tenancy | `docs/operations/TENANT_CLIENT_LOGIN.md` |

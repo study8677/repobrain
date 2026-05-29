@@ -189,6 +189,26 @@ Verification:
 
 Closure verdict: docs-only; final Delivery Reality Audit verdict = COMPLETE after merge and audit-zero on `main` is confirmed.
 
+## 2026-05-29 — Strategy Source Capture v1: simplicity / 1-1-1 / proof / email / memo
+
+<!-- STRATEGY_SOURCE_CAPTURE_V1_2026_05_28_HIST -->
+
+Strategy Source Capture v1 — landed docs-only.
+
+Surface created: `docs/strategy/sources/` (new folder + index README) to host distilled external strategy material (videos, podcasts, essays, talks) as **inputs to thinking**, not doctrine. Authoritative behaviour continues to live in `docs/marketing/`, `docs/decisions/`, `.cursor/rules/`, and `docs/strategy/PRODUCTION_GRADE_CLIENT_OUTCOMES.md`.
+
+First capture: `2026-05-28-simplicity-1-1-1-proof-email-memo.md` — YouTube source captured via ChatGPT distillation supplied in the operator DECISION block. No transcript copied. 12-bullet summary; CorpFlowAI application mapping across 7 surfaces (Lead Rescue, marketing engine, client migration, delivery acceleration, Operator Bridge / memo culture, hiring / delegation, exit optionality); action implications (do-now / do-not / 5 future packets named only — LR-Email-List v1, LR-Proof-1 production, Memo-attachment convention, Hiring-from-pain v1, Pain log v1); 5 proposed doctrine updates listed and intentionally **not** applied (held for separate DECISION-block approval).
+
+Operational implication for Lead Rescue: reinforces the existing one-offer rule (USD 150 pilot), endorses LR-Proof-1 as the next proof asset before scaling traffic, names LR-Email-List v1 as the next marketing-engine candidate. No site copy, pricing, payment-gateway, or runtime change in this PR.
+
+Verification:
+- Files changed: 4 (2 NEW + 2 EDIT). Diff scope verified.
+- npm test passed locally on `corpflow-exec-01` before push.
+- AGENTS.md row added with explicit guardrail: index only; individual captures are task-conditional reading, not mandatory per-task.
+- No doctrine file touched. No runtime / env / secrets / DNS / DB / tenant_id / analytics / Plausible / Search Console / Telegram / Vercel config / GitHub Actions / deployment-settings changes.
+
+Closure verdict: docs-only; final Delivery Reality Audit verdict = COMPLETE after merge.
+
 ## Timeline (key themes)
 
 ### 2025–2026 — Cloud factory, governance, and Vercel hardening
