@@ -34,7 +34,40 @@ Every status comment must start with the executor identity. This is the only add
 
 Place it directly under the `### Cursor status — <timestamp>` line in §5.1, or directly under `### Closure — <timestamp>` in §5.3.
 
-## 4. Branch prefix at a glance
+## 4. Human-readable summary section (required on every Cursor STATUS / Closure)
+
+> Anton should not have to read a full audit report to know what action is required.
+
+Established by Anton on 2026-05-28 23:59 UTC+4 as a bridge-improvement rule. Every Cursor `### Cursor status — …` and `### Closure — …` comment on #249 must include a short human-readable section, **at the top or bottom** of the comment, with these three fixed blocks:
+
+```text
+ANTON TO-DO
+1. [specific action required from Anton, or "none"]
+2. [specific action required from Anton, or omit]
+
+RECOMMENDED NEXT CLICK
+[merge / approve / hold / review / no action]
+
+CAN ANTON IGNORE THIS FOR NOW?
+[yes/no, with one-line reason]
+```
+
+Cursor places the human summary at the **top** by default. Bottom is acceptable for short notes where the body itself is self-evidently a no-action update.
+
+### 4.1 Field rules
+
+- **`ANTON TO-DO`** — only items that require Anton specifically. Annotate satisfied items inline (e.g. *SETTLED — already recorded at issuecomment-…*) so Anton can scan-confirm without scrolling. If a contractor or another executor needs to act, name them in the body, not here.
+- **`RECOMMENDED NEXT CLICK`** — exactly one of: `merge`, `approve`, `hold`, `review`, `no action`. If the click is something else (e.g. *rotate env var*), name it as a free-text line and label it `RECOMMENDED NEXT CLICK: <action>`.
+- **`CAN ANTON IGNORE THIS FOR NOW?`** — the honest answer. If `yes`, the one-line reason explains why (e.g. *evidence-only update; nothing waiting on you*). If `no`, the one-line reason is the actual blocker.
+
+### 4.2 What this rule does and does not cover
+
+- **Applies to:** `### Cursor status — …` and `### Closure — …` comments authored by an executor (Cursor, Codex Cloud, future internal agent).
+- **Does not apply to:** `### Operator decision — …` comments — those are written or mirrored on Anton's behalf and have their own schema in `OPERATOR_BRIDGE_V1.md` §5.2 plus the example in §6.4 below.
+- **Long evidence still allowed below.** Detailed audits, file lists, scoring tables, schemas, and Delivery Reality Audits remain encouraged. They go below the human summary, not above.
+- **Historical comments are not retroactively edited.** Honest history (per §8 *do not delete history*) outweighs scan efficiency on past comments. The new format applies from the announcement comment onward.
+
+## 5. Branch prefix at a glance
 
 | Executor | Branch namespace | Owner field on the packet |
 |---|---|---|
@@ -44,7 +77,7 @@ Place it directly under the `### Cursor status — <timestamp>` line in §5.1, o
 
 Never commit to a branch whose prefix does not match your executor identity. If the packet's `Owner: Executor` field names someone else, **HOLD** and ask Anton for re-assignment.
 
-## 5. What never appears in a status comment
+## 6. What never appears in a status comment
 
 Carried from `OPERATOR_BRIDGE_V1.md` §9 and `docs/execution/MIGRATION_TO_SERVER_CHECKLIST.md` §2.5. If you cannot describe the state without breaking these, post the status only and link evidence:
 
@@ -57,11 +90,22 @@ Carried from `OPERATOR_BRIDGE_V1.md` §9 and `docs/execution/MIGRATION_TO_SERVER
 
 When in doubt, name the **shape** of the evidence and link the `artifacts/` file; do not paste the content.
 
-## 6. Five concrete examples
+## 7. Five concrete examples
 
-### 6.1 Cursor claiming a docs-only packet
+### 7.1 Cursor claiming a docs-only packet
 
 ```
+ANTON TO-DO
+1. none
+
+RECOMMENDED NEXT CLICK
+no action
+
+CAN ANTON IGNORE THIS FOR NOW?
+yes — packet is in progress; checks running; will post evidence when green
+
+---
+
 ### Cursor status — 2026-05-28 04:50 UTC
 
 **Executor:** Cursor
@@ -76,9 +120,20 @@ When in doubt, name the **shape** of the evidence and link the `artifacts/` file
 **Evidence:** PR will be opened when checks green
 ```
 
-### 6.2 Codex Cloud claiming a docs-consistency audit
+### 7.2 Codex Cloud claiming a docs-consistency audit
 
 ```
+ANTON TO-DO
+1. none
+
+RECOMMENDED NEXT CLICK
+no action
+
+CAN ANTON IGNORE THIS FOR NOW?
+yes — read-only audit; will post the report path when complete
+
+---
+
 ### Cursor status — 2026-06-XX HH:MM UTC
 
 **Executor:** Codex Cloud
@@ -93,9 +148,19 @@ When in doubt, name the **shape** of the evidence and link the `artifacts/` file
 **Evidence:** report saved at artifacts/audits/<date>-docs-consistency.md
 ```
 
-### 6.3 Executor hitting an AAP §3 gate
+### 7.3 Executor hitting an AAP §3 gate
 
 ```
+ANTON TO-DO
+1. Rotate <env var name> in Vercel Production (operator-only step; AAP §3.2)
+
+RECOMMENDED NEXT CLICK: rotate <env var name> in Vercel Production
+
+CAN ANTON IGNORE THIS FOR NOW?
+no — packet is blocked on this rotation; live verification cannot complete until the new value propagates
+
+---
+
 ### Cursor status — 2026-06-XX HH:MM UTC
 
 **Executor:** Cursor
@@ -110,7 +175,9 @@ When in doubt, name the **shape** of the evidence and link the `artifacts/` file
 **Evidence:** diagnostic JSON at artifacts/diagnostics/<date>-<env-name>.json
 ```
 
-### 6.4 Anton approving a packet
+### 7.4 Anton approving a packet
+
+> *No human-readable summary required — `### Operator decision` is written or mirrored on Anton's behalf and uses its own schema (`OPERATOR_BRIDGE_V1.md` §5.2). The rule in §4 above applies to executor STATUS / Closure comments only.*
 
 ```
 ### Operator decision — 2026-06-XX HH:MM UTC
@@ -124,9 +191,20 @@ When in doubt, name the **shape** of the evidence and link the `artifacts/` file
 **Verification required:** Codex Cloud posts the closure note with the merge SHA
 ```
 
-### 6.5 Closure mirror
+### 7.5 Closure mirror
 
 ```
+ANTON TO-DO
+1. none — closure record only
+
+RECOMMENDED NEXT CLICK
+no action
+
+CAN ANTON IGNORE THIS FOR NOW?
+yes — packet is COMPLETE; record-keeping only
+
+---
+
 ### Closure — 2026-06-XX HH:MM UTC
 
 **Executor:** Codex Cloud
@@ -140,13 +218,14 @@ When in doubt, name the **shape** of the evidence and link the `artifacts/` file
 
 Mirror to `artifacts/chat_history.md` in the same PR or a tiny follow-up.
 
-## 7. If something is wrong
+## 8. If something is wrong
 
 - If `main` disagrees with #249, `main` wins. Update the issue, do not invent state.
 - If a STATUS comment leaked any forbidden content, post a follow-up comment marking it: `### Redaction notice — <timestamp>` naming what was leaked (by shape, not value) so Anton can decide on rotation. Do **not** delete history — that destroys the audit trail.
+- If a STATUS comment had encoding mojibake (e.g. PowerShell codepage corrupting em-dashes), edit the comment in place via `gh api -X PATCH` and add a `## Encoding correction note` section in the comment naming what was fixed. The comment id is preserved; the audit trail survives.
 - If two executors look like they claimed the same packet, both must HOLD and wait for Anton's `Operator decision` re-assigning ownership.
 
-## 8. References
+## 9. References
 
 - Bridge architecture, schemas, hold rules, guardrails: `docs/operations/OPERATOR_BRIDGE_V1.md`
 - Delivery Acceleration v1 protocol (multi-executor model + Codex Cloud posture): `docs/execution/DELIVERY_ACCELERATION_V1.md`
