@@ -1,6 +1,6 @@
 # ERPNext sandbox install runbook (v1)
 
-**Status:** Phase A1 of multi-phase ERPNext implementation. **Phase B (the install body) is HELD** until the host capacity question in §0.1 is resolved by the operator.
+**Status:** Phase A1 of multi-phase ERPNext implementation. **Phase B §1–§9 + §12 ran successfully on `corpflow-exec-01-u69678` on 2026-05-31 → 2026-06-01** (capacity Path A taken — VM resized to 4 vCPU / 7.5 GiB RAM / 150 GB disk; see `docs/decisions/JOURNAL.md` `JE-2026-05-31-2` and `JE-2026-06-01-1`). The wizard step (§7) was completed via the Path B server-side bypass (§7.1) after the UI wizard failed client-side. Phase C (test plan) and Phase D (go/no-go) still require separate operator approval.
 **Companion to:** `docs/finance/ERPNEXT_SANDBOX_PLAN_V1.md`.
 **Target host (per `docs/decisions/JOURNAL.md` JE-2026-05-29-1):** `corpflow-exec-01` (self-host, Hetzner KVM, Elestio-managed).
 **Anchor sentinel:** `<!-- ERPNEXT_SANDBOX_INSTALL_RUNBOOK_V1 -->`
@@ -17,7 +17,9 @@ This runbook **does not** describe Phase C (test plan execution) or Phase D (go/
 
 ## 0. Hard prerequisites (Phase B BLOCKED until resolved)
 
-### 0.1 Capacity finding (2026-05-29)
+### 0.1 Capacity finding (2026-05-29) — RESOLVED via Path A on 2026-05-31
+
+> **Status (2026-05-31):** Path A taken. Anton resized `corpflow-exec-01` to plan `corpflow-exec-01-u69678` (Ubuntu 24.04, kernel 6.8.0-117), now **4 vCPU / 7,751 MiB RAM (6,521 MiB available) / 2,047 MiB swap unused / 150 GB disk (7% used)**. Phase B §1–§9 + §12 ran successfully on the resized box; see `JE-2026-05-31-2`. The capacity blocker is **no longer active**; this subsection is preserved as historical record.
 
 Read-only pre-flight against `corpflow-exec-01` measured **1.9 GB RAM**, 31 GB disk on `/`, 2 CPU cores, no Docker installed, no existing CorpFlowAI workloads active on the box (no factory processes, no containers, no cron, only `sshd` + `systemd-resolved` + standard OS daemons listening). Egress to `ghcr.io`, `hub.docker.com`, and `github.com/frappe/frappe_docker` reachable.
 
@@ -86,12 +88,21 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# Allow the operator user to run docker without sudo
-sudo usermod -aG docker "$USER"
-newgrp docker
+# Allow the operator user to run docker without sudo.
+# WARNING: do NOT use `"$USER"` here unless you are sure the install block is being run from a regular login shell.
+# If the operator pasted this whole block into `sudo -i bash` (root shell) or chained it through `sudo bash -c '...'`,
+# `$USER` evaluates to `root` and `anton` never gets added to the `docker` group — observed and corrected during the
+# 2026-05-31 install (see JOURNAL JE-2026-05-31-2). Use the literal username instead.
+sudo usermod -aG docker anton
+
+# Log out fully (`exit`) and SSH back in as `anton` so the new group membership takes effect for new shells.
+# `newgrp docker` only mutates the current shell — it does NOT propagate to child processes spawned via `ssh anton@... 'cmd'`.
 
 docker version
 docker compose version
+# Verify the operator user can run docker without sudo:
+docker ps                        # should NOT prompt for sudo
+groups anton | grep -q docker    # should match, otherwise re-run usermod with literal `anton`
 ```
 
 Record the exact `docker version` output (server + client) in a `JOURNAL.md` row at install time.
@@ -106,20 +117,30 @@ cd ~/erpnext-sandbox
 git clone https://github.com/frappe/frappe_docker.git
 cd frappe_docker
 git fetch --tags
-# Pin to a known stable tag at install time; v5.0.0 is the latest stable line as of 2026-05.
-# Confirm with `git tag --sort=-v:refname | head -10` and pick the latest stable v5.x.
-git checkout v5.0.0
+
+# IMPORTANT: frappe_docker does NOT publish semver release tags (no `v5.x`, no `v4.x`).
+# An earlier version of this runbook said `git checkout v5.0.0` — that tag does not exist and the checkout fails.
+# Pin to a deterministic commit SHA on `main` instead.
+#
+# The 2026-05-31 install used SHA 6526ab8cd4d7c6969b9b44f95558590c89ab4347 (frappe_docker @ main).
+# Reproduce that exact state with:
+git checkout 6526ab8cd4d7c6969b9b44f95558590c89ab4347
+#
+# To choose a newer pin at a future install, do this BEFORE running the checkout above:
+#   git log --oneline -10 origin/main          # inspect the recent commits
+#   git rev-parse origin/main                  # capture the SHA you want to pin
+#   git checkout <that SHA>
+# Then update the JOURNAL row with the new SHA.
 ```
 
-Record both the chosen tag and the resolved commit SHA in `JOURNAL.md`:
+Record the resolved commit SHA (and the date you pinned it) in `JOURNAL.md`:
 
 ```text
 ERPNext sandbox install:
-  frappe_docker tag: v5.0.0
-  commit:            <full SHA from `git rev-parse HEAD`>
-  date:              <ISO timestamp>
+  frappe_docker pin: main@<full SHA>
   installed on:      <hostname>
   Docker server:     <docker version --format ...>
+  date:              <ISO timestamp>
 ```
 
 ## 4. Configure the `.env` overlay
@@ -210,6 +231,10 @@ docker compose -p erpnext-sandbox exec backend bench new-site corpflowai-sandbox
 docker compose -p erpnext-sandbox exec backend bench --site corpflowai-sandbox.localhost install-app erpnext
 ```
 
+> **Note (current frappe_docker / MariaDB 11.x):** `--no-mariadb-socket` is **deprecated** and prints
+> `--no-mariadb-socket is DEPRECATED; use --mariadb-user-host-login-scope='%' (wildcard) or --mariadb-user-host-login-scope=<host>, instead.`
+> The flag still works as of 2026-05 — the new equivalent is `--mariadb-user-host-login-scope='%'`. Either form is acceptable for the sandbox; record which one was used in `JOURNAL.md`. The MariaDB 11.8 image also emits a *"version is more than 10.8 which is not yet tested with Frappe Framework"* warning during `bench` — informational, no action required at the sandbox tier.
+
 Confirm the site is reachable on the box:
 
 ```bash
@@ -240,6 +265,76 @@ docker compose -p erpnext-sandbox exec backend bench --site corpflowai-sandbox.l
 
 `developer_mode 0` is the safe default; flip on temporarily only when debugging.
 
+### 7.1 Wizard bypass fallback (Path B — programmatic setup)
+
+The UI wizard can fail client-side with a generic *"Setup failed - Could not start up: Failed to complete setup"* error after the chart-of-accounts step loads (observed 2026-05-31 on `corpflow-exec-01-u69678` — `tabError Log` empty, no `setup_complete` POST in nginx logs, no Python exception in gunicorn). In that case, do **not** keep retrying the UI. Bypass the wizard server-side by invoking `frappe.desk.page.setup_wizard.setup_wizard.setup_complete` directly. This is what `JE-2026-06-01-1` records.
+
+Three operational quirks to know **before** running the script — each one cost us a re-run during the 2026-05-31 install:
+
+1. **`frappe` is in bench's venv, not the system Python.** The backend container's default `python`/`python3` (`/usr/local/bin/python`) does **not** have `frappe` importable. Use **`/home/frappe/frappe-bench/env/bin/python`** explicitly.
+2. **`frappe.init(site=...)` defaults `sites_path='.'`.** Pass the absolute `sites_path` so the site config resolves regardless of cwd: `frappe.init(site=SITE, sites_path='/home/frappe/frappe-bench/sites')`.
+3. **Frappe's logger uses `os.path.join('..', 'logs', '<module>.log')` — a relative path.** It assumes cwd = `<bench>/sites/`. From anywhere else (including `<bench>/`), `frappe.connect()` fails with `FileNotFoundError: '/home/frappe/logs/database.log'`. Fix: `os.chdir('/home/frappe/frappe-bench/sites')` before any `frappe.connect()` call.
+
+The minimum recipe (passwords come from `~/.erpnext-sandbox-credentials`, never inline):
+
+```bash
+# On the host, NOT inside the container:
+docker compose -p erpnext-sandbox exec -T \
+  --workdir /home/frappe/frappe-bench \
+  backend /home/frappe/frappe-bench/env/bin/python - <<'PY'
+import os
+BENCH_ROOT = '/home/frappe/frappe-bench'
+SITES_PATH = os.path.join(BENCH_ROOT, 'sites')
+SITE = 'corpflowai-sandbox.localhost'
+
+os.chdir(SITES_PATH)  # quirk 3
+import frappe
+frappe.init(site=SITE, sites_path=SITES_PATH)  # quirk 2
+frappe.connect()
+frappe.set_user('Administrator')
+
+from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
+result = setup_complete({
+    'language':  'English',
+    'country':   'Mauritius',
+    'timezone':  'Indian/Mauritius',
+    'currency':  'MUR',
+    'first_name': 'Sandbox',
+    'last_name':  'Admin',
+    'full_name':  'Sandbox Admin',
+    'email':      'Administrator',
+    'company_name': 'CorpFlowAI Sandbox',
+    'company_abbr': 'CFS',
+    'chart_of_accounts': 'Standard',
+    'fy_start_date': '2026-01-01',
+    'fy_end_date':   '2026-12-31',
+    'domain':  'Services',
+    'domains': ['Services'],
+})
+frappe.db.commit()
+print('SETUP_COMPLETE_OK', result)
+PY
+```
+
+After it returns `{'status': 'ok'}`, verify directly against MariaDB (faster than `bench mariadb` for a smoke check):
+
+```bash
+# Read DB name + password from the site config (do not print to terminal in operator-visible contexts):
+docker compose -p erpnext-sandbox exec -T backend cat sites/corpflowai-sandbox.localhost/site_config.json
+
+# Then verify the core invariants:
+docker compose -p erpnext-sandbox exec -T db mariadb -u<db_name> -p<db_password> -D<db_name> -e "
+  SELECT field, value FROM tabSingles WHERE doctype='System Settings'
+    AND field IN ('setup_complete','country','language','time_zone','currency');
+  SELECT name, country, default_currency, abbr FROM tabCompany;
+  SELECT COUNT(*) AS account_count FROM tabAccount;
+"
+```
+
+Expected post-bypass state: `setup_complete=1`, `country=Mauritius`, `currency=MUR`, `time_zone=Indian/Mauritius`, one `Company` row named `CorpFlowAI Sandbox`, ~82 `Account` rows (Standard CoA).
+
+After bypass, §8 (test users), §9 (disable scheduler), and §11 (CoA overlay) all proceed normally.
+
 ## 8. Create test users
 
 Both users are sandbox-only and tagged with `sandbox` in their email aliases.
@@ -250,6 +345,33 @@ Both users are sandbox-only and tagged with `sandbox` in their email aliases.
 | Read-only accountant | `accountant-readonly-sandbox@<personal-domain>` | `Accounts User`, `Report Viewer` | Read and export only; **no posting**, no journal-entry create permission |
 
 Verify the read-only role by logging in as the accountant user and attempting to create a Sales Invoice — ERPNext should refuse.
+
+### 8.1 Programmatic creation (Path B fallback or unattended re-runs)
+
+If §7 was completed via the §7.1 bypass (no operator at the UI), create the two users from the same Python entrypoint. Same three quirks as §7.1 apply (use the bench venv Python, pass absolute `sites_path`, `chdir` to `<bench>/sites/`). Generate two strong 32-char passwords with `openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32` and append them to `~/.erpnext-sandbox-credentials` (chmod 600 preserved) — never inline them in the script or in logs.
+
+```python
+# Inside the same bench venv Python session described in §7.1:
+for email, first, last, roles, pw_env in [
+    ('operator-sandbox@<personal-domain>',         'Operator',   'Sandbox',  ['System Manager', 'Accounts Manager'], 'OPERATOR_PW'),
+    ('accountant-readonly-sandbox@<personal-domain>', 'Accountant', 'Readonly', ['Accounts User'],                     'ACCOUNTANT_PW'),
+]:
+    if frappe.db.exists('User', email):
+        print('SKIP', email)
+        continue
+    doc = frappe.get_doc({
+        'doctype': 'User',
+        'email': email, 'first_name': first, 'last_name': last,
+        'send_welcome_email': 0, 'enabled': 1,
+        'new_password': os.environ[pw_env],
+        'roles': [{'role': r} for r in roles],
+    })
+    doc.insert(ignore_permissions=True)
+    print('USER_CREATED', email)
+frappe.db.commit()
+```
+
+Pass the passwords via `-e OPERATOR_PW=... -e ACCOUNTANT_PW=...` on the `docker compose exec` invocation, not in the script literal.
 
 ## 9. Disable automation that could leak
 
@@ -321,20 +443,28 @@ Restore the backup into a second site to prove the backup is usable:
 docker compose -p erpnext-sandbox exec backend bench new-site corpflowai-sandbox-restore.localhost \
   --mariadb-root-password "$MARIADB_ROOT_PASSWORD" \
   --admin-password "$ADMIN_PASSWORD" \
-  --no-mariadb-socket
+  --no-mariadb-socket   # see §6 deprecation note; --mariadb-user-host-login-scope='%' is the modern equivalent
+
+# Note: bench restore now requires --with-public-files and --with-private-files explicitly when the
+# source backup is `--with-files`. Failing to pass them restores the DB only — fine for parity counts,
+# but a real-data restore should include both tar files. The 2026-06-01 verification used:
+#   --with-public-files sites/.../-files.tar
+#   --with-private-files sites/.../-private-files.tar
 
 docker compose -p erpnext-sandbox exec backend bench --site corpflowai-sandbox-restore.localhost \
-  --force restore sites/corpflowai-sandbox.localhost/private/backups/<TIMESTAMP>-database.sql.gz
+  --force restore sites/corpflowai-sandbox.localhost/private/backups/<TIMESTAMP>-database.sql.gz \
+  --mariadb-root-password "$MARIADB_ROOT_PASSWORD" \
+  --admin-password "$ADMIN_PASSWORD"
 ```
 
 Verify the restored site:
 
 - Company name = `CorpFlowAI Sandbox`.
 - Default currency = `MUR`.
-- CoA structure matches the source site.
-- Test users carried over.
+- CoA structure matches the source site (compare `SELECT COUNT(*) FROM tabAccount` between source and restored — should match exactly; the 2026-06-01 run got 82 = 82 in both).
+- Test users carried over (compare `SELECT COUNT(*) FROM tabUser WHERE enabled=1 AND name NOT IN ('Guest')` — should match exactly; 2026-06-01 run got 3 = 3 in both, including the inherited `Administrator`).
 
-Record the backup file name + restore success in `JOURNAL.md`. The restore site can be dropped afterwards with `bench drop-site corpflowai-sandbox-restore.localhost`.
+Record the backup file name, SHA-256, and restore parity in `JOURNAL.md`. The restore site **must** be dropped after verification: `bench drop-site corpflowai-sandbox-restore.localhost --root-password "$MARIADB_ROOT_PASSWORD" --no-backup --force` (the drop archives the site to `<bench>/archived/sites/` and frees its MariaDB schema). Leaving the test site running consumes resources and could be confused with the primary in later screenshots.
 
 ## 13. Phase B exit criteria
 
@@ -397,8 +527,9 @@ Verify:
 
 ## 17. Honest limits of this runbook
 
-- **Cursor has not executed any of §1–§15 yet.** The exact ERPNext / Frappe Docker version pins are placeholders to be set at install time and recorded in `JOURNAL.md`.
-- **Frappe Docker's compose overlay names evolve** between releases; if upstream renames `compose.mariadb.yaml` or `compose.redis.yaml`, §5 needs adjustment at install time. Cursor will verify the overlay file list before running the up command.
-- **§11 CoA overlay** is documented from ERPNext's published import format; the exact JSON shape is confirmed against a running sandbox before being committed to the repo (Phase A2 deliverable).
-- **§12 restore command** is documented from `bench` published help; the exact file name pattern is observed at first run and recorded.
-- **`corpflow-exec-01` is currently below capacity for ERPNext.** Phase B does not begin until §0.1 is cleared. Running §1–§15 against a 1.9 GB host will OOM and the resulting evidence will be unreliable — this runbook would have to be re-run from §15 (tear-down) after a path-A/B/C resolution.
+- **§1–§9 + §12 have been executed once on `corpflow-exec-01-u69678` on 2026-05-31 → 2026-06-01.** Concrete version pins recorded that run: `frappe_docker @ main 6526ab8cd4d7c6969b9b44f95558590c89ab4347`, image `frappe/erpnext:v15.109.1`, frappe app `15.109.0`, MariaDB image `11.8`, Redis `8.6-alpine`. Backup parity verified (82 Account rows in both source and restore site; full audit in `JE-2026-06-01-1`).
+- **§7 was completed via the §7.1 Path B bypass, not the UI wizard.** The UI wizard failed client-side with no server-side error trace; the bypass is now the documented fallback and was used on the only live install to date.
+- **§11 CoA overlay is still deferred to Phase A2.** The 2026-05-31 install used the built-in `Standard` chart-of-accounts template (82 accounts). The Mauritius-specific overlay from `ERPNEXT_SANDBOX_PLAN_V1.md` §2 has not been applied yet.
+- **§13 Phase B exit criteria are not all met yet.** §10 (operator UI tunnel access) and §11 (CoA overlay) remain operator-owned / Phase A2-deferred. Phase B-a closure (this runbook subset) is recorded; full Phase B closure waits for §10 + §11 acknowledgement before Phase C begins.
+- **Frappe Docker's compose overlay names evolve** between commits; if upstream renames `compose.mariadb.yaml` or `compose.redis.yaml`, §5 needs adjustment at install time. Cursor will verify the overlay file list before running the up command.
+- **§12 restore command verified for sandbox** but real-data restore should always include `--with-public-files` + `--with-private-files` (added to the §12 block above).
