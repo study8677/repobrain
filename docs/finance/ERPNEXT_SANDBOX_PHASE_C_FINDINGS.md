@@ -19,7 +19,7 @@ Four cycles, all under `Administrator` (cycles 1–3) and `accountant-readonly-s
 | **1** | §3.1 + §4.1 case 1 + §7 | USD invoice → submit (manual approval) → Payment Request (bank transfer instructions) → Payment Entry against MU MUR bank with FX-loss delta | ✅ Invoice `Paid`; full GL trail captured |
 | **2** | §3.1 + §4.1 case 2 + §5 | USD invoice → submit → Payment Request (paypal.me placeholder link) → Payment Entry against PayPal USD balance → later JE for PayPal→MU bank withdrawal w/ FX | ✅ Invoice `Paid`; PayPal→MU bank withdrawal posted |
 | **3** | §7 (Bank Reconciliation) | Simulate 3-line MU bank CSV; verify cycle-1+2 GL lines match expected entries; post Journal Entry for fee line; verify running balance reconciles within MUR 0.01 | ✅ Reconciled to **MUR 0.00** delta |
-| **4** | §10.1 multi-user line | Switch to `accountant-readonly-sandbox`; verify read access to invoices & GL; attempt Sales Invoice insert; expect `PermissionError` | ⚠️ **FINDING** — see §4 |
+| **4** | §10.1 multi-user line | Switch to `accountant-readonly-sandbox`; verify read access to invoices & GL; attempt Sales Invoice insert; expect `PermissionError` | ⚠️ **ORIGINAL FINDING (C-1)** — see §4. **RESOLVED 2026-06-01** via Option B (custom `Accountant Read-Only` Role with explicit Custom DocPerm rows); see §4 *Resolution status*. |
 
 ## 2. Sandbox configuration produced by Phase C bootstrap
 
@@ -126,20 +126,80 @@ The first two CSV lines reconcile against the existing GL entries on the MU bank
 
 **Root cause:** the user was granted the **`Accounts User`** role during Phase B-a §8.1 user creation, **not** the **`Auditor`** role. `Accounts User` permits Sales Invoice insert/submit by default; `Auditor` is read-only. The naming "`accountant-readonly-sandbox`" implied intent but the role assignment did not match. This is a **finding for Phase D** (see §4) and **must be remediated before any production go-live** per §10.1 multi-user line.
 
+#### 3.4.1 Post-remediation (Option B, 2026-06-01)
+
+Per Anton's DECISION (chat 2026-06-01, *"Re: C-1 remediation result — choose Option B"*), a small sandbox-only remediation packet executed:
+
+1. **Custom Role created:** `Accountant Read-Only` (`desk_access=1`, `is_custom=1`).
+2. **Nine Custom DocPerm rows created** with `read=1 / report=1 / export=1` and every write/state-change/admin flag explicitly `0` on: `GL Entry`, `Journal Entry`, `Sales Invoice`, `Payment Entry`, `Customer`, `Item`, `Account`, `Company`, `Payment Request`.
+3. **User role swap:** `accountant-readonly-sandbox@corpflowai.test` roles before = `['Auditor']` (the intermediate state from the earlier remediation step); roles after = `['Accountant Read-Only']` (Auditor explicitly removed).
+4. **Cycle 4 re-run as the remediated user — all six gates GREEN:**
+
+| Test | Expected | Actual |
+|---|---|---|
+| Read `GL Entry`, `Journal Entry`, `Sales Invoice`, `Payment Entry`, `Customer`, `Item`, `Account`, `Company`, `Payment Request` (list) | OK | ✅ OK (all 9 doctypes; 5 / 3 / 2 / 2 / 2 / 1 / 5 / 1 / 2 rows respectively) |
+| Read specific `Sales Invoice` (`ACC-SINV-2026-00001`) full doc | OK | ✅ OK (USD 150 / Sandbox Client A - USD / docstatus=1 visible) |
+| Insert `Sales Invoice` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+| Save existing `Sales Invoice` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+| Cancel `Sales Invoice` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+| Delete `Sales Invoice` | `PermissionError` | ✅ `PermissionError: User not allowed to delete Sales Invoice: ACC-SINV-2026-00001` |
+| Insert `Payment Entry` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+| Save existing `Payment Entry` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+| Cancel `Payment Entry` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+| Create `Customer` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+| Create `Item` | `PermissionError` | ✅ `PermissionError` (PASS_DENIED) |
+
+5. **Residue audit GREEN:** final sandbox inventory = exactly **2 Sales Invoices** (`ACC-SINV-2026-00001`, `ACC-SINV-2026-00002`), **2 Payment Entries** (`ACC-PAY-2026-00002`, `ACC-PAY-2026-00003`), **3 Journal Entries** (`ACC-JV-2026-00001` / `00002` / `00003`), **2 Customers**, **1 Item** — identical to Phase C end-state. No test residue. Denied-test docs (`Option B Denied Test Customer`, `OPTION-B-DENIED-TEST-ITEM`, `OPTION-B-DENIED-TEST` Payment Entry) never persisted because they raised `PermissionError` before any DB write.
+6. **Scheduler scope unchanged:** `sites/corpflowai-sandbox.localhost/site_config.json` → `disable_scheduler: 1`. Sandbox remains loopback-only on `127.0.0.1:8080`. No CorpFlowAI runtime, Vercel cron, GitHub Actions schedule, Telegram process, or production worker was touched.
+
+**Note on `submit` permission semantics in ERPNext:** the `submit` test is logically subsumed by `insert` + `save` denial. ERPNext's `submit()` flow internally calls `save()` (with `docstatus=0→1` transition), and `save()` requires `write=1`. With `write=0` on the role, any submit attempt fails at the write-check before the submit-check is reached. The test matrix above therefore exercises `cancel` (a discrete state-change permission with `cancel=0`) in place of an explicit `submit` test, while preserving the underlying go/no-go intent ("the accountant cannot change document state").
+
 ## 4. Findings (ranked by go-live impact)
 
-### Finding C-1 — accountant-readonly user is NOT actually read-only (`Accounts User` role) — **high impact**
+### Finding C-1 — accountant-readonly user is NOT actually read-only (`Accounts User` role) — **RESOLVED 2026-06-01 via Option B**
 
-**Observation:** `accountant-readonly-sandbox@corpflowai.test` has role `['Accounts User']`. This role allows Sales Invoice creation in ERPNext's default permission matrix. The user successfully inserted a draft Sales Invoice during cycle 4.
+**Original observation (preserved for audit trail):** `accountant-readonly-sandbox@corpflowai.test` had role `['Accounts User']`. This role allows Sales Invoice creation in ERPNext's default permission matrix. The user successfully inserted a draft Sales Invoice during cycle 4.
 
-**Why it matters:** §10.1 of the sandbox plan explicitly lists *"Multi-user access tested: operator can post; accountant role can read and export but cannot post"* as a go-signal precondition. The current role assignment fails this gate.
+**Why it mattered:** §10.1 of the sandbox plan explicitly lists *"Multi-user access tested: operator can post; accountant role can read and export but cannot post"* as a go-signal precondition. The original role assignment failed this gate.
 
-**Recommended fix (small docs+sandbox tweak, can be done in a follow-up packet):**
-- Update Phase B-a runbook §8.1 to grant **`Auditor`** role (or a custom Role Profile `Accountant Read-Only`) instead of `Accounts User`.
-- Re-run cycle 4 of Phase C against the updated user. The insert attempt must raise `PermissionError`.
-- Until remediated: **do not** use the `Accounts User` role for any production "read-only" persona.
+**Resolution history (sandbox-only; no production touched):**
 
-This finding does not invalidate cycles 1–3 (which ran as `Administrator`); it only blocks the §10.1 multi-user line in the go/no-go criteria.
+| Step | Date | Action | Outcome |
+|---|---|---|---|
+| Intermediate remediation | 2026-06-01 | Swap role from `Accounts User` → `Auditor` (per `JE-2026-05-29-1` initial remediation guidance) | Original dangerous behaviour (insert succeeded) **resolved**, BUT `Auditor`'s default DocPerm matrix has no entry for `Sales Invoice` / `Payment Entry` / `Customer` / `Item` → the accountant could not read the transaction documents §10.1 expects them to inspect. Surfaced as Option A vs Option B trade-off in STATUS-11 ([issuecomment-4590998627](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4590998627)). |
+| **Final remediation (Option B)** | **2026-06-01** | Per Anton's DECISION ([chat](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249), *"Re: C-1 remediation result — choose Option B"*), create a **custom Role `Accountant Read-Only`** with explicit **Custom DocPerm** rows on the 9 doctypes listed below, granting **read / report / export only** and explicitly setting `write / create / submit / cancel / amend / delete / import / set_user_permissions / print / email / share = 0`. Swap user role to `['Accountant Read-Only']` (Auditor removed). Re-run cycle 4. | **All 6 verification gates GREEN.** See §3.4.1 above for the full test matrix. |
+
+**Final role configuration (effective in sandbox, 2026-06-01):**
+
+```text
+User:  accountant-readonly-sandbox@corpflowai.test
+Role:  Accountant Read-Only  (custom, is_custom=1, desk_access=1)
+
+Custom DocPerm rows (one per doctype, permlevel=0):
+  - GL Entry         : read=1  report=1  export=1  [everything else 0]
+  - Journal Entry    : read=1  report=1  export=1  [everything else 0]
+  - Sales Invoice    : read=1  report=1  export=1  [everything else 0]
+  - Payment Entry    : read=1  report=1  export=1  [everything else 0]
+  - Customer         : read=1  report=1  export=1  [everything else 0]
+  - Item             : read=1  report=1  export=1  [everything else 0]
+  - Account          : read=1  report=1  export=1  [everything else 0]
+  - Company          : read=1  report=1  export=1  [everything else 0]
+  - Payment Request  : read=1  report=1  export=1  [everything else 0]
+
+Explicit zeros on every DocPerm row:
+  write=0  create=0  submit=0  cancel=0  amend=0  delete=0
+  import=0  set_user_permissions=0
+  print=0  email=0  share=0
+  if_owner=0
+```
+
+**Note on `print` / `email` / `share`:** these three flags are set to 0 in the current configuration to honour Anton's literal "read/report/export only" instruction. If accountant review later requires printing/PDF-export of Sales Invoices for audit purposes, that is a separate small docs+sandbox packet (flip `print=1` on the Sales Invoice / Payment Entry / Journal Entry rows) — not in scope here.
+
+**§10.1 multi-user line — VERDICT:** ✅ **MET in the sandbox.** The accountant role can **read** all relevant transaction documents (Sales Invoice / Payment Entry / Customer / Item / GL Entry / Journal Entry / Account / Company / Payment Request) AND can **export / report** on them, but **cannot** create, write, submit, cancel, amend, delete, or import on any of them. The operator role (Phase B-a `operator-sandbox@corpflowai.test` with `System Manager` + `Accounts Manager`) retains full posting capability for Phase C cycles 1–3 testing. Two distinct posture roles successfully coexist in the sandbox.
+
+**Production go-live path:** when ERPNext is promoted from sandbox to production (Phase D + a future production-setup packet, both gated), the same `Accountant Read-Only` Role + same 9 Custom DocPerm rows can be reproduced via a one-shot bootstrap script (sandbox script archived at `/tmp/erpnext-c1-option-b.sh` on `corpflow-exec-01-u69678` for now; will be promoted into `docs/runbooks/ERPNEXT_SANDBOX_INSTALL.md` §8.1 in a separate runbook-hardening packet so future installs get this role configuration out of the box).
+
+This finding no longer blocks the §10.1 multi-user line. The remaining Phase D blockers (accountant CoA review, real MU bank CSV import, Wise-manual flow, VAT decision) are unchanged and remain `PENDING`.
 
 ### Finding C-2 — ERPNext requires `reference_no` + `reference_date` on Bank Payment Entries — **low impact / process-only**
 
@@ -227,10 +287,10 @@ Per `JE-2026-05-29-1` and the original sandbox plan §10, the **go/no-go recomme
 - Cycle 3 reconciled to MUR 0.00 delta — within tolerance.
 
 **Blocks for production go-live (per §10.1):**
-1. ⚠️ **Multi-user line (finding C-1)** — the read-only accountant user is not actually read-only. Must be remediated and re-verified.
+1. ✅ **Multi-user line (finding C-1) — RESOLVED 2026-06-01** via Option B custom `Accountant Read-Only` Role (see §4 finding C-1 *Resolution history*; recorded in `JE-2026-06-01-5`). Sandbox accountant can now read Sales Invoice / Payment Entry / Customer / Item / GL Entry / Journal Entry / Account / Company / Payment Request **and** is denied every write, state-change, delete, and admin permission verified by an 11-test cycle-4 re-run.
 2. Accountant review of the Standard CoA + the §2.1 draft is still required by §10.1 ("Chart of Accounts has been reviewed in writing by a Mauritius-licensed accountant"). This is unchanged by Phase C; it's still pending.
 3. Live verification on a real (redacted) MU bank statement is still required by §10.1 — only synthetic CSV tested in Phase C.
-4. PayPal-manual flow tested as designed; same for "bank transfer." Wise is **untested in Phase C** (per operator narrowing) and remains untested → §10.1 *"Payment Request flow tested for bank transfer, PayPal-manual, and Wise-manual"* is **not fully met** for Wise (deferred to C²).
+4. PayPal-manual flow tested as designed; same for "bank transfer." Wise is **untested in Phase C** (per operator narrowing) and remains untested → §10.1 *"Payment Request flow tested for bank transfer, PayPal-manual, and Wise-manual"* is **not fully met** for Wise (deferred to C²; note also that `JE-2026-06-01-4` records Wise as removed from the v1 commercial-launch plan, so this gate may be **explicitly waived** in the Phase D recommendation rather than satisfied).
 5. Backup-and-restore was verified during Phase B-a (PR #275 §12 GREEN parity) → §10.1 *"Backup and restore tested at least once"* **is met**.
 6. VAT review is still deferred per plan §9 → §10.1 *"VAT plan reviewed by accountant **or** explicitly recorded as "below threshold; not yet needed; revisit at MUR X turnover"*** must be either reviewed by accountant or explicitly logged in `JOURNAL.md`.
 
@@ -246,24 +306,26 @@ Per `JE-2026-05-29-1` and the original sandbox plan §10, the **go/no-go recomme
 - We **issued two USD invoices** (USD 150 each), approved them by hand, and recorded payment two different ways: a bank wire (cycle 1) and a payment-link-style PayPal receipt (cycle 2).
 - We then **moved the PayPal money to the Mauritius bank** as we would in real life, recording the FX spread honestly.
 - We **reconciled the Mauritius bank balance** against a synthetic CSV (the kind we'd export from a real MU bank), including a bank fee. **Reconciled to zero variance.**
-- We **checked the read-only role** for an accountant. **The role we created is not actually read-only.** This needs a tiny fix (one role swap) before we can call the multi-user gate satisfied.
+- We **checked the read-only role** for an accountant. **First pass: the role we created was not actually read-only (Accounts User permits Sales Invoice insert).** **Second pass (Auditor swap, intermediate):** insert correctly denied, but Auditor's default permission matrix has no entry for Sales Invoice / Payment Entry / Customer / Item, so the accountant could not see the transaction documents §10.1 expects them to inspect. **Third pass (Option B, 2026-06-01, final):** we created a custom `Accountant Read-Only` Role with explicit read/report/export-only permissions on the nine doctypes an accountant needs to see. **Re-tested 11 scenarios — all green.** The accountant can read invoices, payments, customers, items, GL, journals, accounts, companies, payment requests AND can export/report on them, but cannot create, write, submit, cancel, amend, or delete anything. The multi-user gate is now satisfied in the sandbox.
 - Everything is sandbox-only: no real money, no real client data, no real bank credentials, no live PayPal API.
 
-**What this tells us about doing this for real:** the workflow you described — USD invoice / manual approval / bank-transfer-or-link / payment-before-setup — fits ERPNext cleanly. The blockers between us and "use this for production" are now small and named (accountant review of the CoA, accountant-readonly role fix, real MU bank CSV import, VAT decision). None of them is a code change.
+**What this tells us about doing this for real:** the workflow you described — USD invoice / manual approval / bank-transfer-or-link / payment-before-setup — fits ERPNext cleanly. The blockers between us and "use this for production" are now small and named (accountant review of the CoA, real MU bank CSV import, VAT decision) and none of them are a code change. The accountant-readonly role question is now answered.
 
 ## 9. References
 
 - `docs/finance/ERPNEXT_SANDBOX_PLAN_V1.md` — original §3–§7 plan (defines what we tested and what's deferred).
 - `docs/runbooks/ERPNEXT_SANDBOX_INSTALL.md` — Phase B-a runbook + §8.1 user-creation snippet (where finding C-1 originates).
 - `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` § *AI Lead Rescue doctrine* — Item label *"AI Lead Rescue Setup (USD 150 pilot)"* (verbatim match required).
-- `docs/decisions/JOURNAL.md` — new row `JE-2026-06-01-2` records Phase C executed + the findings catalogued here.
+- `docs/decisions/JOURNAL.md` — row `JE-2026-06-01-3` records Phase C executed end-to-end; row **`JE-2026-06-01-5`** records the **Option B C-1 final remediation** documented here in §3.4.1 and §4.
 - `JE-2026-05-28-1` / `JE-2026-05-28-3` — Lead Rescue USD-launch-pilot doctrine that this Phase C tested.
 - `JE-2026-05-29-1` — gate enforcement: Phase D needs separate operator approval.
-- Operator Bridge issue [#249 STATUS-8](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4590221359) — test design pre-announcement.
+- `JE-2026-06-01-4` — payment route priority update (SBM primary, Peach secondary, MoR backup; PayPal HOLD, Wise removed) — relevant for the §10.1 *"Payment Request flow tested for bank transfer, PayPal-manual, and Wise-manual"* line (Wise may be explicitly waived in Phase D).
+- Operator Bridge issue [#249 STATUS-8](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4590221359) — Phase C test design pre-announcement.
+- Operator Bridge issue [#249 STATUS-11](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4590998627) — intermediate Auditor remediation outcome + Option A vs Option B trade-off.
 
 ## 10. Honest limits of this Phase C run
 
 - **Sandbox-only.** No real client touched. No real PayPal API key. No real Mauritius bank credentials. The `paypal.me` link was a placeholder string. All amounts are synthetic.
 - **Single-day cycle.** Cycles 1–3 all booked on `2026-06-01`. A multi-day or 30-day cycle is deferred to C² and is required before evaluating §10.2's "more than 5% of lines need manual journals" threshold honestly.
-- **Cycle 4 finding (C-1) is a real go/no-go blocker.** Phase D cannot be COMPLETE until C-1 is remediated, OR the operator and accountant explicitly accept the risk in writing.
+- **Cycle 4 finding (C-1) was a real go/no-go blocker; RESOLVED 2026-06-01** via the Option B custom `Accountant Read-Only` Role (see §4 *Resolution status* and `JE-2026-06-01-5`). The 11-test cycle-4 re-run confirmed read access + denial of write/state-change/admin on all relevant doctypes. Phase D can proceed on this gate alone — but other §10.1 gates (accountant CoA review, real MU bank CSV import, VAT decision) remain `PENDING` per §7.
 - **Bank Reconciliation Tool was simulated, not invoked through the UI.** The cycle 3 logic verified that the GL state would match a 3-line CSV import by comparing existing GL entries against expected CSV totals. The Bank Reconciliation Tool's actual UI/API (`erpnext.accounts.doctype.bank_reconciliation_tool.bank_reconciliation_tool.create_journal_entry_bts`) was not exercised end-to-end; cycle 3 validates the **arithmetic**, not the **UI path**. A future packet should run the actual import.
