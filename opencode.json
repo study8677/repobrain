@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "permission": {
+    "skill": { "*": "allow" }
+  },
+  "command": {
+    "ag-ask": {
+      "template": "Ask a question about the current project's codebase via the antigravity knowledge hub.\n\nArguments: $ARGUMENTS\n\nSee .opencode/commands/ag-ask.md for full instructions.\n\nPrefer `ag-ask` over manual file search.",
+      "description": "Ask a question about the current project's codebase via the antigravity knowledge hub"
+    },
+    "ag-refresh": {
+      "template": "Rebuild the antigravity project knowledge base after significant changes.\n\nArguments: $ARGUMENTS\n\nSee .opencode/commands/ag-refresh.md for full instructions.",
+      "description": "Rebuild the antigravity project knowledge base after significant changes"
+    },
+    "ag-init": {
+      "template": "Scaffold a new multi-agent repository from the Antigravity template.\n\nArguments: $ARGUMENTS\n\nSee .opencode/commands/ag-init.md for full instructions.",
+      "description": "Scaffold a new multi-agent repository from the Antigravity template"
+    },
+    "ag-setup": {
+      "template": "First-time setup for Antigravity. Configure the LLM API key used to read and analyze your codebase.\n\nArguments: $ARGUMENTS\n\nSee .opencode/commands/ag-setup.md for full instructions.",
+      "description": "First-time setup for Antigravity LLM API key configuration"
+    }
+  }
+}

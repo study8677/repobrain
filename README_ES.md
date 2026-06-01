@@ -28,6 +28,7 @@ Idioma: [English](README.md) | [中文](README_CN.md) | **Español**
 <img src="https://img.shields.io/badge/Codex-✓-412991?style=flat-square" alt="Codex"/>
 <img src="https://img.shields.io/badge/Cline-✓-FF6B6B?style=flat-square" alt="Cline"/>
 <img src="https://img.shields.io/badge/Aider-✓-8B5CF6?style=flat-square" alt="Aider"/>
+<img src="https://img.shields.io/badge/OpenCode-✓-000000?style=flat-square" alt="OpenCode"/>
 
 </div>
 
@@ -338,6 +339,7 @@ La arquitectura está codificada en **archivos** — cualquier agente que lea ar
 | Gemini CLI / Codex | `AGENTS.md` |
 | Cline | `.clinerules` |
 | Google Antigravity | `.antigravity/rules.md` |
+| OpenCode | `opencode.json` / `.opencode/` |
 
 Todo se genera con `ag init`: `AGENTS.md` es el único rulebook de comportamiento, los archivos específicos por IDE son bootstraps ligeros, y `.antigravity/` guarda el contexto dinámico compartido del proyecto.
 

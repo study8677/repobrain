@@ -27,6 +27,7 @@
 <img src="https://img.shields.io/badge/Codex-✓-412991?style=flat-square" alt="Codex"/>
 <img src="https://img.shields.io/badge/Cline-✓-FF6B6B?style=flat-square" alt="Cline"/>
 <img src="https://img.shields.io/badge/Aider-✓-8B5CF6?style=flat-square" alt="Aider"/>
+<img src="https://img.shields.io/badge/OpenCode-✓-000000?style=flat-square" alt="OpenCode"/>
 
 </div>
 
@@ -335,6 +336,7 @@ Ask 管道采用**双路架构**：
 | Gemini CLI / Codex | `AGENTS.md` |
 | Cline | `.clinerules` |
 | Google Antigravity | `.antigravity/rules.md` |
+| OpenCode | `opencode.json` / `.opencode/` |
 
 均由 `ag init` 生成：`AGENTS.md` 是唯一行为规则源，IDE 专属文件是轻量引导层，`.antigravity/` 保存共享的动态项目上下文。
 
