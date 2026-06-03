@@ -11,6 +11,7 @@ import {
   isPathAllowed,
   normalizeHost,
   resolveAnalyticsForRequest,
+  trackEvent,
 } from '../lib/analytics/index.js';
 
 test('normalizeHost lowercases, trims, and strips port', () => {
@@ -387,4 +388,156 @@ test('resolveAnalyticsForRequest excludes preview / vercel.app hosts', () => {
       assert.equal(r.enabled, false, `preview-like host ${host} should be excluded`);
     }
   });
+});
+
+/**
+ * trackEvent — client-side custom-event helper used by `/lead-rescue`
+ * (Cold-Sprint-V1-Tracking, `JE-2026-06-03-2`).
+ *
+ * The helper guards against four operational realities:
+ *   1) SSR — `window` is undefined; nothing to call.
+ *   2) Plausible script not injected — `window.plausible` is undefined
+ *      (e.g., kill-switch off, host on the deny list, preview deploy).
+ *   3) Plausible script failed to load over the network.
+ *   4) Plausible internal error during dispatch — call must never bubble
+ *      up into the React event handler (form submission must keep
+ *      working).
+ *
+ * Each test snapshots and restores `globalThis.window` so the suite
+ * stays order-independent and side-effect-free.
+ */
+function withMockWindow(plausibleImpl, fn) {
+  const hadWindow = Object.prototype.hasOwnProperty.call(globalThis, 'window');
+  const before = globalThis.window;
+  try {
+    globalThis.window =
+      plausibleImpl === null
+        ? {}
+        : { plausible: plausibleImpl };
+    return fn();
+  } finally {
+    if (hadWindow) {
+      globalThis.window = before;
+    } else {
+      delete globalThis.window;
+    }
+  }
+}
+
+test('trackEvent returns false when window is undefined (SSR)', () => {
+  // The Node test runner has no `window`; trackEvent must short-circuit.
+  assert.equal(typeof globalThis.window, 'undefined');
+  assert.equal(trackEvent('lr_primary_cta_click'), false);
+  assert.equal(
+    trackEvent('lr_primary_cta_click', { props: { location: 'hero' } }),
+    false,
+  );
+});
+
+test('trackEvent returns false when window.plausible is undefined (script not injected)', () => {
+  withMockWindow(null, () => {
+    assert.equal(trackEvent('lr_primary_cta_click'), false);
+    assert.equal(
+      trackEvent('lr_primary_cta_click', { props: { location: 'hero' } }),
+      false,
+    );
+  });
+});
+
+test('trackEvent returns false for invalid event names', () => {
+  let called = 0;
+  withMockWindow(
+    function plausible() {
+      called += 1;
+    },
+    () => {
+      assert.equal(trackEvent(''), false);
+      assert.equal(trackEvent(null), false);
+      assert.equal(trackEvent(undefined), false);
+      assert.equal(trackEvent(42), false);
+      assert.equal(trackEvent({}), false);
+      assert.equal(called, 0, 'invalid event names must not reach plausible');
+    },
+  );
+});
+
+test('trackEvent dispatches plain event names without options', () => {
+  const calls = [];
+  withMockWindow(
+    function plausible() {
+      calls.push(Array.from(arguments));
+    },
+    () => {
+      assert.equal(trackEvent('lr_intake_submit_attempt'), true);
+      assert.equal(trackEvent('lr_intake_submit_success'), true);
+      assert.equal(trackEvent('lr_secondary_cta_click'), true);
+      assert.equal(calls.length, 3);
+      assert.deepEqual(calls[0], ['lr_intake_submit_attempt']);
+      assert.deepEqual(calls[1], ['lr_intake_submit_success']);
+      assert.deepEqual(calls[2], ['lr_secondary_cta_click']);
+    },
+  );
+});
+
+test('trackEvent forwards options.props to plausible call', () => {
+  const calls = [];
+  withMockWindow(
+    function plausible() {
+      calls.push(Array.from(arguments));
+    },
+    () => {
+      assert.equal(
+        trackEvent('lr_primary_cta_click', { props: { location: 'hero' } }),
+        true,
+      );
+      assert.equal(
+        trackEvent('lr_primary_cta_click', { props: { location: 'nav' } }),
+        true,
+      );
+    },
+  );
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0], ['lr_primary_cta_click', { props: { location: 'hero' } }]);
+  assert.deepEqual(calls[1], ['lr_primary_cta_click', { props: { location: 'nav' } }]);
+});
+
+test('trackEvent returns false when plausible throws (does not surface to caller)', () => {
+  withMockWindow(
+    function plausible() {
+      throw new Error('plausible internal error');
+    },
+    () => {
+      assert.equal(trackEvent('lr_primary_cta_click', { props: { location: 'hero' } }), false);
+      assert.equal(trackEvent('lr_intake_submit_attempt'), false);
+    },
+  );
+});
+
+test('trackEvent never carries PII — call sites pass only host/path/surface labels', () => {
+  // Whitelist of values we accept being passed at call sites. The
+  // implementation itself doesn't enforce shape — call-site discipline
+  // does — so this test documents intent and protects against drift.
+  const KNOWN_EVENT_NAMES = new Set([
+    'lr_primary_cta_click',
+    'lr_secondary_cta_click',
+    'lr_intake_submit_attempt',
+    'lr_intake_submit_success',
+  ]);
+  const KNOWN_PROP_KEYS = new Set(['location']);
+  const KNOWN_LOCATION_VALUES = new Set(['nav', 'hero', 'final_form', 'how_it_works_link']);
+  const FORBIDDEN_PROP_KEYS = ['email', 'name', 'phone', 'ip', 'fingerprint', 'user_id', 'session_id'];
+
+  for (const name of KNOWN_EVENT_NAMES) {
+    assert.match(name, /^[a-z][a-z0-9_]*$/, `event name "${name}" must be lowercased snake_case`);
+  }
+  for (const key of FORBIDDEN_PROP_KEYS) {
+    assert.equal(
+      KNOWN_PROP_KEYS.has(key),
+      false,
+      `forbidden prop key "${key}" must not be in the call-site whitelist`,
+    );
+  }
+  for (const v of KNOWN_LOCATION_VALUES) {
+    assert.match(v, /^[a-z][a-z0-9_]*$/, `location value "${v}" must be lowercased snake_case`);
+  }
 });

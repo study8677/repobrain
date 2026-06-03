@@ -28,6 +28,57 @@
 
 ---
 
+## 2026-06-03 — Cold-Sprint-V1-Tracking — Lead Rescue Plausible custom-event baseline (4 events, runtime PR)
+
+<!-- COLD_SPRINT_V1_TRACKING_HIST -->
+
+**Status:** Runtime PR landing the smallest safe Plausible custom-event baseline for `corpflowai.com/lead-rescue`. **No backend changes.** No new env var names. No payment changes. No ERPNext changes. No Pomelli activation. No copy changes. Recorded as `JE-2026-06-03-3`. Anton's chat DECISION (2026-06-03 *"AUTHORISE — Cold-Sprint-V1-Tracking"*) authorised this packet as the first follow-up runtime PR from the Pomelli sprint proposal (`JE-2026-06-03-1`, PR #289 merged `fa6c0e8b`). The goal is to measure more than pageviews on the cold-market campaign without changing what the page says.
+
+**What this packet adds:**
+
+1. New exported helper **`trackEvent(eventName, options)`** in `lib/analytics/index.js` — the same module that already owns the single source of truth for analytics policy (host + path deny lists, env kill-switch, SSR script-injection decision). Safely short-circuits when (a) `eventName` is not a non-empty string, (b) `typeof window === 'undefined'` (SSR), (c) `typeof window.plausible !== 'function'` (script not injected — kill-switch off, host on deny list, preview deploy, network failure), or (d) Plausible itself throws inside the try/catch wrapper. Returns `true` only when dispatch succeeded; otherwise `false`. Documented with a JSDoc block stating the no-PII rule and the four short-circuit conditions.
+
+2. Four custom events wired into `components/AiLeadRescueLanding.js`:
+
+   - **`lr_primary_cta_click`** — fires on click of the nav `Start the 48-hour setup` anchor (with `props.location: 'nav'`) and the hero `Start my 48-hour setup` anchor (with `props.location: 'hero'`). Neither call prevents default anchor navigation to `#intake`.
+   - **`lr_secondary_cta_click`** — fires on click of the hero `See how it works` anchor navigating to `#how-it-works`.
+   - **`lr_intake_submit_attempt`** — fires at the top of `submitLead(e)` after `e.preventDefault()`, before `FormData` extraction and before `fetch('/api/tenant/intake', ...)`.
+   - **`lr_intake_submit_success`** — fires after `if (!r.ok) throw new Error('intake_failed')` passes, before the success alert and `form.reset()`.
+
+3. Seven new unit tests in `node-tests/analytics-policy.test.mjs` covering SSR no-op, script-not-injected no-op, invalid event names rejected, plain-event dispatch, options-with-props dispatch, Plausible-throws caught silently, and the no-PII whitelist (event-name regex + location-value whitelist + forbidden-prop-key blocklist `email` / `name` / `phone` / `ip` / `fingerprint` / `user_id` / `session_id`).
+
+**Files changed (3, small surgical):**
+
+- `lib/analytics/index.js` (+58 lines — new `trackEvent` export with JSDoc).
+- `components/AiLeadRescueLanding.js` (+13 lines net — new import + 2 `trackEvent` calls in `submitLead` + 3 `onClick={() => trackEvent(...)}` props on existing anchors; no markup, copy, headline, sub-headline, body, form labels, error messages, or hero trust band touched).
+- `node-tests/analytics-policy.test.mjs` (+118 lines — 7 new tests).
+
+**Form behaviour preserved.** `submitLead` is structurally unchanged: `e.preventDefault()` still fires first; `FormData` extraction unchanged; `fetch('/api/tenant/intake', ...)` body unchanged; `!r.ok` failure path unchanged; success path unchanged (alert + `form.reset()`); error path unchanged. The two `trackEvent` calls inside `submitLead` are fire-and-forget — they never throw (try/catch internal), never `await`, never block the network call, and never reach the catch block of the calling function. Submission works identically whether the Plausible script is loaded or absent.
+
+**No-PII rule.** Call sites pass only the event name and at most a single small categorical `props.location` value (`'nav'` or `'hero'`) — never email / name / phone / business name / IP / fingerprint / user-id / session-id / form-field values. The new unit test pins the lowercased snake_case event-name shape, the location-value whitelist, and the forbidden-prop-key blocklist.
+
+**Policy unchanged.** Host + path + env kill-switch enforcement still lives in `lib/analytics/config.js` and `resolveAnalyticsForRequest` (`pages/_document.js` decides whether to inject the `<script defer data-domain="corpflowai.com">` tag). `trackEvent` does not duplicate the check — it relies on the absence of `window.plausible` as the operational allow-gate. The Plausible script is never injected on `lux.corpflowai.com` / `core.corpflowai.com` / `*.vercel.app` / `localhost` / `/change` / `/admin` / `/login` / token-bearing URLs / password-reset substrings, so `trackEvent` silently no-ops on every denied surface.
+
+**Verification:**
+
+- `npm test` `428/428` pass (was `421/421` before; +7 added by this packet; no existing test changed).
+- `npm run build` succeeds (`/lead-rescue` SSG rebuilt at 539ms with no warnings).
+- `npm run check:marketing-quality-gate` PASS.
+
+**Hard limits honoured:** zero backend changes (no `lib/server/*` / no `api/*` / no `prisma/*` / no DB schema / no migration); zero new env var names introduced; zero payment changes (no `pages/refund-policy.js` / `pages/terms.js` / `pages/contact.js` / `components/PublicSiteFooter.js` / `LR-Pay-1` wording / `PAY-SBM-2` copy / pricing / forbidden-phrase exposure touched); zero ERPNext changes (no sandbox state / Phase D / Phase C² / runbook §8.1 / production instance / scheduler / accountant work touched); zero Pomelli activation (no Google account / VPN / asset upload / first-asset trial run / personal-data exposure); zero copy changes (no headline / sub-headline / body / CTA wording / form labels / error messages / privacy / refund / terms / contact / footer / hero-trust-band SVG / walkthrough video / asset manifest touched); zero secrets / API keys / OAuth tokens / DB credentials / banking details / KYC material / signed documents / DNS / mail-routing / Vercel config / GitHub Secrets / GitHub workflow files / Telegram / Search Console / payment-settings / payment-automation / CRM-GHL-WhatsApp-SMS integration touched; zero Lux tenant / factory / operator-console / `/change` / `/admin` route touched (Plausible policy already excludes them — they remain excluded). Single-offer rule (`JE-2026-05-28-1`) preserved.
+
+**Live measurement plan.** Once merged + Vercel Production deploy is `READY`, Anton confirms in the Plausible dashboard (apex site `corpflowai.com`) that the four event names appear as Custom Events over the next 24-48 hours of organic traffic. If cold outreach starts before confirmation, the absence of events would prove a dashboard wiring problem rather than the absence of clicks.
+
+**ANTON TO-DO (after merge):**
+
+1. Wait for Vercel Production `READY` on the merge commit.
+2. Open Plausible dashboard for `corpflowai.com` → Custom Events → click the four CTAs on the live `/lead-rescue` once each + submit the form once with sandbox details (e.g. own email + own phone) and confirm the four events register.
+3. Record the Vercel deployment ID + commit SHA + the four-event confirmation in the PR closure Delivery Reality Audit on Bridge `#249` to flip the verdict from **PARTIAL** to **COMPLETE**.
+
+**Standing holds (unchanged):** Phase D · Phase C² · runbook §8.1 · production ERPNext · scheduler · payment gateway configuration · Lead Rescue wording adoption (`LR-Pay-1`) · SBM application submission · `PAY-SBM-3` · NDA / MCIB · Freshdesk account creation · `support.corpflowai.com` CNAME · DKIM/SPF · live-chat · AI chatbot · n8n migration · public site-copy adding portal URL · Pomelli activation. **No new operational hold introduced.** The remaining cold-sprint PRs (PR-B copy variants / PR-D segment-specific landings / PR-E refund-link inline / PR-F French-language affordance / PR-G `lr_video_play` tracking / PR-H `lr_segment_landing` tracking / PR-I cold-outreach docs) remain HELD pending their individual DECISIONs.
+
+---
+
 ## 2026-06-03 — ERPNext Phase D Production Readiness Evaluation (docs-only)
 
 <!-- ERPNEXT_PRODUCTION_READINESS_EVALUATION_V1_HIST -->

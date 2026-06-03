@@ -1,6 +1,7 @@
 import React from 'react';
 import Head from 'next/head';
 
+import { trackEvent } from '../lib/analytics/index.js';
 import PublicSiteFooter from './PublicSiteFooter.js';
 import VisualAssetRenderer, { isAiGeneratedManifest } from './VisualAssetRenderer.js';
 import AssetProvenanceDisclosure from './AssetProvenanceDisclosure.js';
@@ -155,6 +156,7 @@ export default function AiLeadRescueLanding({ host = '', leadRescueAssets }) {
 
   async function submitLead(e) {
     e.preventDefault();
+    trackEvent('lr_intake_submit_attempt');
     const form = e.currentTarget;
     const fd = new FormData(form);
     const payload = {
@@ -177,6 +179,7 @@ export default function AiLeadRescueLanding({ host = '', leadRescueAssets }) {
         body: JSON.stringify(payload),
       });
       if (!r.ok) throw new Error('intake_failed');
+      trackEvent('lr_intake_submit_success');
       alert('Thank you — your AI Lead Rescue intake was submitted. We will contact you shortly.');
       form.reset();
     } catch {
@@ -212,7 +215,12 @@ export default function AiLeadRescueLanding({ host = '', leadRescueAssets }) {
             <div style={{ fontWeight: 900, fontSize: 22 }}>AI Lead Rescue</div>
             <div style={{ color: '#9fb2c8', fontSize: 13 }}>Powered by CorpFlowAI</div>
           </div>
-          <a style={{ ...styles.cta, ...styles.secondary }} href="#intake" className="lr-cta-secondary">Start the 48-hour setup</a>
+          <a
+            style={{ ...styles.cta, ...styles.secondary }}
+            href="#intake"
+            className="lr-cta-secondary"
+            onClick={() => trackEvent('lr_primary_cta_click', { props: { location: 'nav' } })}
+          >Start the 48-hour setup</a>
         </nav>
 
         <section style={styles.hero}>
@@ -223,8 +231,18 @@ export default function AiLeadRescueLanding({ host = '', leadRescueAssets }) {
               AI Lead Rescue captures new enquiries, alerts the owner or operator, logs every lead, and surfaces follow-ups daily — without rebuilding your website or forcing a CRM migration.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 24 }}>
-              <a style={{ ...styles.cta, ...styles.primary }} href="#intake" className="lr-cta-primary">Start my 48-hour setup</a>
-              <a style={{ ...styles.cta, ...styles.secondary }} href="#how-it-works" className="lr-cta-secondary">See how it works</a>
+              <a
+                style={{ ...styles.cta, ...styles.primary }}
+                href="#intake"
+                className="lr-cta-primary"
+                onClick={() => trackEvent('lr_primary_cta_click', { props: { location: 'hero' } })}
+              >Start my 48-hour setup</a>
+              <a
+                style={{ ...styles.cta, ...styles.secondary }}
+                href="#how-it-works"
+                className="lr-cta-secondary"
+                onClick={() => trackEvent('lr_secondary_cta_click')}
+              >See how it works</a>
             </div>
           </div>
 
