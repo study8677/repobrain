@@ -28,11 +28,11 @@
 
 ---
 
-## 2026-06-03 — Cold-Sprint-V1-Copy — minimal `/lead-rescue` hero copy improvements for cold Mauritian prospects (runtime PR)
+## 2026-06-03 — Cold-Sprint-V1-Copy — minimal `/lead-rescue` hero copy improvements for cold Mauritian prospects (runtime PR — **COMPLETE**)
 
 <!-- COLD_SPRINT_V1_COPY_HIST -->
 
-**Status:** Small runtime PR landing the smallest safe `/lead-rescue` hero copy improvements now that Plausible custom-event tracking is live (verified post-PR #293: four events firing on apex, zero on Lux negative control). **No backend changes.** No new env var names. No pricing / payment / form-field / ERPNext / Pomelli / route / asset / API / DB change. Three edits to one file (`components/AiLeadRescueLanding.js`). Recorded as `JE-2026-06-03-5`. Anton's chat DECISION (2026-06-03 *"AUTHORISE — Cold-Sprint-V1-Copy"*) authorised this packet.
+**Status:** Merged as PR [#296](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/296) on commit `2b0d46b9`. **Verdict: COMPLETE** per `.cursor/rules/delivery-reality.mdc` after operator browser/Plausible verification on 2026-06-03 ~10:26 UTC+4 — all five Plausible custom events still fire on apex (`lr_primary_cta_click` with `location:nav`, `lr_primary_cta_click` with `location:hero`, `lr_secondary_cta_click`, `lr_intake_submit_attempt`, `lr_intake_submit_success`); Lux negative control returns zero `plausible.io` requests; HTML probe of `https://corpflowai.com/lead-rescue` confirms thirteen presence checks pass (new buyer-pain fragments, Mauritius HQ-fact trust line, *"Start my 48-hour setup"* count = 3, *"Start the 48-hour setup"* count = 0, USD 150 / no-card / no-guarantee posture intact). Closure DRAs on [PR #296 issuecomment-4609685719](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/296#issuecomment-4609685719) + [Bridge #249 issuecomment-4609685920](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4609685920). Small runtime PR landing the smallest safe `/lead-rescue` hero copy improvements now that Plausible custom-event tracking is live (verified post-PR #293: four events firing on apex, zero on Lux negative control). **No backend changes.** No new env var names. No pricing / payment / form-field / ERPNext / Pomelli / route / asset / API / DB change. Three edits to one file (`components/AiLeadRescueLanding.js`). Recorded as `JE-2026-06-03-5`. Anton's chat DECISION (2026-06-03 *"AUTHORISE — Cold-Sprint-V1-Copy"*) authorised this packet.
 
 ### The brief (decoded)
 
