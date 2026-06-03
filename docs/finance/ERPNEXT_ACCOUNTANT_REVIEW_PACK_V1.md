@@ -34,6 +34,31 @@ This pack is one self-contained brief. The accountant should not need to read an
 - Approve or amend the CorpFlowAI commercial offer (USD 150 launch pilot price is fixed by `JE-2026-05-28-1` and is not the accountant's decision).
 - Comment on marketing, communications, or non-financial doctrine.
 
+## § 0.0 — One-page summary (start here)
+
+The accountant should be able to read this single section and know what they are being asked to sign. Every claim below is reproduced in detail in the section noted in the rightmost column.
+
+| Field | Value | Detail |
+|---|---|---|
+| What this pack is | A self-contained briefing pack for a Mauritius-licensed accountant. It asks for written sign-off on the Chart of Accounts (closes HB-2) and VAT posture (closes HB-3) before CorpFlowAI Ltd issues its first ERPNext-produced invoice. | § 0 + § 10 |
+| What it is not | A tax filing, an audit of existing books, an offer-pricing decision, or an approval of bank credentials / payment-gateway configuration. | § 0 |
+| Company under review | CorpFlowAI Ltd · BRN `C25228280` · registered office Dextra Lane Lot No. 3 Phase 1, Trou Aux Biches, Mauritius. | § 0.1 |
+| Books to date | None. No production ERPNext instance exists yet. The accountant is reviewing **proposed structure**, not existing books. | § 11 |
+| v1 commercial offer | **AI Lead Rescue Setup** — single line item, **USD 150** launch pilot, one-off (no recurring billing). Production Item code: `LR-SETUP-USD-150`. | § 2.1 |
+| Currency posture | USD-denominated invoices to all customers worldwide; MUR-base company books. | § 0.1 + § 3 |
+| Operating bank | State Bank of Mauritius (SBM): MUR-base primary, USD multi-currency for receipts. **No real account number / SWIFT / IBAN appear in this pack.** | § 0.1 + § 11 |
+| Invoice flow | (1) USD 150 Pro-forma issued pre-payment → (2) Customer pays SBM USD wire → (3) Sales Invoice + Payment Entry posted in ERPNext → (4) Auto FX Gain/Loss JE for book-rate vs receipt-rate delta → (5) Setup delivered within 48 hours / 5 business days. | § 3 + § 6 |
+| Pro-forma mechanism | ERPNext **Quotation** with Print Format retitled *"Pro-forma invoice"* (Cursor's recommendation; safer than Sales-Invoice-Draft). Accountant to confirm in Q-Doc-1 / Q-Doc-2. | § 6 |
+| VAT posture today | **No VAT charged on any invoice.** Live-page + template footer reads: *"VAT/tax treatment pending accountant confirmation."* | § 5 |
+| Forward-looking (not v1) | AI Lead Rescue Monitoring (recurring monthly subscription). Not active. Captured so production setup is not future-blocked. | § 7 |
+| Bank reconciliation | CSV / Excel statement export → ERPNext Bank Reconciliation Tool. **No bank credentials enter ERPNext.** | § 8 |
+| What the accountant signs | The closure checklist: 5 rows close HB-2 (CoA + revenue + FX + bank reconciliation), 4 rows close HB-3 (VAT), 2 rows are advisory (document type + recurring). | § 10 |
+| Written questions to answer | **32 numbered questions** across 11 letter-prefixed buckets (CoA / Rev / Flow / FX / VAT / Doc / Recur / Bank). Consolidated index in § 9. | § 9 |
+| Sign-off format | PDF / signed memo / dated email. Anton then records closure as a `JOURNAL.md` row referencing this pack and the accountant's memo. | § 5.4 + § 10.4 |
+| Production blockers this pack closes | **HB-2** (Chart of Accounts review) + **HB-3** (VAT decision) per `ERPNEXT_PRODUCTION_READINESS_EVALUATION.md` § 7. The two remaining blockers (HB-4 redacted bank CSV cycle, HB-1 Phase D operator-approval row) are out of scope for the accountant. | § 10.4 |
+
+**If you read nothing else, read § 1 (Chart of Accounts), § 5 (VAT), and § 10 (sign-off checklist). Everything else in this pack exists to support those three sections.**
+
 ## § 0 — Hard limits honoured by THIS pack
 
 - Zero edits to ERPNext production (no production instance exists yet).
