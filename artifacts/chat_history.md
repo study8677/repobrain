@@ -28,6 +28,104 @@
 
 ---
 
+## 2026-06-03 — Cold-Sprint-V1-Tracking-Fix — Option C: SSG runtime host-gated Plausible loader (runtime fix)
+
+<!-- COLD_SPRINT_V1_TRACKING_FIX_OPTION_C_HIST -->
+
+**Status:** Runtime PR fixing the analytics injection gap identified in the PR #291 closure DRA. **No backend changes.** No new env var names. No payment changes. No ERPNext changes. No Pomelli activation. No Lead Rescue copy / pricing / layout / form fields / video / asset manifest changes. No new analytics vendors. No PII. Recorded as `JE-2026-06-03-4`. Anton's chat DECISION (2026-06-03 *"AUTHORISE — Cold-Sprint-V1-Tracking-Fix via Option C"*) authorised this packet after reviewing the PR #291 closure DRA ([issuecomment-4608984840](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/291#issuecomment-4608984840)) and the three-option proposal on Bridge `#249` ([issuecomment-4608989930](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249#issuecomment-4608989930)).
+
+### The gap (recap from PR #291 DRA)
+
+The four PR #291 `trackEvent` calls (`lr_primary_cta_click` × 2 locations, `lr_secondary_cta_click`, `lr_intake_submit_attempt`, `lr_intake_submit_success`) ship in the production page bundle (`/_next/static/chunks/0np12moztsz80.js` — verified live) but never fire because the Plausible `<script defer data-domain="corpflowai.com" src="https://plausible.io/js/script.js">` tag is not injected into the SSG-prerendered HTML for `/lead-rescue`. `Document.getInitialProps` runs at build time with `ctx.req` undefined, so the existing `resolveAnalyticsForRequest({ host: '', path: '/lead-rescue' })` returns `enabled: false` (this is the "Static-export caveat" documented in `pages/_document.js`'s JSDoc). At runtime, `window.plausible` is therefore undefined and the `trackEvent` no-op guard short-circuits every call.
+
+A naive build-time fix (just fall back the host to `corpflowai.com`) would inject Plausible into the prerendered HTML — but that HTML is **also** served from `lux.corpflowai.com/lead-rescue` and `core.corpflowai.com/lead-rescue` (both verified live to return identical 41,313-byte SSG output during the DRA, because there is no `middleware.js` and Lux/Core do not intercept apex SSG routes). A build-time fallback would therefore leak Plausible to Lux + Core, violating the explicit deny boundary.
+
+### Option C implementation
+
+A **runtime host-gated loader**: instead of emitting the static `<script>` tag at SSG build time, emit a small self-contained inline `<script>` that runs in the visitor's browser, reads `window.location.hostname` + `pathname` + `search`, applies the SAME policy data from `lib/analytics/config.js` (serialised inline at build time), and only when ALL checks pass dynamically `document.createElement('script')` + appends the Plausible tag to `<head>`.
+
+**Three source files (+312 net):**
+
+1. **`lib/analytics/index.js` (+205 lines)**
+   - New internal helper `isPathAllowedWithoutHost(fullPath)` — applies the host-independent subset of deny rules (`DENY_PATH_PREFIXES` with word-boundary, `DENY_PATH_SUBSTRINGS`, `DENY_QUERY_KEYS`); skips `APEX_DENY_PATH_PREFIXES` (those re-apply at runtime once the real host is known).
+   - `resolveAnalyticsForRequest` extended to return a new `requiresRuntimeHostCheck` boolean: `false` for SSR (host known, deny-list applied at SSR time, static `<script>` tag still emitted, Plausible verification on apex `/` unchanged); `true` for SSG when host is empty AND the path passes every host-independent deny. Kill-switch off OR host-independent deny still returns `enabled: false` + `requiresRuntimeHostCheck: false` — the loader is never emitted for paths that can never be allowed at runtime.
+   - New export `buildSsgRuntimeLoaderScript({ src, domain })` returns the inline JS source as a string (IE11-safe vanilla JS, no module syntax, no dependencies). Policy data (`ALLOW_HOSTS`, `DENY_HOST_EXACT`, `DENY_HOST_SUFFIX`, `DENY_PATH_PREFIXES`, `APEX_DENY_PATH_PREFIXES`, `DENY_PATH_SUBSTRINGS`, `DENY_QUERY_KEYS`, `APEX_HOST`) is serialised at build time directly from `config.js`. The entire body is wrapped in `try { … } catch (e) {}` so a runtime error inside the policy check never breaks the host page.
+
+2. **`pages/_document.js` (+24 lines)**
+   - Imports `buildSsgRuntimeLoaderScript`; renders the inline loader via `dangerouslySetInnerHTML` when `analytics.requiresRuntimeHostCheck` is `true`, else renders the canonical static `<script>` tag.
+   - Updated JSDoc preamble describes the two render strategies (SSR static tag for verifiability + SSG runtime-host-gated loader for multi-host correctness) and notes the multi-host SSG-output reality (Lux + Core + preview all serve the same prerendered HTML on `/lead-rescue` — verified live during PR #291 DRA preparation).
+
+3. **`node-tests/analytics-policy.test.mjs` (+205 lines, +20 new tests, 1 existing test updated)**
+   - 7 tests pinning `resolveAnalyticsForRequest`'s new contract (SSR apex unchanged; SSR Lux/Core/preview/localhost still denied; SSG fallback enabled on `/`, `/lead-rescue`, `/about`, `/onboarding`, `/lead-rescue/details`; SSG fallback denied on every host-independent deny path; kill-switch off respected; null/undefined/empty/whitespace host all trigger SSG fallback; env overrides honoured).
+   - 12 tests executing the loader inside a Node `vm.createContext` sandbox with mocked `window.location` + `document.createElement` + `document.head.appendChild` — verifies the loader injects on apex + denies Lux/Luxe/tenant/Core/localhost/`*.vercel.app` previews + applies word-boundary path-prefix deny + apex-specific deny + query-string deny + substring deny + empty hostname + subdomain spoof + malformed `window.location` (defensive try/catch never throws) + env-overridden src/domain.
+   - 1 existing test (`resolveAnalyticsForRequest disables when host is empty`) renamed and updated to assert the new behaviour (empty host → `requiresRuntimeHostCheck: true`).
+
+### Boundary preservation (the key correctness property)
+
+The loader runs in **every** visitor's browser, regardless of which host serves the prerendered HTML. Its first checks are `denyExact.indexOf(h) !== -1` and the `denySuffix` iteration, then `allow.indexOf(h) !== -1`. Result:
+
+| Visitor host | Loader behaviour | Plausible injected? |
+|---|---|---|
+| `corpflowai.com` | passes all checks for allowed paths | YES |
+| `lux.corpflowai.com` | fails `allow.indexOf` | NO |
+| `luxe.corpflowai.com` | fails `allow.indexOf` | NO |
+| `<tenant>.corpflowai.com` | fails `allow.indexOf` | NO |
+| `core.corpflowai.com` | fails `denyExact` | NO |
+| `localhost` / `localhost:3000` | fails `denyExact` | NO |
+| `*.vercel.app` preview | fails `denySuffix` | NO |
+| `corpflowai.com.evil.com` | fails `allow.indexOf` | NO |
+| `corpflowai.com` + `/admin` | fails word-boundary path deny | NO |
+| `corpflowai.com` + `/change-v2` | fails word-boundary path deny | NO |
+| `corpflowai.com` + `/concierge` | fails apex-specific deny | NO |
+| `corpflowai.com` + `?token=…` | fails query deny | NO |
+| `corpflowai.com` + `/reset-password` | fails substring deny | NO |
+| `corpflowai.com` + `/changelog` | passes (no over-match) | YES |
+| `corpflowai.com` + `/properties-overview` | passes (apex deny is slash-only) | YES |
+
+All 15 cases pinned by `vm`-context tests.
+
+### Single-source-of-truth discipline
+
+The loader's policy data is **serialised at build time** directly from the same exports in `lib/analytics/config.js`. There is no second deny list in inline JS, no duplicated allow list, no hardcoded strings in `_document.js`. Future edits to `config.js` propagate automatically to both SSR (`resolveAnalyticsForRequest`) and SSG (the loader source via `buildSsgRuntimeLoaderScript`).
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `npm test` | **448/448 pass** (was 428/428 after PR #291; +20 new tests; 1 existing test updated to reflect Option C contract; no other existing test modified) |
+| `npm run build` | clean (`/lead-rescue` SSG rebuilt at 469ms, no warnings) |
+| `npm run check:marketing-quality-gate` | PASS |
+| `ReadLints` (3 changed source files) | no errors |
+
+### Hard limits honoured
+
+Zero backend changes · zero new env var names · zero new analytics vendors (Plausible only) · zero PII added · zero Lead Rescue copy / pricing / layout / form fields / video / asset manifest changes · zero payment changes · zero ERPNext changes · zero Pomelli activation · zero secrets / API keys / OAuth tokens / DB credentials / banking details / KYC material / signed documents / DNS / mail-routing / Vercel config / GitHub Secrets / GitHub workflow files / Telegram / Search Console / payment-settings / payment-automation / CRM-GHL-WhatsApp-SMS integration touched · existing denies for Lux / Core / preview / `localhost` / `/change` / `/admin` / `/login` / `/master` / `/lux-editor` / `/lux-guide` / `/sovereign-intake` / `/core-lux-migration-repair` / `/api/` / `/_next/` / `/client/` / `/concierge` / `/properties` / `/property` / token-bearing URLs / password-reset substrings ALL preserved (both SSR and SSG paths, verified by dedicated unit tests for each) · kill-switch behaviour preserved · Plausible verification on apex `/` preserved (SSR static tag still emitted).
+
+### ID collision note (declared)
+
+`JE-2026-06-03-3` is **claimed by two parallel packets already merged to main**: Cold-Sprint-V1-Tracking PR #291 (`00b16288`, this packet's parent) and ERPNext Phase D Accountant Pack v1 PR #292 (`500ed622`). Both rows exist in `docs/decisions/JOURNAL.md`. Same pattern as the `JE-2026-06-02-4` collision recorded in PR #287 DRA — declared and accepted. No fix this packet. My new packet uses `JE-2026-06-03-4`.
+
+### ANTON TO-DO (after merge)
+
+1. Wait for Vercel Production `READY` on the merge commit.
+2. `curl https://corpflowai.com/lead-rescue` (or browser View Source) — confirm the inline `<script>` loader is present in `<head>` and the SSR-style `<script defer data-domain=… src=…>` tag is absent on this SSG route. (The apex `/` SSR page still has the static tag — Plausible verification still works.)
+3. `curl https://lux.corpflowai.com/lead-rescue` — confirm the inline loader is present in `<head>` (same HTML served from any host) but the loader will NOT inject Plausible at runtime when the browser is on a Lux host. To verify visually, open Lux + DevTools + Network tab and confirm no request to `plausible.io/js/script.js`.
+4. Browser sanity check on apex `https://corpflowai.com/lead-rescue` — click nav primary CTA, hero primary CTA, hero secondary CTA, then submit one sandbox/test intake (e.g. own email + own phone + "Sandbox test, ignore" in the message field).
+5. Open Plausible dashboard for `corpflowai.com` → Custom Events; confirm all four events appear: `lr_primary_cta_click` (with `location: 'nav'` AND `location: 'hero'` props), `lr_secondary_cta_click`, `lr_intake_submit_attempt`, `lr_intake_submit_success`.
+6. Record the Vercel Production deployment ID + commit SHA + four-event confirmation in the PR closure DRA on Bridge `#249` to flip both this PR AND PR #291 from PARTIAL to COMPLETE.
+
+### Delivery Reality verdict (per `.cursor/rules/delivery-reality.mdc`)
+
+**PARTIAL at merge** — local + CI checks GREEN; the four PR #291 events firing on production `/lead-rescue` is the verification step that flips both this PR and PR #291 to COMPLETE.
+
+### Standing holds (unchanged)
+
+Phase D · Phase C² · runbook §8.1 · production ERPNext · scheduler · payment gateway configuration · Lead Rescue wording adoption (`LR-Pay-1`) · SBM application submission · `PAY-SBM-3` · NDA / MCIB · Freshdesk account creation · `support.corpflowai.com` CNAME · DKIM/SPF · live-chat · AI chatbot · n8n migration · public site-copy adding portal URL · Pomelli activation.
+
+**No new holds introduced by this packet.** Cold-outreach campaign execution remains HELD pending PR-I docs-only landing per Pomelli sprint § 8 stopping rule (`JE-2026-06-03-1`); the other cold-sprint follow-up PRs (PR-B / PR-D / PR-E / PR-F / PR-G / PR-H / PR-I) remain HELD pending their individual DECISIONs.
+
+---
+
 ## 2026-06-03 — ERPNext Phase D Accountant Pack v1 (docs-only)
 
 <!-- ERPNEXT_ACCOUNTANT_REVIEW_PACK_V1_HIST -->

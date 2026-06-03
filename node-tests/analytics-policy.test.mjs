@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 import {
+  buildSsgRuntimeLoaderScript,
   DEFAULT_PLAUSIBLE_DOMAIN,
   DEFAULT_PLAUSIBLE_SRC,
   getMarketingSurface,
@@ -338,11 +340,21 @@ test('resolveAnalyticsForRequest enables apex marketing pages including /lead-re
   });
 });
 
-test('resolveAnalyticsForRequest disables when host is empty (covers SSG / no-req case)', () => {
+test('resolveAnalyticsForRequest enables SSG runtime-host-check fallback when host is empty (JE-2026-06-03-4)', () => {
+  // Behaviour update for Cold-Sprint-V1-Tracking-Fix Option C:
+  // previously empty host short-circuited to disabled because
+  // `isHostAllowed('')` returned false. Now empty host (the SSG
+  // build-time signature when `ctx.req` is undefined) enables the
+  // runtime host-gated loader instead, with `requiresRuntimeHostCheck`
+  // true. The loader still denies Lux / Core / preview / localhost at
+  // runtime — see the dedicated SSG-loader test block below.
   withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
     for (const host of ['', null, undefined]) {
       const r = resolveAnalyticsForRequest({ host, path: '/' });
-      assert.equal(r.enabled, false, `empty host (${String(host)}) should disable analytics`);
+      assert.equal(r.enabled, true, `empty host (${String(host)}) should enable SSG fallback`);
+      assert.equal(r.requiresRuntimeHostCheck, true);
+      assert.equal(r.domain, DEFAULT_PLAUSIBLE_DOMAIN);
+      assert.equal(r.src, DEFAULT_PLAUSIBLE_SRC);
     }
   });
 });
@@ -511,6 +523,328 @@ test('trackEvent returns false when plausible throws (does not surface to caller
       assert.equal(trackEvent('lr_intake_submit_attempt'), false);
     },
   );
+});
+
+/**
+ * SSG static-export fallback (Cold-Sprint-V1-Tracking-Fix Option C,
+ * `JE-2026-06-03-4`). `resolveAnalyticsForRequest` must:
+ *   1) Continue to return `requiresRuntimeHostCheck: false` and the
+ *      static-tag-friendly shape when host is known (SSR path —
+ *      regression coverage for the existing apex root behaviour).
+ *   2) Return `{ enabled: true, requiresRuntimeHostCheck: true }` with
+ *      the configured Plausible domain + src when host is empty (SSG
+ *      build time) AND the path passes every host-independent deny.
+ *   3) Stay disabled when host is empty AND a host-independent deny
+ *      matches the path (operator routes, password-reset substring,
+ *      token-bearing query) — the inline loader script is never
+ *      emitted for paths that can never be allowed at runtime.
+ *   4) Stay disabled when the kill-switch is off, regardless of host.
+ */
+
+test('resolveAnalyticsForRequest returns requiresRuntimeHostCheck:false for SSR apex (regression)', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    const r = resolveAnalyticsForRequest({ host: 'corpflowai.com', path: '/lead-rescue' });
+    assert.equal(r.enabled, true);
+    assert.equal(r.requiresRuntimeHostCheck, false);
+    assert.equal(r.domain, DEFAULT_PLAUSIBLE_DOMAIN);
+    assert.equal(r.src, DEFAULT_PLAUSIBLE_SRC);
+  });
+});
+
+test('resolveAnalyticsForRequest returns requiresRuntimeHostCheck:false when SSR host is denied (regression)', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const host of ['lux.corpflowai.com', 'core.corpflowai.com', 'preview.vercel.app', 'localhost']) {
+      const r = resolveAnalyticsForRequest({ host, path: '/lead-rescue' });
+      assert.equal(r.enabled, false, `SSR ${host} should stay disabled`);
+      assert.equal(r.requiresRuntimeHostCheck, false);
+      assert.equal(r.domain, null);
+      assert.equal(r.src, null);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest enables SSG fallback with requiresRuntimeHostCheck:true on apex SSG paths', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const path of ['/lead-rescue', '/lead-rescue/details', '/about', '/onboarding', '/']) {
+      const r = resolveAnalyticsForRequest({ host: '', path });
+      assert.equal(r.enabled, true, `SSG ${path} should enable runtime host-gated loader`);
+      assert.equal(r.requiresRuntimeHostCheck, true);
+      assert.equal(r.domain, DEFAULT_PLAUSIBLE_DOMAIN);
+      assert.equal(r.src, DEFAULT_PLAUSIBLE_SRC);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest SSG fallback honours every host-independent path deny', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const path of [
+      '/change',
+      '/change/queue',
+      '/change-v2',
+      '/admin',
+      '/admin/users',
+      '/admin-tools',
+      '/login',
+      '/master',
+      '/lux-editor',
+      '/sovereign-intake',
+      '/api/factory/health',
+      '/_next/static/whatever.js',
+      '/client/change-decisions',
+      '/reset-password',
+      '/auth/forgot-password',
+      '/?token=abc',
+      '/?reset=xyz',
+      '/?ticket=12345',
+      '/foo?bar=1&token=abc',
+    ]) {
+      const r = resolveAnalyticsForRequest({ host: '', path });
+      assert.equal(r.enabled, false, `SSG ${path} must stay denied (host-independent deny)`);
+      assert.equal(r.requiresRuntimeHostCheck, false);
+      assert.equal(r.domain, null);
+      assert.equal(r.src, null);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest SSG fallback respects kill-switch off', () => {
+  for (const value of ['false', '', undefined]) {
+    withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: value }, () => {
+      const r = resolveAnalyticsForRequest({ host: '', path: '/lead-rescue' });
+      assert.equal(r.enabled, false, `kill-switch=${String(value)} must disable SSG fallback`);
+      assert.equal(r.requiresRuntimeHostCheck, false);
+    });
+  }
+});
+
+test('resolveAnalyticsForRequest tolerates null/undefined host like SSG empty host', () => {
+  withPlausibleEnv({ NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true' }, () => {
+    for (const host of [null, undefined, '', '   ']) {
+      const r = resolveAnalyticsForRequest({ host, path: '/lead-rescue' });
+      assert.equal(r.enabled, true, `host=${String(host)} should fall through to SSG runtime check`);
+      assert.equal(r.requiresRuntimeHostCheck, true);
+    }
+  });
+});
+
+test('resolveAnalyticsForRequest SSG fallback honours apex marketing /lead-rescue end-to-end against current envs', () => {
+  withPlausibleEnv(
+    {
+      NEXT_PUBLIC_PLAUSIBLE_ENABLED: 'true',
+      NEXT_PUBLIC_PLAUSIBLE_DOMAIN: 'corpflowai.com',
+      NEXT_PUBLIC_PLAUSIBLE_SRC: 'https://plausible.io/js/script.js',
+    },
+    () => {
+      const r = resolveAnalyticsForRequest({ host: '', path: '/lead-rescue' });
+      assert.equal(r.enabled, true);
+      assert.equal(r.requiresRuntimeHostCheck, true);
+      assert.equal(r.domain, 'corpflowai.com');
+      assert.equal(r.src, 'https://plausible.io/js/script.js');
+    },
+  );
+});
+
+/**
+ * buildSsgRuntimeLoaderScript — produces the inline JS string emitted
+ * into SSG pages when `requiresRuntimeHostCheck` is true. The script
+ * must be self-contained vanilla JS (no module syntax / dependencies)
+ * and must enforce the SAME policy as `isAnalyticsEnabledForHostPath`
+ * against `window.location` at runtime.
+ *
+ * We test by executing the script inside a Node `vm` context with a
+ * minimal mocked `window` + `document`, then asserting whether a
+ * Plausible `<script>` tag was appended to the mock head for each
+ * combination of host + path + query.
+ */
+function runLoaderInVm({ src, domain, hostname, pathname, search } = {}) {
+  const created = [];
+  const head = {
+    appendChild(node) {
+      created.push(node);
+    },
+  };
+  const sandbox = {
+    window: {
+      location: {
+        hostname: hostname || '',
+        pathname: pathname || '/',
+        search: search || '',
+      },
+    },
+    document: {
+      head,
+      createElement(tag) {
+        const attrs = {};
+        return {
+          tagName: tag,
+          attrs,
+          set defer(v) {
+            this._defer = v;
+          },
+          get defer() {
+            return this._defer;
+          },
+          set src(v) {
+            this._src = v;
+          },
+          get src() {
+            return this._src;
+          },
+          setAttribute(k, v) {
+            attrs[k] = v;
+          },
+        };
+      },
+    },
+  };
+  vm.createContext(sandbox);
+  const source = buildSsgRuntimeLoaderScript({
+    src: src || DEFAULT_PLAUSIBLE_SRC,
+    domain: domain || DEFAULT_PLAUSIBLE_DOMAIN,
+  });
+  vm.runInContext(source, sandbox);
+  return { created };
+}
+
+test('buildSsgRuntimeLoaderScript returns empty string when src/domain are missing', () => {
+  assert.equal(buildSsgRuntimeLoaderScript({}), '');
+  assert.equal(buildSsgRuntimeLoaderScript({ src: 'a' }), '');
+  assert.equal(buildSsgRuntimeLoaderScript({ domain: 'a' }), '');
+  assert.equal(buildSsgRuntimeLoaderScript(), '');
+});
+
+test('SSG loader appends Plausible script on apex corpflowai.com + allowed paths', () => {
+  for (const path of ['/', '/lead-rescue', '/lead-rescue/details', '/about', '/onboarding']) {
+    const { created } = runLoaderInVm({ hostname: 'corpflowai.com', pathname: path });
+    assert.equal(created.length, 1, `apex ${path} must inject Plausible script`);
+    assert.equal(created[0].attrs['data-domain'], DEFAULT_PLAUSIBLE_DOMAIN);
+    assert.equal(created[0].src, DEFAULT_PLAUSIBLE_SRC);
+    assert.equal(created[0].defer, true);
+  }
+});
+
+test('SSG loader denies Lux / Core / preview / localhost hosts (boundary preserved)', () => {
+  for (const hostname of [
+    'lux.corpflowai.com',
+    'luxe.corpflowai.com',
+    'tenantx.corpflowai.com',
+    'core.corpflowai.com',
+    'localhost',
+    'preview-abc.vercel.app',
+    'corpflow-ai-command-center-preview.vercel.app',
+  ]) {
+    const { created } = runLoaderInVm({ hostname, pathname: '/lead-rescue' });
+    assert.equal(created.length, 0, `${hostname} must NOT inject Plausible (boundary)`);
+  }
+});
+
+test('SSG loader denies operator routes on apex with word-boundary semantics', () => {
+  for (const path of [
+    '/change',
+    '/change/queue',
+    '/change-v2',
+    '/admin',
+    '/admin/users',
+    '/admin-tools',
+    '/login',
+    '/master',
+    '/lux-editor',
+    '/lux-guide',
+    '/sovereign-intake',
+    '/core-lux-migration-repair',
+    '/api/factory/health',
+    '/_next/static/whatever.js',
+    '/client/change-decisions',
+  ]) {
+    const { created } = runLoaderInVm({ hostname: 'corpflowai.com', pathname: path });
+    assert.equal(created.length, 0, `apex ${path} must NOT inject Plausible (path deny)`);
+  }
+});
+
+test('SSG loader respects word-boundary deny: /changelog and /administrative pass', () => {
+  for (const path of ['/changelog', '/changelog/2026-05', '/administrative']) {
+    const { created } = runLoaderInVm({ hostname: 'corpflowai.com', pathname: path });
+    assert.equal(created.length, 1, `apex ${path} must inject (word-boundary deny is strict)`);
+  }
+});
+
+test('SSG loader denies apex-specific paths /concierge /properties /property', () => {
+  for (const path of ['/concierge', '/properties', '/properties/admin', '/property/abc']) {
+    const { created } = runLoaderInVm({ hostname: 'corpflowai.com', pathname: path });
+    assert.equal(created.length, 0, `apex ${path} must NOT inject (apex-specific deny)`);
+  }
+});
+
+test('SSG loader passes apex /properties-overview (no over-match)', () => {
+  const { created } = runLoaderInVm({ hostname: 'corpflowai.com', pathname: '/properties-overview' });
+  assert.equal(created.length, 1, 'apex /properties-overview must inject (no over-match)');
+});
+
+test('SSG loader denies token-bearing query strings on apex', () => {
+  for (const search of ['?token=abcd', '?reset=xyz', '?ticket=12345', '?foo=bar&token=abcd']) {
+    const { created } = runLoaderInVm({
+      hostname: 'corpflowai.com',
+      pathname: '/lead-rescue',
+      search,
+    });
+    assert.equal(created.length, 0, `apex /lead-rescue${search} must NOT inject (query deny)`);
+  }
+});
+
+test('SSG loader denies password-reset / forgot-password substrings on apex', () => {
+  for (const path of [
+    '/reset-password',
+    '/auth/reset-password',
+    '/forgot-password',
+    '/auth/forgot-password/step-2',
+  ]) {
+    const { created } = runLoaderInVm({ hostname: 'corpflowai.com', pathname: path });
+    assert.equal(created.length, 0, `apex ${path} must NOT inject (substring deny)`);
+  }
+});
+
+test('SSG loader denies empty hostname (defensive — never inject without a real host)', () => {
+  const { created } = runLoaderInVm({ hostname: '', pathname: '/lead-rescue' });
+  assert.equal(created.length, 0, 'empty hostname must NOT inject');
+});
+
+test('SSG loader denies a host that looks like apex but is a different domain (e.g. corpflowai.com.evil.com)', () => {
+  const { created } = runLoaderInVm({
+    hostname: 'corpflowai.com.evil.com',
+    pathname: '/lead-rescue',
+  });
+  assert.equal(created.length, 0, 'subdomain-like spoofs must NOT inject');
+});
+
+test('SSG loader does not throw on missing window.location pieces (defensive)', () => {
+  // The script is wrapped in try/catch — even completely malformed
+  // browser state must never break the host page. We assert no
+  // exception escapes and no script is appended.
+  const sandbox = {
+    window: { location: {} },
+    document: {
+      head: { appendChild: () => { throw new Error('should not reach'); } },
+      createElement: () => { throw new Error('should not reach'); },
+    },
+  };
+  vm.createContext(sandbox);
+  const source = buildSsgRuntimeLoaderScript({
+    src: DEFAULT_PLAUSIBLE_SRC,
+    domain: DEFAULT_PLAUSIBLE_DOMAIN,
+  });
+  assert.doesNotThrow(() => vm.runInContext(source, sandbox));
+});
+
+test('SSG loader honours custom env-overridden src and domain', () => {
+  const { created } = runLoaderInVm({
+    hostname: 'corpflowai.com',
+    pathname: '/lead-rescue',
+    src: 'https://plausible.io/js/script.outbound-links.js',
+    domain: 'corpflowai.com',
+  });
+  assert.equal(created.length, 1);
+  assert.equal(created[0].src, 'https://plausible.io/js/script.outbound-links.js');
+  assert.equal(created[0].attrs['data-domain'], 'corpflowai.com');
 });
 
 test('trackEvent never carries PII — call sites pass only host/path/surface labels', () => {

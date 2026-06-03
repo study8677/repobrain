@@ -1,6 +1,9 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
 
-import { resolveAnalyticsForRequest } from '../lib/analytics/index.js';
+import {
+  buildSsgRuntimeLoaderScript,
+  resolveAnalyticsForRequest,
+} from '../lib/analytics/index.js';
 
 /**
  * Custom Document for SEO + accessibility baseline + canonical SSR
@@ -76,13 +79,39 @@ import { resolveAnalyticsForRequest } from '../lib/analytics/index.js';
  *    `DENY_PATH_PREFIXES`. Password-reset URLs stay excluded by the
  *    substring/query deny lists. None of those gates change.
  *
- * Static-export caveat: `Document.getInitialProps` runs at request
- * time on every SSR page (including the apex root `/`, which uses
- * `getServerSideProps`). For statically-optimised pages without per-
- * request rendering, `ctx.req` is undefined; we treat that as "no
- * host" and emit nothing. Plausible verification only needs the apex
- * root, which is SSR — see ADR
- * `docs/decisions/20260527-plausible-apex-only-rollout-step1.md`.
+ * Two render strategies depending on `ctx.req` presence (since
+ * 2026-06-03, JE-2026-06-03-4 — Cold-Sprint-V1-Tracking-Fix Option C):
+ *
+ *  1. **SSR (`ctx.req` defined — apex `/` via `getServerSideProps`,
+ *     every page with per-request rendering).** Emit the canonical
+ *     `<script defer data-domain="…" src="…">` tag. Plausible's
+ *     "Verify your installation" probe inspects the initial server
+ *     response and finds the tag on apex `/`. Per-host gating is
+ *     decided here at request time — Lux / Core / preview hosts
+ *     never receive the tag in the SSR response.
+ *
+ *  2. **SSG / static-prerender (`ctx.req` undefined — apex marketing
+ *     pages like `/lead-rescue` built via `getStaticProps`).** Emit
+ *     an inline `<script>` that runs in the visitor's browser, reads
+ *     `window.location.hostname` + `pathname` + `search`, and only
+ *     then conditionally appends the Plausible tag. The loader's
+ *     policy data (`ALLOW_HOSTS`, deny lists, apex-specific denies,
+ *     query-key denies, path substring denies, `APEX_HOST`) is
+ *     serialised at build time from `lib/analytics/config.js`, so
+ *     `lib/analytics/` remains the single source of truth — there is
+ *     no second deny list to maintain elsewhere.
+ *
+ *     This is needed because CorpFlow runs a single Vercel project
+ *     with one SSG output per route shared across many hosts; without
+ *     a runtime host check, the prerendered HTML for `/lead-rescue`
+ *     would inject Plausible when served from `lux.corpflowai.com` or
+ *     `core.corpflowai.com` (both verified to currently serve the
+ *     same apex SSG HTML on `/lead-rescue` per the PR #291 closure
+ *     DRA). The runtime check restores the Lux / Core / preview deny
+ *     boundary while enabling apex SSG event tracking.
+ *
+ *     Plausible verification is unaffected — it inspects the SSR apex
+ *     `/`, not SSG pages.
  *
  * Viewport meta is still set in `pages/_app.js` per Next.js convention.
  */
@@ -104,6 +133,9 @@ export default class CorpFlowDocument extends Document {
   render() {
     const { analytics } = this.props;
     const plausibleEnabled = Boolean(analytics && analytics.enabled);
+    const requiresRuntimeHostCheck = Boolean(
+      analytics && analytics.requiresRuntimeHostCheck,
+    );
 
     return (
       <Html lang="en">
@@ -123,11 +155,22 @@ export default class CorpFlowDocument extends Document {
             }}
           />
           {plausibleEnabled ? (
-            <script
-              defer
-              data-domain={analytics.domain}
-              src={analytics.src}
-            />
+            requiresRuntimeHostCheck ? (
+              <script
+                dangerouslySetInnerHTML={{
+                  __html: buildSsgRuntimeLoaderScript({
+                    src: analytics.src,
+                    domain: analytics.domain,
+                  }),
+                }}
+              />
+            ) : (
+              <script
+                defer
+                data-domain={analytics.domain}
+                src={analytics.src}
+              />
+            )
           ) : null}
         </Head>
         <body>
