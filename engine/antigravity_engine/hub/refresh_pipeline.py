@@ -143,9 +143,16 @@ def _is_retryable_error(exc: Exception) -> bool:
     Returns:
         True if the error is retryable.
     """
-    # asyncio.TimeoutError has an empty str() — check type first.
-    if isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
-        return True
+    # A bare asyncio wait_for timeout has an empty str() and means OUR own
+    # per-attempt deadline elapsed — the model is slow/stalling, not
+    # transiently failing. Retrying the same full-length attempt just
+    # multiplies wall-clock by (retries + 1) for the same outcome, which is
+    # what made refresh appear to hang. Treat a *bare* timeout as NON-retryable
+    # so the step falls back immediately. A provider-side timeout that carries
+    # a message (e.g. "gateway time-out"/"504") falls through to the keyword
+    # check below and stays retryable.
+    if isinstance(exc, (TimeoutError, asyncio.TimeoutError)) and not str(exc).strip():
+        return False
     msg = str(exc).lower()
     retryable_keywords = (
         "timeout",
@@ -332,7 +339,10 @@ async def refresh_pipeline(workspace: Path, quick: bool = False, failed_only: bo
 
         print("[2/3] Analyzing with multi-agent swarm...", file=sys.stderr)
 
-        refresh_timeout = float(os.environ.get("AG_REFRESH_AGENT_TIMEOUT_SECONDS", "90"))
+        # Conventions is a 3-hop handoff swarm (ScanAnalyst → ArchitectureReviewer
+        # → ConventionWriter), so it needs ~3x a single call. Default is generous
+        # enough for slow reasoning models; fast models finish well under it.
+        refresh_timeout = float(os.environ.get("AG_REFRESH_AGENT_TIMEOUT_SECONDS", "300"))
         try:
             result = await _run_with_retry(
                 Runner.run, agent, prompt,
@@ -449,7 +459,7 @@ async def refresh_pipeline(workspace: Path, quick: bool = False, failed_only: bo
                 "OpenAI Agent SDK not found. Install: pip install antigravity-engine"
             ) from None
 
-        module_timeout = float(os.environ.get("AG_MODULE_AGENT_TIMEOUT_SECONDS", "45"))
+        module_timeout = float(os.environ.get("AG_MODULE_AGENT_TIMEOUT_SECONDS", "240"))
 
         # Skip module agents when failed-only mode has no modules to process
         if modules_filter is not None and not modules_filter:
@@ -1902,7 +1912,7 @@ async def _generate_map_md(workspace: Path, model: str) -> str:
         batches.append(current_batch)
 
     map_agent = build_map_agent(model)
-    map_timeout = float(os.environ.get("AG_MAP_AGENT_TIMEOUT_SECONDS", "90"))
+    map_timeout = float(os.environ.get("AG_MAP_AGENT_TIMEOUT_SECONDS", "240"))
 
     async def _run_map_batch(batch: list[str], batch_idx: int) -> str:
         prompt = "Create a map.md from these module knowledge documents:\n" + "\n".join(batch)
@@ -2100,7 +2110,7 @@ Output ONLY the Markdown registry. Start with `# Module Registry`.
         model=model,
     )
 
-    registry_timeout = float(os.environ.get("AG_REGISTRY_TIMEOUT_SECONDS", "60"))
+    registry_timeout = float(os.environ.get("AG_REGISTRY_TIMEOUT_SECONDS", "120"))
     result = await _run_with_retry(
         Runner.run, registry_agent, prompt,
         timeout=registry_timeout,
