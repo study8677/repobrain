@@ -28,6 +28,99 @@
 
 ---
 
+## 2026-06-04 — ERPNext production-shell setup recipe v1 — PR-B (docs-only — **COMPLETE-AT-PR-MERGE**)
+
+<!-- ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE_V1_HIST -->
+
+**Status:** Recorded as `JE-2026-06-04-3` in `docs/decisions/JOURNAL.md`. New canonical recipe **`docs/runbooks/ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md`** + new `AGENTS.md` Must-read row. **Verdict per `.cursor/rules/delivery-reality.mdc` § docs-only: COMPLETE at PR merge** for the *recipe artefact*; the actual host-side execution is a separate piece of work that must report its own STATUS on bridge #249 before any execution-closure verdict can be claimed. PR-B stacked on PR #299 (`docs/server-agent-access-execution-boundary-v1`) which is stacked on PR #298 (`docs/je-2026-06-04-1-erpnext-production-shell-authorisation`). **Recommended merge order:** PR #298 → PR #299 → PR-B → execute on box.
+
+### Why this recipe now
+
+Anton's APPROVED DECISION on 2026-06-04 (*"Decision: A — draft the full end-to-end ERPNext production-shell setup recipe in one PR"*) following his earlier `AskQuestion` answers (Q1 = Option B "proven Phase B-a model"; Q2 = "Yes — open the Server Agent Access / Execution Boundary Runbook now"). Splitting wizard bypass, print formats, and PDF smoke into later PRs was rejected as ambiguity-creating; one complete recipe lets Anton execute end-to-end in one controlled SSH session without improvising. This recipe is the L1 → L3 deliverable for the host-side execution of `ERPNext-Production-Shell-Setup-Host-Agent-1` authorised by `JE-2026-06-04-1` and implementing the L1/L2/L3 collaboration pattern formalised in `JE-2026-06-04-2`.
+
+### What the recipe is
+
+A **22-section, ~750-line operator-paste runbook** at `docs/runbooks/ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md` (anchor sentinel `<!-- ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE_V1 -->`). Sections:
+
+| § | Purpose |
+|---|---|
+| 0 | Pre-execution checklist + 12-point hard contract restated from `JE-2026-06-04-1` + secrets-handling rules |
+| 1 | Pre-flight — `hostname` / `whoami` / `pwd` / `df -h` / `free -h` / `docker ps` + explicit `HOST_MISMATCH` / capacity / sandbox-state checks |
+| 2 | Sandbox preservation gate — fresh `bench backup --with-files` + SHA-256s of the four resulting files (satisfies `JE-2026-06-04-1` sandbox-preservation condition i) |
+| 3 | Fresh `frappe_docker` clone at `~/erpnext-production/frappe_docker`, pinned to SHA `6526ab8c…` (same as sandbox per `JE-2026-05-31-2` / `JE-2026-06-01-1`) |
+| 4 | Production `.env` overlay; credentials at `~/.erpnext-production-credentials` (`chmod 600`); masked-key verification |
+| 5 | Stack bring-up under Docker project `erpnext-production` (separate from `erpnext-sandbox`) on host port `127.0.0.1:8081` (sandbox keeps `8080`) via inline `compose.cf-production-port.yaml` override |
+| 6 | Fresh Frappe site `corpflowai-production.localhost` + `bench install-app erpnext` + `curl -sI` smoke (`--mariadb-user-host-login-scope='%'`, modern equivalent of the now-deprecated `--no-mariadb-socket`) |
+| 7 | Server-side wizard bypass — proven Phase B-a Path B Python orchestrator from `JE-2026-06-01-1` § 7.1; three quirks (bench-venv Python, absolute `sites_path`, `os.chdir('/home/frappe/frappe-bench/sites')` before `frappe.connect()`); Company `CorpFlowAI Ltd` / abbr `CFL` / country `Mauritius` / currency `USD` / FY 2026-01-01..2026-12-31 / domain `Services` / chart `Standard`; idempotent (checks `setup_complete` first) |
+| 8 | Company doctype identity extension — BRN `C25228280` / `support@corpflowai.com` / `https://corpflowai.com` / registered-office Address doctype linked via Dynamic Link; explicitly NO bank account, NO VAT, NO `submit()` |
+| 9 | Letter Head `CorpFlowAI Ltd - Production Letter Head` (text-only v1; § 9.1 logo upload OPTIONAL operator UI step) |
+| 10 | Chart of Accounts overlay — 7 broad scalable revenue categories from `JE-2026-06-04-1` § (f) (Productized Service Revenue / Implementation-Setup Revenue / Recurring Subscription-Retainer Revenue / Consulting-Advisory Revenue / Software-Platform Access Revenue / Other Operating Revenue / Foreign Exchange Gain-Loss); explicitly NOT creating VAT / MU-specific / bank-ledger / Lead-Rescue-specific accounts (HELD by HB-2 + HB-3 + HB-4) |
+| 11 | Production Item `LR-SETUP-USD-150` (no `SBX-` prefix) — verbatim name *"AI Lead Rescue Setup (USD 150 launch pilot)"* per `BRAND_AND_CONVERSION_DOCTRINE.md` § *AI Lead Rescue doctrine* and `JE-2026-05-28-1` single-offer rule; `is_service_item=1`, USD 150 selling price, income account default `Implementation / Setup Revenue - CFL` |
+| 12 | Naming series Property Setters — Quotation default `CFLR-QUO-.YYYY.-.NNN` (ERPNext `QTN-…` fallback); Sales Invoice default `CFLR-INV-.YYYY.-.NNN` (ERPNext `SINV-…` fallback) |
+| 13 | Quotation Print Format **`CFLR Pro-forma Invoice`** titled verbatim *"Pro-forma invoice"* with W1–W5 footer **verbatim** from `AI_LEAD_RESCUE_MANUAL_PRO_FORMA_TEMPLATE_V1.md` § 1; defensive forbidden-wording assertion (`Tax invoice` / `VAT invoice` / `Pay now` / `PayPal accepted` / `Wise accepted` / card-scheme logos / revenue-guarantee language → script aborts) |
+| 14 | Sales Invoice Print Format DRAFT **`CFLR Sales Invoice (Draft)`** with prominent DRAFT label + *"Draft placeholder — VAT/tax treatment pending accountant confirmation. Not for client issue."* banner; same forbidden-wording assertion; explicitly NOT *"Tax invoice"* / *"VAT invoice"* |
+| 15 | Test customer **`Test Buyer (CFLR-DRY-RUN)`** (clearly fake naming) |
+| 16 | Test PDF smoke — ONE Quotation (`docstatus=0` draft, NOT submitted), `LR-SETUP-USD-150` × 1 @ USD 150, rendered via `frappe.get_print()` + `frappe.utils.pdf.get_pdf()`, saved to `/tmp/CFLR-PRODUCTION-SHELL-SMOKE-…pdf`, magic-bytes/size verification; copied to host via `docker compose cp`; PASS/PARTIAL/FAIL verdict criteria |
+| 17 | UI access via SSH tunnel `ssh -L 8081:localhost:8081 anton@5.78.213.185` (sandbox tunnel on `8080` can coexist); 8-item UI spot-check walkthrough |
+| 18 | **25-row verification checklist V1–V25** — including V20 no bank account, V21 no submitted SI, V22 no VAT, V23 no DNS/TLS/SMTP/public exposure, V24 HB-2/HB-3/HB-4 still PENDING, V25 sandbox preservation honoured |
+| 19 | Rollback / cleanup / no-go rules — § 19.1 production-shell rollback; § 19.2 no-go rules; § 19.3 sandbox-removal four-condition gate verbatim from `JE-2026-06-04-1`; § 19.4 12-point hard contract as "what this recipe NEVER does" mapping table |
+| 20 | Operator handoff — 8 evidence blocks Anton pastes back to Cursor for the future execution-closure JE row + bridge STATUS + chat_history entry + closure PR |
+| 21 | Cross-references — 11 source-of-truth docs |
+| 22 | Change log |
+
+### Why this design
+
+The recipe is **sandbox-preserving**: parallel install with separate Docker project name (`erpnext-production` vs `erpnext-sandbox`), separate site (`corpflowai-production.localhost` vs `corpflowai-sandbox.localhost`), separate credentials file (`~/.erpnext-production-credentials` vs `~/.erpnext-sandbox-credentials`), separate host port (`8081` vs `8080`). Both stacks can coexist; sandbox tear-down requires the four-condition gate from `JE-2026-06-04-1`.
+
+The recipe is **defensive**: § 13 + § 14 Print Format scripts run a forbidden-wording assertion on the final rendered HTML and abort before writing to the database if any forbidden token (Tax invoice / VAT invoice / Pay now / PayPal accepted / Wise accepted / Instant checkout / card-scheme logos / revenue-guarantee language) appears. This makes it impossible to accidentally introduce wording prohibited by `JE-2026-06-04-1` § (4) + `BRAND_AND_CONVERSION_DOCTRINE.md`.
+
+The recipe is **idempotent**: every section checks for existing state before creating (Item, Item Price, Letter Head, Print Format, Account, Address, Customer, Quotation via custom remarks tag); safe to re-run if a section fails partway.
+
+The recipe is **secret-disciplined**: secrets generated on the host into `~/.erpnext-production-credentials` (`chmod 600`); only the file path + byte count is reported back to Cursor; never the contents; every script sources from the file, never accepts pasted passwords.
+
+### What this PR does NOT do (the 12-point hard contract from `JE-2026-06-04-1` restated)
+
+This recipe-creation PR (and the eventual recipe execution it describes) explicitly does NOT:
+
+1. Activate ERPNext accounting on production.
+2. Issue any pro-forma / quotation / invoice to a real client.
+3. Submit any Sales Invoice (no GL posting on production).
+4. Activate VAT or use *"Tax invoice"* / *"VAT invoice"* wording anywhere.
+5. Enter any real bank account number / SWIFT / BIC / IBAN / routing / sort-code / card or payment credentials / payment-gateway API keys / client secrets.
+6. Configure DNS, TLS, SMTP, reverse proxy, or any public exposure of the production site.
+7. Change the CorpFlowAI app runtime, Vercel project settings, GitHub workflow files / settings, Postgres / Neon / Prisma schema, n8n, Plausible, Search Console, Telegram, or any client-facing surface.
+8. Invent new env var names.
+9. Print passwords / secrets / DB strings / API tokens / OAuth refresh tokens in chat or logs.
+10. Promote the sandbox database to production.
+11. Import sandbox transactional data into production.
+12. Delete the sandbox by default.
+
+### Next step (when Anton has time + an SSH session)
+
+Anton SSHes into `corpflow-exec-01-u69678` from his own terminal, pulls main to get this PR merged, opens `docs/runbooks/ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md` in `less` on the box (or on his laptop in another tab), and pastes § 1 → § 16 blocks one at a time, sharing each section's evidence output back into the Cursor chat. Cursor (L1) captures the evidence into a new `JE-YYYY-MM-DD-N` execution-closure row and a bridge #249 STATUS comment. The session is expected to take ~30–45 minutes for clean execution. **The recipe is not authorised to run yet by automation — only by Anton at the keyboard, after merge.**
+
+### What stays HELD even after the recipe runs successfully
+
+- **HB-2** Mauritius-licensed accountant CoA review in writing — **PENDING-ACCOUNTANT**.
+- **HB-3** VAT decision recorded in `JOURNAL.md` — **PENDING-ACCOUNTANT**.
+- **HB-4** Real (redacted) MU bank CSV reconciliation cycle — **PENDING-OPERATOR**.
+- **Submitted Sales Invoice on production** (GL posting) — HELD pending HB-2 + HB-3 + HB-4 closure plus a separate future Phase D authorisation row.
+- **First email of an ERPNext-generated PDF to a real client** — HELD pending HB-2 + HB-3 + HB-4 closure plus a separate future Phase D authorisation row.
+- **Sandbox tear-down** — HELD pending the four-condition gate from `JE-2026-06-04-1` (final backup documented + production-shell site reachable + PDF smoke PASS/PARTIAL + explicit Anton DECISION on bridge #249).
+
+### Cross-references
+
+- Authorisation: `docs/decisions/JOURNAL.md` `JE-2026-06-04-1` (PR #298).
+- Execution boundary: `docs/operations/SERVER_AGENT_ACCESS_AND_EXECUTION_BOUNDARY_V1.md` § 5.4 (PR #299, this recipe inherits the L1/L2/L3 collaboration pattern).
+- Recipe: `docs/runbooks/ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md` (this PR).
+- Source patterns (sandbox-proven): `docs/runbooks/ERPNEXT_SANDBOX_INSTALL.md` §§ 5 / 6 / 7.1 / 12 / 15.
+- Pending blockers: `docs/finance/ERPNEXT_PRODUCTION_READINESS_EVALUATION.md` § 7.1.
+- W1–W5 verbatim source: `docs/finance/AI_LEAD_RESCUE_MANUAL_PRO_FORMA_TEMPLATE_V1.md` § 1.
+- Item naming source: `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` § *AI Lead Rescue doctrine*.
+- Bridge coordination: [#249](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249).
+
+---
+
 ## 2026-06-04 — Server agent access & execution boundary v1 — canonical runbook (docs-only — **COMPLETE-AT-PR-MERGE**)
 
 <!-- SERVER_AGENT_ACCESS_AND_EXECUTION_BOUNDARY_V1_HIST -->
