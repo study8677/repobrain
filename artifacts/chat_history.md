@@ -28,6 +28,159 @@
 
 ---
 
+## 2026-06-04 — `ERPNext-Production-Shell-host_name-Fix-1` — execution closure (**COMPLETE**, live verified on box)
+
+<!-- ERPNEXT_PRODUCTION_SHELL_HOST_NAME_FIX_1_CLOSURE_HIST -->
+
+**Status:** Recorded as `JE-2026-06-04-5` in `docs/decisions/JOURNAL.md`. **Verdict per `.cursor/rules/delivery-reality.mdc` § operational completion (4-state model): state 4 — Live verified** on `corpflowai-production.localhost` on `corpflow-exec-01-u69678`. The previous `wkhtmltopdf ConnectionRefusedError` is resolved; recipe § 16-style PDF rendering is now structurally unblocked.
+
+### Why this fix happened now
+
+Anton attempted manual ERPNext classic Letter Head editing in the UI after recipe § 7 wizard bypass completed; classic editing produced visual problems and PDF generation failed with `wkhtmltopdf ConnectionRefusedError`. The Print Designer evaluation (`JE-2026-06-04-4`, Packet 1 sketch) identified the root cause as a Frappe-Docker `host_name` mismatch — backend container cannot resolve the site's loopback hostname because Docker DNS only knows Compose service names (`frontend`, `db`, etc.). Anton authorised the small unblocker packet with `AUTHORISE — ERPNext-Production-Shell-host_name-Fix-1`; Cursor authored Block A (read-only discovery) + Block B (fix + minimal smoke); Anton executed both blocks via L3 SSH from his terminal; output pasted back at 2026-06-04 ~11:03 UTC+4.
+
+### What Cursor authored at L1 (no SSH client on laptop, host-side mutation impossible from this session)
+
+**Block A — Discovery (read-only):**
+- Detected Docker project names (handled both `erpnext-production` recipe name and `corpflowai-production` operator-deployed reality without hard-coding).
+- Confirmed all 9 production-shell containers `Up`; sandbox project still `running(9)`.
+- Probed backend → frontend internal reachability (5 hostname candidates).
+- Showed current `host_name` value via grep-filtered `bench show-config` (filtered for non-secret keys only; raw `show-config` includes `db_password` and was never displayed).
+- Confirmed `wkhtmltopdf --version` is `0.12.6.1 (with patched qt)` — the correct patched version, so the renderer engine itself was fine.
+- Inventoried recipe § 9 / § 11 / § 13 / § 15 / § 16 doctype presence.
+
+**Block B — Fix + minimal smoke:**
+- `bench --site corpflowai-production.localhost set-config host_name "http://frontend:8080"` — writes the key.
+- `bench --site corpflowai-production.localhost clear-cache` — clears Frappe app cache.
+- Renders a 6-line raw-HTML string to PDF via `frappe.utils.pdf.get_pdf()` with zero doctype dependencies (smallest possible blast radius — no Item / Customer / Quotation / Letter Head touched).
+- Copies the resulting PDF out of the backend container to the host filesystem via `docker compose cp`.
+- Re-confirms sandbox preservation via `docker compose ls`.
+
+### What Anton executed at L3 and pasted back
+
+**Block A discovery findings (essential evidence captured into `JE-2026-06-04-5`):**
+
+| Key | Value |
+|---|---|
+| Production Docker project | `corpflowai-production` (NOT `erpnext-production` as recipe § 5 named — operator deployed under a different name; recipe-vs-reality drift to fix in separate small follow-up PR) |
+| Sandbox project | `corpflowai-sandbox` (also drift vs recipe's `erpnext-sandbox`; sandbox preserved) |
+| All 9 production-shell containers status | `Up` for 4 hours; `db` explicitly `(healthy)` |
+| Backend → `http://frontend:8080` | HTTP 200 ✓ |
+| Backend → `http://corpflowai-production-frontend-1:8080` | HTTP 200 ✓ (Compose-generated container DNS name) |
+| `wkhtmltopdf` version inside backend | `0.12.6.1 (with patched qt)` ✓ |
+| Current `host_name` (before fix) | **unset** in `sites/corpflowai-production.localhost/site_config.json` — **root cause confirmed** |
+| Letter Head names present | `['CorpFlowAI Letterhead']` — one Letter Head, operator-created manually with a different name from recipe § 9's `CorpFlowAI Ltd - Production Letter Head` |
+| `CFLR-` prefixed Print Formats | none (recipe § 13 + § 14 never run) |
+| Test customer `Test Buyer (CFLR-DRY-RUN)` | not present (recipe § 15 never run) |
+| Item `LR-SETUP-USD-150` | not present (recipe § 11 never run) |
+| Latent recipe § 16 bug discovered | Quotation query in Block A failed with `pymysql.err.OperationalError: (1054, "Unknown column 'remarks' in 'SELECT'")` — v15 Quotation doctype has `customer_remarks`, not `remarks`; recipe § 16 idempotency tag uses `remarks` and will need a small follow-up fix |
+
+**Block B execution findings (verification evidence):**
+
+| Key | Value |
+|---|---|
+| `bench set-config host_name` exit | 0 (silent success — normal for bench set-config) |
+| `bench clear-cache` exit | 0 (silent success — normal) |
+| `frappe.utils.get_url()` post-fix | `http://frontend:8080` ✓ |
+| `frappe.conf.get('host_name')` post-fix | `http://frontend:8080` ✓ |
+| PDF magic bytes | `25504446` (= `%PDF` ✓ — valid PDF) |
+| PDF size | 18,108 bytes |
+| `SMOKE_VERDICT` | `PASS` |
+| PDF on host filesystem | `/home/anton/host_name_fix_smoke.pdf` (`-rw-r--r-- 1 anton anton 18108 Jun 4 07:03`) |
+| Sandbox containers post-fix | `corpflowai-sandbox running(9)` ✓ (preservation confirmed) |
+
+### Hard limits honoured (Packet 1 — operationally executed)
+
+- Loopback only — production-shell site remained bound to `127.0.0.1:8081` on the host; no public exposure.
+- No DNS / TLS / SMTP changes.
+- No Sales Invoice created or submitted; no GL entry posted; no VAT activated.
+- No real bank account / SWIFT / BIC / IBAN / routing / sort-code / card / payment-gateway credentials entered.
+- No Print Designer installed (deferred to Packet 2 per `JE-2026-06-04-4` § 7.2).
+- No scheduler / queue worker container restart (deferred — interactive PDF render works without; email-attachment PDFs rendered in worker processes may need restart in the next operational cycle to pick up the new `host_name`).
+- No real client invoice / pro-forma issued or emailed.
+- No secrets printed — only file paths, sizes, magic bytes, and Frappe-API readback of the new `host_name` value reported back.
+- Zero CorpFlowAI runtime / Vercel / GitHub workflows / Postgres / Neon / Prisma / n8n / Plausible / Telegram / Search Console / payment-settings / public-surface mutations.
+- Zero ERPNext sandbox mutation (project `corpflowai-sandbox`, site `corpflowai-sandbox.localhost`, credentials file `~/.erpnext-sandbox-credentials` all untouched).
+
+### Follow-up work identified during execution (NOT in this PR; separate small follow-up PRs)
+
+| # | Item | Where |
+|---|---|---|
+| (i) | Recipe doc-drift fix — update Docker project names from `erpnext-production` / `erpnext-sandbox` to `corpflowai-production` / `corpflowai-sandbox` to match operator-deployed reality | `ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md` § 5 |
+| (ii) | Recipe latent-bug fix — change `remarks` to `customer_remarks` in idempotency check (Quotation v15 schema) | `ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md` § 16 |
+| (iii) | Recipe override-file name — operator-deployed reality uses `compose.corpflowai-production-noproxy.yaml`; recipe currently shows `compose.cf-production-port.yaml` | `ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md` § 5 |
+| (iv) | Operator UI cleanup — review the existing `CorpFlowAI Letterhead` Letter Head for script-bleed-through; repair or replace before any real pro-forma rendering | Anton's UI session |
+| (v) | Worker container restart — recommended in next operational cycle so background-rendered PDFs pick up the new `host_name` value | L3 operator action |
+
+None of (i)–(v) are blockers for the COMPLETE verdict on `JE-2026-06-04-5`.
+
+### What stays HELD after this fix
+
+All standing holds from `JE-2026-06-04-3` carry forward. Specifically: HB-2 (accountant CoA review), HB-3 (VAT decision), HB-4 (real MU bank CSV) all PENDING; Phase D go-live HELD; first submitted Sales Invoice HELD; first ERPNext-emailed PDF to a real client HELD; sandbox tear-down HELD pending four-condition gate from `JE-2026-06-04-1`. The Print Designer Packet 2 (full install + Chrome backend + template work, ~3 hours) remains UNAUTHORISED — Anton's separate `AUTHORISE — ERPNext-PrintDesigner-Install-1` chat DECISION required before that work runs.
+
+### Cross-references
+
+- Authorisation: chat DECISION 2026-06-04 *"AUTHORISE — ERPNext-Production-Shell-host_name-Fix-1"*.
+- Evaluation that defined this packet: `docs/finance/ERPNEXT_PRINT_DESIGNER_EVALUATION_V1.md` § 7.1.
+- Production-shell hard contract: `docs/decisions/JOURNAL.md` `JE-2026-06-04-1`.
+- Execution boundary (L1/L2/L3): `docs/operations/SERVER_AGENT_ACCESS_AND_EXECUTION_BOUNDARY_V1.md`.
+- Recipe (still the canonical reference for the full production-shell setup): `docs/runbooks/ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md`.
+- Bridge coordination: [#249](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249).
+
+---
+
+## 2026-06-04 — ERPNext Print Designer evaluation v1 — decision artefact (docs-only — **COMPLETE-AT-PR-MERGE**)
+
+<!-- ERPNEXT_PRINT_DESIGNER_EVALUATION_V1_HIST -->
+
+**Status:** Recorded as `JE-2026-06-04-4` in `docs/decisions/JOURNAL.md`. New canonical doc **`docs/finance/ERPNEXT_PRINT_DESIGNER_EVALUATION_V1.md`** + new `AGENTS.md` Must-read row. **Verdict per `.cursor/rules/delivery-reality.mdc` § docs-only: COMPLETE at PR merge** for the evaluation artefact (operator + agent governance; no customer-visible URL to probe by design). The two future packets defined by the evaluation each report their own STATUS on bridge #249 when authorised + executed.
+
+### Why this evaluation now
+
+Anton attempted to configure ERPNext classic Letter Head / footer / image / script fields manually on `corpflowai-production.localhost`. The result was poor: image scaling unreliable, script/comment text appearing in the printed document, PDF generation failing with `wkhtmltopdf ConnectionRefusedError`, manual UI editing too error-prone for the near-perfect client-facing PDFs CorpFlowAI needs. Anton authorised `ERPNext-Print-Designer-Evaluation-1` to research whether Frappe Print Designer or a similar PDF / document design system should replace classic Letter Head / Print Format editing.
+
+### What Cursor checked (all live web research from L1, no SSH)
+
+| # | Source | What it confirmed |
+|---|---|---|
+| S1 | `frappe/print_designer` GitHub repo + `README.md` | v15-compatible (README warning: *"only compatible with develop and V15 version"*); stable v1.6.7 released 2026-02-10; 421 stars; official Frappe-team-owned. |
+| S2 | Print Designer install guides (techsolvo + YouTube) | Standard install via `bench get-app` + `install-app` + `bench build` + `bench migrate`; installs **into existing site** (not a separate site). |
+| S3 | `frappe/print_designer` PR #399 — Chrome PDF Generator (merged) | Chromium-based PDF backend alternative to wkhtmltopdf: **2.21–2.79× faster**, **2.27–2.73× lower CPU**; toggleable per Print Format; Frappe Cloud explicitly *"not supported for now"* for Chrome backend. |
+| S4 | `frappe/frappe` PR #35812 + Issue #35546 | Chrome backend upstreamed into Frappe core for v16; v15 has it via Print Designer; v16 still downloads Chromium into bench dir rather than using OS package — production should install `chromium-headless-shell` as a system package + set `chromium_binary_path` in `common_site_config.json`. |
+| S5 | `frappe/erpnext` Issue #36018 + `frappe/frappe_docker` Issue #1589 + Aakvatech blog | The `wkhtmltopdf ConnectionRefusedError` is a Frappe-Docker `host_name` mismatch — backend container cannot resolve site's loopback hostname; fix: set `host_name` to a URL the backend container can reach internally (typically `http://frontend:8080`); wkhtmltopdf upstream archived 2023, abandoned. |
+
+### Decision (the verdict matrix this doc records)
+
+| # | Option | Verdict |
+|---|---|---|
+| **A** | Install Print Designer into existing ERPNext production shell | **EVALUATE-SEPARATELY → recommend GO via separate `ERPNext-PrintDesigner-Install-1` authorisation packet** |
+| **B** | Install Print Designer as a separate self-hosted site / container | **NO-GO** (loses access to live doctype data) |
+| **C** | Use Frappe Cloud + Print Designer | **NO-GO for v1** (contradicts `JE-2026-05-29-1` self-hosted decision; Chrome backend "FC not supported"; new paid vendor) |
+| **D** | Build / own a PDF renderer | **NO-GO** (duplicates ERPNext data model + audit trail; high maintenance debt) |
+| **E** | Continue classic ERPNext Letter Head / Print Format editing | **NO-GO for v1.5+ / TRANSITIONAL-only** (wkhtmltopdf abandoned; emergency single-PDF use acceptable if `host_name` is fixed first) |
+
+### Two future-packet shapes defined (NOT authorised by the eval doc)
+
+- **Packet 1 — `ERPNext-Production-Shell-host_name-Fix-1`** (~10 min L3 work) — the emergency unblocker. Anton authorised this immediately after reading the eval; executed 2026-06-04 ~11:03 UTC+4 with verdict COMPLETE (`JE-2026-06-04-5` in this same PR).
+- **Packet 2 — `ERPNext-PrintDesigner-Install-1`** (~3 hours L3 + ~60 min template design) — the long-term answer. **Remains UNAUTHORISED**; requires separate Anton chat DECISION before any installation work.
+
+### Hard limits honoured by this PR
+
+This PR is documentation only. Zero installation, zero ERPNext mutation, zero SSH commands, zero secrets touched, zero edits to `api/` / `lib/` / `components/` / `pages/` / `prisma/` / `middleware*` / `scripts/` / `public/` / `core/engine/` / `.env*` / `.github/` / `vercel.json` / `next.config*` / `package*.json` / `tsconfig*`, zero CorpFlowAI runtime / Vercel / DNS / Postgres / Neon / n8n / Plausible / Telegram / payment / public-surface changes.
+
+### What stays HELD by this evaluation
+
+All standing holds from `JE-2026-06-04-3` carry forward. This evaluation does NOT close HB-2 / HB-3 / HB-4 / Phase D / first submitted Sales Invoice / first ERPNext-emailed PDF to a real client / sandbox tear-down four-condition gate.
+
+### Cross-references
+
+- Evaluation doc: `docs/finance/ERPNEXT_PRINT_DESIGNER_EVALUATION_V1.md`.
+- Companion JE row (host_name fix execution closure landed in same PR): `JE-2026-06-04-5`.
+- Production-shell hard contract: `JE-2026-06-04-1`.
+- Recipe: `docs/runbooks/ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md`.
+- Bridge: [#249](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249).
+
+---
+
 ## 2026-06-04 — ERPNext production-shell setup recipe v1 — PR-B (docs-only — **COMPLETE-AT-PR-MERGE**)
 
 <!-- ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE_V1_HIST -->
