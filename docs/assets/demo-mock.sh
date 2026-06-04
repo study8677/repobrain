@@ -16,19 +16,19 @@ c_off="\033[0m"
 echo
 
 if [[ "$QUESTION" == *"calls"* || "$QUESTION" == *"call "* ]]; then
-  printf "${c_cyan}▸ Router: GRAPH=yes → querying GitNexus call chain${c_off}\n"
+  printf "${c_cyan}▸ Router: selecting relevant modules → refresh_pipeline${c_off}\n"
   sleep 0.5
   printf "${c_cyan}▸ Reading agents/refresh_pipeline.md${c_off}\n"
   sleep 0.4
   echo
-  printf "${c_green}✓ Answer (graph + 2 sources):${c_off}\n"
+  printf "${c_green}✓ Answer (2 sources):${c_off}\n"
   echo
   echo "  refresh_pipeline.run() is called from:"
   echo
   printf "    1. _cli_entry.ag_refresh()             ${c_under}engine/antigravity_engine/_cli_entry.py:142${c_off}\n"
   printf "    2. mcp_server.refresh_project()        ${c_under}engine/antigravity_engine/hub/mcp_server.py:88${c_off}\n"
   echo
-  printf "  ${c_dim}Confidence: high · Tree-sitter parse + agent doc cross-check${c_off}\n"
+  printf "  ${c_dim}Confidence: high · agent doc + live source cross-check${c_off}\n"
   echo
   exit 0
 fi

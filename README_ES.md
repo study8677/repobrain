@@ -110,7 +110,7 @@ Tiempo: pocos minutos en repos pequeños, más en repos grandes. Requiere `ag-se
 
 ### `ag-ask` — Q&A enrutada sobre el código
 
-**La razón principal por la que existe este plugin**. Enruta tu pregunta al ModuleAgent adecuado (y a GitAgent / GitNexus cuando aplica), y devuelve una respuesta fundamentada en el código real, con rutas de archivo y números de línea. Úsalo **antes** de hacer grep manual o leer archivos — es más rápido y más preciso. Buenas formas de pregunta: "¿dónde se define/maneja X?", "¿por qué se hizo Y de esta forma?", "¿cómo funciona el flujo de auth?", "¿qué depende del módulo Z?".
+**La razón principal por la que existe este plugin**. Enruta tu pregunta al ModuleAgent adecuado (y a GitAgent cuando aplica), y devuelve una respuesta fundamentada en el código real, con rutas de archivo y números de línea. Úsalo **antes** de hacer grep manual o leer archivos — es más rápido y más preciso. Buenas formas de pregunta: "¿dónde se define/maneja X?", "¿por qué se hizo Y de esta forma?", "¿cómo funciona el flujo de auth?", "¿qué depende del módulo Z?".
 
 ```
 # Claude Code
@@ -212,11 +212,9 @@ ag init mi-proyecto && cd mi-proyecto
        └──► ag-mcp         Servidor MCP → Claude Code llama directamente
 ```
 
-**Clúster Multi-Agente Dinámico** — Durante `ag-refresh`, el motor usa **agrupación funcional inteligente**: archivos agrupados por relaciones de import, co-ubicación en directorios y prefijos de nombre. El código fuente se pre-carga directamente en el contexto del agente (sin tool calls), y los artefactos de build se filtran automáticamente. Cada sub-agente analiza ~30K tokens de código enfocado en 1 llamada LLM y produce un **documento de conocimiento Markdown completo** (`agents/*.md`). Módulos grandes generan múltiples agent docs en paralelo (uno por grupo, sin fusión ni pérdida de información). Un **Map Agent** lee todos los docs y genera `map.md` — un índice de enrutamiento. Durante `ag-ask`, Router lee `map.md` para seleccionar módulos relevantes, luego alimenta sus agent docs a los agentes de respuesta. Para preguntas estructurales (cadenas de llamadas, dependencias, análisis de impacto), el Router consulta automáticamente el grafo de código [GitNexus](https://github.com/abhigyanpatwari/GitNexus). **Completamente agnóstico al lenguaje** — detección de módulos por estructura de directorios pura, análisis de código realizado íntegramente por LLMs. Funciona con cualquier lenguaje de programación.
+**Clúster Multi-Agente Dinámico** — Durante `ag-refresh`, el motor usa **agrupación funcional inteligente**: archivos agrupados por relaciones de import, co-ubicación en directorios y prefijos de nombre. El código fuente se pre-carga directamente en el contexto del agente (sin tool calls), y los artefactos de build se filtran automáticamente. Cada sub-agente analiza ~30K tokens de código enfocado en 1 llamada LLM y produce un **documento de conocimiento Markdown completo** (`agents/*.md`). Módulos grandes generan múltiples agent docs en paralelo (uno por grupo, sin fusión ni pérdida de información). Un **Map Agent** lee todos los docs y genera `map.md` — un índice de enrutamiento. Durante `ag-ask`, Router lee `map.md` para seleccionar módulos relevantes, luego alimenta sus agent docs a los agentes de respuesta. **Completamente agnóstico al lenguaje** — detección de módulos por estructura de directorios pura, análisis de código realizado íntegramente por LLMs. Funciona con cualquier lenguaje de programación.
 
 **GitAgent** — Un agente dedicado a analizar el historial git — entiende quién cambió qué y por qué.
-
-**Enriquecimiento de Grafos GitNexus (opcional)** — Instala [GitNexus](https://github.com/abhigyanpatwari/GitNexus) para desbloquear respuestas enriquecidas con grafos. El Router LLM decide cuándo una pregunta necesita análisis estructural (cadenas de llamadas, dependencias, impacto) y consulta GitNexus automáticamente — combinando datos precisos del grafo con comprensión semántica de los agent docs.
 
 **Feedback de auditoría NLPM** — Este repositorio se ha beneficiado de [NLPM](https://github.com/xiaolai/nlpm-for-claude), un linter de programación en lenguaje natural para plugins de Claude Code, skills y definiciones de agentes creado por [xiaolai](https://github.com/xiaolai). Su auditoría ayudó a encontrar mejoras útiles en frontmatter de skills e higiene de dependencias.
 
@@ -255,7 +253,7 @@ antigravity-workspace-template/
         │   ├── contracts.py #   Modelos Pydantic: claims, evidencia, estado de refresh
         │   ├── ask_pipeline.py    # facts estructurados + swarm legacy
         │   ├── refresh_pipeline.py # orquestación de refresh basado en evidencia
-        │   ├── ask_tools.py #   Exploración de código + herramientas GitNexus
+        │   ├── ask_tools.py #   Exploración de código
         │   ├── scanner.py   #   Escaneo multi-lenguaje de proyecto
         │   ├── module_grouping.py # agrupación funcional inteligente
         │   └── mcp_server.py#   Servidor MCP (ag-mcp)
@@ -300,7 +298,7 @@ Crea `AGENTS.md` (reglas de comportamiento autoritativas), archivos bootstrap de
 ag-refresh --workspace mi-proyecto
 ```
 
-**Pipeline de 9 pasos:**
+**Pipeline de 8 pasos:**
 1. Escanear codebase (lenguajes, frameworks, estructura)
 2. Pipeline multi-agente genera `conventions.md`
 3. Generar `structure.md` — árbol de archivos agnóstico al lenguaje con conteos de líneas
@@ -309,7 +307,6 @@ ag-refresh --workspace mi-proyecto
 6. **Análisis completo por LLM** — archivos agrupados por grafo de imports + directorio + prefijo, pre-cargados en contexto (~30K tokens por sub-agente), artefactos de build filtrados automáticamente. Cada sub-agente lee el código fuente completo y produce un **documento de conocimiento Markdown completo** (`agents/*.md`). Módulos grandes generan múltiples agent docs (uno por grupo, sin fusión). Control global de concurrencia API previene rate-limiting. **Completamente agnóstico al lenguaje** — funciona con cualquier lenguaje de programación.
 7. **RefreshGitAgent** analiza historial git, genera `_git_insights.md`
 8. **Map Agent** lee todos los agent docs → genera `map.md` (índice de enrutamiento de módulos con descripciones y temas clave)
-9. **Indexación GitNexus** (opcional) — ejecuta `gitnexus analyze` para construir un grafo de código Tree-sitter (16 lenguajes, cadenas de llamadas, dependencias). Se omite automáticamente si GitNexus no está instalado.
 
 ### 3. `ag-ask` — Q&A basado en Router
 
@@ -317,9 +314,7 @@ ag-refresh --workspace mi-proyecto
 ag-ask "¿Cómo funciona la autenticación en este proyecto?"
 ```
 
-El pipeline de ask usa una **arquitectura de doble vía**:
-- **Vía semántica**: Router lee `map.md` → selecciona módulos → lee `agents/*.md` → LLM responde con referencias al código. Múltiples agent docs se leen en paralelo, luego un Synthesizer combina las respuestas.
-- **Vía de grafo** (automática): El Router LLM decide si la pregunta necesita análisis estructural → consulta GitNexus para cadenas de llamadas, dependencias o impacto → inyecta datos del grafo en el contexto. Se omite silenciosamente si GitNexus no está instalado.
+El pipeline de ask usa una **vía semántica**: Router lee `map.md` → selecciona módulos → lee `agents/*.md` → LLM responde con referencias al código. Múltiples agent docs se leen en paralelo, luego un Synthesizer combina las respuestas.
 
 Si los agent docs aún no se han generado, recurre al swarm legacy Router → ModuleAgent/GitAgent.
 
@@ -381,20 +376,18 @@ El núcleo del motor es **un clúster de Agents creado dinámicamente por módul
  ag-refresh:                                 ag-ask:
 
  Para cada módulo:                           Router (lee map.md)
- ┌ Agrupar archivos por grafo de imports       ├── GRAPH: no → leer agents/*.md → respuesta LLM
- ├ Pre-cargar ~30K tokens por sub-agente       └── GRAPH: yes → consultar grafo GitNexus
- ├ Filtrar artefactos de build                       → datos de grafo + agents/*.md → respuesta LLM
+ ┌ Agrupar archivos por grafo de imports       └── leer agents/*.md → respuesta LLM
+ ├ Pre-cargar ~30K tokens por sub-agente
+ ├ Filtrar artefactos de build
  ├ Sub-agentes → documentos Markdown agent
  ├ agents/{module}.md (o /group_N.md)
- ├ Map Agent → map.md
- └ GitNexus analyze (opcional)
+ └ Map Agent → map.md
 ```
 
 **Innovaciones clave:**
 - **LLM como analizador**: Sin AST ni regex — el código fuente se alimenta directamente al LLM. Funciona con cualquier lenguaje de programación de forma inmediata.
 - **Agrupación inteligente**: Archivos agrupados por relaciones de import, co-ubicación en directorios y prefijos de nombre. Artefactos de build filtrados automáticamente. Límite duro de caracteres (800K) previene desbordamiento de contexto.
 - **Sin pérdida de información**: Módulos grandes producen múltiples `agent.md` (uno por grupo) — sin fusión ni compresión. Durante `ag-ask`, múltiples agent docs son leídos por LLMs en paralelo, luego un Synthesizer combina las respuestas.
-- **Respuestas enriquecidas con grafos**: El Router LLM decide automáticamente cuándo una pregunta necesita datos estructurales (cadenas de llamadas, dependencias, impacto) y consulta GitNexus. Combina relaciones precisas del grafo con comprensión semántica.
 - **Control global de concurrencia API**: `AG_API_CONCURRENCY` limita las llamadas LLM simultáneas entre todos los módulos, previniendo rate-limiting.
 - **Detección de módulos agnóstica al lenguaje**: Estructura de directorios pura — sin `__init__.py` ni marcadores específicos de lenguaje.
 
@@ -441,34 +434,6 @@ Configura `MCP_ENABLED=true` para hacer visibles los servidores y
 automáticamente. Los servidores MCP por stdio heredan el entorno del proceso y
 los valores `env` configurados, así que trátalos como código con permisos
 locales.
-</details>
-
-<details>
-<summary><b>Integración GitNexus</b> — Inteligencia profunda de código opcional</summary>
-
-[GitNexus](https://github.com/abhigyanpatwari/GitNexus) es una **herramienta de terceros** que construye un grafo de conocimiento de código usando Tree-sitter AST. Antigravity proporciona hooks de integración incorporados — cuando instalas GitNexus por separado, `ag-ask` lo detecta automáticamente y desbloquea tres herramientas adicionales:
-
-| Herramienta | Función |
-|:------------|:--------|
-| `gitnexus_query` | Búsqueda híbrida (BM25 + semántica) — superior a grep para consultas semánticas |
-| `gitnexus_context` | Vista 360° de un símbolo: llamadores, llamados, referencias, definición |
-| `gitnexus_impact` | Análisis de radio de explosión — ¿qué se rompe si cambias un símbolo? |
-
-> **Nota:** GitNexus **NO** viene incluido con Antigravity. Antigravity funciona completamente sin él — GitNexus es una mejora opcional.
-
-```bash
-# 1. Instalar GitNexus (requiere Node.js)
-npm install -g gitnexus
-
-# 2. Indexar tu proyecto
-cd my-project
-gitnexus analyze .
-
-# 3. Usar ag-ask como siempre — las herramientas GitNexus se detectan automáticamente
-ag-ask "¿Cómo funciona el flujo de autenticación?"
-```
-
-**Cómo funciona:** `ask_tools.py` verifica si el CLI `gitnexus` está. Si lo encuentra, registra las herramientas para cada ModuleAgent. Si no, simplemente no aparecen — cero overhead.
 </details>
 
 <details>
@@ -595,13 +560,6 @@ Reporte completo (datos, metodología, tablas por celda, advertencias):
         <b>goodmorning10</b>
       </a><br/>
       <sub>Mejora de carga de contexto en <code>ag ask</code> — añadió CONTEXT.md, AGENTS.md y memory/*.md como fuentes de contexto (#29)</sub>
-    </td>
-    <td align="center" width="20%">
-      <a href="https://github.com/abhigyanpatwari">
-        <img src="https://github.com/abhigyanpatwari.png" width="80" /><br/>
-        <b>Abhigyan Patwari</b>
-      </a><br/>
-      <sub><a href="https://github.com/abhigyanpatwari/GitNexus">GitNexus</a> — grafo de conocimiento de código integrado nativamente en <code>ag ask</code> para búsqueda de símbolos, grafos de llamadas y análisis de impacto</sub>
     </td>
     <td align="center" width="20%">
       <a href="https://github.com/BBear0115">

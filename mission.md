@@ -16,7 +16,3 @@ Antigravity centers on the `ag-refresh` + `ag-ask` workflow:
 - Other IDEs can use the shared context files, raw CLI commands, or `ag-mcp`.
 - Documentation, version metadata, and CI checks describe the same product
   contract.
-
-## Note
-For a generated downstream project, replace this file with that project's own
-mission.

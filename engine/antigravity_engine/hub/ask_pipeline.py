@@ -14,7 +14,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from antigravity_engine.hub._constants import SKIP_DIRS
+from antigravity_engine.hub._constants import (
+    AGENT_MD_FALLBACK_MARKER,
+    AGENT_MD_FALLBACK_SENTINEL,
+    SKIP_DIRS,
+)
 from antigravity_engine.hub.contracts import (
     ClaimVerification,
     ModuleClaim,
@@ -400,13 +404,12 @@ async def _ask_with_structured_facts(workspace: Path, question: str) -> str | No
     return await _ask_with_legacy_facts(workspace, question)
 
 
-def _parse_router_output(output: str) -> tuple[list[str], bool]:
+def _parse_router_output(output: str) -> list[str]:
     """Parse the Router agent's structured output.
 
     Expected format::
 
         MODULES: module1, module2
-        GRAPH: yes
 
     Falls back to treating each line as a module name if the format
     is not recognized (backward compatible with old Router output).
@@ -415,61 +418,25 @@ def _parse_router_output(output: str) -> tuple[list[str], bool]:
         output: Raw Router agent output text.
 
     Returns:
-        Tuple of (raw module name list, needs_graph boolean).
+        List of raw module names.
     """
     modules: list[str] = []
-    needs_graph = False
 
     for line in output.splitlines():
         stripped = line.strip()
-        upper = stripped.upper()
-
-        if upper.startswith("MODULES:"):
+        if stripped.upper().startswith("MODULES:"):
             raw = stripped[len("MODULES:"):].strip()
             modules = [m.strip().strip("`*") for m in raw.split(",") if m.strip()]
-        elif upper.startswith("GRAPH:"):
-            val = stripped[len("GRAPH:"):].strip().lower()
-            needs_graph = val in ("yes", "true", "1")
 
     # Fallback: if no MODULES: line found, treat each line as a module name
     if not modules:
         modules = [
             line.strip().strip("- *`#")
             for line in output.strip().splitlines()
-            if line.strip() and not line.strip().upper().startswith("GRAPH:")
+            if line.strip()
         ]
 
-    return modules, needs_graph
-
-
-def _query_graph_for_question(workspace: Path, question: str) -> str:
-    """Query GitNexus code knowledge graph for structural information.
-
-    Calls ``gitnexus query`` with the user's question to get call chains,
-    dependency relationships, and symbol context. Silently returns empty
-    string if GitNexus is not installed or not indexed.
-
-    Args:
-        workspace: Project root directory.
-        question: Natural language question.
-
-    Returns:
-        Graph query results as formatted string, or empty string.
-    """
-    from antigravity_engine.hub.ask_tools import (
-        _is_gitnexus_available,
-        _run_gitnexus,
-    )
-
-    if not _is_gitnexus_available():
-        return ""
-
-    # Use gitnexus query for hybrid search (BM25 + semantic)
-    result = _run_gitnexus(workspace.resolve(), ["query", question])
-    if not result or "error" in result.lower()[:50]:
-        return ""
-
-    return result
+    return modules
 
 
 def _match_to_known_modules(
@@ -598,6 +565,28 @@ def _load_project_context(
     return "## Project Context (project-wide reference docs)\n\n" + "\n\n".join(parts)
 
 
+def _is_fallback_doc(content: str) -> bool:
+    """True if an agent.md is an auto-generated refresh fallback (a bare file
+    listing written when a module's LLM analysis failed), not real knowledge."""
+    return AGENT_MD_FALLBACK_MARKER in content or AGENT_MD_FALLBACK_SENTINEL in content
+
+
+def _prepend_degradation_banner(
+    answer: str | None, degraded_modules: list[str]
+) -> str | None:
+    """Prefix a visible warning when some answered modules had only fallback
+    (un-analyzed) knowledge, so an answer is never presented as fully grounded."""
+    if not answer or not degraded_modules:
+        return answer
+    mods = ", ".join(degraded_modules)
+    banner = (
+        f"> ⚠ Incomplete knowledge for module(s): {mods}. These were not fully "
+        "analyzed in the last refresh, so the answer may be unreliable for them — "
+        "run `ag-refresh --failed-only` to fix.\n\n"
+    )
+    return banner + answer
+
+
 async def _ask_with_agent_md(workspace: Path, question: str) -> str | None:
     """Answer a question by routing through map.md → agent.md files.
 
@@ -646,23 +635,11 @@ async def _ask_with_agent_md(workspace: Path, question: str) -> str | None:
     router_prompt = f"""\
 You are a routing agent for a codebase Q&A system.
 
-Given the question and module map below, do TWO things:
-
-1. Select 1-3 modules most relevant to this question.
-2. Decide whether this question needs **structural graph analysis** — i.e.,
-   call chains, dependency graphs, import relationships, impact analysis,
-   cross-module data flow, or symbol lookup. If the question is about
-   WHAT code does or WHY it's designed that way, graph is NOT needed.
-   If it's about WHO calls WHOM, dependencies, or tracing execution flow,
-   graph IS needed.
+Given the question and module map below, select the 1-3 modules most relevant
+to this question.
 
 Output format (strict):
 MODULES: module1, module2
-GRAPH: yes
-
-Or:
-MODULES: module1
-GRAPH: no
 
 Question: {question}
 
@@ -671,7 +648,7 @@ Module Map:
 """
     router_agent = Agent(
         name="QuickRouter",
-        instructions="Output ONLY in the exact format: MODULES: ... and GRAPH: yes/no. No other text.",
+        instructions="Output ONLY in the exact format: MODULES: module1, module2. No other text.",
         model=model,
     )
     ask_timeout = float(os.environ.get("AG_ASK_TIMEOUT_SECONDS", "240"))
@@ -684,11 +661,12 @@ Module Map:
             stream_enabled=settings.STREAM_ENABLED,
             progress_label="Routing question via map.md...",
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning("ask: router agent failed: %s", exc)
         return None
 
-    # Parse Router output: MODULES + GRAPH decision
-    raw_modules, needs_graph = _parse_router_output(router_output)
+    # Parse Router output: MODULES line
+    raw_modules = _parse_router_output(router_output)
 
     # Collect known module names from agents/ directory
     agents_dir = ag_dir / "agents"
@@ -702,10 +680,13 @@ Module Map:
 
     selected_modules = _match_to_known_modules(raw_modules, known_modules)
     if not selected_modules:
+        logger.warning(
+            "ask: router output matched no known modules (raw=%s)", raw_modules
+        )
         return None
 
     print(
-        f"[2/4] Selected modules: {', '.join(selected_modules)} | graph: {'yes' if needs_graph else 'no'}",
+        f"[2/4] Selected modules: {', '.join(selected_modules)}",
         file=sys.stderr,
     )
 
@@ -730,16 +711,26 @@ Module Map:
                     continue
 
     if not module_knowledge:
+        logger.warning(
+            "ask: selected modules had no readable agent docs: %s", selected_modules
+        )
         return None
 
-    # Step 2.5: Query GitNexus graph if Router decided it's needed
-    graph_context = ""
-    if needs_graph:
-        graph_context = _query_graph_for_question(workspace, question)
-        if graph_context:
-            print(f"[2.5/4] Graph enrichment: {len(graph_context)} chars", file=sys.stderr)
+    # Detect modules whose knowledge doc is an auto-generated refresh fallback
+    # (a bare file listing, not real analysis) so it is never silently served
+    # to the user as factual, grounded knowledge.
+    degraded_modules = [
+        name for name, content in module_knowledge if _is_fallback_doc(content)
+    ]
+    if degraded_modules:
+        logger.warning(
+            "ask: %d selected module doc(s) are refresh fallbacks (no LLM "
+            "analysis): %s",
+            len(degraded_modules),
+            ", ".join(degraded_modules),
+        )
 
-    # Step 2.6: Load project-level docs so the synthesizer can answer
+    # Step 2.5: Load project-level docs so the synthesizer can answer
     # project-wide questions (conventions, CI, dependencies, module
     # relationships) even when per-module agent docs don't carry them.
     project_context = _load_project_context(ag_dir, map_content=map_content)
@@ -754,22 +745,20 @@ tooling, lint/format/type-check, CI, docs, dependencies, supported environments,
 or how modules relate to each other. If the project context already answers the
 question, answer from it even if the per-module knowledge does not."""
 
-    # Step 3: Answer from agent.md content (+ optional graph context)
+    if degraded_modules:
+        project_section += (
+            "\n\nIMPORTANT: The knowledge for these module(s) is an auto-generated "
+            "fallback — a bare file listing, NOT real analysis: "
+            f"{', '.join(degraded_modules)}. Do not present that file list as findings. "
+            "Use the code-inspection tools to read the listed files directly; if you "
+            "cannot ground the answer in real source, say the module knowledge is "
+            "incomplete."
+        )
+
+    # Step 3: Answer from agent.md content
     print(f"[3/4] Reading {len(module_knowledge)} agent docs...", file=sys.stderr)
     ask_api_concurrency = int(os.environ.get("AG_API_CONCURRENCY", "5"))
     _ask_api_sem = asyncio.Semaphore(ask_api_concurrency)
-
-    # Build graph section for prompts (empty string if no graph data)
-    graph_section = ""
-    if graph_context:
-        graph_section = f"""
-
-Structural relationships (from code knowledge graph — precise call/import/dependency data):
-{graph_context[:30_000]}
-
-IMPORTANT: The "module knowledge" describes WHAT the code does (semantic understanding).
-The "structural relationships" show WHO calls/imports WHOM (precise graph data).
-Combine both sources for a complete answer. Prefer graph data for structural questions."""
 
     if len(module_knowledge) == 1:
         # Single agent.md → one LLM call
@@ -802,7 +791,6 @@ Question: {question}
 Module: {mod_name}
 Knowledge:
 {knowledge[:80_000]}
-{graph_section}
 """
         answer_agent = Agent(
             name="AnswerAgent",
@@ -822,8 +810,9 @@ Knowledge:
                 progress_label="Generating answer from agent.md...",
             )
             print("[4/4] Answer synthesized.", file=sys.stderr)
-            return answer
-        except Exception:
+            return _prepend_degradation_banner(answer, degraded_modules)
+        except Exception as exc:
+            logger.warning("ask: answer agent failed: %s", exc)
             return None
     else:
         # Multiple agent.md → parallel LLM calls (with concurrency limit) → synthesizer
@@ -855,7 +844,6 @@ Question: {question}
 Module: {mod_name}
 Knowledge:
 {knowledge[:60_000]}
-{graph_section}
 """
             agent = Agent(
                 name=f"Reader_{mod_name}",
@@ -876,7 +864,8 @@ Knowledge:
                         progress_label=None,
                     )
                 return mod_name, answer
-            except Exception:
+            except Exception as exc:
+                logger.warning("ask: reader for module %s failed: %s", mod_name, exc)
                 return mod_name, None
 
         partial_answers = await asyncio.gather(
@@ -892,11 +881,12 @@ Knowledge:
         ]
 
         if not valid_answers:
+            logger.warning("ask: no per-module reader produced a usable answer")
             return None
 
         if len(valid_answers) == 1:
             print("[4/4] Answer synthesized.", file=sys.stderr)
-            return valid_answers[0][1]
+            return _prepend_degradation_banner(valid_answers[0][1], degraded_modules)
 
         # Synthesize multiple answers
         synth_parts = "\n\n---\n\n".join(
@@ -929,10 +919,11 @@ Partial answers:
                 progress_label="Synthesizing answers from multiple modules...",
             )
             print("[4/4] Answer synthesized from multiple modules.", file=sys.stderr)
-            return answer
-        except Exception:
+            return _prepend_degradation_banner(answer, degraded_modules)
+        except Exception as exc:
+            logger.warning("ask: multi-module synthesis failed: %s", exc)
             # Return the first valid answer as fallback
-            return valid_answers[0][1]
+            return _prepend_degradation_banner(valid_answers[0][1], degraded_modules)
 
 
 async def _ask_with_legacy_facts(workspace: Path, question: str) -> str | None:

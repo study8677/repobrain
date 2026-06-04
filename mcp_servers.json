@@ -75,15 +75,6 @@
       }
     },
     {
-      "name": "gitnexus",
-      "description": "Code knowledge graph — symbol search, call graphs, impact analysis (requires: npm install -g gitnexus && gitnexus analyze .)",
-      "transport": "stdio",
-      "command": "gitnexus",
-      "args": ["mcp"],
-      "enabled": false,
-      "env": {}
-    },
-    {
       "name": "custom-http",
       "description": "Example HTTP/Streamable HTTP server",
       "transport": "http",

@@ -17,7 +17,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from antigravity_engine.hub._constants import SOURCE_CODE_EXTS, WORKSPACE_ROOT_MODULE_ID
+from antigravity_engine.hub._constants import (
+    AGENT_MD_FALLBACK_MARKER,
+    AGENT_MD_FALLBACK_SENTINEL,
+    SOURCE_CODE_EXTS,
+    WORKSPACE_ROOT_MODULE_ID,
+)
 from antigravity_engine.hub.contracts import (
     EvidenceSpan,
     FailureRecord,
@@ -672,19 +677,12 @@ async def refresh_pipeline(workspace: Path, quick: bool = False, failed_only: bo
         print("[8/8] Scan-only mode: map generation skipped.", file=sys.stderr)
         refresh_status.stages["module_registry"] = "skipped"
 
-    # -- Step 9: GitNexus code graph indexing (optional) --
-    _run_gitnexus_analyze(workspace, refresh_status)
-
     current_sha = _get_head_sha(workspace)
     if current_sha:
         sha_file.write_text(current_sha, encoding="utf-8")
 
-    # GitNexus is optional — exclude it from overall status calculation
-    non_optional_stages = {
-        k: v for k, v in refresh_status.stages.items() if k != "gitnexus"
-    }
     refresh_status.overall_status = _aggregate_states(
-        list(non_optional_stages.values()) + list(refresh_status.modules.values()),
+        list(refresh_status.stages.values()) + list(refresh_status.modules.values()),
         skipped_state="success",
     )
     _write_refresh_status(ag_dir, refresh_status)
@@ -1373,9 +1371,10 @@ def _build_agent_md_fallback(
         Markdown string with file listing.
     """
     lines = [
+        AGENT_MD_FALLBACK_MARKER,
         f"# Module: {module} — Group: {group_name}",
         "",
-        "(Auto-generated fallback — LLM analysis was unavailable)",
+        AGENT_MD_FALLBACK_SENTINEL,
         "",
         "## Source Files",
         "",
@@ -1716,72 +1715,6 @@ def _export_normalized_graph_store(ag_dir: Path, graph: dict[str, Any]) -> None:
         ("\n".join(edges_lines) + "\n") if edges_lines else "",
         encoding="utf-8",
     )
-
-
-def _run_gitnexus_analyze(workspace: Path, refresh_status: RefreshStatus) -> None:
-    """Run ``gitnexus analyze`` to build/update the code knowledge graph.
-
-    Silently skips if the ``gitnexus`` CLI is not installed. This step is
-    optional — the ask pipeline degrades gracefully without it.
-
-    Args:
-        workspace: Project root directory.
-        refresh_status: Mutable refresh status to record outcome.
-    """
-    try:
-        result = subprocess.run(
-            ["gitnexus", "--version"],
-            capture_output=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            print("[9/9] GitNexus not installed; skipping code graph indexing.", file=sys.stderr)
-            refresh_status.stages["gitnexus"] = "skipped"
-            return
-    except FileNotFoundError:
-        print("[9/9] GitNexus not installed; skipping code graph indexing.", file=sys.stderr)
-        refresh_status.stages["gitnexus"] = "skipped"
-        return
-
-    print("[9/9] Running GitNexus code graph indexing...", file=sys.stderr)
-    try:
-        gitnexus_timeout = int(os.environ.get("AG_GITNEXUS_TIMEOUT_SECONDS", "300"))
-        result = subprocess.run(
-            ["gitnexus", "analyze", str(workspace.resolve())],
-            capture_output=True,
-            text=True,
-            cwd=str(workspace),
-            check=False,
-            timeout=gitnexus_timeout,
-        )
-        if result.returncode == 0:
-            print("  ✓ GitNexus code graph indexed", file=sys.stderr)
-            refresh_status.stages["gitnexus"] = "success"
-        else:
-            stderr_snippet = (result.stderr or "")[:200].strip()
-            print(f"  ⚠ GitNexus analyze failed: {stderr_snippet}", file=sys.stderr)
-            _mark_stage_failure(
-                refresh_status,
-                stage="gitnexus",
-                reason=stderr_snippet or "non-zero exit code",
-                partial=True,
-            )
-    except subprocess.TimeoutExpired:
-        print("  ⚠ GitNexus analyze timed out", file=sys.stderr)
-        _mark_stage_failure(
-            refresh_status,
-            stage="gitnexus",
-            reason="timeout",
-            partial=True,
-        )
-    except Exception as exc:
-        print(f"  ⚠ GitNexus analyze error: {exc}", file=sys.stderr)
-        _mark_stage_failure(
-            refresh_status,
-            stage="gitnexus",
-            reason=str(exc),
-            partial=True,
-        )
 
 
 def _get_head_sha(workspace: Path) -> str | None:

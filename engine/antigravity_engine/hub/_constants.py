@@ -138,3 +138,15 @@ FRAMEWORK_MARKERS: dict[str, str] = {
     "setup.cfg": "Python (setup.cfg)",
     "tox.ini": "Tox",
 }
+
+# ---------------------------------------------------------------------------
+# Fallback knowledge-doc markers
+# ---------------------------------------------------------------------------
+
+# Written at the top / in the body of an auto-generated fallback agent.md.
+# A fallback doc is emitted when a module's LLM analysis fails or times out and
+# contains only a bare file listing — NOT real analyzed knowledge. The ask
+# pipeline detects either marker so a degraded module is never silently served
+# as if it were factual, grounded knowledge.
+AGENT_MD_FALLBACK_MARKER = "<!-- ag:status=fallback -->"
+AGENT_MD_FALLBACK_SENTINEL = "(Auto-generated fallback — LLM analysis was unavailable)"

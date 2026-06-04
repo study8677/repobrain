@@ -32,108 +32,6 @@ _MAX_READ_LINES = 200
 
 
 # ---------------------------------------------------------------------------
-# GitNexus integration (optional)
-# ---------------------------------------------------------------------------
-
-def _is_gitnexus_available() -> bool:
-    """Check if the ``gitnexus`` CLI is installed and reachable."""
-    try:
-        subprocess.run(
-            ["gitnexus", "--version"],
-            capture_output=True,
-            timeout=5,
-            check=False,
-        )
-        return True
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False
-
-
-def _run_gitnexus(workspace: Path, args: list[str], timeout: int = 30) -> str:
-    """Run a gitnexus CLI command and return stdout.
-
-    Args:
-        workspace: Project root.
-        args: CLI arguments after ``gitnexus``.
-        timeout: Seconds before giving up.
-
-    Returns:
-        stdout text, or an error string.
-    """
-    try:
-        result = subprocess.run(
-            ["gitnexus", *args],
-            capture_output=True,
-            text=True,
-            cwd=str(workspace),
-            timeout=timeout,
-            check=False,
-        )
-        if result.returncode != 0:
-            err = result.stderr.strip() or "unknown error"
-            return f"GitNexus error: {err}"
-        return result.stdout.strip() or "(no output)"
-    except FileNotFoundError:
-        return "GitNexus is not installed."
-    except subprocess.TimeoutExpired:
-        return "GitNexus query timed out."
-
-
-def _create_gitnexus_tools(workspace: Path) -> dict[str, Callable]:
-    """Create GitNexus-powered tools if gitnexus is installed.
-
-    Args:
-        workspace: Absolute path to the project root.
-
-    Returns:
-        Dict of tool-name to callable, empty if gitnexus unavailable.
-    """
-    if not _is_gitnexus_available():
-        return {}
-
-    ws = workspace.resolve()
-
-    def gitnexus_query(query: str) -> str:
-        """Search the project's code knowledge graph using hybrid search.
-
-        Args:
-            query: Natural-language or symbol-name query.
-
-        Returns:
-            Ranked search results with file paths, symbols, and context.
-        """
-        return _run_gitnexus(ws, ["query", query])
-
-    def gitnexus_context(symbol: str) -> str:
-        """Get a 360-degree view of a symbol: definition, callers, callees, and references.
-
-        Args:
-            symbol: Fully-qualified or short symbol name.
-
-        Returns:
-            Symbol definition, categorized references, and relationships.
-        """
-        return _run_gitnexus(ws, ["context", symbol])
-
-    def gitnexus_impact(symbol: str) -> str:
-        """Analyze the blast radius of changing a symbol.
-
-        Args:
-            symbol: The symbol to analyze impact for.
-
-        Returns:
-            Impact analysis with affected files and confidence scores.
-        """
-        return _run_gitnexus(ws, ["impact", symbol])
-
-    return {
-        "gitnexus_query": gitnexus_query,
-        "gitnexus_context": gitnexus_context,
-        "gitnexus_impact": gitnexus_impact,
-    }
-
-
-# ---------------------------------------------------------------------------
 # Tool factory — returns workspace-bound tool functions
 # ---------------------------------------------------------------------------
 
@@ -475,10 +373,6 @@ def create_ask_tools(workspace: Path) -> dict[str, Callable]:
         "summarize_directory": summarize_directory,
         "read_binary_stub": read_binary_stub,
     }
-
-    # ── GitNexus tools (optional) ──
-    gitnexus_tools = _create_gitnexus_tools(ws)
-    tools.update(gitnexus_tools)
 
     # Every retrieval call emits a lossless graph artifact.
     return wrap_retrieval_tools(ws, tools)

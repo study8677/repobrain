@@ -88,7 +88,14 @@ def test_legacy_unprefixed_mcp_tool_names_do_not_reappear() -> None:
         "__pycache__",
         "venv",
         ".venv",
+        ".tmp-venv",
         "antigravity_workspace_template_venv",
+        # Generated / local-only dirs that are never part of shipped source:
+        # the knowledge base, IDE & agent state, eval artifacts, build output.
+        ".antigravity",
+        ".claude",
+        "artifacts",
+        "build",
     }
     searchable_suffixes = {".md", ".json", ".py", ".toml"}
     this_file = Path(__file__).resolve()
