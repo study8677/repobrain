@@ -28,6 +28,72 @@
 
 ---
 
+## 2026-06-05 — `ERPNext-PrintDesigner-Editor-Fix-1-Persistent-Patch` — FIX-PASS executed at L3 + runbook v1 → v2 (dual bind-mount) + install verdict flip `JE-2026-06-05-4` PARTIAL → PASS (docs amendment to PR #307; host-side fix already live on box)
+
+<!-- ERPNEXT_PRINT_DESIGNER_EDITOR_FIX_1_PERSISTENT_PATCH_HIST -->
+
+**Status:** Recorded as `JE-2026-06-05-7` in `docs/decisions/JOURNAL.md`. PR #307 amended with: (a) runbook v2 with corrected root cause + final dual-bind-mount operator block + frappe-docker volume-overlay quirk documented in § 9 + § 12 verdict updated to FIX-PASS at 2026-06-05 05:51 UTC with EV-1..EV-3 evidence + § 13 change log v2 entry; (b) this chat_history closure section. **Host-side fix already live on box** — executed at L3 keyboard during the chat session in which Anton authorised `ERPNext-PrintDesigner-Editor-Fix-1-Persistent-Patch`; the live `corpflowai-production-frontend-1` container now has TWO bind-mounts for `print_designer/` (one for `apps/` path so absolute-path symlink targets can resolve; one for `sites/assets/print_designer/` mapped to host `public/` directory bypassing the volume-overlay quirk entirely). **Why two halves were needed:** the v1 single-bind-mount runbook approach had a hidden assumption that `corpflowai-production_sites` was a truly shared Docker volume between backend and frontend (per `docker inspect --format '{{ .Mounts }}'`); execution surfaced that the `sites/assets/` subpath behaves as if NOT shared — likely the frontend image's entrypoint copying its baked-in `sites/assets/` over the volume mount on startup, masking it for that subpath specifically. The dual-bind-mount works around this by giving nginx a direct host-filesystem path that doesn't depend on volume synchronisation. **What this unblocks:** Anton's separate `AUTHORISE — ERPNext-CFLR-ProForma-Template-Build-1` chat DECISION for the pro-forma template build per `JE-2026-06-05-2` runbook. Template build remains HELD on that explicit chat decision; not auto-promoted. **What remains held (unchanged):** HB-1..HB-4 · Phase D go-live · first submitted Sales Invoice · first ERPNext-emailed PDF to real client · `ERPNext-PrintDesigner-Persistence-1` (F-1 worker count + F-2 venv `.pth` packet not drafted) · `ERPNext-PrintDesigner-Chrome-Setup-1` (Chrome backend setup-chrome packet not drafted) · `ERPNext-PrintDesigner-SocketIO-Origin-Fix-1` (websocket origin allow-list fix not drafted) · sandbox tear-down four-condition gate · all `JE-2026-06-05-1..5` standing holds. **Verdict per `.cursor/rules/delivery-reality.mdc`:** **COMPLETE** for both the docs amendment (this PR merge) AND the live host-side fix (executed 2026-06-05 05:51 UTC with FIX-PASS evidence: canvas screenshot of `Sales Invoice PD Format v2` rendered in Print Designer visual editor at `localhost:8081/app/print-designer/...` + clean browser console of bundle 404 + `is not a constructor` errors + HTTP 200 on the bundle URL + 9/9 production containers Up + sandbox preserved 5 days). The cosmetic SocketIO `Invalid origin` error remains (documented in runbook § 9 as separate future packet — does not block canvas).
+
+## 2026-06-05 — `ERPNext-PrintDesigner-Editor-Fix-1` — frontend service bind-mount fix for Print Designer visual editor blank-canvas (docs-only runbook PR; host-side fix is L3 operator-paste; ~5 min execution; ~10s HTTP downtime)
+
+<!-- ERPNEXT_PRINT_DESIGNER_EDITOR_FIX_PACKET_V1_HIST -->
+
+**Status:** Recorded as `JE-2026-06-05-5` in `docs/decisions/JOURNAL.md`. New canonical doc `docs/runbooks/ERPNEXT_PRINT_DESIGNER_EDITOR_FIX_PACKET_V1.md` (anchor sentinel `<!-- ERPNEXT_PRINT_DESIGNER_EDITOR_FIX_PACKET_V1 -->`). **Depends on:** `JE-2026-06-05-4` *Workstream Alignment* (this PR's branch is based on the alignment branch). **Verdict per `.cursor/rules/delivery-reality.mdc` § docs-only: COMPLETE at PR merge** for the runbook artefact. **Update (recorded under `JE-2026-06-05-7`):** the host-side fix execution produced FIX-PASS at 2026-06-05 05:51 UTC, but the v1 runbook described a single-bind-mount approach which executed-then-failed-at-asset-serving; the working final fix is a dual-bind-mount (see `JE-2026-06-05-7` row above for execution evidence + runbook v2 amendment). The v1 row remains as historical record of the initial authorisation; the v2 amendment lives in the same PR #307 (no separate amendment PR).
+
+### Why this PR now
+
+While capturing UI evidence for the workstream alignment under `JE-2026-06-05-4`, Anton opened the Print Designer visual editor against the seeded demo template `Sales Invoice PD Format v2`. The route resolved but the canvas stayed blank. Browser DevTools captured:
+
+```
+GET /assets/print_designer/dist/js/print_designer.bundle.UDIPLQSC.js → 404 (Not Found)
+Uncaught SyntaxError: Failed to execute 'appendChild' on 'Node': Unexpected token '<'
+Uncaught (in promise) TypeError: frappe.ui.PrintDesigner is not a constructor at load_print_designer (print_designer.js:181:28)
+```
+
+Diagnosis: the bind-mount Compose override authored during the install session (`JE-2026-06-05-3` closure → applied via `bench install-app` + `bench build` per `JE-2026-06-05-4` § 2.6) mounts `host-apps/print_designer/` into the **5 Python services** that need to `import print_designer` at runtime (`backend`, `scheduler`, `queue-short`, `queue-long`, `websocket`) — but **not into the `frontend` (nginx) container** that serves `/assets/print_designer/dist/...` static bundles. `bench build` writes compiled JS / CSS to `apps/print_designer/print_designer/public/dist/` on the bind-mounted source and symlinks `sites/assets/print_designer/` → `apps/print_designer/print_designer/public/` with an **absolute** target path. When nginx in the frontend container resolves the symlink, it follows the absolute path to a location that exists only in the backend container's filesystem view → 404 → browser executes 404 HTML as JS → `frappe.ui.PrintDesigner` class never registers → blank canvas.
+
+Fix: add the same bind-mount line for the `frontend` service to the existing Compose override (`~/erpnext-production/frappe_docker/overrides/compose.print-designer-mount.yaml`) and run `docker compose up -d`. Only the frontend container is recreated (other 5 services have unchanged spec). The backend's IP does not change, so the `JE-2026-06-05-4` § 2.6 nginx-upstream-IP-cache 502 issue does **not** recur. Estimated execution: ~5 minutes at the L3 keyboard. Estimated HTTP downtime: ~10 seconds (frontend container restart).
+
+### What landed (PR scope)
+
+Pure docs / runbook artefact. **3 files** changed:
+
+| File | Change |
+|---|---|
+| `docs/runbooks/ERPNEXT_PRINT_DESIGNER_EDITOR_FIX_PACKET_V1.md` | **New canonical runbook.** 13 sections covering hard limits (15 explicit out-of-scope categories) + prerequisites PR-1..PR-6 + root cause analysis (§ 2.1 captured symptom, § 2.2 architecture mismatch table, § 2.3 fix) + pre-flight PF-1..PF-5 (read-only smoking-gun confirmation that frontend container's `apps/print_designer/` is missing) + single paste-safe operator block § 4 (outer `bash -c` wrapper + auto-discovers Compose file list via `docker inspect` + auto-discovers print-designer-mount override path + timestamped backup + heredoc-rewrites override with `frontend` added preserving 5 existing services + `docker compose up -d` recreates frontend only + 15s wait + verification listing of dist JS files + production health re-check + sandbox preservation re-check + `OPERATOR_BLOCK_DONE` sentinel) + browser smoke UI-1..UI-7 (incognito mandatory) + verification matrix FIX-PASS / FIX-PARTIAL / FIX-FAIL + evidence EV-1..EV-6 + rollback § 8 + honest limits + standing holds unchanged + cross-references + verdict + change log v1 2026-06-05. |
+| `docs/decisions/JOURNAL.md` | `JE-2026-06-05-5` row added at top of table (newest-first ordering); references `JE-2026-06-05-4` as the alignment doc that captured the symptom this fix addresses. |
+| `artifacts/chat_history.md` | This section. |
+
+### Headlines
+
+- **One-line fix** — add `frontend:` to the existing 5-service bind-mount Compose override + `docker compose up -d`. Runbook auto-discovers Compose file list via `docker inspect` so Anton doesn't have to remember it.
+- **Paste-safe operator block** — single `bash -c '...'` wrapper, uses heredoc (`<<"YAML_END"`) to write YAML inside a file rather than expecting Anton to paste YAML into a shell prompt (the hazard that produced the *"services:: command not found"* errors earlier in the session). One paste from `bash -c '` to closing `'`, no copy-individual-lines, idempotent (re-running is safe), prints `OPERATOR_BLOCK_DONE` sentinel at end.
+- **Low blast radius** — only the `frontend` container is recreated (other 5 services have unchanged spec → no recreation → backend IP stable → no risk of repeating the `JE-2026-06-05-4` § 2.6 nginx-upstream-IP-cache 502). Sandbox is not touched (`corpflowai-sandbox` Docker project preservation rule honoured). `host_name = http://frontend:8080` from `JE-2026-06-04-5` is not touched. Print Designer source code is not modified. ERPNext data (sites, doctypes, customers, quotations, sales invoices, GL entries) is not touched.
+- **Out of scope (explicit non-goals)** — does NOT fix the persistence gaps F-1 (gunicorn worker count `GUNICORN_WORKERS=2` env unchanged; SIGTTIN hot-bump reverts on container recreation) + F-2 (venv `.pth` for `pip install -e print_designer` in backend writable layer lost on container recreation); does NOT fix the SocketIO `Invalid origin` 400 (separate future packet `ERPNext-PrintDesigner-SocketIO-Origin-Fix-1` not drafted); does NOT install Chrome PDF backend (separate future packet `ERPNext-PrintDesigner-Chrome-Setup-1` not drafted); does NOT render any PDF (PDF rendering is `ERPNext-CFLR-ProForma-Template-Build-1` still HELD on its own AUTHORISE).
+- **After FIX-PASS** — Anton reports EV-1..EV-6 evidence to Bridge #249 → Cursor drafts small docs PR `ERPNext-PrintDesigner-Install-Closure-Flip-1` (not drafted by THIS PR) that records install verdict flip `JE-2026-06-05-4` PARTIAL → new `JE-2026-06-05-N` PASS → next separate `AUTHORISE — ERPNext-CFLR-ProForma-Template-Build-1` chat DECISION authorises template build host-side execution per `JE-2026-06-05-2` runbook.
+- **After FIX-FAIL** — rollback via § 8 restores previous override file + `docker compose up -d`; install state stays PARTIAL with editor unusable; manual Word/Pages pro-forma `JE-2026-06-02-7` remains canonical client-facing mechanism; diagnostic continues in separate Bridge #249 thread.
+
+### Standing holds (unchanged)
+
+`HB-1` · `HB-2` PENDING-ACCOUNTANT · `HB-3` PENDING-ACCOUNTANT · `HB-4` PENDING-OPERATOR · full Phase D ERPNext accounting go-live · first submitted Sales Invoice · first ERPNext-emailed PDF to real client · `ERPNext-CFLR-ProForma-Template-Build-1` host-side execution · `ERPNext-PrintDesigner-Persistence-1` (F-1+F-2) not drafted · `ERPNext-PrintDesigner-Chrome-Setup-1` not drafted · `ERPNext-PrintDesigner-SocketIO-Origin-Fix-1` not drafted · sandbox tear-down four-condition gate · all `JE-2026-06-05-1..4` standing holds.
+
+**New holds introduced by THIS PR:** none.
+
+### Cross-references
+
+- Authorisation: chat DECISION 2026-06-05 *"Please receive any authorisation required to repair this issue"* treated as `AUTHORISE — ERPNext-PrintDesigner-Editor-Fix-1`.
+- New canonical runbook: `docs/runbooks/ERPNEXT_PRINT_DESIGNER_EDITOR_FIX_PACKET_V1.md`.
+- The state this fix targets: `docs/finance/ERPNEXT_PRINT_DESIGNER_WORKSTREAM_ALIGNMENT_2026_06_05.md` (`JE-2026-06-05-4`) § 4.2 blocker B-1.
+- Install closure schema: `docs/runbooks/ERPNEXT_PRINT_DESIGNER_INSTALL_CLOSURE_CHECKLIST_V1.md` (`JE-2026-06-05-3`).
+- Print Designer evaluation (Packet 2 install shape this fix patches): `docs/finance/ERPNEXT_PRINT_DESIGNER_EVALUATION_V1.md` (`JE-2026-06-04-4`).
+- host_name fix preserved by this fix: `JE-2026-06-04-5`.
+- CFLR design brief gated on install verdict PASS: `docs/finance/CFLR_MAURITIUS_PRO_FORMA_TEMPLATE_DESIGN_BRIEF_V1.md` (`JE-2026-06-05-1`).
+- CFLR build runbook gated on install verdict PASS: `docs/runbooks/ERPNEXT_CFLR_PRO_FORMA_TEMPLATE_BUILD_PACKET_V1.md` (`JE-2026-06-05-2`).
+- Manual Word/Pages pro-forma fallback (canonical client-facing path during PARTIAL state): `docs/finance/AI_LEAD_RESCUE_MANUAL_PRO_FORMA_TEMPLATE_V1.md` (`JE-2026-06-02-7`).
+- Bridge coordination: [#249](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249).
+
+---
+
 ## 2026-06-05 — `ERPNext-PrintDesigner-Workstream-Alignment-1` — install-completion alignment after L3 install session (docs-only — **COMPLETE-AT-PR-MERGE**; install state PARTIAL with 2 operator-clearable blockers)
 
 <!-- ERPNEXT_PRINT_DESIGNER_WORKSTREAM_ALIGNMENT_1_HIST -->
