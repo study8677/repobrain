@@ -28,6 +28,55 @@
 
 ---
 
+## 2026-06-05 — `ERPNext-PrintDesigner-Install-Closure-Checklist-1` — 15-item evidence checklist (docs-only — **COMPLETE-AT-PR-MERGE**)
+
+<!-- ERPNEXT_PRINT_DESIGNER_INSTALL_CLOSURE_CHECKLIST_1_HIST -->
+
+**Status:** Recorded as `JE-2026-06-05-3` in `docs/decisions/JOURNAL.md`. New canonical doc `docs/runbooks/ERPNEXT_PRINT_DESIGNER_INSTALL_CLOSURE_CHECKLIST_V1.md` (anchor sentinel `<!-- ERPNEXT_PRINT_DESIGNER_INSTALL_CLOSURE_CHECKLIST_V1 -->`). **Verdict per `.cursor/rules/delivery-reality.mdc` § docs-only: COMPLETE at PR merge** for the closure-checklist artefact. The install it closes (`ERPNext-PrintDesigner-Install-1`, Packet 2 from `JE-2026-06-04-4` § 7.2) is its own authorisation chain; the closure verdict (PASS/PARTIAL/FAIL) the checklist enables is recorded as its own future `JE-YYYY-MM-DD-N` row on Bridge [#249](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249).
+
+### What landed (PR scope)
+
+Pure docs / closure-checklist artefact. Short by design — 15 numbered evidence items C-1..C-15 that Anton returns on Bridge #249 when the install finishes, plus a PASS/PARTIAL/FAIL decision tree.
+
+- **7 sections** in `ERPNEXT_PRINT_DESIGNER_INSTALL_CLOSURE_CHECKLIST_V1.md`:
+  - § 0 hard limits (12 out-of-scope categories).
+  - § 1 when to run (after install commands at L3 keyboard; PASS verdict here does NOT authorise the build runbook — that requires its own chat DECISION).
+  - § 2 the 15-item closure checklist, organised:
+    - § 2.1 project health C-1 (production all 9 containers `Up`) + C-2 (sandbox preserved per `JE-2026-06-04-1`).
+    - § 2.2 Print Designer presence C-3 (`bench list-apps` includes `print_designer`) + C-4 (ERPNext UI loads at `http://localhost:8081/login` via SSH tunnel per recipe § 17) + C-5 (Print Designer UI at `/printdesigner` and discoverable via desk search).
+    - § 2.3 PDF backend C-6 (Chrome present preferred per `JE-2026-06-04-4` § 4 Option A OR wkhtmltopdf-only transitional fallback OK because `JE-2026-06-04-5` host_name fix already live; `bench setup-chrome` per-container note).
+    - § 2.4 host_name preservation C-7 (`http://frontend:8080` per `JE-2026-06-04-5` unchanged).
+    - § 2.5 no real data / surfaces C-8..C-13 (no real Customer beyond test / no real Quotation beyond recipe § 16 test row at `docstatus=0` / zero submitted Sales Invoice / zero GL entries / zero VAT activation / zero bank or payment-gateway setup / zero public exposure with frontend bound loopback-only `127.0.0.1:8081`).
+    - § 2.6 errors / warnings C-14 (terminal output + backend/scheduler/queue log tails; explained-or-absent rule).
+    - § 2.7 final verdict C-15.
+  - § 3 decision tree PASS / PARTIAL / FAIL (first-match-wins; FAIL on hard violations; PARTIAL on sandbox drift / UI discovery gap / Chrome unavailability / noisy warnings; PASS on all-clean — but PASS does NOT authorise the build runbook).
+  - § 4 standing holds unchanged.
+  - § 5 cross-references.
+  - § 6 verdict per delivery-reality.mdc § docs-only = COMPLETE-AT-PR-MERGE.
+  - § 7 change log v1.
+
+### Hard limits honoured
+
+Zero host commands; zero ERPNext mutation on `corpflow-exec-01-u69678`; zero sandbox mutation; zero Print Designer install (its own authorisation chain); zero template build (`JE-2026-06-05-2` + its own future chat DECISION); zero Sales Invoice / GL / VAT / `Tax invoice` / `VAT invoice` wording; zero real bank / SWIFT / BIC / IBAN / payment-gateway / OAuth token added; zero edits to runtime / scripts / env / DNS / Vercel / GitHub-workflows / Postgres / Neon / Prisma schema; zero pricing / page-copy changes; zero host commands from this L1 session — HOST_MISMATCH guard not triggered.
+
+### Standing holds (unchanged)
+
+HB-1 (full Phase D beyond narrowed shell-setup) · HB-2 (accountant CoA review) · HB-3 (VAT decision) · HB-4 (real MU bank CSV reconciliation) · Phase D go-live · first submitted Sales Invoice · first ERPNext-emailed PDF to real client · `ERPNext-PrintDesigner-Install-1` still its own authorisation chain (this checklist standardises closure, not authorisation) · sandbox tear-down four-condition gate · all `JE-2026-06-05-1` and `JE-2026-06-05-2` standing holds.
+
+### Cross-references
+
+- Authorisation: chat DECISION 2026-06-05 *"AUTHORISE — ERPNext-PrintDesigner-Install-Closure-Checklist-1"*.
+- The checklist: `docs/runbooks/ERPNEXT_PRINT_DESIGNER_INSTALL_CLOSURE_CHECKLIST_V1.md`.
+- The install packet this checklist closes: `ERPNext-PrintDesigner-Install-1` (Packet 2 from `JE-2026-06-04-4` § 7.2).
+- The build runbook this checklist gates: `docs/runbooks/ERPNEXT_CFLR_PRO_FORMA_TEMPLATE_BUILD_PACKET_V1.md` (`JE-2026-06-05-2`).
+- Design spec it serves: `docs/finance/CFLR_MAURITIUS_PRO_FORMA_TEMPLATE_DESIGN_BRIEF_V1.md` (`JE-2026-06-05-1`).
+- Production-shell setup recipe v1.1 (SSH tunnel § 17): `docs/runbooks/ERPNEXT_PRODUCTION_SHELL_SETUP_RECIPE.md` (`JE-2026-06-04-3` + `JE-2026-06-04-6`).
+- host_name fix that C-7 verifies preserved: `JE-2026-06-04-5`.
+- Sandbox-preservation rule that C-2 verifies preserved: `JE-2026-06-04-1`.
+- Bridge coordination: [#249](https://github.com/antonvdberg-bit/corpflow-ai-command-center/issues/249).
+
+---
+
 ## 2026-06-05 — `ERPNext-CFLR-ProForma-Template-Build-Packet-1` — `CFLR Mauritius Pro-forma Invoice v1` Print Designer build runbook (docs-only — **COMPLETE-AT-PR-MERGE**)
 
 <!-- ERPNEXT_CFLR_PRO_FORMA_TEMPLATE_BUILD_PACKET_1_HIST -->
