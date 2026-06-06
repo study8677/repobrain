@@ -36,7 +36,15 @@ export async function getServerSideProps({ req, params }) {
     try {
       const result = await loadAiLeadRescueDetailData({ id });
       if (result && result.ok === true) {
-        initialLead = result.lead;
+        // Force JSON-serializable shape NOW: `leadRowToAiLeadRescueDetail` returns
+        // raw Date objects for submitted_at/updated_at (from Prisma). Next.js will
+        // JSON.stringify props when delivering them to the client, but during the
+        // SSR render pass the component sees the original Date object, while the
+        // hydration pass sees an ISO string. The two `String(value)` outputs differ
+        // (toLocaleString vs ISO), producing a React hydration mismatch that can
+        // skip attaching event handlers — the 2026-06-06 P0 where clicking Save
+        // produced zero reaction. Round-tripping through JSON here pins one shape.
+        initialLead = JSON.parse(JSON.stringify(result.lead));
       } else if (result && result.ok === false) {
         initialError = {
           error: result.error || 'LOAD_FAILED',

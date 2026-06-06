@@ -484,11 +484,26 @@ export default function AiLeadRescueAdminDetail(props = {}) {
   }
 
   async function save(e) {
-    e.preventDefault();
-    if (!leadId) return;
+    // Wired to BOTH `<form onSubmit>` AND `<button onClick>` so that the
+    // handler runs regardless of which path React/the browser invokes.
+    // The 2026-06-06 P0 was clicking Save producing zero reaction —
+    // hydration failure could leave the form's onSubmit unattached, causing
+    // a native form POST that silently reloads the page. The button is
+    // now type="button" with explicit onClick, so clicking can never fall
+    // through to a native form submission.
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (saving) return; // re-entry guard (double-click)
+    if (!leadId) {
+      setError({
+        code: 'ID_MISSING',
+        message: 'Cannot save: no lead id present.',
+        http_status: null,
+      });
+      return;
+    }
     setSaving(true);
     setError(null);
-    setSavedMsg('');
+    setSavedMsg('Saving…');
     try {
       const body = {
         id: leadId,
@@ -522,6 +537,7 @@ export default function AiLeadRescueAdminDetail(props = {}) {
         const msg =
           (data && (data.message || data.detail)) || `Request failed with HTTP ${r.status}.`;
         setError({ code, message: msg, http_status: r.status });
+        setSavedMsg('');
         return;
       }
       setLead(normalizeLead(data && data.lead));
@@ -533,6 +549,7 @@ export default function AiLeadRescueAdminDetail(props = {}) {
         message: err instanceof Error ? err.message : 'Could not save.',
         http_status: null,
       });
+      setSavedMsg('');
     } finally {
       setSaving(false);
     }
@@ -614,7 +631,20 @@ export default function AiLeadRescueAdminDetail(props = {}) {
                 />
               </section>
 
-              <form onSubmit={save}>
+              {/*
+                Form's onSubmit is a deterministic no-op preventDefault so
+                an Enter keypress inside an input (or any unexpected submit
+                path) cannot fall through to a native form POST that would
+                silently reload the page. The Save button below is wired
+                via explicit onClick — independent of the form's submit
+                lifecycle. Fixes the 2026-06-06 P0 where clicking Save
+                produced no visible reaction on Production.
+              */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                }}
+              >
                 <section style={card}>
                   <h2 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800 }}>Commercial</h2>
                   <div
@@ -768,8 +798,10 @@ export default function AiLeadRescueAdminDetail(props = {}) {
 
                 <div style={{ marginTop: 12 }}>
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={save}
                     disabled={saving}
+                    data-testid="ai-lead-rescue-save"
                     style={{ ...btn, opacity: saving ? 0.6 : 1 }}
                   >
                     {saving ? 'Saving…' : 'Save changes'}

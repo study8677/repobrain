@@ -192,6 +192,16 @@ If `/admin/lead-rescue` shows a permanent `Loading…` or an error banner, work 
    If the intake does not appear, the issue is upstream of the operator cockpit (tenant intake / host context); follow `docs/operations/TENANT_CLIENT_LOGIN.md` to confirm the submitting host resolves to a registered tenant.
 4. **Confirm the deployment includes the SSR fallback.** `view-source:` on the page should contain the SSR-rendered `<tr>` rows for current leads or the SSR-rendered error envelope. If you see *only* `Loading…` in the raw HTML, the deployment predates the SSR fallback fix — redeploy / verify the deployed commit on Vercel Production.
 
+## Troubleshooting — clicking Save produces no visible reaction
+
+If you click **Save** on the detail page and nothing happens (no "Saving…", no "Saved.", no error), this was the 2026-06-06 P0 — fixed by PR #318. The Save button is now wired via explicit `onClick={save}` with `type="button"`, and the surrounding form's `onSubmit` is a deterministic no-op preventDefault. Native browser form submission can no longer fall through and silently reload the page.
+
+If you still see no reaction:
+
+1. **Hard-refresh the page** (Ctrl+F5 / Cmd+Shift+R) to clear a stale Service Worker / cached bundle.
+2. **Inspect the Save button** in DevTools — it must carry `data-testid="ai-lead-rescue-save"` and `type="button"`. If `type="submit"` is present, the deployed bundle predates PR #318 — verify the deployed commit on Vercel Production.
+3. **Open DevTools → Network** and click Save. A `PATCH /api/factory/lead-rescue/patch` request must appear. If no request fires, JavaScript hydration is broken — capture the browser console error and attach it to the issue.
+
 ## Troubleshooting — save does not persist or the PAID_SETUP checklist does not appear
 
 If you save a field on `/admin/lead-rescue/[id]` and the change is gone after a refresh, or you set status to `PAID_SETUP` and the 13-item setup checklist does not appear:
