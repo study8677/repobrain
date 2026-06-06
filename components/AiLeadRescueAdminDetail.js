@@ -7,6 +7,7 @@ import {
   AI_LEAD_RESCUE_CHECKLIST_ITEM_STATES,
   AI_LEAD_RESCUE_STATUSES,
 } from '../lib/cmp/_lib/ai-lead-rescue-operator.js';
+import { fmtDateStableUtc } from '../lib/format/utc-date.js';
 
 const DETAIL_FETCH_TIMEOUT_MS = 25_000;
 
@@ -75,14 +76,17 @@ const errorBoxStyle = {
   marginBottom: 16,
 };
 
-function fmtDate(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return '—';
-  }
-}
+// 2026-06-06 P0 — date formatting moved to `lib/format/utc-date.js`
+// (`fmtDateStableUtc`). The previous `fmtDate` here used
+// `new Date(iso).toLocaleString()`, whose output depends on the host
+// locale AND timezone. Once this page started SSR-rendering
+// `initialLead` (PR #319), the Vercel server (UTC, en-US default) and
+// the operator browser (Mauritius UTC+4, browser locale) emitted
+// different text for the same ISO string. React detected the text
+// mismatch and aborted hydration on `/admin/lead-rescue/[id]`, leaving
+// the whole component inert (no Save click handler, no Test click
+// handler — `Save handler mounted: NO` in the PR #320 diagnostic
+// panel). See `lib/format/utc-date.js` for the SSR-stable replacement.
 
 function regionLabel(path) {
   const v = (path || '').toLowerCase();
@@ -662,7 +666,7 @@ export default function AiLeadRescueAdminDetail(props = {}) {
           <h1 style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 800 }}>{businessLabel}</h1>
           {lead && lead.submitted_at ? (
             <p style={{ margin: '8px 0 0', color: '#8899aa', fontSize: 13 }}>
-              Submitted {fmtDate(lead.submitted_at)}
+              Submitted {fmtDateStableUtc(lead.submitted_at)}
               {lead.prospect.source_host ? ` · ${lead.prospect.source_host}` : ''}
             </p>
           ) : null}
@@ -1060,12 +1064,12 @@ Last Test click: ${saveDiagnostics.testClickAt || '(none)'}`}
                               {item.completed_at ? (
                                 <div style={{ fontSize: 11, color: '#6ee7b7', marginTop: 6 }}>
                                   {item.state === 'skipped' ? 'Skipped' : 'Completed'}{' '}
-                                  {fmtDate(item.completed_at)}
+                                  {fmtDateStableUtc(item.completed_at)}
                                   {item.actor_label ? ` · ${item.actor_label}` : ''}
                                 </div>
                               ) : item.updated_at ? (
                                 <div style={{ fontSize: 11, color: '#8899aa', marginTop: 6 }}>
-                                  Updated {fmtDate(item.updated_at)}
+                                  Updated {fmtDateStableUtc(item.updated_at)}
                                   {item.actor_label ? ` · ${item.actor_label}` : ''}
                                 </div>
                               ) : null}

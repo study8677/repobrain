@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 
 import { AI_LEAD_RESCUE_STATUSES } from '../lib/cmp/_lib/ai-lead-rescue-operator.js';
+import { fmtDateStableUtc } from '../lib/format/utc-date.js';
 
 const pageStyle = {
   minHeight: '100vh',
@@ -39,14 +40,12 @@ const td = { padding: '12px 8px', borderBottom: '1px solid rgba(255,255,255,0.05
 const LIST_FETCH_TIMEOUT_MS = 25_000;
 const LIST_API_PATH = '/api/factory/lead-rescue/list';
 
-function fmtDate(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return '—';
-  }
-}
+// 2026-06-06 P0 — `fmtDate` previously used
+// `new Date(iso).toLocaleString()`, which is locale + timezone
+// dependent and produces different SSR vs CSR strings (causing a
+// React hydration mismatch on `/admin/lead-rescue/[id]`; less
+// noticeable here but the same anti-pattern). Replaced everywhere
+// with `fmtDateStableUtc` from `lib/format/utc-date.js`.
 
 function regionLabel(path) {
   const v = (path || '').toLowerCase();
@@ -416,7 +415,7 @@ export default function AiLeadRescueAdminList(props = {}) {
                   ? leads.map((row) => (
                       <tr key={row.id}>
                         <td style={{ ...td, color: '#8899aa', fontFamily: 'monospace', fontSize: 12 }}>
-                          {fmtDate(row.submitted_at)}
+                          {fmtDateStableUtc(row.submitted_at)}
                         </td>
                         <td style={{ ...td, fontWeight: 600 }}>{row.business_name || '—'}</td>
                         <td style={td}>{row.contact_name || '—'}</td>
@@ -435,7 +434,7 @@ export default function AiLeadRescueAdminList(props = {}) {
                         <td style={td}>{row.currency || '—'}</td>
                         <td style={td}>{row.payment_status || 'none'}</td>
                         <td style={td}>{row.owner || '—'}</td>
-                        <td style={{ ...td, fontSize: 12, color: '#8899aa' }}>{fmtDate(row.last_contacted)}</td>
+                        <td style={{ ...td, fontSize: 12, color: '#8899aa' }}>{fmtDateStableUtc(row.last_contacted)}</td>
                         <td style={{ ...td, maxWidth: 140 }}>{row.next_action || '—'}</td>
                         <td style={{ ...td, maxWidth: 120 }}>{row.notes_preview || '—'}</td>
                         <td style={td}>

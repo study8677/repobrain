@@ -224,6 +224,38 @@ Console (DevTools → Console) also receives namespaced `console.info('[ai-lead-
 
 When the live save failure is fully diagnosed, the diagnostic panel and Test click button must be removed or downgraded — they are not part of the long-term operator UX.
 
+### Root cause found on 2026-06-06 — React hydration mismatch (PR #321)
+
+The 2026-06-06 save-not-firing P0 was a **React hydration failure** on `/admin/lead-rescue/[id]`, fixed by PR #321.
+
+What the PR #320 diagnostic panel showed live:
+
+```
+Detail bundle: save-wiring-v2
+Lead id: cmq21ocm20000jv04oy8658qf
+Save handler mounted: NO      ← the smoking gun
+Save phase: idle
+Last Test click: (none)
+```
+
+`Save handler mounted: NO` is set by a mount `useEffect` — if it remains `NO` after page load, **React did not hydrate the component**, no event handlers attached, and every click on Save / Test click silently no-ops.
+
+The underlying defect was a server-vs-client text mismatch in the SSR-rendered detail header. The old `fmtDate(iso)` returned `new Date(iso).toLocaleString()`, whose output depends on the host locale AND timezone:
+
+- Vercel SSR (UTC, en-US default) emitted e.g. `6/6/2026, 7:41:38 AM`.
+- Operator browser (Mauritius UTC+4, browser locale) emitted e.g. `06/06/2026 11:41:38`.
+
+React detected the mismatch during hydration of `Submitted {fmtDate(lead.submitted_at)}` and aborted hydrating the subtree. Everything below — form, Save button, Test click button, checklist editor — became static HTML with no React event listeners. The raw `fetch(...)` PATCH still worked (proving backend persistence was intact), but no UI click could trigger it.
+
+The fix in PR #321:
+
+- Introduced `lib/format/utc-date.js` with `fmtDateStableUtc(value)`. Output: `YYYY-MM-DD HH:mm:ss UTC` for valid input, `—` otherwise. Uses only `getUTC*` accessors and zero-padded strings — bit-for-bit deterministic across Node and every browser.
+- Replaced every call to `fmtDate(...)` in `components/AiLeadRescueAdminDetail.js` and `components/AiLeadRescueAdminList.js` with `fmtDateStableUtc(...)`.
+- Pinned the contract in `node-tests/admin-lead-rescue-detail-hydration-stable.test.mjs` — forbids `toLocaleString`, `toLocaleDateString`, `toLocaleTimeString`, `Intl.DateTimeFormat`, `Math.random`, and the legacy `fmtDate(` helper in either component (comments stripped).
+- The PR #320 diagnostic panel is **intentionally retained** for one more live verification cycle so the operator can read `Save handler mounted: YES` and watch `Save phase` transition `idle → clicked → saving → saved`. Once verified live, those diagnostics will be removed in a follow-up PR.
+
+Operator UX note: detail timestamps now display in canonical UTC. For factory-admin work this is arguably clearer than browser-local time — it matches automation_events, n8n receipts, and Postgres timestamps without any zone conversion in the operator's head.
+
 ## Troubleshooting — save does not persist or the PAID_SETUP checklist does not appear
 
 If you save a field on `/admin/lead-rescue/[id]` and the change is gone after a refresh, or you set status to `PAID_SETUP` and the 13-item setup checklist does not appear:
