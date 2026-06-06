@@ -192,6 +192,18 @@ If `/admin/lead-rescue` shows a permanent `Loading…` or an error banner, work 
    If the intake does not appear, the issue is upstream of the operator cockpit (tenant intake / host context); follow `docs/operations/TENANT_CLIENT_LOGIN.md` to confirm the submitting host resolves to a registered tenant.
 4. **Confirm the deployment includes the SSR fallback.** `view-source:` on the page should contain the SSR-rendered `<tr>` rows for current leads or the SSR-rendered error envelope. If you see *only* `Loading…` in the raw HTML, the deployment predates the SSR fallback fix — redeploy / verify the deployed commit on Vercel Production.
 
+## Troubleshooting — detail page is blank/black after clicking "Open"
+
+The detail page at `/admin/lead-rescue/[id]` follows the same robustness contract as the list page: the data is SSR-fetched via a shared loader, the React tree is wrapped in an error boundary (so a render-time throw becomes a visible error block, never a black screen), every nested field access goes through a `normalizeLead()` shim with safe defaults, and the Back-to-pipeline link is always rendered outside the boundary. If an operator ever sees a fully blank/black page, the page chrome itself failed to render — that is a deployment / build problem, not an application logic problem.
+
+1. **Confirm the navigation URL.** It should look like `https://corpflowai.com/admin/lead-rescue/<lead-id>` with `lead-id` matching what the list row shows. If `lead-id` is missing or the wrong shape, the page surfaces `ID_REQUIRED` and a Back-to-list link instead of blanking.
+2. **Read the error block.** When something fails to load, the page now shows an explicit alert with HTTP status, error code, message, **Retry**, **Back to list**, and **Open raw API** controls. Press **Open raw API** to inspect `/api/factory/lead-rescue/get?id=<lead-id>` in a new tab while authenticated:
+   - **`{ ok: true, lead: {...} }`** — API healthy; click **Retry**.
+   - **`{ ok: false, error: "LEAD_NOT_FOUND" }`** — the lead was deleted or its `qualification_json` no longer matches the AI Lead Rescue product. Return to the list.
+   - **`{ ok: false, error: "LEAD_RESCUE_GET_FAILED" }`** — DB call failed; inspect `message`.
+   - **`{ ok: false, error: "FACTORY_AUTH_REQUIRED" }`** — the admin session expired between SSR and client fetch. Reload after re-authenticating.
+3. **If you see a completely black page with no Back link.** That means even the page chrome failed to render — almost always a stale or broken deployed bundle. Verify the deployed commit on Vercel Production matches the head of `main`, redeploy if not, and clear browser cache. If the issue persists, capture the browser console error and attach it to the issue.
+
 ## Live verification checklist (do before calling any change COMPLETE)
 
 CI green and a merged PR are not proof of delivery. Before marking any AI Lead Rescue change `COMPLETE`, walk through:
