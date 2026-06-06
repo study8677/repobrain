@@ -192,6 +192,15 @@ If `/admin/lead-rescue` shows a permanent `Loading…` or an error banner, work 
    If the intake does not appear, the issue is upstream of the operator cockpit (tenant intake / host context); follow `docs/operations/TENANT_CLIENT_LOGIN.md` to confirm the submitting host resolves to a registered tenant.
 4. **Confirm the deployment includes the SSR fallback.** `view-source:` on the page should contain the SSR-rendered `<tr>` rows for current leads or the SSR-rendered error envelope. If you see *only* `Loading…` in the raw HTML, the deployment predates the SSR fallback fix — redeploy / verify the deployed commit on Vercel Production.
 
+## Troubleshooting — save does not persist or the PAID_SETUP checklist does not appear
+
+If you save a field on `/admin/lead-rescue/[id]` and the change is gone after a refresh, or you set status to `PAID_SETUP` and the 13-item setup checklist does not appear:
+
+1. **Look for the inline error block right above the Save button.** After this fix the save error and save success messages render *next to* the Save button, not only at the top of the page — a silent save failure is no longer possible at the UX layer.
+2. **Use "Open raw API" in the error block** to inspect the `PATCH /api/factory/lead-rescue/patch` response in a new tab. The stable envelope is `{ ok: true, lead: {...} }` on success or `{ ok: false, error, message, http_status }` on failure. Compare the returned `lead.operations.status` and `lead.setup_checklist_eligible` with what you expected.
+3. **Confirm the response shape end-to-end.** The pin is in `node-tests/admin-lead-rescue-patch-api.test.mjs`: setting `status: 'PAID_SETUP'` always returns `setup_checklist_eligible: true` and the canonical 13-item checklist in the response, **and** a subsequent detail-loader read returns the same status. If both of those are not visible after a successful save, the deployment predates the persistence fix — verify the deployed commit on Vercel Production.
+4. **Checklist progress survives non-checklist saves.** `mergeAiLeadRescueOperatorPatch` now preserves the stored `setup_checklist` block from `qualification_json.ai_lead_rescue_operator`. Editing "Next action" / "Owner" / commercial fields no longer wipes checklist state — pinned by the `saving operator fields after a checklist save does NOT wipe checklist progress` regression test.
+
 ## Troubleshooting — detail page is blank/black after clicking "Open"
 
 The detail page at `/admin/lead-rescue/[id]` follows the same robustness contract as the list page: the data is SSR-fetched via a shared loader, the React tree is wrapped in an error boundary (so a render-time throw becomes a visible error block, never a black screen), every nested field access goes through a `normalizeLead()` shim with safe defaults, and the Back-to-pipeline link is always rendered outside the boundary. If an operator ever sees a fully blank/black page, the page chrome itself failed to render — that is a deployment / build problem, not an application logic problem.

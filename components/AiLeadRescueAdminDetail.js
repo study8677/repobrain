@@ -733,11 +733,48 @@ export default function AiLeadRescueAdminDetail(props = {}) {
                   </label>
                 </section>
 
-                {savedMsg ? <p style={{ color: '#6ee7b7' }}>{savedMsg}</p> : null}
+                {/*
+                  Render the save error inline next to the Save button so an
+                  operator who clicks Save at the bottom of the form cannot
+                  miss a failure. The same error is also visible at the top
+                  of the boundary; this is a second, scroll-position-safe
+                  surface for the 2026-06-06 persistence-not-visible failure.
+                */}
+                {error ? (
+                  <div style={{ marginTop: 12, marginBottom: 12 }}>
+                    <DetailErrorBlock
+                      error={error}
+                      leadId={leadId}
+                      loading={saving}
+                      onRetry={load}
+                    />
+                  </div>
+                ) : null}
+                {savedMsg ? (
+                  <p
+                    role="status"
+                    style={{
+                      color: '#031018',
+                      background: '#6ee7b7',
+                      padding: '10px 14px',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      display: 'inline-block',
+                    }}
+                  >
+                    {savedMsg}
+                  </p>
+                ) : null}
 
-                <button type="submit" disabled={saving} style={{ ...btn, opacity: saving ? 0.6 : 1 }}>
-                  {saving ? 'Saving…' : 'Save changes'}
-                </button>
+                <div style={{ marginTop: 12 }}>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    style={{ ...btn, opacity: saving ? 0.6 : 1 }}
+                  >
+                    {saving ? 'Saving…' : 'Save changes'}
+                  </button>
+                </div>
               </form>
 
               {lead.setup_checklist_eligible && lead.setup_checklist.items.length > 0 ? (
