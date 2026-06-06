@@ -37,6 +37,24 @@ Marketing positioning must be consistent with the **`docs/strategy/ABOVE_THE_LIN
 
 A marketing surface passes this guardrail when the intended buyer can see a managed outcome they want, understand who is accountable for delivering it, and recognise that CorpFlowAI's value is the running function — not a generic AI tool reskinned.
 
+## Google-tool-generated collateral
+
+Some buyer-facing collateral may be drafted with Google AI tools (AI Studio, Opal, NotebookLM, Pomelli, Gemini Canvas, Gemini image / Nano Banana tooling, AI Studio multi-speaker audio) under the operating bounds in **`docs/strategy/GOOGLE_ACCELERATION_LANE.md`**. The following rules apply to any Google-drafted asset that is on a path to a prospect or client surface — landing pages, intake pages, decks, proposals, one-pagers, scripts, social posts, audio, video, or visuals.
+
+Rules:
+
+- **Google-generated collateral is first draft only.** It is not approved for prospect or client use until it has been edited and reviewed.
+- **Must pass the brand / conversion doctrine** in this file (CTA rules, copy rules, tone of voice, visual direction, mandatory review checklist, allowed-claims rules).
+- **Must pass the above-the-line doctrine** in `docs/strategy/ABOVE_THE_LINE_STRATEGY_DOCTRINE.md`. If the asset positions CorpFlowAI as a generic AI / chatbot / agent / prompt-to-app / content-generation / automation-reseller company, it does not ship.
+- **No fake evidence.** No fake screenshots, no fake testimonials, no fabricated metrics, no fabricated case studies, no synthetic-voice impersonation of a real person.
+- **No guaranteed-revenue claims.** The allowed-claims rules in § *Copy rules* still apply. AI-drafted copy does not get a relaxed claims bar.
+- **Final buyer-facing copy must be owner-friendly, specific, and outcome-led.** Generic AI cadence (revolutionary / unlock / 10x / fully autonomous / replace your team) is removed before publication.
+- **Disclose AI-generated audio or video** where the audience would reasonably expect human authorship (e.g. a founder briefing or a client explainer narrated by a synthetic voice).
+- **No sensitive client data** is loaded into a Google tool to produce buyer-facing collateral. Sanitised / synthetic examples only, per `docs/strategy/GOOGLE_ACCELERATION_LANE.md` § *Data safety rules*.
+- **The marketing quality gate still applies.** A Google-drafted asset must pass `docs/marketing/04_DELIVERY_QUALITY_GATE.md` (target ≥ 12/14) before handoff.
+
+If a Google-drafted asset cannot meet these rules with reasonable editing, the right answer is to throw the draft out — not to ship it because it already exists.
+
 ## Definition of done
 
 A marketing or intake surface is complete only when all of these are true:

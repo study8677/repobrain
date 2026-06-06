@@ -67,5 +67,6 @@ A capture never directly mutates doctrine. A capture proposes; doctrine PRs deci
 |---|---|---|---|
 | 2026-05-28 | [simplicity-1-1-1-proof-email-memo](./2026-05-28-simplicity-1-1-1-proof-email-memo.md) | Simplicity, 1-1-1, Proof, Email List, and Memo Culture | Lead Rescue, marketing engine, memo culture, hiring, exit optionality |
 | 2026-06-06 | [above-the-line-ai-strategy](./2026-06-06-above-the-line-ai-strategy.md) | Above-the-Line AI Strategy — commodity vs defensible | Product strategy, Lead Rescue framing, marketing positioning, packets / roadmap, technical discovery. Informed doctrine: `docs/strategy/ABOVE_THE_LINE_STRATEGY_DOCTRINE.md` |
+| 2026-06-06 | [google-ai-tools-acceleration-source](./2026-06-06-google-ai-tools-acceleration-source.md) | Google AI tools acceleration — seven-tool overview | Internal acceleration for prototypes, internal tools, workflow design, training assets, decks / proposals, diagrams / visual assets, client explainers, sales collateral, product discovery packs. Informs lane: `docs/strategy/GOOGLE_ACCELERATION_LANE.md` |
 
 When a new capture lands, add a row to this table in the same PR.
