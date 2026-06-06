@@ -11,6 +11,28 @@
       html.cf-login-pending #operatorLoginChrome {
         visibility: hidden;
       }
+      /*
+       * Suppress the Chrome / WebKit yellow autofill background flash.
+       * Match Tailwind slate-950 (#020617 bg) + slate-100 text so the
+       * autofilled state is visually identical to the empty/typed state,
+       * which removes the "flashy/jumpy" feel operators reported when
+       * Google Password Manager fills the form after page-load.
+       * Standard W3C `:autofill` is included as well for forward compat.
+       */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus,
+      input:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 1000px #020617 inset !important;
+        box-shadow: 0 0 0 1000px #020617 inset !important;
+        -webkit-text-fill-color: #f1f5f9 !important;
+        caret-color: #f1f5f9 !important;
+        transition: background-color 9999s ease-in-out 0s;
+      }
+      input:autofill {
+        box-shadow: 0 0 0 1000px #020617 inset !important;
+        -webkit-text-fill-color: #f1f5f9 !important;
+      }
     </style>
     <script>
       (function () {
@@ -37,44 +59,56 @@
         ></div>
         <div id="ok" class="hidden mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-emerald-200 text-sm"></div>
 
-        <div class="mt-8 space-y-4">
+        <form id="formClientEmailLogin" action="#client-email-login" method="post" autocomplete="on" novalidate class="mt-8 space-y-4">
           <p class="text-[11px] uppercase tracking-wide text-slate-500 font-medium">Email &amp; password</p>
-          <label class="block text-xs text-slate-300"
+          <label class="block text-xs text-slate-300" for="simpleUser"
             >Email
             <input
               id="simpleUser"
+              name="username"
               type="email"
               autocomplete="username"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
               class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2.5 text-sm"
             />
           </label>
-          <label class="block text-xs text-slate-300"
+          <label class="block text-xs text-slate-300" for="simplePass"
             >Password
             <input
               id="simplePass"
+              name="password"
               type="password"
               autocomplete="current-password"
               class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2.5 text-sm"
             />
           </label>
           <button
-            type="button"
+            type="submit"
             id="btnSimpleLogin"
             class="w-full rounded-lg bg-[var(--cf-accent,#d4af37)] text-slate-950 px-4 py-2.5 text-sm font-semibold"
           >
             Log in with email
           </button>
-        </div>
+        </form>
 
-        <div class="mt-8 pt-6 border-t border-slate-800 space-y-4">
+        <!--
+          PIN-only login is a separate <form> so Chrome / Google Password
+          Manager cannot pair the saved account password with the PIN
+          field.  The PIN input uses name="login_pin" (NOT "password")
+          and autocomplete="one-time-code".
+        -->
+        <form id="formClientPinLogin" action="#client-pin-login" method="post" autocomplete="off" novalidate class="mt-8 pt-6 border-t border-slate-800 space-y-4">
           <p class="text-[11px] uppercase tracking-wide text-slate-500 font-medium">PIN only</p>
           <p class="text-[11px] text-slate-500 leading-relaxed">
             If your operator gave you a <strong class="text-slate-400">6-digit PIN</strong> only, enter it here. This site already knows your workspace from the web address.
           </p>
-          <label class="block text-xs text-slate-300"
+          <label class="block text-xs text-slate-300" for="simplePin"
             >PIN
             <input
               id="simplePin"
+              name="login_pin"
               type="password"
               inputmode="numeric"
               autocomplete="one-time-code"
@@ -84,13 +118,13 @@
             />
           </label>
           <button
-            type="button"
+            type="submit"
             id="btnSimplePinLogin"
             class="w-full rounded-lg border border-slate-600 bg-slate-900 hover:bg-slate-800 text-slate-100 px-4 py-2.5 text-sm font-semibold"
           >
             Log in with PIN
           </button>
-        </div>
+        </form>
 
         <details class="mt-6 rounded-xl border border-slate-800 bg-slate-950/30 p-3">
           <summary class="cursor-pointer text-sm text-sky-300 underline select-none">Forgot password?</summary>
@@ -185,45 +219,77 @@
           <div id="loginFactoryColumn" class="rounded-2xl border border-slate-800 bg-slate-900/30 p-4">
             <h2 class="text-sm font-semibold">Factory Admin</h2>
             <p class="text-xs text-slate-400 mt-1">For you only: full factory access.</p>
-            <label class="block text-xs text-slate-300 mt-4">Username
-              <input id="adminUser" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
-            </label>
-            <label class="block text-xs text-slate-300 mt-3">Password
-              <input id="adminPass" type="password" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
-            </label>
-            <button id="btnAdmin" class="mt-4 w-full rounded-lg bg-sky-500 text-slate-950 px-4 py-2 text-sm font-semibold">Login as Admin</button>
+            <!--
+              Each login flow lives in its own <form> so Chrome / Google
+              Password Manager pairs username + password correctly and
+              does not bleed credentials across columns.  Fragment-only
+              `action` URLs keep the form unique to its credential set
+              without ever triggering a real navigation (JS calls
+              preventDefault on submit).
+            -->
+            <form id="formFactoryAdminLogin" action="#factory-admin-login" method="post" autocomplete="on" novalidate>
+              <label class="block text-xs text-slate-300 mt-4" for="adminUser">Username
+                <input
+                  id="adminUser"
+                  name="username"
+                  type="text"
+                  autocomplete="username"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
+                />
+              </label>
+              <label class="block text-xs text-slate-300 mt-3" for="adminPass">Password
+                <input
+                  id="adminPass"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
+                />
+              </label>
+              <button id="btnAdmin" type="submit" class="mt-4 w-full rounded-lg bg-sky-500 text-slate-950 px-4 py-2 text-sm font-semibold">Login as Admin</button>
+            </form>
           </div>
 
           <div id="loginTenantColumn" class="rounded-2xl border border-slate-800 bg-slate-900/30 p-4">
             <h2 class="text-sm font-semibold">Client / Tenant</h2>
             <p class="text-xs text-slate-400 mt-1">Tenant-scoped access (no factory settings).</p>
-            <label class="block text-xs text-slate-300 mt-4">Tenant ID
-              <input id="tenantId" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm font-mono" placeholder="e.g. luxe-maurice" autocomplete="organization" />
-            </label>
-            <div id="tenantIdHostLock" class="hidden mt-2 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-[11px] text-emerald-100/90 leading-relaxed">
-              <span class="text-emerald-200/95 font-medium">This hostname is mapped to tenant</span>
-              <code id="tenantIdExpected" class="mx-1 text-slate-100"></code>
-              <span class="text-emerald-200/95">— field is locked so it is not mistyped (e.g. <code class="text-rose-200">lux</code> vs <code class="text-slate-100">luxe-maurice</code>).</span>
-              <button type="button" id="btnUnlockTenantId" class="ml-2 text-sky-300 underline font-normal">
-                Unlock to type a different tenant
-              </button>
-            </div>
-            <div class="grid grid-cols-1 gap-3 mt-3">
-              <p class="text-[11px] text-slate-400">Default: <strong class="text-slate-300">email + password</strong> from your operator.</p>
-              <label class="block text-xs text-slate-300">Email
-                <input id="tenantUser" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="name@company.com" autocomplete="username" />
+            <form id="formOperatorTenantLogin" action="#operator-tenant-login" method="post" autocomplete="on" novalidate>
+              <label class="block text-xs text-slate-300 mt-4" for="tenantId">Tenant ID
+                <input id="tenantId" name="tenant_id" type="text" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm font-mono" placeholder="e.g. luxe-maurice" autocomplete="organization" autocapitalize="off" autocorrect="off" spellcheck="false" />
               </label>
-              <label class="block text-xs text-slate-300">Password
-                <input id="tenantPass" type="password" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" autocomplete="current-password" />
-              </label>
-              <details class="rounded-lg border border-slate-800 bg-slate-950/30 px-3 py-2">
-                <summary class="cursor-pointer text-[11px] text-slate-500 select-none">Use a PIN instead (only if your operator gave you one)</summary>
-                <label class="block text-xs text-slate-300 mt-3">PIN
-                  <input id="tenantPin" type="password" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" autocomplete="one-time-code" />
+              <div id="tenantIdHostLock" class="hidden mt-2 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-[11px] text-emerald-100/90 leading-relaxed">
+                <span class="text-emerald-200/95 font-medium">This hostname is mapped to tenant</span>
+                <code id="tenantIdExpected" class="mx-1 text-slate-100"></code>
+                <span class="text-emerald-200/95">— field is locked so it is not mistyped (e.g. <code class="text-rose-200">lux</code> vs <code class="text-slate-100">luxe-maurice</code>).</span>
+                <button type="button" id="btnUnlockTenantId" class="ml-2 text-sky-300 underline font-normal">
+                  Unlock to type a different tenant
+                </button>
+              </div>
+              <div class="grid grid-cols-1 gap-3 mt-3">
+                <p class="text-[11px] text-slate-400">Default: <strong class="text-slate-300">email + password</strong> from your operator.</p>
+                <label class="block text-xs text-slate-300" for="tenantUser">Email
+                  <input id="tenantUser" name="username" type="email" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="name@company.com" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" />
                 </label>
-              </details>
-            </div>
-            <button id="btnTenant" class="mt-4 w-full rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold">Login as Tenant</button>
+                <label class="block text-xs text-slate-300" for="tenantPass">Password
+                  <input id="tenantPass" name="password" type="password" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" autocomplete="current-password" />
+                </label>
+                <details class="rounded-lg border border-slate-800 bg-slate-950/30 px-3 py-2">
+                  <summary class="cursor-pointer text-[11px] text-slate-500 select-none">Use a PIN instead (only if your operator gave you one)</summary>
+                  <label class="block text-xs text-slate-300 mt-3" for="tenantPin">PIN
+                    <!--
+                      PIN field MUST NOT be name="password" or it steals the
+                      saved account password from Chrome / Google Password
+                      Manager. Use `login_pin` + autocomplete=one-time-code.
+                    -->
+                    <input id="tenantPin" name="login_pin" type="password" inputmode="numeric" maxlength="12" class="mt-1 w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" autocomplete="one-time-code" />
+                  </label>
+                </details>
+              </div>
+              <button id="btnTenant" type="submit" class="mt-4 w-full rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold">Login as Tenant</button>
+            </form>
 
             <div
               class="mt-4 rounded-xl border border-slate-800 bg-slate-950/50 p-3 text-[11px] text-slate-400 leading-relaxed space-y-2"
@@ -492,7 +558,12 @@
             } catch (_) {}
           }
 
-          $('btnSimpleLogin').addEventListener('click', async () => {
+          // Submit listeners on the <form> elements so both pressing Enter
+          // in a field and clicking the submit button trigger one path —
+          // and so Chrome / Google Password Manager sees a real submit
+          // event and offers to save the credentials.
+          $('formClientEmailLogin').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
             err('');
             try {
               if (!clientTenantId) {
@@ -526,7 +597,8 @@
             }
           });
 
-          $('btnSimplePinLogin').addEventListener('click', async () => {
+          $('formClientPinLogin').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
             err('');
             try {
               if (!clientTenantId) {
@@ -611,7 +683,22 @@
         } else if (login_route === 'operator') {
           let hostMappedTenantId = null;
 
-          $('btnTenant').addEventListener('click', async () => {
+          /**
+           * Returns the raw `next` query param (unsanitized — caller still
+           * runs it through safeNextPath() before redirecting).  Used to
+           * decide whether to redirect after a successful login or stay
+           * on /login to show operator/factory tooling.
+           */
+          function rawNextParam() {
+            try {
+              return new URLSearchParams(window.location.search).get('next') || '';
+            } catch (_) {
+              return '';
+            }
+          }
+
+          $('formOperatorTenantLogin').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
             err('');
             try {
               const typed = String($('tenantId').value || '').trim();
@@ -633,6 +720,9 @@
                 pin: $('tenantPin').value,
               });
               good('Logged in as tenant. Session cookie set.');
+              if (rawNextParam()) {
+                window.location.href = safeNextPath();
+              }
             } catch (e) {
               let m = String(e.message || e);
               const jb = e.corpflowBody && typeof e.corpflowBody === 'object' ? e.corpflowBody : null;
@@ -750,7 +840,8 @@
             }
           });
 
-          $('btnAdmin').addEventListener('click', async () => {
+          $('formFactoryAdminLogin').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
             err('');
             try {
               await post('/api/auth/login', {
@@ -759,6 +850,16 @@
                 password: $('adminPass').value,
               });
               good('Logged in as admin. Session cookie set.');
+              // If we were redirected here from a gated page (e.g.
+              // /admin/lead-rescue), honour the `next` param so the
+              // operator lands where they originally tried to go.
+              // Falls back to refreshing the session banner so the
+              // factory tools panel becomes visible if no `next` was
+              // provided.
+              if (rawNextParam()) {
+                window.location.href = safeNextPath();
+                return;
+              }
               await refreshSessionBanner();
             } catch (e) {
               err(String(e.message || e));
