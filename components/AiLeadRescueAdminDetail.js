@@ -136,7 +136,11 @@ export default function AiLeadRescueAdminDetail() {
         credentials: 'include',
       });
       const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'load_failed');
+      if (!r.ok || data?.ok === false) {
+        const code = data?.error || `HTTP_${r.status}`;
+        const msg = data?.message || data?.detail || `Request failed with HTTP ${r.status}.`;
+        throw new Error(`${msg} (${code})`);
+      }
       setLead(data.lead);
       hydrateForm(data.lead);
     } catch (e) {
@@ -172,7 +176,11 @@ export default function AiLeadRescueAdminDetail() {
         }),
       });
       const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'checklist_save_failed');
+      if (!r.ok || data?.ok === false) {
+        const code = data?.error || `HTTP_${r.status}`;
+        const msg = data?.message || data?.detail || `Request failed with HTTP ${r.status}.`;
+        throw new Error(`${msg} (${code})`);
+      }
       setLead(data.lead);
       hydrateForm(data.lead);
     } catch (err) {
@@ -211,7 +219,11 @@ export default function AiLeadRescueAdminDetail() {
         body: JSON.stringify(body),
       });
       const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'save_failed');
+      if (!r.ok || data?.ok === false) {
+        const code = data?.error || `HTTP_${r.status}`;
+        const msg = data?.message || data?.detail || `Request failed with HTTP ${r.status}.`;
+        throw new Error(`${msg} (${code})`);
+      }
       setLead(data.lead);
       hydrateForm(data.lead);
       setSavedMsg('Saved.');

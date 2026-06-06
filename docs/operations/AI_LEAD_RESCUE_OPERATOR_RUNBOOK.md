@@ -170,6 +170,28 @@ The notes, payment-notes, and intake-message fields are jsonb / free-text and ar
 
 If a client sends one of these by mistake (e.g. pastes a card into a WhatsApp screenshot), **redact before recording** and tell them to use a payment provider directly.
 
+## Troubleshooting — admin list will not load
+
+If `/admin/lead-rescue` shows a permanent `Loading…` or an error banner, work through the following in order. The page is intentionally robust against this failure: the table is SSR-pre-populated, the client adds a 25 s timeout on the refresh fetch, and any failure surfaces an explicit error envelope with HTTP status + retry — so an operator should never be stuck on an unactionable spinner.
+
+1. **Read the error banner.** It surfaces the HTTP status (e.g. `HTTP 500`), the error code (e.g. `LEAD_RESCUE_LIST_FAILED`), and a human-readable message. Press **Retry** first.
+2. **Open raw API.** The banner also exposes a `Open raw API` link to `/api/factory/lead-rescue/list?…`. Open it in a new tab while authenticated as factory admin:
+   - **`{ ok: true, leads: [...] }`** — the API is healthy; the issue was a transient cold start. Reload the page.
+   - **`{ ok: false, error: "LEAD_RESCUE_LIST_FAILED", message: "..." }`** — DB call failed. Inspect `message` (typically a Prisma / connection error); confirm `POSTGRES_URL` in Vercel and Neon availability.
+   - **`{ ok: false, error: "FACTORY_AUTH_REQUIRED" }`** — the admin session expired between SSR and the client fetch. Reload after re-authenticating.
+3. **Confirm a recent intake actually persisted.** From psql or Neon SQL Editor:
+
+   ```sql
+   SELECT id, tenant_id, email, status, created_at
+   FROM leads
+   WHERE qualification_json -> 'intake_meta' ->> 'product' = 'ai-lead-rescue'
+   ORDER BY created_at DESC
+   LIMIT 20;
+   ```
+
+   If the intake does not appear, the issue is upstream of the operator cockpit (tenant intake / host context); follow `docs/operations/TENANT_CLIENT_LOGIN.md` to confirm the submitting host resolves to a registered tenant.
+4. **Confirm the deployment includes the SSR fallback.** `view-source:` on the page should contain the SSR-rendered `<tr>` rows for current leads or the SSR-rendered error envelope. If you see *only* `Loading…` in the raw HTML, the deployment predates the SSR fallback fix — redeploy / verify the deployed commit on Vercel Production.
+
 ## Live verification checklist (do before calling any change COMPLETE)
 
 CI green and a merged PR are not proof of delivery. Before marking any AI Lead Rescue change `COMPLETE`, walk through:

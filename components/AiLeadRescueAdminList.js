@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -36,6 +36,9 @@ const th = {
 };
 const td = { padding: '12px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13, verticalAlign: 'top' };
 
+const LIST_FETCH_TIMEOUT_MS = 25_000;
+const LIST_API_PATH = '/api/factory/lead-rescue/list';
+
 function fmtDate(iso) {
   if (!iso) return '—';
   try {
@@ -53,15 +56,38 @@ function regionLabel(path) {
   return path;
 }
 
-export default function AiLeadRescueAdminList() {
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+/**
+ * @param {{
+ *   initialLeads?: Array<Record<string, unknown>>|null,
+ *   initialError?: { error?: string, message?: string, http_status?: number }|null,
+ * }} [props]
+ */
+export default function AiLeadRescueAdminList(props = {}) {
+  const { initialLeads, initialError } = props;
+  const hasInitial = Array.isArray(initialLeads);
+
+  const [leads, setLeads] = useState(hasInitial ? initialLeads : []);
+  // If SSR pre-populated the list (success OR error), we are NOT loading on first paint.
+  // This is the safety net that prevents permanent "Loading…" when client-side hydration
+  // doesn't run or the API hangs — the page always reflects the SSR result.
+  const [loading, setLoading] = useState(!hasInitial && !initialError);
+  const [error, setError] = useState(() => {
+    if (!initialError) return null;
+    return {
+      code: initialError.error || 'LOAD_FAILED',
+      message: initialError.message || 'Could not load AI Lead Rescue leads.',
+      http_status: initialError.http_status || null,
+    };
+  });
   const [status, setStatus] = useState('');
   const [region, setRegion] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
   const [q, setQ] = useState('');
   const [searchDraft, setSearchDraft] = useState('');
+  // First effect run after mount should NOT immediately refetch when SSR already populated
+  // the list (avoids an unnecessary round-trip and a flash of "Loading…").
+  const skipFirstFetchRef = useRef(hasInitial || Boolean(initialError));
+  const inFlightAbortRef = useRef(null);
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
@@ -74,22 +100,83 @@ export default function AiLeadRescueAdminList() {
   }, [status, region, paymentStatus, q]);
 
   const load = useCallback(async () => {
+    if (inFlightAbortRef.current) {
+      try {
+        inFlightAbortRef.current.abort();
+      } catch {
+        /* ignore */
+      }
+    }
+    const controller =
+      typeof AbortController !== 'undefined' ? new AbortController() : null;
+    inFlightAbortRef.current = controller;
+    const timeoutId = controller
+      ? setTimeout(() => {
+          try {
+            controller.abort();
+          } catch {
+            /* ignore */
+          }
+        }, LIST_FETCH_TIMEOUT_MS)
+      : null;
+
     setLoading(true);
-    setError('');
+    setError(null);
+    let httpStatus = null;
     try {
-      const r = await fetch(`/api/factory/lead-rescue/list${queryString}`, { credentials: 'include' });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'load_failed');
+      const r = await fetch(`${LIST_API_PATH}${queryString}`, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+        signal: controller ? controller.signal : undefined,
+      });
+      httpStatus = r.status;
+      let data = null;
+      try {
+        data = await r.json();
+      } catch (parseErr) {
+        throw new Error(
+          `HTTP ${httpStatus}: response was not JSON (${parseErr instanceof Error ? parseErr.message : String(parseErr)}).`,
+        );
+      }
+      if (!r.ok || (data && data.ok === false)) {
+        const code = (data && data.error) || 'LOAD_FAILED';
+        const msg =
+          (data && (data.message || data.detail)) ||
+          `Request failed with HTTP ${httpStatus}.`;
+        const err = new Error(msg);
+        err.code = code;
+        err.http_status = httpStatus;
+        throw err;
+      }
       setLeads(Array.isArray(data.leads) ? data.leads : []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load leads.');
+      const aborted = e && (e.name === 'AbortError' || e.code === 20);
+      const code = aborted ? 'TIMEOUT' : (e && e.code) || 'LOAD_FAILED';
+      const message = aborted
+        ? `Request timed out after ${Math.round(LIST_FETCH_TIMEOUT_MS / 1000)}s (production may be cold-starting).`
+        : e instanceof Error
+          ? e.message
+          : 'Could not load AI Lead Rescue leads.';
+      setError({
+        code,
+        message,
+        http_status: (e && e.http_status) || httpStatus || null,
+      });
       setLeads([]);
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (inFlightAbortRef.current === controller) {
+        inFlightAbortRef.current = null;
+      }
       setLoading(false);
     }
   }, [queryString]);
 
   useEffect(() => {
+    if (skipFirstFetchRef.current) {
+      skipFirstFetchRef.current = false;
+      return;
+    }
     load();
   }, [load]);
 
@@ -100,6 +187,10 @@ export default function AiLeadRescueAdminList() {
     });
     return Array.from(set).sort();
   }, [leads]);
+
+  const showLoadingRow = loading && !error && leads.length === 0;
+  const showErrorRow = !loading && error;
+  const showEmptyRow = !loading && !error && leads.length === 0;
 
   return (
     <div style={pageStyle}>
@@ -138,16 +229,18 @@ export default function AiLeadRescueAdminList() {
             <button
               type="button"
               onClick={load}
+              disabled={loading}
               style={{
                 ...input,
-                cursor: 'pointer',
+                cursor: loading ? 'wait' : 'pointer',
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 fontSize: 11,
+                opacity: loading ? 0.6 : 1,
               }}
             >
-              Refresh
+              {loading ? 'Loading…' : 'Refresh'}
             </button>
           </header>
 
@@ -214,7 +307,64 @@ export default function AiLeadRescueAdminList() {
             </button>
           </section>
 
-          {error ? <p style={{ color: '#fca5a5', marginBottom: 16 }}>{error}</p> : null}
+          {error ? (
+            <div
+              role="alert"
+              style={{
+                background: 'rgba(248, 113, 113, 0.08)',
+                border: '1px solid rgba(248, 113, 113, 0.35)',
+                color: '#fecaca',
+                padding: '12px 14px',
+                borderRadius: 10,
+                marginBottom: 16,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 12,
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ minWidth: 0, flex: '1 1 360px' }}>
+                <strong style={{ display: 'block', fontSize: 13, color: '#fca5a5' }}>
+                  Could not load AI Lead Rescue list
+                  {error.http_status ? ` (HTTP ${error.http_status})` : ''} — {error.code}
+                </strong>
+                <span style={{ fontSize: 12, color: '#fecaca', wordBreak: 'break-word' }}>
+                  {error.message}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={load}
+                  disabled={loading}
+                  style={{
+                    ...input,
+                    cursor: loading ? 'wait' : 'pointer',
+                    fontWeight: 700,
+                    color: '#031018',
+                    background: '#fca5a5',
+                    border: '1px solid #fca5a5',
+                  }}
+                >
+                  {loading ? 'Retrying…' : 'Retry'}
+                </button>
+                <a
+                  href={`${LIST_API_PATH}${queryString}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    ...input,
+                    textDecoration: 'none',
+                    color: '#7dd3fc',
+                    fontWeight: 700,
+                  }}
+                >
+                  Open raw API
+                </a>
+              </div>
+            </div>
+          ) : null}
 
           <div style={{ ...glass, overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1500 }}>
@@ -241,52 +391,61 @@ export default function AiLeadRescueAdminList() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {showLoadingRow ? (
                   <tr>
-                    <td colSpan={17} style={{ ...td, color: '#8899aa' }}>
+                    <td colSpan={18} style={{ ...td, color: '#8899aa' }}>
                       Loading…
                     </td>
                   </tr>
-                ) : leads.length === 0 ? (
+                ) : null}
+                {showErrorRow ? (
                   <tr>
-                    <td colSpan={17} style={{ ...td, color: '#8899aa' }}>
+                    <td colSpan={18} style={{ ...td, color: '#fecaca' }}>
+                      List could not be loaded — see the error above. Press <strong>Retry</strong>.
+                    </td>
+                  </tr>
+                ) : null}
+                {showEmptyRow ? (
+                  <tr>
+                    <td colSpan={18} style={{ ...td, color: '#8899aa' }}>
                       No AI Lead Rescue intakes match these filters.
                     </td>
                   </tr>
-                ) : (
-                  leads.map((row) => (
-                    <tr key={row.id}>
-                      <td style={{ ...td, color: '#8899aa', fontFamily: 'monospace', fontSize: 12 }}>
-                        {fmtDate(row.submitted_at)}
-                      </td>
-                      <td style={{ ...td, fontWeight: 600 }}>{row.business_name || '—'}</td>
-                      <td style={td}>{row.contact_name || '—'}</td>
-                      <td style={td}>{row.email || '—'}</td>
-                      <td style={td}>{row.phone || '—'}</td>
-                      <td style={td}>{regionLabel(row.region_path)}</td>
-                      <td style={{ ...td, maxWidth: 120 }}>{row.lead_sources || '—'}</td>
-                      <td style={{ ...td, maxWidth: 140 }}>{row.preferred_payment_path || '—'}</td>
-                      <td style={td}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>
-                          {row.status_label || row.status}
-                        </span>
-                      </td>
-                      <td style={td}>{row.setup_price != null ? row.setup_price : '—'}</td>
-                      <td style={td}>{row.monthly_monitoring_price != null ? row.monthly_monitoring_price : '—'}</td>
-                      <td style={td}>{row.currency || '—'}</td>
-                      <td style={td}>{row.payment_status || 'none'}</td>
-                      <td style={td}>{row.owner || '—'}</td>
-                      <td style={{ ...td, fontSize: 12, color: '#8899aa' }}>{fmtDate(row.last_contacted)}</td>
-                      <td style={{ ...td, maxWidth: 140 }}>{row.next_action || '—'}</td>
-                      <td style={{ ...td, maxWidth: 120 }}>{row.notes_preview || '—'}</td>
-                      <td style={td}>
-                        <Link href={row.detail_path} style={{ color: '#7dd3fc', fontWeight: 700, fontSize: 12 }}>
-                          Open
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ) : null}
+                {!loading && leads.length > 0
+                  ? leads.map((row) => (
+                      <tr key={row.id}>
+                        <td style={{ ...td, color: '#8899aa', fontFamily: 'monospace', fontSize: 12 }}>
+                          {fmtDate(row.submitted_at)}
+                        </td>
+                        <td style={{ ...td, fontWeight: 600 }}>{row.business_name || '—'}</td>
+                        <td style={td}>{row.contact_name || '—'}</td>
+                        <td style={td}>{row.email || '—'}</td>
+                        <td style={td}>{row.phone || '—'}</td>
+                        <td style={td}>{regionLabel(row.region_path)}</td>
+                        <td style={{ ...td, maxWidth: 120 }}>{row.lead_sources || '—'}</td>
+                        <td style={{ ...td, maxWidth: 140 }}>{row.preferred_payment_path || '—'}</td>
+                        <td style={td}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#2dd4bf' }}>
+                            {row.status_label || row.status}
+                          </span>
+                        </td>
+                        <td style={td}>{row.setup_price != null ? row.setup_price : '—'}</td>
+                        <td style={td}>{row.monthly_monitoring_price != null ? row.monthly_monitoring_price : '—'}</td>
+                        <td style={td}>{row.currency || '—'}</td>
+                        <td style={td}>{row.payment_status || 'none'}</td>
+                        <td style={td}>{row.owner || '—'}</td>
+                        <td style={{ ...td, fontSize: 12, color: '#8899aa' }}>{fmtDate(row.last_contacted)}</td>
+                        <td style={{ ...td, maxWidth: 140 }}>{row.next_action || '—'}</td>
+                        <td style={{ ...td, maxWidth: 120 }}>{row.notes_preview || '—'}</td>
+                        <td style={td}>
+                          <Link href={row.detail_path} style={{ color: '#7dd3fc', fontWeight: 700, fontSize: 12 }}>
+                            Open
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  : null}
               </tbody>
             </table>
           </div>
