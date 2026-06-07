@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 
 import {
   AI_LEAD_RESCUE_CHECKLIST_ITEM_STATES,
-  AI_LEAD_RESCUE_STATUSES,
+  getAiLeadRescueForwardStatuses,
 } from '../lib/cmp/_lib/ai-lead-rescue-operator.js';
 import { fmtDateStableUtc } from '../lib/format/utc-date.js';
 
@@ -823,12 +823,32 @@ export default function AiLeadRescueAdminDetail(props = {}) {
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
                     >
-                      {AI_LEAD_RESCUE_STATUSES.map((s) => (
+                      {/*
+                        2026-06-08 PR #326 — forward-only dropdown.
+                        Filter by the SAVED status (lead.operations.status),
+                        not local form state, so the operator can still
+                        revert an unsaved change locally without
+                        the option disappearing. The API layer still
+                        accepts any valid status — corrections via raw
+                        PATCH stay possible.
+                      */}
+                      {getAiLeadRescueForwardStatuses(lead.operations.status).map((s) => (
                         <option key={s} value={s}>
                           {s.replace(/_/g, ' ')}
                         </option>
                       ))}
                     </select>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: '#8899aa',
+                        marginTop: 4,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Forward-only. Backwards transitions are disabled in the UI to prevent accidental
+                      moves. Contact factory master if a correction is needed.
+                    </span>
                   </label>
                   <label style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
                     <span style={labelStyle}>Next action</span>

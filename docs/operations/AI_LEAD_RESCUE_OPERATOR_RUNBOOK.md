@@ -34,6 +34,8 @@ NEW_INTAKE → QUALIFYING → DEMO_OFFERED → DEMO_BOOKED → QUOTE_SENT
 LOST and PAUSED are terminal/holding states reachable from any prior step.
 ```
 
+**Forward-only in the UI (PR #326):** the status dropdown on `/admin/lead-rescue/[id]` only offers the lead's saved status plus every status that appears after it in the canonical order above. Backwards moves are not selectable from the dropdown — this prevents accidental regressions and resolves the operator confusion that produced spurious 500-style error messages on backward clicks. The API layer remains permissive (raw `PATCH /api/factory/lead-rescue/patch` with any valid status still works), so factory master can correct a mis-set status by direct API call when genuinely needed. See `getAiLeadRescueForwardStatuses(currentStatus)` in `lib/cmp/_lib/ai-lead-rescue-operator.js`.
+
 The setup checklist card on the detail page is only visible from `PAID_SETUP` onwards (5 statuses: `PAID_SETUP`, `SETUP_IN_PROGRESS`, `LIVE_PILOT`, `MONITORING_OFFERED`, `MONTHLY_ACTIVE`). Before payment, the card is hidden and the API returns `CHECKLIST_NOT_ELIGIBLE` on any attempt to patch it.
 
 ## How to review new intakes
@@ -334,6 +336,31 @@ What PR #325 deliberately does NOT change:
 - No change to factory-admin auth or response envelopes.
 
 Operator UX implication: the first request after a function cold-start may take ~250 ms longer than before (the retry budget), in exchange for the page no longer showing a spurious red error block when the engine settles. Subsequent warm requests pay no cost.
+
+### Fourth root cause found on 2026-06-08 — single-shot retry too tight for Neon scale-to-zero (PR #326)
+
+After PR #325 merged and was verified live, Anton observed the same UI error block (`Could not load lead detail (HTTP 500) — LEAD_RESCUE_PATCH_FAILED Invalid `prisma.lead.findUnique()` invocation: Engine is not yet connected.`) returning on a status-change save. He initially attributed it to a backwards status transition; the code grep confirmed that hypothesis was incorrect — there is no backwards-transition guard anywhere in `lib/server/admin-lead-rescue-api.js` or `lib/cmp/_lib/ai-lead-rescue-operator.js`. The direction of change is invisible to the API.
+
+The actual root cause was PR #325's retry window: a single retry with a 250 ms backoff is not always enough to outlast Neon scale-to-zero wake-up + Prisma engine subprocess spawn on a fresh Vercel function instance. Both the first attempt AND the single retry can race the same cold engine and fail identically — the operator then sees the raw Prisma message.
+
+What PR #326 changes — still surgical, still AI Lead Rescue only:
+
+- **`COLD_START_RETRY_INITIAL_DELAY_MS` widened from 250 ms → 1500 ms.** Covers the worst observed Neon wake-up window without producing visible latency in the healthy path.
+- **`COLD_START_RETRY_MAX_RETRIES` raised from 1 → 2.** Total attempt budget is now 3 (initial + 2 retries). Pinned by a static assertion that caps it at 3, so this never silently grows into a general-purpose retry loop.
+- **`withPrismaColdStartRetry(db, op, opts)` now accepts `{ delayMs, maxRetries }`.** Production paths use the defaults. Tests pass `{ delayMs: 0 }` to keep the suite fast. Each handler (`loadAiLeadRescueListData`, `loadAiLeadRescueDetailData`, `applyAiLeadRescuePatch`) accepts an optional `retryOpts` arg that plumbs through.
+- **Status dropdown on `/admin/lead-rescue/[id]` is now forward-only.** Backed by a new helper `getAiLeadRescueForwardStatuses(currentStatus)` in `lib/cmp/_lib/ai-lead-rescue-operator.js`, the dropdown only offers the lead's saved status PLUS every status that appears after it in `AI_LEAD_RESCUE_STATUSES`. The dropdown filters by the **saved** status (`lead.operations.status`), not local form state, so an operator can still revert an unsaved local change without the option disappearing. The API layer stays permissive — corrections via raw PATCH remain possible, with the operator's full knowledge.
+- **UI note under the dropdown** explains the forward-only rule and tells the operator to contact the factory master for corrections.
+
+What PR #326 still does NOT change:
+
+- No broad `PrismaClient` singleton refactor across the ~50 call sites.
+- No retry loop beyond the bounded 3-attempt budget.
+- No change to factory-admin auth or response envelopes.
+- No backward-transition logic at the API layer (it remains permissive).
+
+Strategic follow-up — PR #327 (queued, not yet open):
+
+Migrate `lib/server/admin-lead-rescue-api.js` (and eventually the broader codebase) to Prisma 6's **Neon driver adapter** (`@prisma/adapter-neon`) with `engineType = "client"`. That removes the Rust query-engine binary entirely from the serverless function bundle, which removes the entire class of "Engine is not yet connected" / "Response from the Engine was empty" failures along with it. PR #327 is the long-term answer; PR #326 buys the time to do it cleanly.
 
 ### Earlier (incorrect) hypothesis kept for the record — React hydration mismatch via locale-sensitive `fmtDate`
 

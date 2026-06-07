@@ -8,9 +8,11 @@ import {
   AI_LEAD_RESCUE_SETUP_CHECKLIST_V1,
   AI_LEAD_RESCUE_SETUP_CHECKLIST_VERSION,
   AI_LEAD_RESCUE_SETUP_ELIGIBLE_STATUSES,
+  AI_LEAD_RESCUE_STATUSES,
   aiLeadRescueRegionPathLabel,
   buildAiLeadRescueIntakeNotification,
   defaultAiLeadRescueOperator,
+  getAiLeadRescueForwardStatuses,
   isAiLeadRescueLead,
   isAiLeadRescueSetupStatus,
   leadRowToAiLeadRescueDetail,
@@ -294,5 +296,66 @@ describe('ai-lead-rescue-operator', () => {
     assert.match(out.notification_text, /Phone \/ WhatsApp: \(not provided\)/);
     assert.match(out.notification_text, /Preferred payment path: \(not selected\)/);
     assert.match(out.notification_text, /Region: Not selected/);
+  });
+});
+
+describe('getAiLeadRescueForwardStatuses — forward-only dropdown filter (PR #326)', () => {
+  it('returns the current status plus every later status in canonical order', () => {
+    const fromPaidSetup = getAiLeadRescueForwardStatuses('PAID_SETUP');
+    const idx = AI_LEAD_RESCUE_STATUSES.indexOf('PAID_SETUP');
+    assert.deepEqual(fromPaidSetup, AI_LEAD_RESCUE_STATUSES.slice(idx));
+    assert.equal(fromPaidSetup[0], 'PAID_SETUP', 'current status must remain selectable');
+    assert.ok(
+      !fromPaidSetup.includes('NEW_INTAKE'),
+      'earlier statuses must NOT be selectable from PAID_SETUP',
+    );
+    assert.ok(
+      !fromPaidSetup.includes('QUALIFYING'),
+      'earlier statuses must NOT be selectable from PAID_SETUP',
+    );
+    assert.ok(
+      fromPaidSetup.includes('PAUSED'),
+      'tail statuses (LOST/PAUSED) remain reachable',
+    );
+  });
+
+  it('returns the full canonical list for the first status (NEW_INTAKE)', () => {
+    const fromNew = getAiLeadRescueForwardStatuses('NEW_INTAKE');
+    assert.equal(fromNew.length, AI_LEAD_RESCUE_STATUSES.length);
+    assert.deepEqual([...fromNew], [...AI_LEAD_RESCUE_STATUSES]);
+  });
+
+  it('returns only the last status when currentStatus is the final entry (PAUSED)', () => {
+    const fromPaused = getAiLeadRescueForwardStatuses('PAUSED');
+    assert.deepEqual(fromPaused, ['PAUSED']);
+  });
+
+  it('returns [LOST, PAUSED] from LOST (canonical-order tail)', () => {
+    const fromLost = getAiLeadRescueForwardStatuses('LOST');
+    assert.deepEqual(fromLost, ['LOST', 'PAUSED']);
+  });
+
+  it('normalizes input case / whitespace before slicing (operator-safe)', () => {
+    const fromLowercase = getAiLeadRescueForwardStatuses('paid_setup');
+    const idx = AI_LEAD_RESCUE_STATUSES.indexOf('PAID_SETUP');
+    assert.deepEqual(fromLowercase, AI_LEAD_RESCUE_STATUSES.slice(idx));
+  });
+
+  it('falls back to the full list for null / unknown / empty input (defensive)', () => {
+    assert.deepEqual(getAiLeadRescueForwardStatuses(null), [...AI_LEAD_RESCUE_STATUSES]);
+    assert.deepEqual(getAiLeadRescueForwardStatuses(undefined), [...AI_LEAD_RESCUE_STATUSES]);
+    assert.deepEqual(getAiLeadRescueForwardStatuses(''), [...AI_LEAD_RESCUE_STATUSES]);
+    assert.deepEqual(
+      getAiLeadRescueForwardStatuses('NOT_A_REAL_STATUS'),
+      [...AI_LEAD_RESCUE_STATUSES],
+      'unknown input must never lock the dropdown empty',
+    );
+  });
+
+  it('returned slice never mutates the canonical array', () => {
+    const before = [...AI_LEAD_RESCUE_STATUSES];
+    const slice = getAiLeadRescueForwardStatuses('PAID_SETUP');
+    slice.length = 0;
+    assert.deepEqual([...AI_LEAD_RESCUE_STATUSES], before, 'mutating the returned slice must not affect the source');
   });
 });
