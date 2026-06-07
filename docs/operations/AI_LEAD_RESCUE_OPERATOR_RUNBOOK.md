@@ -294,6 +294,47 @@ Strategic follow-up (NOT in scope of this PR):
 
 Prisma 6.16+ supports `engineType = "client"` + driver adapter (`@prisma/adapter-pg` or `@prisma/adapter-neon`), which removes the Rust query-engine binary entirely. That is Prisma's recommended long-term direction for serverless and is what they will default to in Prisma 7. Migrating CorpFlow to that pattern is a separate, larger change because every `new PrismaClient()` call site (~50 files) needs an adapter wired in, and the Postgres-provider doc (`docs/operations/POSTGRES_PROVIDER.md`) and runtime guards would benefit from a Neon-only adapter (`@prisma/adapter-neon`). Plan that as its own packet; do not bundle it with the surgical fix in this PR.
 
+### Third root cause found on 2026-06-07 — Prisma engine cold-start race on the first query (PR #325)
+
+After PR #324 ensured the Prisma query engine binary was actually present in every Vercel function bundle, the diagnostic panel finally showed `Save phase: saved` + `Last patch response status: 200` for an operator-field save. Anton then tried to change the lead status to `PAID_SETUP`. Two failure variants appeared, each on a different click, on the same merged build:
+
+```
+Invalid `prisma.lead.findUnique()` invocation:
+Engine is not yet connected.
+Backtrace [{ fn: "start_thread" }, { fn: "__clone" }]
+```
+
+```
+Invalid `prisma.lead.findUnique()` invocation:
+Response from the Engine was empty
+```
+
+**The critical diagnostic** was the next click after the error: the AI Lead Rescue list page showed the row at the new status (`Setup in progress` after one save, `PAID_SETUP` after another). **The database write had landed in Neon every time, even when the UI saw HTTP 500**. So this is a UX / response-delivery race, not a data-integrity problem.
+
+Both error wordings are two faces of one Prisma 6 + Vercel cold-start bug:
+
+- **`Engine is not yet connected`** — the engine binary spawn has started, the Prisma client's `$connect()` lifecycle has not yet completed, and a query was fired anyway. Hits the first call on a fresh function instance.
+- **`Response from the Engine was empty`** — the engine accepted the query, executed it against Neon (so the row IS updated), but the response stream back to the Node.js process was truncated or lost (often function-timeout-adjacent or engine subprocess kill).
+
+The contributing factors on this codebase:
+
+1. **~50 files each declare `const prisma = new PrismaClient()` at module top level.** When a serverless function instance loads multiple of these (e.g. `api/factory_router.js` imports `admin-lead-rescue-api.js`, `admin-leads.js`, `auth.js`, `telemetry.js`, etc., each with its own client constructor), several engines race to spawn during cold-start. The long-term fix is a singleton `PrismaClient` shared across the process — a separate packet, intentionally out of scope here.
+2. **Neon's scale-to-zero compute can take a few seconds to wake** on the first connection after idle, layering additional latency onto the engine startup.
+
+What PR #325 changes — surgical, AI Lead Rescue only:
+
+- **Eager `prisma.$connect()` at module load** in `lib/server/admin-lead-rescue-api.js` so the engine + Neon connection are warm before the first incoming request. Failures here are logged to stderr (Vercel function logs) and swallowed; a real connection problem still surfaces normally on the first query through the standard `LEAD_RESCUE_*_FAILED` error envelope.
+- **`withPrismaColdStartRetry(db, operation)`** — a single-shot retry helper that fires *only* on the two documented wordings above. It calls `db.$connect()` between attempts (when the client exposes it), waits ~250 ms, and retries the operation once. If the retry also fails, the error propagates to the caller unchanged. No loops, no exponential backoff, no background workers, no masking of unrelated errors.
+- **Every Prisma data call in the AI Lead Rescue admin paths is wrapped** — `loadAiLeadRescueListData` (`findMany`), `loadAiLeadRescueDetailData` (`findUnique`), and `applyAiLeadRescuePatch` (`findUnique` + `update`). Pinned by static assertions in `node-tests/admin-lead-rescue-cold-start-retry.test.mjs` — `npm test` will fail if a bare `await db.lead.X(...)` appears outside a retry wrapper.
+
+What PR #325 deliberately does NOT change:
+
+- No other server file is modified. The broad `PrismaClient` singleton refactor across the ~50 call sites is logged as follow-up technical debt, not bundled into a late-night PR.
+- No retry loop, no exponential backoff, no auto-recovery on non-cold-start error wordings. Real failures (validation, constraint, `Can't reach database server`) still propagate immediately.
+- No change to factory-admin auth or response envelopes.
+
+Operator UX implication: the first request after a function cold-start may take ~250 ms longer than before (the retry budget), in exchange for the page no longer showing a spurious red error block when the engine settles. Subsequent warm requests pay no cost.
+
 ### Earlier (incorrect) hypothesis kept for the record — React hydration mismatch via locale-sensitive `fmtDate`
 
 This was PR #321's framing. It was a real latent bug:
