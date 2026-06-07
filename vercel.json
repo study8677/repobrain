@@ -5,6 +5,11 @@
       "UV_LINK_MODE": "copy"
     }
   },
+  "functions": {
+    "api/factory_router.js": {
+      "includeFiles": "node_modules/.prisma/client/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/",

@@ -250,6 +250,50 @@ The fix in **PR #323**:
 
 The PR #321 deterministic UTC formatter and PR #320 diagnostic panel remain in place — they are still defensively correct (no locale-sensitive render output, and the operator can read live build provenance on the page).
 
+### Second root cause found on 2026-06-07 — Prisma query engine binary missing from the Vercel function bundle
+
+After PR #323 restored client-side React hydration (`Save handler mounted: YES` was finally green on the `save-wiring-v2` diagnostic panel and the panel reported the deployed commit `477bb8a2`), clicking Save surfaced the **next** failure underneath: a server 500 from PATCH with a Prisma-specific error message.
+
+What the operator saw on the page (above the now-rendered 13-item checklist):
+
+```
+Could not load lead detail (HTTP 500) — LEAD_RESCUE_PATCH_FAILED
+Invalid `prisma.lead.findUnique()` invocation:
+Engine is not yet connected.
+Backtrace [{ fn: "start_thread" }, { fn: "__clone" }]
+```
+
+Diagnostic signals captured at the time that ruled out earlier hypotheses:
+
+- `https://core.corpflowai.com/api/factory/production-pulse/runtime` returned `core.database_reachable: true`. The drift fingerprint from `docs/operations/POSTGRES_PROVIDER.md` §4b (`database_reachable: false` + `db.prisma.io:5432` in the error body + Lux `tenant_id` fallback to `lux`) was **not** present.
+- `https://lux.corpflowai.com/api/tenant/site` returned `tenant_id: luxe-maurice`, proving GET-path Prisma calls on the same function family could reach Neon.
+- The `save-wiring-v2` diagnostic panel confirmed `Save handler mounted: YES` and the panel `Commit:` line matched the merge SHA of PR #323 — so the failure was on the server PATCH path, not in React hydration and not on a stale deploy.
+
+The error wording (`Engine is not yet connected`) + Linux thread-spawn backtrace (`start_thread`, `__clone`) + the recent Turbopack→Webpack switch is the documented signature of Vercel's serverless function tracer omitting `libquery_engine-rhel-openssl-3.0.x.so.node` from a function bundle. See [prisma/prisma#22142](https://github.com/prisma/prisma/issues/22142), [prisma/prisma#19499](https://github.com/prisma/prisma/discussions/19499), and the [Prisma "Deploy to Vercel" guide](https://www.prisma.io/docs/orm/v6/prisma-client/deployment/serverless/deploy-to-vercel).
+
+The CorpFlow architecture has **two** kinds of routes that talk to Prisma on Vercel, and they need **two** different tracing fixes:
+
+1. **Next.js pages routes with Prisma in `getServerSideProps`** — e.g. `/admin/lead-rescue/[id]`. Next.js Webpack emits an `.nft.json` next to each route's `.js`; Vercel uses those NFT files to assemble the function bundle. The official fix is the [`@prisma/nextjs-monorepo-workaround-plugin`](https://github.com/prisma/prisma/tree/main/packages/nextjs-monorepo-workaround-plugin) registered against Next's Webpack pass — it rewrites every `.nft.json` to list `libquery_engine-rhel-openssl-3.0.x.so.node` and `schema.prisma` so Vercel includes them in the bundle.
+2. **Vercel-native functions under `api/`** — `api/factory_router.js` is *not* a Next.js API route (it lives outside `pages/api/`) and is handled directly by `@vercel/nft`, which the Next plugin cannot reach. The fix is `vercel.json` `functions["api/factory_router.js"].includeFiles` set to a glob that explicitly copies the Prisma client output (engine binary + schema + generated client) into the function's bundle.
+
+Both fixes ship together because the AI Lead Rescue Save flow needs both: the detail page's SSR loads the lead via `loadAiLeadRescueDetailData` from the Next pages bundle (covered by fix #1), and the PATCH itself goes through `api/factory_router.js` (covered by fix #2).
+
+What this PR adds:
+
+- `next.config.mjs` — registers `PrismaPlugin` on the server-side Webpack pass. The repo had no `next.config.mjs` before this PR; everything ran on defaults.
+- `vercel.json` — adds `functions["api/factory_router.js"].includeFiles: "node_modules/.prisma/client/**"`.
+- `package.json` — declares `@prisma/nextjs-monorepo-workaround-plugin` as a normal `dependency` (not devDependency) so Vercel build picks it up.
+- `node-tests/prisma-engine-binary-tracing.test.mjs` — static regression tests pinning all three wiring points.
+
+Verified locally:
+
+- `npm run build` (Webpack, with `next.config.mjs` loaded) emits 6 `.nft.json` files that include the Linux engine binary path: `admin/lead-rescue.js.nft.json`, `admin/lead-rescue/[id].js.nft.json`, `lead-rescue.js.nft.json`, `index.js.nft.json`, `properties.js.nft.json`, `properties/admin.js.nft.json`, `property/[slug].js.nft.json`.
+- Full test suite (`npm test`) — 593/593 pass.
+
+Strategic follow-up (NOT in scope of this PR):
+
+Prisma 6.16+ supports `engineType = "client"` + driver adapter (`@prisma/adapter-pg` or `@prisma/adapter-neon`), which removes the Rust query-engine binary entirely. That is Prisma's recommended long-term direction for serverless and is what they will default to in Prisma 7. Migrating CorpFlow to that pattern is a separate, larger change because every `new PrismaClient()` call site (~50 files) needs an adapter wired in, and the Postgres-provider doc (`docs/operations/POSTGRES_PROVIDER.md`) and runtime guards would benefit from a Neon-only adapter (`@prisma/adapter-neon`). Plan that as its own packet; do not bundle it with the surgical fix in this PR.
+
 ### Earlier (incorrect) hypothesis kept for the record — React hydration mismatch via locale-sensitive `fmtDate`
 
 This was PR #321's framing. It was a real latent bug:
