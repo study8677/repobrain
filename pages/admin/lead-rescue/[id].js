@@ -2,49 +2,14 @@ import AiLeadRescueAdminDetail from '../../../components/AiLeadRescueAdminDetail
 import { requireAdminPageSession } from '../../../lib/server/admin-page-gate.js';
 import { loadAiLeadRescueDetailData } from '../../../lib/server/admin-lead-rescue-api.js';
 
-export default function AdminLeadRescueDetailPage({
-  initialLead,
-  initialError,
-  leadId,
-  buildInfo,
-}) {
+export default function AdminLeadRescueDetailPage({ initialLead, initialError, leadId }) {
   return (
     <AiLeadRescueAdminDetail
       initialLead={initialLead}
       initialError={initialError}
       leadId={leadId}
-      buildInfo={buildInfo}
     />
   );
-}
-
-/**
- * Reads Vercel build-time / runtime env vars and returns a JSON-serializable
- * `buildInfo` object that gets rendered into the diagnostic panel. Letting the
- * operator read the **deployed commit SHA** on the live page is the only
- * ground-truth way to confirm which build is being served — bumping a string
- * constant in source is not enough.
- *
- * Vercel sets these automatically on every deployment:
- *   - VERCEL_GIT_COMMIT_SHA       full git SHA of the deployed commit
- *   - VERCEL_GIT_COMMIT_REF       branch / tag
- *   - VERCEL_DEPLOYMENT_ID        e.g. dpl_…
- *   - VERCEL_ENV                  'production' | 'preview' | 'development'
- *
- * Local dev: all fall back to safe placeholders so the panel never crashes.
- */
-function readBuildInfo() {
-  const sha = process.env.VERCEL_GIT_COMMIT_SHA || '';
-  const ref = process.env.VERCEL_GIT_COMMIT_REF || '';
-  const deploymentId = process.env.VERCEL_DEPLOYMENT_ID || '';
-  const vercelEnv = process.env.VERCEL_ENV || 'local';
-  return {
-    commitSha: sha,
-    commitShaShort: sha ? sha.slice(0, 12) : 'local-dev',
-    commitRef: ref,
-    deploymentId,
-    vercelEnv,
-  };
 }
 
 /**
@@ -74,11 +39,12 @@ export async function getServerSideProps({ req, params }) {
         // Force JSON-serializable shape NOW: `leadRowToAiLeadRescueDetail` returns
         // raw Date objects for submitted_at/updated_at (from Prisma). Next.js will
         // JSON.stringify props when delivering them to the client, but during the
-        // SSR render pass the component sees the original Date object, while the
+        // SSR render pass the component sees the original Date object while the
         // hydration pass sees an ISO string. The two `String(value)` outputs differ
-        // (toLocaleString vs ISO), producing a React hydration mismatch that can
-        // skip attaching event handlers — the 2026-06-06 P0 where clicking Save
-        // produced zero reaction. Round-tripping through JSON here pins one shape.
+        // (toLocaleString vs ISO), which would produce a React hydration mismatch
+        // and silently skip attaching event handlers (the 2026-06-06 P0 where
+        // clicking Save produced zero reaction). Round-tripping through JSON
+        // here pins one shape across SSR and CSR. See PR #321.
         initialLead = JSON.parse(JSON.stringify(result.lead));
       } else if (result && result.ok === false) {
         initialError = {
@@ -102,7 +68,6 @@ export async function getServerSideProps({ req, params }) {
       initialLead,
       initialError,
       leadId: id,
-      buildInfo: readBuildInfo(),
     },
   };
 }

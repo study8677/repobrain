@@ -196,35 +196,30 @@ If `/admin/lead-rescue` shows a permanent `Loading…` or an error banner, work 
 
 ## Troubleshooting — clicking Save produces no visible reaction
 
-If you click **Save** on the detail page and nothing happens (no "Saving…", no "Saved.", no error), the detail page now renders a **visible diagnostic panel** directly above the Save button that tells you, at a glance, where the chain is breaking. Read it from top to bottom:
+The live operator surface no longer carries a diagnostic panel. With the root cause from PR #327 resolved (engine-stays-warm across requests), saves are expected to succeed transparently. If clicking **Save** ever produces no visible reaction again ("Saving…" / "Saved." / inline error all absent), the failure surface is somewhere upstream of the API and the page is most likely no longer hydrating. Work the checklist below:
 
-```
-Detail bundle: save-wiring-v2
-Lead id: <the id from the URL, or (none) if missing>
-Save handler mounted: YES | NO
-Last save click: <ISO timestamp, or (none)>
-Save phase: idle | clicked | saving | saved | error
-Last patch response status: <HTTP status, or (none)>
-Last Test click: <ISO timestamp, or (none)>
-```
+1. **Inline error block.** The detail page renders any save failure as a red error block *next to* the Save button (not just at the top), with the API error code and HTTP status. If you see no block AND no `Saved.` pill after pressing Save, React event handlers may not be attached.
+2. **DevTools → Console.** A red hydration / runtime error is the most likely culprit. The historical surfaces of this class of bug, recorded below in this runbook, were (a) Next.js 16 + Turbopack `_clientMiddlewareManifest.js` 404 (PR #323) and (b) a locale-sensitive `toLocaleString()` SSR/CSR mismatch (PR #321). Both are now structurally prevented — Webpack is used for the build, and timestamps render through `fmtDateStableUtc`.
+3. **Raw API probe.** While authenticated as factory master, run this from DevTools to bypass all UI wiring and confirm the API is reachable:
 
-How to read each line:
+   ```js
+   fetch('/api/factory/lead-rescue/patch', {
+     method: 'PATCH',
+     credentials: 'include',
+     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+     body: JSON.stringify({
+       id: '<the lead id from the URL>',
+       next_action: 'runbook probe ' + new Date().toISOString(),
+     }),
+   }).then(r => r.json().then(j => ({ status: r.status, body: j }))).then(console.log);
+   ```
 
-1. **`Detail bundle: save-wiring-v2`** — if this line does not appear at all on the page, Production is **not** serving the build with the diagnostics. Verify the deployed commit on Vercel Production and clear the browser cache.
-2. **`Save handler mounted: YES`** — if it says `NO`, React did not hydrate the page. Look in DevTools → Console for a red hydration / runtime error; that is the bug.
-3. **`Last Test click: …`** — there is a blue **Test click** button beside Save. Pressing it updates this line only (no API call). If the timestamp does not move, click events from React are not reaching the page at all (CSP, hydration failure, overlay). If it moves but **Save** does not, the bug is inside the Save handler.
-4. **`Save phase: clicked` after pressing Save** — the Save handler writes this *before* any validation or fetch, so it must transition out of `idle` on every click. If it stays `idle` after a click, the click event is not being delivered to `save()`.
-5. **`Save phase: saving` → `saved` (or `error`)** — once `clicked`, the handler then transitions to `saving` (request in flight), then `saved` on HTTP 200 or `error` on any failure.
-6. **`Last patch response status: <NNN>`** — populated as soon as the `PATCH /api/factory/lead-rescue/patch` request returns. Status `200` means the API persisted the change; a non-`200` means look at the inline error block beside Save.
+   - HTTP 200 with `{ ok: true, lead: { … } }` → the API is fine; the bug is in the UI (look at the deployed commit + clear browser cache).
+   - HTTP 500 with `LEAD_RESCUE_PATCH_FAILED` → see *Troubleshooting — Prisma engine cold-start* below.
+   - HTTP 403 with `FACTORY_AUTH_REQUIRED` → the factory master session has expired; sign back in.
+4. **Deployed-commit check.** Vercel → Deployments → Production → confirm the Ready deployment's commit matches `main`. PRs #319 – #327 fixed several latent issues; running against an older Production build can resurrect any of them.
 
-There is also a **`Open raw save diagnostic`** disclosure beneath the buttons. Expand it for a copy/paste `fetch(...)` snippet that PATCHes only `next_action` from DevTools while you are still signed in. Use it to separate UI wiring from API persistence:
-
-- If the raw snippet returns `{ ok: true, lead: { … } }` (HTTP 200) but clicking Save still shows `Save phase: idle`, the bug is in the React UI wiring — not the API.
-- If the raw snippet also fails, the bug is in the API or session, not the UI.
-
-Console (DevTools → Console) also receives namespaced `console.info('[ai-lead-rescue/detail] …')` events for `component mounted`, `save clicked`, `save payload prepared`, and `save response`. They never log notes, payment fields, owner, or `last_contacted` values — only structural booleans and the HTTP status. Filter the console by `ai-lead-rescue/detail` to follow the click chain end-to-end.
-
-When the live save failure is fully diagnosed, the diagnostic panel and Test click button must be removed or downgraded — they are not part of the long-term operator UX.
+If you need temporary in-page diagnostics again for a future investigation, *do not* re-introduce them inline on `components/AiLeadRescueAdminDetail.js`. Add them on a separate `/admin/lead-rescue/[id]/__diagnostics` route gated behind a query-string flag, so the production surface stays clean. The cleanup rationale is captured in PR #328.
 
 ### Root cause found on 2026-06-06 — Turbopack `_clientMiddlewareManifest.js` 404 (PR #323)
 
@@ -389,9 +384,29 @@ What PR #327 deliberately does NOT change:
 - No other server file is touched. Other modules in the codebase (~10 files) still call `$disconnect()` after their requests — they may have the same latent issue, but they're not what Anton is hitting and they're not on the AI Lead Rescue critical path.
 - The retry helpers from PR #325 and PR #326 stay in place. They were never the wrong solution; they were just patching the wrong layer. They remain useful for the genuinely-first request after a fresh function spawn (when even the eager `$connect()` may race the first incoming request) and as defence-in-depth against Neon scale-to-zero hiccups.
 
-Strategic follow-up — PR #328 (queued, no longer urgent):
+### Diagnostic UI cleanup — PR #328 (2026-06-08, after the chronicle closed)
 
-Migrate `lib/server/admin-lead-rescue-api.js` (and eventually the broader codebase) to Prisma 6's **Neon driver adapter** (`@prisma/adapter-neon`) with `engineType = "client"`. That removes the Rust query-engine binary entirely from the serverless function bundle, which removes the entire class of "Engine is not yet connected" / "Response from the Engine was empty" failures along with it. PR #328 is the long-term answer; with PR #327 in place, the failure mode that motivated PR #328 should be effectively gone, so PR #328 becomes a hygiene improvement rather than an incident response.
+PR #327 verified live on `lux.corpflowai.com/admin/lead-rescue/[id]` — status changes, `next_action` changes, and Setup checklist changes all persist across consecutive PATCHes on the same warm function instance. With the underlying race resolved, the temporary in-page diagnostics that had accumulated through PR #319 – PR #322 were removed in PR #328:
+
+- The **`Detail bundle / Commit / Deployment / Env / Lead id / Save handler mounted / Last save click / Save phase / Last patch response status / Last Test click`** panel above the Save button is gone.
+- The blue **Test click** button is gone.
+- The **`Open raw save diagnostic`** disclosure is gone (the raw fetch snippet remains documented in the *Troubleshooting* section above, for operators who want to reach for it from DevTools).
+- The `buildInfo` SSR prop (sourced from `VERCEL_GIT_COMMIT_SHA` / `VERCEL_DEPLOYMENT_ID` / `VERCEL_ENV`) is no longer plumbed from `pages/admin/lead-rescue/[id].js` to the component. Vercel commit/deploy provenance still lives where it canonically lives (Vercel Deployments + GitHub `main`).
+- The `logDiag` console helper and the `saveDiagnostics` React state are gone. `console.info('[ai-lead-rescue/detail] …')` events no longer appear.
+
+What stays (production surface):
+
+- The **`Save changes`** button (now the only button) — `data-testid="ai-lead-rescue-save"`, explicit `onClick={save}`, `type="button"`. PR #319's defence-in-depth against native form-POST regression remains pinned by `node-tests/admin-lead-rescue-detail-save-wiring.test.mjs`.
+- The inline `DetailErrorBlock` next to the Save button — operators still see API errors with HTTP status + error code + a Retry / Back / Open raw API affordance.
+- The `Saved.` success pill.
+- The forward-only status dropdown (PR #326) and its explanatory note.
+- All Setup checklist functionality.
+
+The static regression test `does NOT plumb buildInfo / Vercel commit metadata through the page (PR #328 cleanup)` in `node-tests/admin-lead-rescue-detail-save-wiring.test.mjs` pins the cleanup so the production surface cannot silently re-accumulate diagnostic scaffolding.
+
+Strategic follow-up — Neon driver adapter migration (queued, no longer urgent):
+
+Migrate `lib/server/admin-lead-rescue-api.js` (and eventually the broader codebase) to Prisma 6's **Neon driver adapter** (`@prisma/adapter-neon`) with `engineType = "client"`. That removes the Rust query-engine binary entirely from the serverless function bundle and removes the entire class of "Engine is not yet connected" / "Response from the Engine was empty" failures along with it. With PR #327 + PR #328 in place, the failure mode that motivated this migration should be effectively gone, so it is a hygiene improvement rather than incident response.
 
 ### Earlier (incorrect) hypothesis kept for the record — React hydration mismatch via locale-sensitive `fmtDate`
 
