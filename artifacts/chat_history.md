@@ -28,6 +28,83 @@
 
 ---
 
+## 2026-06-08 — AI Lead Rescue outbound activity log — live verification COMPLETE (`LeadRescue-Outbound-Activity-Log-1`; PR [#331](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/331); `JE-2026-06-08-1` → flipped PARTIAL → COMPLETE via `JE-2026-06-08-3`)
+
+<!-- AI_LEAD_RESCUE_OUTBOUND_ACTIVITY_LOG_LIVE_VERIFIED_2026_06_08_HIST -->
+
+**Status:** **COMPLETE.** Anton walked the 9-step live verification at the operator keyboard on the merged Production deployment using a real cockpit row (Jolly Rogers prospect). All 9 steps passed; the activity log is now the canonical per-lead audit trail for AI Lead Rescue outreach, replies, follow-ups, manual pro-forma sends, payment confirmations, and delivery handoffs.
+
+**Why this matters:** PR #331 took the operator cockpit from "no per-lead outreach audit trail" to "every outbound action captured server-stamped on the lead row, with channel + type enums, optional next_action / next_action_date / status_after, append-only contract, 200-entry stored cap, 50-entry render cap, and full preservation across operator + checklist saves". The companion docs PR [#332](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/332) (commercial launch pack, separate verdict track, recorded as `COMPLETE` under `JE-2026-06-08-2` at merge) explicitly anchored every paste-ready outreach / discovery / pricing / onboarding doc to the activity log, with a planned-pending caveat — that caveat is now historically satisfied.
+
+### Final SHAs and deployment IDs
+
+| Track | Merge SHA | Merged at (UTC) | Production deployment ID | Status |
+|---|---|---|---|---|
+| PR #331 (runtime) | `d6c976e87655e0f9a0c3249d9b2e94885748a458` | 2026-06-08T06:26:55Z | `4971015196` (success) | merged + deployed + **live verified** |
+| PR #332 (docs) | `dc85dab513e5b38efbaaca562233b3d07582cf00` | 2026-06-08T06:30:48Z | `4971045915` (success, current Production head) | merged + deployed; docs-only |
+| Audit-flip / chat-history (this commit) | (pending merge on `docs/lead-rescue-activity-log-audit-flip`) | n/a | n/a | docs-only |
+
+PR #332 sits on top of PR #331 with no runtime overlap (PR #332 modified only `docs/` + `AGENTS.md` + `JOURNAL.md` + `artifacts/chat_history.md`), so the activity-log runtime that landed under deployment `4971015196` rolled forward unchanged into `4971045915`.
+
+### 9-step live verification matrix (operator: Anton, 2026-06-08, Jolly Rogers prospect row)
+
+| # | Step | Result |
+|---|---|---|
+| 1 | `/admin/lead-rescue` list loads | PASS |
+| 2 | Detail page loads | PASS |
+| 3 | Activity log card visible | PASS |
+| 4 | Activity entry appends | PASS |
+| 5 | Activity entry saves | PASS |
+| 6 | Activity entry persists after save/reload (server-stamped `at` + `actor_label` unchanged across hard refresh) | PASS |
+| 7 | Setup checklist update saves | PASS |
+| 8 | Checklist note saves | PASS |
+| 9 | Checklist + checklist note persists | PASS |
+
+These 9 reported steps subsume the 7 minimum live checks named in the PR #331 acceptance contract — steps 4–6 cover *activity append → server-stamping → reload-persistence* and steps 7–9 cover *unrelated operator save preserves activity + checklist save preserves activity* via the cross-direction preservation tests pinned in `node-tests/admin-lead-rescue-patch-api.test.mjs` (`REGRESSION: mergeAiLeadRescueOperatorPatch preserves persisted setup_checklist AND activity`).
+
+### Pre-verification operator-runtime smoke (baseline before Anton sat down)
+
+- `https://core.corpflowai.com/api/factory/production-pulse/runtime` → HTTP 200, `core.database_reachable: true`, `deployment_ready: true`, no `db.prisma.io` drift fingerprint (per `docs/operations/POSTGRES_PROVIDER.md` § 4b).
+- `https://lux.corpflowai.com/admin/lead-rescue` → HTTP 307 (expected — auth redirect for unauthenticated visitor; SSR loader reachable).
+- `https://lux.corpflowai.com/lead-rescue` → HTTP 200 (public landing healthy, sentinels unchanged).
+- `https://corpflowai.com/lead-rescue` → HTTP 200 (apex public landing healthy).
+
+### Delivery Reality Audit (per `.cursor/rules/delivery-reality.mdc`)
+
+```text
+Delivery Reality Audit:
+- Local fix exists: YES
+- Merged to main: YES
+- Production deployment ID: 4971015196 (PR #331 first reached Production here at 2026-06-08T06:27:54Z; rolled forward unchanged into 4971045915 under PR #332's docs-only deployment 2026-06-08T06:31:39Z)
+- Commit deployed: d6c976e87655e0f9a0c3249d9b2e94885748a458 (PR #331 merge); dc85dab513e5b38efbaaca562233b3d07582cf00 (PR #332 merge, currently serving)
+- Live URLs tested: https://lux.corpflowai.com/admin/lead-rescue (list — PASS) and https://lux.corpflowai.com/admin/lead-rescue/[id] (detail — PASS; Jolly Rogers prospect row)
+- Expected vs actual result: 9/9 PASS per matrix above
+- Client-facing flow usable: YES (operator cockpit drives operator-side outreach + replies + follow-ups + payment confirmations + delivery handoffs end-to-end)
+- Final verdict: COMPLETE
+```
+
+### Doctrine compliance (unchanged by this verification)
+
+USD 150 launch pilot **single-offer rule** preserved · *"no card on the public page"* preserved · *"invoiced after we review your intake"* preserved · *"48-hour setup"* preserved · *"We do not guarantee new revenue"* preserved · manual pro-forma path preserved (`JE-2026-06-02-7`) · SBM warm-network primary route preserved (`JE-2026-06-01-4 / PAY-SBM-2`) · ERPNext PDF / Sales Invoice path remains held pending Print Designer install closure + `HB-1..HB-4` clearance · Above-the-Line strategic doctrine preserved · no edits to `/lead-rescue` live page sentinels.
+
+### What this unblocks (immediate, operator-side)
+
+- Anton's existing warm-network outreach cycle, started under PR #332's launch pack on 2026-06-08, now logs each outbound + reply + payment confirmation as a structured activity entry on the lead row instead of free-text in the Notes field.
+- The "use Notes field until PR #331 ships" interim guidance in `docs/operations/AI_LEAD_RESCUE_OPERATOR_RUNBOOK.md` § *From paid pilot to setup* / § *How to use the activity log for outreach and follow-up* is now historically satisfied; the runbook text itself is not edited by this commit (the caveat is anchored to time-of-writing and stays accurate as a historical reference).
+- The `JE-2026-06-08-1` PARTIAL verdict for PR #331 is replaced by the **COMPLETE** verdict recorded in append-only follow-up row `JE-2026-06-08-3`. Per journal cadence, the original PARTIAL row is preserved as the local + CI + merge milestone record; the verdict-flip row records the live-verification event.
+
+### Standing holds (unchanged by this verification)
+
+HB-1 · HB-2 · HB-3 · HB-4 · Phase D go-live · first submitted Sales Invoice · first ERPNext-emailed PDF to real client · `ERPNext-CFLR-ProForma-Template-Build-1` host-side execution still HELD on its own AUTHORISE chain · `ERPNext-PrintDesigner-Persistence-1` · `ERPNext-PrintDesigner-Chrome-Setup-1` · sandbox tear-down four-condition gate · all `JE-2026-06-05-1..9` standing holds.
+
+### Verdict tracks (kept separate per `.cursor/rules/delivery-reality.mdc`)
+
+- **PR #331 (runtime activity log):** **COMPLETE** as of this row. Audit recorded above.
+- **PR #332 (docs launch pack):** **COMPLETE** at merge per docs-only delivery-reality rule. Recorded under `JE-2026-06-08-2`. No verification step pending.
+- **Live `/lead-rescue` public page:** unchanged by either PR; no public-surface verification required.
+
+---
+
 ## 2026-06-08 — AI Lead Rescue first-paid-pilots launch pack (`LeadRescue-First-Paid-Pilots-Launch-Pack-1` — `JE-2026-06-08-2`; docs-only PR; **PARTIAL until merged**)
 
 <!-- AI_LEAD_RESCUE_FIRST_PAID_PILOTS_LAUNCH_PACK_2026_06_08_HIST -->
