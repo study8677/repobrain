@@ -161,6 +161,59 @@ Each row saves independently via the existing factory PATCH route — there is n
 
 The canonical order is locked in by an assertion in `node-tests/ai-lead-rescue-operator.test.mjs`. If you need to add or rename an item, update the v1 list in `lib/cmp/_lib/ai-lead-rescue-operator.js`, update the test, update this table, and bump the checklist `version` if the change is breaking.
 
+## How to use the activity log
+
+The **Activity log** card on `/admin/lead-rescue/[id]` is the operator-visible timeline of outbound actions, replies, follow-ups, and handoffs for a single lead. It is the lightweight in-app substitute for a third-party CRM during the first paid pilots — explicitly scoped per the CRM Reuse Audit (`docs/strategy/CORPFLOWAI_CRM_REUSE_AUDIT_V1.md`) and **not** a full CRM rebuild.
+
+### What it stores
+
+Each entry is server-stamped at save time and append-only. The persisted shape is:
+
+| Field | Source | Notes |
+|---|---|---|
+| `at` | server (`nowIso`) | ISO 8601, never client-spoofable |
+| `actor_label` | server (admin session) | the operator who clicked **Add activity** |
+| `channel` | operator dropdown | `whatsapp`, `linkedin`, `email`, `call`, `manual`, `internal` |
+| `type` | operator dropdown | `outbound_opener`, `outbound_followup`, `prospect_replied`, `call_booked`, `intake_reviewed`, `manual_pro_forma_sent`, `payment_confirmed_manual`, `delivery_handoff`, `bad_fit`, `follow_up_scheduled`, `note` |
+| `note` | optional textarea | trimmed to 4 000 chars |
+| `next_action` | optional input | trimmed to 500 chars |
+| `next_action_date` | optional datetime | invalid input is dropped to `null` |
+| `status_after` | optional | informational only; entering it here does **not** mutate the lead's status |
+
+The list is capped at **200 entries** per lead in storage (oldest dropped first); the UI renders the most recent **50** in reverse-chronological order. Both caps are enforced by `appendAiLeadRescueActivity` and `parseAiLeadRescueActivity` in `lib/cmp/_lib/ai-lead-rescue-operator.js`.
+
+### When to use it
+
+- **Cold outreach.** Each WhatsApp / LinkedIn / email opener you send → one `outbound_opener` entry with the channel and a one-line summary.
+- **Follow-ups.** `outbound_followup` for second / third touches after no reply.
+- **Replies.** When the prospect replies, log `prospect_replied` with the gist of the reply (do not paste private content — see *What not to store* below).
+- **Booked calls.** `call_booked` with the date / time in `next_action_date`.
+- **Manual pro-forma.** `manual_pro_forma_sent` once you send the pro-forma for the pilot.
+- **Payment confirmed.** `payment_confirmed_manual` when funds clear; pair with the Commercial card update.
+- **Delivery handoff.** `delivery_handoff` when the lead crosses the `PAID_SETUP → SETUP_IN_PROGRESS` boundary and you start the 13-item setup checklist.
+- **Bad fit.** `bad_fit` instead of silently letting the lead die — keeps the audit trail honest.
+
+### What it is NOT
+
+- **Not a status mutator.** Use the *Status* dropdown (forward-only, see PR #326) for actual status changes. `status_after` on an activity entry is for context only.
+- **Not a chat log.** Do not paste full message threads. One-line summaries plus a link to the source channel are enough.
+- **Not editable.** Entries are append-only by design — if you record something incorrect, add a corrective entry (`note` / `internal`) explaining the correction. This preserves the audit trail.
+- **Not a replacement for the Setup checklist** once the lead reaches `PAID_SETUP`. Use both: the checklist tracks deliverable progress, the activity log tracks operator actions and prospect signals.
+
+### Operator workflow
+
+1. Open `/admin/lead-rescue/[id]`.
+2. Use the **Activity log** card under the *Status and operations* form.
+3. Pick **Channel** + **Type** from the closed dropdowns.
+4. Add a short **Note** describing what happened.
+5. (Optional) Set **Next action** and **Next action date** so the next touch is scheduled in writing.
+6. Click **Add activity**. The card will refresh in place; reload the page to confirm the new entry persists with a server timestamp + your operator label.
+7. Saving operator fields (Status, Next action, etc.) **does not** wipe the activity log; saving a checklist item also does not wipe it. This is enforced by integration tests in `node-tests/admin-lead-rescue-patch-api.test.mjs`.
+
+### What not to store in activity entries
+
+The same hard rules in the *What not to store* section below apply verbatim to every activity field. **No card numbers, banking credentials, passwords, OTPs, or private health details.** The activity log is jsonb in `qualification_json.ai_lead_rescue_operator.activity[]` and is operator-visible — treat it like an internal CRM note.
+
 ## What not to store
 
 The notes, payment-notes, and intake-message fields are jsonb / free-text and are **operator-visible**. Treat them as you would any internal CRM note, and **never** paste any of the following into any field:
@@ -473,6 +526,7 @@ CI green and a merged PR are not proof of delivery. Before marking any AI Lead R
 6. **n8n forwards `payload.notification_text`** to the configured operator Telegram / email channel.
 7. **Setup checklist** card appears for a `PAID_SETUP` (or later) lead and shows **all 13 items**; toggling one row saves and survives a page reload.
 8. **Eligibility gate** holds — the card stays hidden for `QUALIFYING` / `PAYMENT_PENDING` etc., and the PATCH endpoint returns `CHECKLIST_NOT_ELIGIBLE` for those statuses.
+9. **Activity log** card appears on the detail page; submitting one entry persists with a server timestamp + the operator's session label, the entry survives a page reload, and saving an unrelated operator field afterwards does **not** wipe the activity timeline.
 
 If any of these fails on production, the change is **FAILED**, not COMPLETE — see `.cursor/rules/delivery-reality.mdc`.
 

@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  AI_LEAD_RESCUE_ACTIVITY_CHANNELS,
+  AI_LEAD_RESCUE_ACTIVITY_MAX_ENTRIES,
+  AI_LEAD_RESCUE_ACTIVITY_TYPES,
   AI_LEAD_RESCUE_CHECKLIST_ITEM_STATES,
   AI_LEAD_RESCUE_INTAKE_NOTIFICATION_EVENT,
   AI_LEAD_RESCUE_PRODUCT,
@@ -9,7 +12,10 @@ import {
   AI_LEAD_RESCUE_SETUP_CHECKLIST_VERSION,
   AI_LEAD_RESCUE_SETUP_ELIGIBLE_STATUSES,
   AI_LEAD_RESCUE_STATUSES,
+  aiLeadRescueActivityChannelLabel,
+  aiLeadRescueActivityTypeLabel,
   aiLeadRescueRegionPathLabel,
+  appendAiLeadRescueActivity,
   buildAiLeadRescueIntakeNotification,
   defaultAiLeadRescueOperator,
   getAiLeadRescueForwardStatuses,
@@ -19,7 +25,10 @@ import {
   leadRowToAiLeadRescueListItem,
   mergeAiLeadRescueChecklistItemPatch,
   mergeAiLeadRescueOperatorPatch,
+  normalizeAiLeadRescueActivityChannel,
+  normalizeAiLeadRescueActivityType,
   normalizeAiLeadRescueStatus,
+  parseAiLeadRescueActivity,
   parseAiLeadRescueSetupChecklist,
   parseIntakeMeta,
 } from '../lib/cmp/_lib/ai-lead-rescue-operator.js';
@@ -357,5 +366,317 @@ describe('getAiLeadRescueForwardStatuses — forward-only dropdown filter (PR #3
     const slice = getAiLeadRescueForwardStatuses('PAID_SETUP');
     slice.length = 0;
     assert.deepEqual([...AI_LEAD_RESCUE_STATUSES], before, 'mutating the returned slice must not affect the source');
+  });
+});
+
+describe('ai-lead-rescue-operator activity log', () => {
+  const baseQj = (now = '2026-06-08T08:00:00.000Z') => ({
+    intake_meta: { product: AI_LEAD_RESCUE_PRODUCT },
+    ai_lead_rescue_operator: defaultAiLeadRescueOperator(now),
+  });
+
+  it('exposes a stable v1 channel set and type set', () => {
+    assert.deepEqual([...AI_LEAD_RESCUE_ACTIVITY_CHANNELS], [
+      'whatsapp',
+      'linkedin',
+      'email',
+      'call',
+      'manual',
+      'internal',
+    ]);
+    assert.deepEqual([...AI_LEAD_RESCUE_ACTIVITY_TYPES], [
+      'outbound_opener',
+      'outbound_followup',
+      'prospect_replied',
+      'call_booked',
+      'intake_reviewed',
+      'manual_pro_forma_sent',
+      'payment_confirmed_manual',
+      'delivery_handoff',
+      'bad_fit',
+      'follow_up_scheduled',
+      'note',
+    ]);
+  });
+
+  it('normalises and labels channels/types case-insensitively', () => {
+    assert.equal(normalizeAiLeadRescueActivityChannel('WhatsApp'), 'whatsapp');
+    assert.equal(normalizeAiLeadRescueActivityChannel('Call'), 'call');
+    assert.equal(normalizeAiLeadRescueActivityChannel('FAX'), null);
+    assert.equal(normalizeAiLeadRescueActivityType('outbound-opener'), 'outbound_opener');
+    assert.equal(normalizeAiLeadRescueActivityType('Bad Fit'), 'bad_fit');
+    assert.equal(normalizeAiLeadRescueActivityType('hammer-time'), null);
+    assert.equal(aiLeadRescueActivityChannelLabel('whatsapp'), 'WhatsApp');
+    assert.equal(aiLeadRescueActivityTypeLabel('outbound_opener'), 'Outbound opener sent');
+  });
+
+  it('appendAiLeadRescueActivity stamps server time + actor and ignores client-supplied at/actor_label', () => {
+    const now = '2026-06-08T09:00:00.000Z';
+    const r = appendAiLeadRescueActivity(
+      baseQj(),
+      {
+        channel: 'whatsapp',
+        type: 'outbound_opener',
+        note: 'Sent the warm-network opener.',
+        next_action: 'Follow up Friday if no reply',
+        next_action_date: '2026-06-12T09:00:00Z',
+        // These two fields are ignored — server stamps both.
+        at: '1990-01-01T00:00:00Z',
+        actor_label: 'fake@spoofed.test',
+      },
+      'anton@corpflowai.com',
+      now,
+    );
+    assert.equal(r.ok, true);
+    const list = parseAiLeadRescueActivity(r.qj);
+    assert.equal(list.length, 1);
+    const e = list[0];
+    assert.equal(e.at, now, 'timestamp must be server-stamped');
+    assert.equal(e.actor_label, 'anton@corpflowai.com', 'actor must come from session, not client');
+    assert.equal(e.channel, 'whatsapp');
+    assert.equal(e.channel_label, 'WhatsApp');
+    assert.equal(e.type, 'outbound_opener');
+    assert.equal(e.type_label, 'Outbound opener sent');
+    assert.equal(e.note, 'Sent the warm-network opener.');
+    assert.equal(e.next_action, 'Follow up Friday if no reply');
+    assert.equal(e.next_action_date, '2026-06-12T09:00:00.000Z');
+    assert.equal(e.status_after, null);
+  });
+
+  it('rejects unknown channel and unknown type', () => {
+    const now = '2026-06-08T09:00:00.000Z';
+    assert.deepEqual(
+      appendAiLeadRescueActivity(baseQj(), { channel: 'fax', type: 'outbound_opener' }, 'op', now),
+      { ok: false, error: 'INVALID_ACTIVITY_CHANNEL' },
+    );
+    assert.deepEqual(
+      appendAiLeadRescueActivity(baseQj(), { channel: 'whatsapp', type: 'hammer_time' }, 'op', now),
+      { ok: false, error: 'INVALID_ACTIVITY_TYPE' },
+    );
+  });
+
+  it('treats empty/whitespace note + next_action as null and ignores invalid next_action_date', () => {
+    const now = '2026-06-08T10:00:00.000Z';
+    const r = appendAiLeadRescueActivity(
+      baseQj(),
+      {
+        channel: 'email',
+        type: 'note',
+        note: '   ',
+        next_action: '',
+        next_action_date: 'not-a-date',
+      },
+      'op',
+      now,
+    );
+    assert.equal(r.ok, true);
+    const e = parseAiLeadRescueActivity(r.qj)[0];
+    assert.equal(e.note, null);
+    assert.equal(e.next_action, null);
+    assert.equal(e.next_action_date, null);
+  });
+
+  it('truncates long note + next_action to documented limits', () => {
+    const now = '2026-06-08T10:00:00.000Z';
+    const longNote = 'x'.repeat(5000);
+    const longNext = 'y'.repeat(800);
+    const r = appendAiLeadRescueActivity(
+      baseQj(),
+      { channel: 'internal', type: 'note', note: longNote, next_action: longNext },
+      'op',
+      now,
+    );
+    assert.equal(r.ok, true);
+    const e = parseAiLeadRescueActivity(r.qj)[0];
+    assert.equal(e.note.length, 4000);
+    assert.equal(e.next_action.length, 500);
+  });
+
+  it('only accepts status_after values from the canonical AI_LEAD_RESCUE_STATUSES list', () => {
+    const now = '2026-06-08T11:00:00.000Z';
+    const ok = appendAiLeadRescueActivity(
+      baseQj(),
+      { channel: 'manual', type: 'payment_confirmed_manual', status_after: 'paid_setup' },
+      'op',
+      now,
+    );
+    assert.equal(ok.ok, true);
+    assert.equal(parseAiLeadRescueActivity(ok.qj)[0].status_after, 'PAID_SETUP');
+
+    const bad = appendAiLeadRescueActivity(
+      baseQj(),
+      { channel: 'manual', type: 'payment_confirmed_manual', status_after: 'BOGUS' },
+      'op',
+      now,
+    );
+    assert.equal(bad.ok, true);
+    assert.equal(parseAiLeadRescueActivity(bad.qj)[0].status_after, null);
+  });
+
+  it('caps activity at AI_LEAD_RESCUE_ACTIVITY_MAX_ENTRIES (oldest dropped first)', () => {
+    let qj = baseQj('2026-06-08T08:00:00.000Z');
+    const overflow = AI_LEAD_RESCUE_ACTIVITY_MAX_ENTRIES + 5;
+    for (let i = 0; i < overflow; i += 1) {
+      const iso = new Date(`2026-06-08T08:00:${String(i % 60).padStart(2, '0')}.000Z`).toISOString();
+      const r = appendAiLeadRescueActivity(
+        qj,
+        { channel: 'internal', type: 'note', note: `entry ${i}` },
+        'op',
+        iso,
+      );
+      assert.equal(r.ok, true);
+      qj = r.qj;
+    }
+    const list = parseAiLeadRescueActivity(qj);
+    assert.equal(list.length, AI_LEAD_RESCUE_ACTIVITY_MAX_ENTRIES);
+    assert.equal(list[0].note, `entry ${overflow - AI_LEAD_RESCUE_ACTIVITY_MAX_ENTRIES}`);
+    assert.equal(list[list.length - 1].note, `entry ${overflow - 1}`);
+  });
+
+  it('parseAiLeadRescueActivity drops invalid persisted entries silently', () => {
+    const qj = {
+      ai_lead_rescue_operator: {
+        activity: [
+          { at: '2026-06-08T08:00:00.000Z', channel: 'whatsapp', type: 'outbound_opener', note: 'good' },
+          null,
+          { at: '', channel: 'whatsapp', type: 'outbound_opener' },
+          { at: '2026-06-08T08:00:00.000Z', channel: 'fax', type: 'outbound_opener' },
+          { at: '2026-06-08T08:00:00.000Z', channel: 'email', type: 'hammer' },
+          'not-an-object',
+        ],
+      },
+    };
+    const list = parseAiLeadRescueActivity(qj);
+    assert.equal(list.length, 1);
+    assert.equal(list[0].note, 'good');
+  });
+
+  it('detail projection exposes activity[] alongside operations and setup_checklist', () => {
+    const now = '2026-06-08T12:00:00.000Z';
+    let qj = baseQj(now);
+    qj = appendAiLeadRescueActivity(
+      qj,
+      { channel: 'whatsapp', type: 'outbound_opener', note: 'opener' },
+      'anton',
+      now,
+    ).qj;
+
+    const row = {
+      id: 'lead_42',
+      tenantId: 'corpflowai',
+      name: 'Jane',
+      email: 'jane@acme.test',
+      phone: '',
+      contact: null,
+      message: '',
+      intent: '',
+      status: 'QUALIFYING',
+      qualificationJson: qj,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    };
+    const detail = leadRowToAiLeadRescueDetail(row);
+    assert.equal(Array.isArray(detail.activity), true);
+    assert.equal(detail.activity.length, 1);
+    assert.equal(detail.activity[0].channel, 'whatsapp');
+    assert.equal(detail.activity[0].actor_label, 'anton');
+  });
+
+  it('REGRESSION: mergeAiLeadRescueOperatorPatch preserves persisted setup_checklist AND activity', () => {
+    const now1 = '2026-06-08T12:00:00.000Z';
+    const now2 = '2026-06-08T12:30:00.000Z';
+
+    let qj = baseQj(now1);
+    qj = mergeAiLeadRescueChecklistItemPatch(
+      qj,
+      { key: 'intake_reviewed', state: 'done', note: 'verified' },
+      'anton',
+      now1,
+    ).qj;
+    qj = appendAiLeadRescueActivity(
+      qj,
+      { channel: 'whatsapp', type: 'outbound_opener', note: 'opener' },
+      'anton',
+      now1,
+    ).qj;
+
+    // Run an unrelated operator save (no activity, no checklist) — historically this
+    // dropped sibling jsonb keys. Now both must survive.
+    const merged = mergeAiLeadRescueOperatorPatch(
+      qj,
+      { owner: 'anton', next_action: 'follow up' },
+      'anton',
+      now2,
+    );
+
+    const checklist = parseAiLeadRescueSetupChecklist(merged);
+    const reviewed = checklist.items.find((i) => i.key === 'intake_reviewed');
+    assert.equal(reviewed.state, 'done', 'setup_checklist must survive operator merge');
+    assert.equal(reviewed.note, 'verified');
+
+    const activity = parseAiLeadRescueActivity(merged);
+    assert.equal(activity.length, 1, 'activity[] must survive operator merge');
+    assert.equal(activity[0].note, 'opener');
+  });
+
+  it('checklist merge preserves activity[]', () => {
+    const now = '2026-06-08T13:00:00.000Z';
+    let qj = baseQj(now);
+    qj = appendAiLeadRescueActivity(
+      qj,
+      { channel: 'manual', type: 'payment_confirmed_manual', note: 'paid via SWIFT' },
+      'anton',
+      now,
+    ).qj;
+
+    const merged = mergeAiLeadRescueChecklistItemPatch(
+      qj,
+      { key: 'intake_reviewed', state: 'done' },
+      'anton',
+      now,
+    );
+    assert.equal(merged.ok, true);
+    const activity = parseAiLeadRescueActivity(merged.qj);
+    assert.equal(activity.length, 1);
+    assert.equal(activity[0].note, 'paid via SWIFT');
+  });
+
+  it('activity append preserves existing operator fields', () => {
+    const now = '2026-06-08T14:00:00.000Z';
+    let qj = baseQj(now);
+    qj = mergeAiLeadRescueOperatorPatch(
+      qj,
+      { owner: 'anton', next_action: 'send opener', setup_price: 6900, currency: 'MUR' },
+      'anton',
+      now,
+    );
+
+    const r = appendAiLeadRescueActivity(
+      qj,
+      { channel: 'whatsapp', type: 'outbound_opener', note: 'opener sent' },
+      'anton',
+      now,
+    );
+    assert.equal(r.ok, true);
+
+    const detail = leadRowToAiLeadRescueDetail({
+      id: 'lead_99',
+      tenantId: 'corpflowai',
+      name: 'X',
+      email: '',
+      phone: '',
+      contact: null,
+      message: '',
+      intent: '',
+      status: 'QUALIFYING',
+      qualificationJson: r.qj,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    });
+    assert.equal(detail.operations.owner, 'anton', 'owner must survive activity append');
+    assert.equal(detail.operations.next_action, 'send opener');
+    assert.equal(detail.commercial.setup_price, 6900);
+    assert.equal(detail.commercial.currency, 'MUR');
+    assert.equal(detail.activity.length, 1);
   });
 });

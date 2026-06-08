@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 import {
+  AI_LEAD_RESCUE_ACTIVITY_CHANNELS,
+  AI_LEAD_RESCUE_ACTIVITY_MAX_RENDER,
+  AI_LEAD_RESCUE_ACTIVITY_TYPES,
   AI_LEAD_RESCUE_CHECKLIST_ITEM_STATES,
+  aiLeadRescueActivityChannelLabel,
+  aiLeadRescueActivityTypeLabel,
   getAiLeadRescueForwardStatuses,
 } from '../lib/cmp/_lib/ai-lead-rescue-operator.js';
 import { fmtDateStableUtc } from '../lib/format/utc-date.js';
@@ -106,6 +111,21 @@ function normalizeLead(input) {
       note: typeof it.note === 'string' ? it.note : '',
       actor_label: typeof it.actor_label === 'string' ? it.actor_label : '',
     }));
+  const rawActivity = Array.isArray(lead.activity) ? lead.activity : [];
+  const activity = rawActivity
+    .filter((e) => e && typeof e === 'object' && typeof e.at === 'string' && e.at)
+    .map((e) => ({
+      at: e.at,
+      actor_label: typeof e.actor_label === 'string' ? e.actor_label : '',
+      channel: typeof e.channel === 'string' ? e.channel : '',
+      channel_label: typeof e.channel_label === 'string' ? e.channel_label : '',
+      type: typeof e.type === 'string' ? e.type : '',
+      type_label: typeof e.type_label === 'string' ? e.type_label : '',
+      note: typeof e.note === 'string' ? e.note : '',
+      next_action: typeof e.next_action === 'string' ? e.next_action : '',
+      next_action_date: typeof e.next_action_date === 'string' ? e.next_action_date : '',
+      status_after: typeof e.status_after === 'string' ? e.status_after : '',
+    }));
   return {
     id: typeof lead.id === 'string' ? lead.id : '',
     tenant_id: lead.tenant_id != null ? String(lead.tenant_id) : '',
@@ -152,6 +172,7 @@ function normalizeLead(input) {
       all_done: Boolean(cl.all_done),
     },
     setup_checklist_eligible: Boolean(lead.setup_checklist_eligible),
+    activity,
   };
 }
 
@@ -313,6 +334,16 @@ export default function AiLeadRescueAdminDetail(props = {}) {
   const [checklistDrafts, setChecklistDrafts] = useState({});
   const [checklistSaving, setChecklistSaving] = useState(null);
   const [checklistError, setChecklistError] = useState(null);
+
+  const [activityChannel, setActivityChannel] = useState('whatsapp');
+  const [activityType, setActivityType] = useState('outbound_opener');
+  const [activityNote, setActivityNote] = useState('');
+  const [activityNextAction, setActivityNextAction] = useState('');
+  const [activityNextDate, setActivityNextDate] = useState('');
+  const [activitySaving, setActivitySaving] = useState(false);
+  const [activityError, setActivityError] = useState(null);
+  const [activitySaved, setActivitySaved] = useState(false);
+
   const skipFirstFetchRef = useRef(hasInitialLead || hasInitialError);
   const inFlightAbortRef = useRef(null);
 
@@ -482,6 +513,70 @@ export default function AiLeadRescueAdminDetail(props = {}) {
       });
     } finally {
       setChecklistSaving(null);
+    }
+  }
+
+  async function submitActivity(e) {
+    // Mirror the save() pattern (PR #319): explicit type="button" + onClick,
+    // preventDefault defensively so this is safe to invoke from any event
+    // source, even though the surrounding card is not a <form>.
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (activitySaving) return;
+    if (!leadId) {
+      setActivityError({
+        code: 'ID_MISSING',
+        message: 'Cannot save activity: no lead id present.',
+        http_status: null,
+      });
+      return;
+    }
+    setActivitySaving(true);
+    setActivityError(null);
+    setActivitySaved(false);
+    try {
+      const body = {
+        id: leadId,
+        activity_append: {
+          channel: activityChannel,
+          type: activityType,
+          note: activityNote || null,
+          next_action: activityNextAction || null,
+          next_action_date: activityNextDate ? new Date(activityNextDate).toISOString() : null,
+        },
+      };
+      const r = await fetch('/api/factory/lead-rescue/patch', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+      let data = null;
+      try {
+        data = await r.json();
+      } catch (_) {
+        data = null;
+      }
+      if (!r.ok || (data && data.ok === false)) {
+        const code = (data && data.error) || `HTTP_${r.status}`;
+        const msg =
+          (data && (data.message || data.detail)) || `Request failed with HTTP ${r.status}.`;
+        setActivityError({ code, message: msg, http_status: r.status });
+        return;
+      }
+      setLead(normalizeLead(data && data.lead));
+      hydrateForm(data && data.lead);
+      setActivityNote('');
+      setActivityNextAction('');
+      setActivityNextDate('');
+      setActivitySaved(true);
+    } catch (err) {
+      setActivityError({
+        code: (err && err.code) || 'ACTIVITY_SAVE_FAILED',
+        message: err instanceof Error ? err.message : 'Could not save activity.',
+        http_status: null,
+      });
+    } finally {
+      setActivitySaving(false);
     }
   }
 
@@ -829,6 +924,228 @@ export default function AiLeadRescueAdminDetail(props = {}) {
                   </button>
                 </div>
               </form>
+
+              <section style={{ ...card, marginTop: 24 }} data-testid="ai-lead-rescue-activity">
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                  }}
+                >
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Activity log</h2>
+                  <span style={{ fontSize: 12, color: '#8899aa' }}>
+                    {lead.activity.length} {lead.activity.length === 1 ? 'entry' : 'entries'}
+                  </span>
+                </div>
+                <p
+                  style={{
+                    color: '#8899aa',
+                    fontSize: 12,
+                    marginTop: 6,
+                    marginBottom: 16,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Outbound, replies, follow-ups, manual pro-forma, payment confirmation, handoff, and
+                  bad-fit signals. Append-only. Server-stamped timestamp + operator.{' '}
+                  <strong>Do not paste card numbers, banking credentials, passwords, or private
+                  health details</strong> into any field — see the runbook&rsquo;s{' '}
+                  <em>What not to store</em> section.
+                </p>
+
+                <div style={{ marginBottom: 20 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                      gap: 12,
+                    }}
+                  >
+                    <label style={{ display: 'grid', gap: 4 }}>
+                      <span style={labelStyle}>Channel</span>
+                      <select
+                        style={input}
+                        value={activityChannel}
+                        onChange={(e) => setActivityChannel(e.target.value)}
+                      >
+                        {AI_LEAD_RESCUE_ACTIVITY_CHANNELS.map((c) => (
+                          <option key={c} value={c}>
+                            {aiLeadRescueActivityChannelLabel(c)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label style={{ display: 'grid', gap: 4 }}>
+                      <span style={labelStyle}>Type</span>
+                      <select
+                        style={input}
+                        value={activityType}
+                        onChange={(e) => setActivityType(e.target.value)}
+                      >
+                        {AI_LEAD_RESCUE_ACTIVITY_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {aiLeadRescueActivityTypeLabel(t)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <label style={{ display: 'grid', gap: 4, marginTop: 12 }}>
+                    <span style={labelStyle}>Note</span>
+                    <textarea
+                      style={{ ...input, minHeight: 64, fontSize: 13 }}
+                      value={activityNote}
+                      placeholder="What happened? Keep it short — links, summary, who replied."
+                      onChange={(e) => setActivityNote(e.target.value)}
+                      maxLength={4000}
+                    />
+                  </label>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                      gap: 12,
+                      marginTop: 12,
+                    }}
+                  >
+                    <label style={{ display: 'grid', gap: 4 }}>
+                      <span style={labelStyle}>Next action (optional)</span>
+                      <input
+                        style={input}
+                        value={activityNextAction}
+                        onChange={(e) => setActivityNextAction(e.target.value)}
+                        maxLength={500}
+                        placeholder="e.g. Follow up Tue, share pro-forma."
+                      />
+                    </label>
+                    <label style={{ display: 'grid', gap: 4 }}>
+                      <span style={labelStyle}>Next action date (optional)</span>
+                      <input
+                        type="datetime-local"
+                        style={input}
+                        value={activityNextDate}
+                        onChange={(e) => setActivityNextDate(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  {activityError ? (
+                    <div style={{ marginTop: 12 }}>
+                      <DetailErrorBlock
+                        error={activityError}
+                        leadId={leadId}
+                        loading={activitySaving}
+                        onRetry={() => setActivityError(null)}
+                      />
+                    </div>
+                  ) : null}
+                  {activitySaved && !activityError ? (
+                    <p
+                      role="status"
+                      style={{
+                        color: '#031018',
+                        background: '#6ee7b7',
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        fontWeight: 700,
+                        display: 'inline-block',
+                        marginTop: 12,
+                        fontSize: 13,
+                      }}
+                    >
+                      Activity added.
+                    </p>
+                  ) : null}
+                  <div style={{ marginTop: 14 }}>
+                    <button
+                      type="button"
+                      onClick={submitActivity}
+                      disabled={activitySaving}
+                      data-testid="ai-lead-rescue-add-activity"
+                      style={{
+                        ...btn,
+                        padding: '9px 14px',
+                        fontSize: 13,
+                        opacity: activitySaving ? 0.6 : 1,
+                      }}
+                    >
+                      {activitySaving ? 'Adding…' : 'Add activity'}
+                    </button>
+                  </div>
+                </div>
+
+                {lead.activity.length > 0 ? (
+                  <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
+                    {[...lead.activity]
+                      .reverse()
+                      .slice(0, AI_LEAD_RESCUE_ACTIVITY_MAX_RENDER)
+                      .map((entry, idx) => (
+                        <li
+                          key={`${entry.at}-${idx}`}
+                          style={{
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: 10,
+                            padding: '10px 14px',
+                            background: 'rgba(255,255,255,0.02)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>
+                              <span style={{ color: '#7dd3fc' }}>
+                                {entry.channel_label || entry.channel || '—'}
+                              </span>
+                              <span style={{ color: '#8899aa', margin: '0 6px' }}>·</span>
+                              <span>{entry.type_label || entry.type || '—'}</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: '#8899aa' }}>
+                              {fmtDateStableUtc(entry.at)}
+                              {entry.actor_label ? ` · ${entry.actor_label}` : ''}
+                            </div>
+                          </div>
+                          {entry.note ? (
+                            <div
+                              style={{
+                                fontSize: 13,
+                                lineHeight: 1.5,
+                                marginTop: 6,
+                                whiteSpace: 'pre-wrap',
+                              }}
+                            >
+                              {entry.note}
+                            </div>
+                          ) : null}
+                          {entry.next_action || entry.next_action_date ? (
+                            <div style={{ fontSize: 12, color: '#cbd5f5', marginTop: 6 }}>
+                              <span style={{ color: '#8899aa' }}>Next:</span>{' '}
+                              {entry.next_action || '—'}
+                              {entry.next_action_date
+                                ? ` · by ${fmtDateStableUtc(entry.next_action_date)}`
+                                : ''}
+                            </div>
+                          ) : null}
+                          {entry.status_after ? (
+                            <div style={{ fontSize: 11, color: '#8899aa', marginTop: 6 }}>
+                              Status noted: {entry.status_after.replace(/_/g, ' ')}
+                            </div>
+                          ) : null}
+                        </li>
+                      ))}
+                  </ol>
+                ) : (
+                  <p style={{ color: '#8899aa', fontSize: 12, margin: 0 }}>
+                    No activity recorded yet.
+                  </p>
+                )}
+              </section>
 
               {lead.setup_checklist_eligible && lead.setup_checklist.items.length > 0 ? (
                 <section style={{ ...card, marginTop: 24 }}>

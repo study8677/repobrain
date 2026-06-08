@@ -335,3 +335,172 @@ describe('leadRowToAiLeadRescueDetail — checklist eligibility derives from row
     assert.equal(out.setup_checklist_eligible, false);
   });
 });
+
+describe('applyAiLeadRescuePatch — activity log persistence', () => {
+  it('rejects an activity_append with an unknown channel', async () => {
+    const fake = makeFakePrisma([makeAiLeadRescueRow('lead_1')]);
+    const out = await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: { channel: 'fax', type: 'outbound_opener' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    assert.equal(out.ok, false);
+    assert.equal(out.error, 'INVALID_ACTIVITY_CHANNEL');
+    assert.equal(out.http_status, 400);
+  });
+
+  it('rejects an activity_append with an unknown type', async () => {
+    const fake = makeFakePrisma([makeAiLeadRescueRow('lead_1')]);
+    const out = await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: { channel: 'whatsapp', type: 'hammer_time' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    assert.equal(out.ok, false);
+    assert.equal(out.error, 'INVALID_ACTIVITY_TYPE');
+  });
+
+  it('persists a valid activity_append, server-stamps actor + timestamp, and read-back includes it', async () => {
+    const fake = makeFakePrisma([makeAiLeadRescueRow('lead_1')]);
+    const out = await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: {
+          channel: 'whatsapp',
+          type: 'outbound_opener',
+          note: 'Sent the warm-network opener.',
+          // Client tries to spoof — server must ignore.
+          actor_label: 'spoofed@evil.test',
+          at: '1990-01-01T00:00:00.000Z',
+        },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+      nowIso: '2026-06-08T15:00:00.000Z',
+    });
+    assert.equal(out.ok, true);
+    assert.equal(out.lead.activity.length, 1);
+    assert.equal(out.lead.activity[0].channel, 'whatsapp');
+    assert.equal(out.lead.activity[0].type, 'outbound_opener');
+    assert.equal(out.lead.activity[0].note, 'Sent the warm-network opener.');
+    assert.equal(out.lead.activity[0].actor_label, 'antonvdb', 'actor must come from session, not client');
+    assert.equal(out.lead.activity[0].at, '2026-06-08T15:00:00.000Z', 'timestamp must be server-stamped');
+
+    const reread = await loadAiLeadRescueDetailData({ id: 'lead_1', prismaClient: fake });
+    assert.equal(reread.ok, true);
+    assert.equal(reread.lead.activity.length, 1);
+    assert.equal(reread.lead.activity[0].note, 'Sent the warm-network opener.');
+    assert.equal(reread.lead.activity[0].actor_label, 'antonvdb');
+  });
+
+  it('an operator-fields save AFTER an activity_append preserves the activity[]', async () => {
+    const fake = makeFakePrisma([makeAiLeadRescueRow('lead_1')]);
+    await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: { channel: 'whatsapp', type: 'outbound_opener', note: 'opener' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    await applyAiLeadRescuePatch({
+      body: { id: 'lead_1', next_action: 'Follow up Friday', owner: 'antonvdb' },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    const reread = await loadAiLeadRescueDetailData({ id: 'lead_1', prismaClient: fake });
+    assert.equal(reread.ok, true);
+    assert.equal(reread.lead.operations.next_action, 'Follow up Friday');
+    assert.equal(reread.lead.activity.length, 1, 'activity[] must survive an unrelated operator save');
+    assert.equal(reread.lead.activity[0].note, 'opener');
+  });
+
+  it('a checklist save AFTER an activity_append preserves the activity[]', async () => {
+    const fake = makeFakePrisma([makeAiLeadRescueRow('lead_1', { status: 'PAID_SETUP' })]);
+    await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: {
+          channel: 'manual',
+          type: 'payment_confirmed_manual',
+          note: 'paid via SWIFT',
+        },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        setup_checklist_item: { key: 'intake_reviewed', state: 'done' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    const reread = await loadAiLeadRescueDetailData({ id: 'lead_1', prismaClient: fake });
+    assert.equal(reread.ok, true);
+    assert.equal(reread.lead.activity.length, 1, 'activity[] must survive checklist save');
+    assert.equal(reread.lead.activity[0].note, 'paid via SWIFT');
+    const item = reread.lead.setup_checklist.items.find((i) => i.key === 'intake_reviewed');
+    assert.equal(item.state, 'done');
+  });
+
+  it('an activity_append AFTER a checklist save preserves checklist progress', async () => {
+    const fake = makeFakePrisma([makeAiLeadRescueRow('lead_1', { status: 'PAID_SETUP' })]);
+    await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        setup_checklist_item: { key: 'intake_reviewed', state: 'done', note: 'reviewed' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: { channel: 'whatsapp', type: 'outbound_followup', note: 'followup' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+    });
+    const reread = await loadAiLeadRescueDetailData({ id: 'lead_1', prismaClient: fake });
+    assert.equal(reread.ok, true);
+    assert.equal(reread.lead.activity.length, 1);
+    const item = reread.lead.setup_checklist.items.find((i) => i.key === 'intake_reviewed');
+    assert.equal(item.state, 'done', 'checklist progress must NOT be wiped by an activity append');
+    assert.equal(item.note, 'reviewed');
+  });
+
+  it('appending two activities accumulates without dropping the first', async () => {
+    const fake = makeFakePrisma([makeAiLeadRescueRow('lead_1')]);
+    await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: { channel: 'whatsapp', type: 'outbound_opener', note: 'first' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+      nowIso: '2026-06-08T10:00:00.000Z',
+    });
+    await applyAiLeadRescuePatch({
+      body: {
+        id: 'lead_1',
+        activity_append: { channel: 'whatsapp', type: 'prospect_replied', note: 'second' },
+      },
+      prismaClient: fake,
+      actorLabel: 'antonvdb',
+      nowIso: '2026-06-08T11:00:00.000Z',
+    });
+    const reread = await loadAiLeadRescueDetailData({ id: 'lead_1', prismaClient: fake });
+    assert.equal(reread.ok, true);
+    assert.equal(reread.lead.activity.length, 2);
+    assert.equal(reread.lead.activity[0].note, 'first');
+    assert.equal(reread.lead.activity[1].note, 'second');
+  });
+});
