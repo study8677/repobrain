@@ -31,6 +31,18 @@
 <br/>
 
 <div align="center">
+
+<a href="https://doloffer.com">
+  <img src="docs/assets/doloffer-banner.png" alt="DolOffer - GPT and Claude membership recharge, official subscriptions with after-sales support" width="800"/>
+</a>
+
+<sub><b>Sponsored:</b> DolOffer offers discounted GPT and Claude membership recharge, official subscriptions, and after-sales support. Use code <code>AI8888</code> for 10% off.</sub>
+
+</div>
+
+<br/>
+
+<div align="center">
 <img src="docs/assets/before_after.png" alt="Before vs After Antigravity" width="800"/>
 </div>
 
