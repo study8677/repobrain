@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 400 500"
+  preserveAspectRatio="xMidYMid meet"
+  role="img"
+  aria-hidden="true"
+  font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+>
+  <title>AI Lead Rescue property edition - region motif</title>
+  <desc>An abstract editorial region mark. A simplified, hand-drawn island silhouette is rendered in a thin teal hairline; a slightly heavier brushed-brass arc traces the north-west portion of the silhouette; a small north arrow and a tracked-out caption "North and West" sit beside it. The shape is intentionally abstract and is not a traced or accurate map of any real territory.</desc>
+
+  <defs>
+    <linearGradient id="lr-prop-region-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(15, 76, 76, 0.04)"/>
+      <stop offset="100%" stop-color="rgba(15, 76, 76, 0.01)"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path
+      d="M 198 56
+         C 226 56, 248 64, 264 84
+         C 280 102, 290 124, 296 146
+         C 302 168, 304 192, 304 218
+         C 304 244, 300 270, 290 300
+         C 280 328, 264 354, 240 376
+         C 222 392, 198 402, 174 402
+         C 152 402, 130 394, 116 380
+         C 100 364, 92 344, 92 322
+         C 92 296, 96 268, 100 240
+         C 102 218, 104 196, 110 176
+         C 116 156, 124 134, 138 116
+         C 152 96, 170 76, 184 66
+         C 188 62, 192 58, 198 56 Z"
+      fill="url(#lr-prop-region-fill)"
+      stroke="rgba(15, 76, 76, 0.45)"
+      stroke-width="1.1"
+    />
+
+    <path
+      d="M 198 56
+         C 184 60, 168 72, 152 88
+         C 136 104, 124 122, 116 142
+         C 110 158, 106 174, 102 192"
+      stroke="rgba(156, 122, 61, 0.85)"
+      stroke-width="1.8"
+    />
+  </g>
+
+  <g transform="translate(330, 84)" stroke="rgba(15, 76, 76, 0.7)" stroke-width="1" fill="none" stroke-linecap="round">
+    <circle cx="0" cy="0" r="14"/>
+    <line x1="0" y1="-14" x2="0" y2="-3"/>
+    <line x1="-3" y1="-7" x2="0" y2="-12"/>
+    <line x1="3"  y1="-7" x2="0" y2="-12"/>
+  </g>
+  <text
+    x="330" y="115"
+    text-anchor="middle"
+    font-size="9"
+    letter-spacing="0.20em"
+    fill="rgba(15, 76, 76, 0.7)"
+    font-weight="700"
+  >N.</text>
+
+  <g fill="rgba(156, 122, 61, 0.9)">
+    <circle cx="120" cy="140" r="2"/>
+  </g>
+
+  <text
+    x="200" y="448"
+    text-anchor="middle"
+    font-size="10"
+    letter-spacing="0.30em"
+    fill="rgba(26, 26, 26, 0.65)"
+    font-weight="700"
+  >NORTH &#38; WEST</text>
+  <text
+    x="200" y="466"
+    text-anchor="middle"
+    font-size="9"
+    letter-spacing="0.24em"
+    fill="rgba(26, 26, 26, 0.45)"
+    font-weight="500"
+  >abstract region mark</text>
+
+  <g stroke="rgba(15, 76, 76, 0.18)" stroke-width="0.6" fill="none" stroke-linecap="round">
+    <line x1="200" y1="60"  x2="200" y2="40"/>
+    <line x1="200" y1="404" x2="200" y2="424"/>
+    <line x1="84"  y1="232" x2="64"  y2="232"/>
+    <line x1="316" y1="232" x2="336" y2="232"/>
+  </g>
+</svg>

@@ -23,9 +23,24 @@ import PublicSiteFooter from './PublicSiteFooter.js';
  *  - Inter Variable (self-hosted at `/assets/fonts/InterVariable.woff2`,
  *    declared in `pages/_document.js`) at editorial weights:
  *    200–300 for display, 400 for body, 600–700 for CTAs / labels.
- *  - No images, no fake screenshots, no real-business logos. The
- *    "what you see every morning" cockpit panel is rendered as
- *    HTML/CSS with explicit "illustrative example" labelling and
+ *  - Three hand-authored editorial SVG marks live in
+ *    `/public/assets/visuals/lead-rescue-property-*.svg`:
+ *      · `…hero.svg`     — hero-side editorial composition (horizon
+ *                          + coastline contours + brushed-brass margin
+ *                          + small north arrow + tracked caption
+ *                          "Mauritius North & West"). No real
+ *                          property, agency, or person depicted.
+ *      · `…workflow.svg` — abstract 5-node workflow ribbon
+ *                          (channels → log → alert → board → summary).
+ *      · `…region.svg`   — abstract region mark used at low
+ *                          opacity as a decorative watermark.
+ *                          Hand-drawn, intentionally not a traced map.
+ *    All three are CorpFlowAI-owned (no third-party IP), pure SVG
+ *    (no photographs, no logos), each well under 4 KB. Decorative
+ *    role only; alt text on the wrapping `<img>` describes the
+ *    composition for screen readers.
+ *  - The "what you see every morning" cockpit panel remains rendered
+ *    as HTML/CSS with explicit "illustrative example" labelling and
  *    fake property leads (`EXAMPLE: …`).
  *
  * CTA wiring (no new env vars, no new schema):
@@ -85,7 +100,19 @@ const styles = {
     color: palette.ink, fontSize: 13, textDecoration: 'none',
     borderBottom: `1px solid ${palette.hairline}`, paddingBottom: 2,
   },
-  hero: { paddingTop: 72, paddingBottom: 48, maxWidth: 820 },
+  hero: { paddingTop: 72, paddingBottom: 48 },
+  heroLayout: {
+    display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(0, 1fr)',
+    gap: 56, alignItems: 'start',
+  },
+  heroBody: { maxWidth: 720, minWidth: 0 },
+  heroVisualWrap: {
+    position: 'relative', width: '100%',
+    border: `1px solid ${palette.hairlineSoft}`,
+    background: palette.cream, borderRadius: 6, overflow: 'hidden',
+    boxShadow: '0 1px 0 rgba(15, 76, 76, 0.04), 0 14px 40px rgba(15, 76, 76, 0.05)',
+  },
+  heroVisual: { width: '100%', height: 'auto', display: 'block' },
   eyebrow: {
     fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase',
     color: palette.teal, fontWeight: 700, marginBottom: 28,
@@ -135,9 +162,15 @@ const styles = {
   },
   body: { marginTop: 18, color: palette.muted, lineHeight: 1.65, fontSize: 16, maxWidth: 680 },
   divider: { height: 1, background: palette.hairlineSoft, margin: '64px 0 0' },
+  workflowVisualWrap: {
+    marginTop: 28, padding: '8px 12px',
+    border: `1px solid ${palette.hairlineSoft}`,
+    background: palette.paper, borderRadius: 4, overflow: 'hidden',
+  },
+  workflowVisual: { width: '100%', height: 'auto', display: 'block' },
   workflowBand: {
     display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: 12, marginTop: 36,
+    gap: 12, marginTop: 16,
   },
   workflowStep: {
     background: palette.paper, border: `1px solid ${palette.hairlineSoft}`,
@@ -203,6 +236,13 @@ const styles = {
     padding: '14px 22px', fontSize: 12, color: palette.faint,
     background: palette.warmSand, borderTop: `1px solid ${palette.hairlineSoft}`,
   },
+  segmentsHeader: { position: 'relative' },
+  regionMotifWrap: {
+    position: 'absolute', top: -28, right: -16,
+    width: 188, height: 232, opacity: 0.45,
+    pointerEvents: 'none',
+  },
+  regionMotif: { width: '100%', height: '100%', display: 'block' },
   segments: {
     display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
     gap: 16, marginTop: 36,
@@ -445,33 +485,48 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
         </nav>
 
         <section style={styles.hero}>
-          <div style={styles.eyebrow}>Mauritius property operations</div>
-          <h1 style={styles.h1}>
-            Property enquiries do not get lost on purpose. <span style={styles.h1Accent}>They get lost between channels.</span>
-          </h1>
-          <p style={styles.lead}>
-            Buyers and tenants reach you on WhatsApp, Facebook, your website form, listing portals, and calls — sometimes the same person on three of them in one weekend. The enquiry that does not get a reply within a day is the one that quietly walks to another agency.
-          </p>
-          <p style={styles.trustLine}>
-            We do not replace WhatsApp Business. We make sure the enquiries inside it are logged, visible, and followed up.
-          </p>
-          <div style={styles.ctaRow}>
-            <a
-              href="#pilot-outline"
-              style={styles.ctaPrimary}
-              className="lr-property-cta-primary"
-              onClick={() => trackEvent('lr_property_primary_cta_click', { props: { location: 'hero' } })}
-            >
-              Request the Mauritius property pilot outline
-            </a>
-            <a
-              href="#how-it-works"
-              style={styles.ctaSecondary}
-              className="lr-property-cta-secondary"
-              onClick={() => trackEvent('lr_property_secondary_cta_click', { props: { location: 'hero' } })}
-            >
-              See how it works
-            </a>
+          <div style={styles.heroLayout} className="lr-property-hero-layout">
+            <div style={styles.heroBody}>
+              <div style={styles.eyebrow}>Mauritius property operations</div>
+              <h1 style={styles.h1}>
+                Property enquiries do not get lost on purpose. <span style={styles.h1Accent}>They get lost between channels.</span>
+              </h1>
+              <p style={styles.lead}>
+                Buyers and tenants reach you on WhatsApp, Facebook, your website form, listing portals, and calls — sometimes the same person on three of them in one weekend. The enquiry that does not get a reply within a day is the one that quietly walks to another agency.
+              </p>
+              <p style={styles.trustLine}>
+                We do not replace WhatsApp Business. We make sure the enquiries inside it are logged, visible, and followed up.
+              </p>
+              <div style={styles.ctaRow}>
+                <a
+                  href="#pilot-outline"
+                  style={styles.ctaPrimary}
+                  className="lr-property-cta-primary"
+                  onClick={() => trackEvent('lr_property_primary_cta_click', { props: { location: 'hero' } })}
+                >
+                  Request the Mauritius property pilot outline
+                </a>
+                <a
+                  href="#how-it-works"
+                  style={styles.ctaSecondary}
+                  className="lr-property-cta-secondary"
+                  onClick={() => trackEvent('lr_property_secondary_cta_click', { props: { location: 'hero' } })}
+                >
+                  See how it works
+                </a>
+              </div>
+            </div>
+            <aside style={styles.heroVisualWrap} className="lr-property-hero-aside" aria-hidden="false">
+              <img
+                src="/assets/visuals/lead-rescue-property-hero.svg"
+                alt="Editorial composition with three thin teal horizon lines, a soft coastline curve echoed by two faint topographic contours, a brushed-brass margin rule with two small register dots, a small north arrow, and a tracked-out caption reading Mauritius North and West."
+                width="600"
+                height="750"
+                style={styles.heroVisual}
+                loading="eager"
+                decoding="async"
+              />
+            </aside>
           </div>
         </section>
 
@@ -483,6 +538,17 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
           <p style={styles.body}>
             Five steps, all visible. WhatsApp, Facebook, the website form, listing portals, and calls flow into one lead log. The owner or operator is alerted. A follow-up board shows what has been replied to, what is awaiting a response, and what has gone cold. A short daily summary keeps everyone honest about the leads that quietly slipped past forty-eight hours.
           </p>
+          <div style={styles.workflowVisualWrap} className="lr-property-workflow-visual-wrap">
+            <img
+              src="/assets/visuals/lead-rescue-property-workflow.svg"
+              alt="Abstract horizontal flow with five thin nodes connected on a single hairline. Left to right: a cluster of small dots labelled CHANNELS for WhatsApp, Facebook, site, listing, and calls; a small rectangle labelled LEAD LOG; a chevron labelled ALERT for the owner or operator; a small grid labelled FOLLOW-UP for replied, awaiting, and stale; a stack of three lines labelled SUMMARY for the morning view."
+              width="1200"
+              height="200"
+              style={styles.workflowVisual}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
           <div style={styles.workflowBand}>
             {workflowSteps.map((step) => (
               <div key={step.index} style={styles.workflowStep}>
@@ -539,8 +605,21 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
         </section>
 
         <section style={styles.section}>
-          <div style={styles.sectionLabel}>Who this is for</div>
-          <h2 style={styles.h2}>Property operators who already get the enquiries — they just need the workflow that keeps them.</h2>
+          <div style={styles.segmentsHeader}>
+            <div style={styles.regionMotifWrap} className="lr-property-region-motif-wrap" aria-hidden="true">
+              <img
+                src="/assets/visuals/lead-rescue-property-region.svg"
+                alt=""
+                width="400"
+                height="500"
+                style={styles.regionMotif}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <div style={styles.sectionLabel}>Who this is for</div>
+            <h2 style={styles.h2}>Property operators who already get the enquiries — they just need the workflow that keeps them.</h2>
+          </div>
           <div style={styles.segments}>
             {segments.map((seg) => (
               <article key={seg.label} style={styles.segmentCard} className="lr-property-segment">
@@ -653,6 +732,42 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
         }
         .lr-property-cockpit-row:last-child {
           border-bottom: 0;
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          .lr-property-hero-aside img {
+            animation: lrPropHeroSettle 1400ms ease-out 120ms both;
+          }
+          @keyframes lrPropHeroSettle {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          .lr-property-workflow-visual-wrap img,
+          .lr-property-region-motif-wrap img {
+            animation: lrPropFadeIn 1100ms ease-out 220ms both;
+          }
+          @keyframes lrPropFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+          }
+        }
+        @media (max-width: 900px) {
+          .lr-property-hero-layout {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 32px !important;
+          }
+          .lr-property-hero-aside {
+            order: -1;
+            max-width: 360px;
+            margin-bottom: 8px;
+          }
+        }
+        @media (max-width: 560px) {
+          .lr-property-hero-aside {
+            display: none !important;
+          }
+          .lr-property-region-motif-wrap {
+            display: none !important;
+          }
         }
         @media (max-width: 720px) {
           .lr-property-cockpit-thead {

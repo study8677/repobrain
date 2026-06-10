@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 600 750"
+  preserveAspectRatio="xMidYMid meet"
+  role="img"
+  aria-hidden="true"
+  font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+>
+  <title>AI Lead Rescue property edition - Mauritius North and West editorial mark</title>
+  <desc>An abstract editorial composition. Soft cream background, three thin teal horizon lines, a lower-third coastline curve echoed by two faint topographic contours, a vertical brushed-brass margin rule on the right with two small register dots, a small north arrow in the upper-right corner, and a tracked-out caption "Mauritius North and West" near the foot. No real properties, agencies, or photographs are depicted.</desc>
+
+  <defs>
+    <linearGradient id="lr-prop-hero-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FBF8F2"/>
+      <stop offset="55%" stop-color="#FAF6F0"/>
+      <stop offset="100%" stop-color="#F4ECDF"/>
+    </linearGradient>
+    <linearGradient id="lr-prop-hero-coast" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(15, 76, 76, 0.0)"/>
+      <stop offset="20%" stop-color="rgba(15, 76, 76, 0.65)"/>
+      <stop offset="80%" stop-color="rgba(15, 76, 76, 0.65)"/>
+      <stop offset="100%" stop-color="rgba(15, 76, 76, 0.0)"/>
+    </linearGradient>
+    <linearGradient id="lr-prop-hero-brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(156, 122, 61, 0.0)"/>
+      <stop offset="15%" stop-color="rgba(156, 122, 61, 0.55)"/>
+      <stop offset="85%" stop-color="rgba(156, 122, 61, 0.55)"/>
+      <stop offset="100%" stop-color="rgba(156, 122, 61, 0.0)"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="750" fill="url(#lr-prop-hero-bg)"/>
+
+  <line x1="552" y1="80" x2="552" y2="670" stroke="url(#lr-prop-hero-brass)" stroke-width="0.75"/>
+  <circle cx="552" cy="200" r="2" fill="rgba(156, 122, 61, 0.85)"/>
+  <circle cx="552" cy="550" r="2" fill="rgba(156, 122, 61, 0.85)"/>
+
+  <g stroke="rgba(15, 76, 76, 0.30)" stroke-width="0.75" fill="none" stroke-linecap="round">
+    <line x1="80" y1="180" x2="380" y2="180"/>
+    <line x1="80" y1="220" x2="450" y2="220"/>
+    <line x1="80" y1="260" x2="520" y2="260"/>
+  </g>
+
+  <g fill="none" stroke-linecap="round">
+    <path
+      d="M 60 540 C 140 510, 220 528, 300 520 S 460 510, 540 524"
+      stroke="url(#lr-prop-hero-coast)"
+      stroke-width="1.5"
+    />
+    <path
+      d="M 60 568 C 140 540, 220 556, 300 548 S 460 538, 540 552"
+      stroke="rgba(15, 76, 76, 0.20)"
+      stroke-width="1"
+    />
+    <path
+      d="M 60 596 C 140 570, 220 584, 300 576 S 460 568, 540 580"
+      stroke="rgba(15, 76, 76, 0.12)"
+      stroke-width="1"
+    />
+  </g>
+
+  <g transform="translate(516, 96)" stroke="rgba(15, 76, 76, 0.75)" stroke-width="1" fill="none" stroke-linecap="round">
+    <circle cx="0" cy="0" r="13" fill="rgba(255, 255, 255, 0.0)"/>
+    <line x1="0" y1="-13" x2="0" y2="-3"/>
+    <line x1="-3" y1="-7" x2="0" y2="-12"/>
+    <line x1="3" y1="-7" x2="0" y2="-12"/>
+  </g>
+  <text
+    x="516" y="124"
+    text-anchor="middle"
+    font-size="9"
+    letter-spacing="0.20em"
+    fill="rgba(15, 76, 76, 0.75)"
+    font-weight="700"
+  >N.</text>
+
+  <g fill="rgba(26, 26, 26, 0.35)">
+    <circle cx="86"  cy="690" r="0.9"/>
+    <circle cx="100" cy="690" r="0.9"/>
+    <circle cx="114" cy="690" r="0.9"/>
+  </g>
+  <text
+    x="86" y="668"
+    font-size="10"
+    letter-spacing="0.32em"
+    fill="rgba(26, 26, 26, 0.62)"
+    font-weight="700"
+  >MAURITIUS</text>
+  <text
+    x="86" y="685"
+    font-size="9"
+    letter-spacing="0.28em"
+    fill="rgba(26, 26, 26, 0.45)"
+    font-weight="500"
+  >NORTH &#38; WEST</text>
+
+  <g fill="rgba(15, 76, 76, 0.18)">
+    <circle cx="200" cy="540" r="1.4"/>
+    <circle cx="350" cy="528" r="1.4"/>
+    <circle cx="478" cy="520" r="1.4"/>
+  </g>
+</svg>
