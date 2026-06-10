@@ -28,6 +28,39 @@
 
 ---
 
+## 2026-06-10 — AI Lead Rescue Mauritius property landing page (PR [#337](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/337); `LR-Property-Mauritius-Landing-1`; PARTIAL pending visual review)
+
+<!-- AI_LEAD_RESCUE_PROPERTY_MAURITIUS_LANDING_2026_06_10_HIST -->
+
+**Status:** **PARTIAL** — branch pushed, CI green (test, vercel-env, Vercel preview deployed), PR #337 open. Pending visual review on the Vercel preview against Beach Properties Mauritius and Expat Immobilier, then merge + production live verification before the verdict can flip to COMPLETE.
+
+**Why this PR exists:** Anton paused the Mauritius property cold-outreach lane (delivered as PR #336, see prior bullet) on 2026-06-08 because the apex `/lead-rescue` page is functional but reads as generic SaaS against Mauritius luxury property references. The cold-outreach lane stays paused until a visually credible property-specific surface is live.
+
+**What ships:**
+
+- New SSG route `pages/lead-rescue/property-mauritius.js` (existing `/lead-rescue` is unchanged).
+- New component `components/AiLeadRescuePropertyMauritiusLanding.js` with a light editorial luxury treatment — warm cream background `#FAF6F0`, deep teal accent `#0F4C4C`, charcoal text, Inter Variable at editorial weights (200–300 display, 400 body, 600–700 CTAs/labels). The brand-canonical `#2dd4bf` accent is intentionally unused on this surface; that decision is documented in the component header. `/lead-rescue` retains the canonical accent.
+- `pages/sitemap.xml.js` — `APEX_PATHS` extended with the new route so Search Console can discover it.
+
+**CTA wiring (no env / schema / API changes):** intake form posts to the existing `/api/tenant/intake` handler with `meta.product='ai-lead-rescue'` (exact match — fires the existing operator notification path), `meta.lead_rescue_variant='property-mauritius'`, `meta.page='/lead-rescue/property-mauritius'`, and a new `meta.property_segment` (real_estate_agency / villa_rental / property_manager / serviced_apartment_str / other_property). All flow into `qualificationJson.intake_meta` and become visible on `/admin/lead-rescue/[id]`. No admin code changed.
+
+**Doctrine compliance** (`docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`):
+
+- Single offer rule preserved (USD 150 launch pilot, invoiced after intake review, no card on the page).
+- Required no-guarantee copy verbatim.
+- Required payment-trust copy present.
+- CTA describes buyer action (**Request the Mauritius property pilot outline**) — not route-as-CTA.
+- User-required hero line verbatim: *"We do not replace WhatsApp Business. We make sure the enquiries inside it are logged, visible, and followed up."*
+- Trust boundaries enumerate every constraint Anton named (no revenue guarantees / no CRM rebuild / no replacement of WhatsApp / website / sales process / no transaction handling / no tenant or buyer PII beyond the lead log).
+- Multilingual note verbatim per the brief.
+- Mock cockpit view is pure HTML/CSS with explicit "Illustrative example" tag and `EXAMPLE:` row prefixes — no fake testimonials, no fake logos, no fabricated metrics, no scraped prospect data.
+
+**CI status:** test ✅, vercel-env ✅, Vercel deployment ✅ (preview gated behind Vercel SSO; URL on PR #337 comment), Vercel Preview Comments ✅. Local: `npm run build` green; targeted node-tests (`lead-rescue-runtime`, `analytics-policy`, `sitemap-host-aware`, `ai-lead-rescue-operator`) 106/106 pass; ReadLints clean.
+
+**Delivery Reality verdict:** **PARTIAL.** Will flip to **COMPLETE** only after (i) Anton visually reviews the preview against Beach Properties Mauritius and Expat Immobilier and confirms restrained-luxury / property-aware standard, (ii) PR #337 merges, (iii) Vercel Production deploys the merge commit, (iv) `https://corpflowai.com/lead-rescue/property-mauritius` returns 200 with the expected content.
+
+**Cold-outreach lane status:** stays paused until the verdict above is COMPLETE. The Mauritius property sales execution pack (PR #336) remains the active operating guide once the page is live.
+
 ## 2026-06-08 — AI Lead Rescue outbound activity log — live verification COMPLETE (`LeadRescue-Outbound-Activity-Log-1`; PR [#331](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/331); `JE-2026-06-08-1` → flipped PARTIAL → COMPLETE via `JE-2026-06-08-3`)
 
 <!-- AI_LEAD_RESCUE_OUTBOUND_ACTIVITY_LOG_LIVE_VERIFIED_2026_06_08_HIST -->

@@ -27,7 +27,15 @@ function normalizeHost(req) {
   }
 }
 
-const APEX_PATHS = ['/', '/lead-rescue', '/about', '/process', '/standards', '/onboarding'];
+const APEX_PATHS = [
+  '/',
+  '/lead-rescue',
+  '/lead-rescue/property-mauritius',
+  '/about',
+  '/process',
+  '/standards',
+  '/onboarding',
+];
 
 const LUX_STATIC_PATHS = ['/', '/concierge'];
 
