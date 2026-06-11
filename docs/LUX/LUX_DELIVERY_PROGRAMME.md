@@ -79,6 +79,8 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 - **Production verification**: live `/` , `/properties`, `/property/[slug]`, `/concierge` on `https://lux.corpflowai.com/` reflect the vision-aligned positioning; tenant boundaries preserved; lead capture remains green.
 - **Operator next action**: continue the *LuxeMaurice Vision-Aligned Public Experience* slice and the **operator action** recorded in `docs/LUX/LUXEMAURICE_OPERATOR_TICKET_UPDATE.md`.
 
+> **Vision-Aligned Public Experience — Slice 1 (PR #343, merged 2026-06-11):** brand-fidelity rebuild of `/`, `/properties`, `/property/[slug]`, `/concierge` against the approved Strategic Vision presentation and Brand Guidelines. **Live verified** on `https://lux.corpflowai.com/` against deployment **`5019756150`** on commit **`c5cd3769316c7c793f0dd323c210d92b474f46aa`** — charcoal/ivory/gold/stone palette + Cormorant Garamond/Inter hierarchy + monogram + LUXEMAURICE wordmark + signature “Private. Curated. Considered.” + “This is not a property website.” + “Invited. Not advertised.” + “Confidence at distance.” are all present on production. `/properties/admin` remains **307 → /login?next=…** (auth-gated). No fake inventory; tenant boundaries intact; media governance unchanged. **Full audit:** `docs/LUX/39_LuxeMaurice_Phase_2_Build_Brief.md` § 14. The full Phase-2 §8 Reality Gate stays **PARTIAL** until a real client-published listing, editor E2E on production, and governed public imagery on a real listing also clear (Slice C scope). Master ticket **`cmo8mjijk0000jl04l1jz0v6d`** remains **open**.
+
 ### Phase 3 — CRM / operator workflow in `/change`
 
 - **Client-visible outcome**: the business can respond reliably; no “lost lead” path.

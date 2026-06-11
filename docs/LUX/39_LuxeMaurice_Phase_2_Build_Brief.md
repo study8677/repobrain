@@ -392,6 +392,74 @@ Delivery Reality Audit (queue desk cleanup):
 
 ---
 
+## 14. Delivery Reality Audit — Vision-aligned public experience (PR #343)
+
+**Scope:** Brand-fidelity rebuild of the public LuxeMaurice surfaces against the approved Strategic Vision presentation and Brand Guidelines. **Homepage** (`/`), **Private Opportunities** (`/properties`), **Private Opportunity memorandum** (`/property/[slug]`), and **Private Advisory** (`/concierge`). New brand primitives (`components/LuxeMauriceBrandPrimitives.js` — monogram, wordmark, font stylesheet, eyebrow, hairline). Brand tokens locked to the four-colour system (`charcoal #111111`, `ivory #F4EFE8`, `gold #A8842C`, `stone #6B6256`) and the typography pair (Cormorant Garamond for display, Inter for body). **No CMP / auth / publication-governance / media-pipeline / tenancy semantics changed** by this slice. **`/properties/admin` remains auth-gated.** **No fake inventory introduced.** Programme master ticket **`cmo8mjijk0000jl04l1jz0v6d` remains open**.
+
+**Live HTML markers verified on `https://lux.corpflowai.com/` (PR #343 commit):**
+
+- `Private. Curated. Considered.`
+- `Private Wealth & Lifestyle Platform for Mauritius`
+- `This is not a property website.`
+- `Invited. Not advertised.`
+- `Confidence at distance.`
+- `font-family:"Cormorant Garamond"…` on hero + section display headings
+- `font-family:"Inter"…` on body / eyebrow text
+- `color:#F4EFE8` (ivory text), `color:#A8842C` (gold accent), `background:#111111` (charcoal shell)
+- Wordmark rendered as `LuxeMaurice` with `text-transform:uppercase` + `letter-spacing:0.32em` (visually `LUXEMAURICE`)
+
+**Live HTML markers verified on `https://lux.corpflowai.com/properties`:**
+
+- `<title>Private Opportunities — LuxeMaurice</title>`
+- `PRIVATE OPPORTUNITIES` eyebrow + `A quiet moment before the next reveal` Cormorant display
+- Empty-state body: `Private opportunities are being prepared for client review…`
+- CTA: `Request a private consultation`
+- `__NEXT_DATA__` `listings: []` (no fake inventory)
+- `IDX`, `MLS`, `realtor platform`, `property feed`, `feed-first`: **absent**
+
+**Live HTML markers verified on `https://lux.corpflowai.com/property/lm-villa-belombre`:**
+
+- `<title>Bel Ombre villa enclave — Private Opportunity — LuxeMaurice</title>`
+- `PRIVATE OPPORTUNITY MEMORANDUM` eyebrow, two-column editorial layout with sections `Overview`, `Lifestyle context`, `Advisory notes`, `At a glance`
+- CTA: `Discuss this private opportunity with a private advisor.` → `Request a private consultation`
+- `IDX`, `MLS`, listing-tile language: **absent**
+
+**Live HTML markers verified on `https://lux.corpflowai.com/concierge`:**
+
+- `<title>Private advisory — LuxeMaurice</title>`
+- `PRIVATE ADVISORY` eyebrow + `Request a private consultation.` Cormorant display
+- Strapline: `Tell us briefly what you are seeking in Mauritius.`
+- Intent pills: `Completed residence`, `Development partnership`, `Relocation to Mauritius`, `Investment / diversification`, `Ongoing ownership support`
+- Underline-only inputs (no card chrome); CTA `Request a private consultation`
+
+**Live `/properties/admin` auth gate verified:** `GET https://lux.corpflowai.com/properties/admin` → `307` → `/login?next=/properties/admin` (operator login chrome — auth-gated as designed). **Anonymous users cannot read or write admin APIs.** Editor end-to-end on the new public chrome remains the same scope as Slice C and is not re-audited by this slice.
+
+**Factory health unaffected:** `GET https://core.corpflowai.com/api/factory/health` → `200 ok:true` (database, sovereign session, admin operator, runtime config all healthy after the deploy).
+
+```text
+Delivery Reality Audit (Vision-aligned public experience):
+- Local fix exists: YES
+- Merged to main: YES — PR #343 — squash merge commit c5cd3769316c7c793f0dd323c210d92b474f46aa
+- GitHub Production deployment: id 5019756150 — environment Production — status success — SHA c5cd3769316c7c793f0dd323c210d92b474f46aa — environment_url https://corpflow-ai-command-center-5v7ljlhzh-corpflowai.vercel.app
+- Vercel dpl_* id: use Vercel dashboard Deployments for SHA c5cd3769 if a dpl_… id is required for runbooks
+- Live URLs tested (2026-06-11, post-deploy):
+  - GET https://lux.corpflowai.com/ → 200 (charcoal/ivory/gold/stone palette, Cormorant + Inter hierarchy, monogram + LUXEMAURICE wordmark, signature “Private. Curated. Considered.”, “This is not a property website.”, Mauritius Strategic Base, Two buyers section, “Invited. Not advertised.”, “Confidence at distance.”, “Request a private consultation.” CTA)
+  - GET https://lux.corpflowai.com/properties → 200 (Private Opportunities framing, premium empty state, no fake inventory, IDX/MLS absent)
+  - GET https://lux.corpflowai.com/property/lm-villa-belombre → 200 (Private Opportunity Memorandum layout, Overview / Lifestyle context / Advisory notes / At a glance, private advisory CTA)
+  - GET https://lux.corpflowai.com/concierge → 200 (Private Advisory editorial form, underline-only inputs, intent pills)
+  - GET https://lux.corpflowai.com/properties/admin → 307 → /login?next=/properties/admin (auth-gated)
+  - GET https://core.corpflowai.com/api/factory/health → 200 ok:true
+- Expected vs actual: Matches — brand fidelity (palette, type, monogram + wordmark, all required key phrases) live on production; non-negotiables (no IDX/MLS, no fake inventory, admin auth-gated, factory health unchanged) hold.
+- Tenant boundaries: intact (Lux brand only on Lux surfaces; operator login chrome on /login — same cross-tenant operator auth surface as before).
+- Published-only visibility + preview gating + media governance: unchanged by this slice (no Slice C semantics modified).
+- Programme §8 Reality Gate (full): PARTIAL — first real client-published listing, editor E2E on the new chrome, and governed public imagery on a real listing remain open under Slice C scope.
+- Final verdict (vision-aligned public experience slice): COMPLETE — brand-fidelity rebuild live-verified on lux.corpflowai.com.
+```
+
+Programme master ticket **`cmo8mjijk0000jl04l1jz0v6d`** — **remains open**. Vision-aligned public experience is **live-verified**; **first real client-published listing**, **editor E2E on production**, and **governed public imagery on a real listing** remain the open programme gates (Slice C scope).
+
+---
+
 ## Output summary (for Anton / PM)
 
 | Item | Value |
@@ -403,3 +471,4 @@ Delivery Reality Audit (queue desk cleanup):
 | **Reality Gate checklist** | §8 |
 | **Engineer handoff** | §10 |
 | **Next Cursor prompt** | §11 |
+| **Vision-aligned public experience (PR #343)** | §14 — **COMPLETE** (live-verified 2026-06-11 on `lux.corpflowai.com`). Programme §8 Reality Gate still **PARTIAL** under Slice C scope (first real client-published listing + editor E2E + governed public imagery). |

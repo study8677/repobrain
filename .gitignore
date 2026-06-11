@@ -25,3 +25,5 @@ vanguard/audit/
 # Re-generated locally; never committed.
 .lux-vision-screenshots/
 .smoke-screenshots/
+# Production verification HTML + screenshots for PR #343 (live audit only).
+.lux-verify/
