@@ -28,6 +28,45 @@
 
 ---
 
+## 2026-06-11 — Mauritius property landing page polish iteration (PRs [#338](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/338) → [#339](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/339) → [#340](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/340); `LR-Property-Mauritius-Polish-1`; **COMPLETE** in production)
+
+<!-- AI_LEAD_RESCUE_PROPERTY_MAURITIUS_POLISH_ITERATION_2026_06_11_HIST -->
+
+**Status:** **COMPLETE.** Production at `https://corpflowai.com/lead-rescue/property-mauritius` is serving the polished design Anton accepted. Final live verification confirmed `main` HEAD `9597d990` is deployed, the URL returns HTTP 200 (~55 KB), and key copy / assets / structure render as designed.
+
+**Why this iteration exists:** Anton paused the Mauritius property cold-outreach lane on 2026-06-08 because the apex CorpFlowAI surface was not visually credible against Mauritius property operators (Beach Properties Mauritius, Expat Immobilier). PR #337 (prior bullet) shipped the first dedicated `/lead-rescue/property-mauritius` page. This bullet covers the three follow-up PRs that took that customer-visible surface from "abstract editorial visuals" to "locally credible Mauritius property page" against Anton's live reviews.
+
+**What shipped (PRs #338 → #340):**
+
+- **#338 — abstract editorial SVG treatment.** Hand-authored hero-side SVG, workflow ribbon SVG, low-opacity region motif behind the segments-section header. CorpFlowAI-owned, no third-party IP, total ~12 KB on the wire. Merged 2026-06-10. Anton's live review on the merged production page: hero composition was *"too little"*; region motif was *"not really hitting the mark."*
+- **#339 — photographic property hero + accurate Mauritius map.** Replaced the abstract hero SVG with an editorial Mauritius West-coast lagoon photograph (AI-generated under restraint guardrails — no people, no buildings, no logos, no travel-brochure clichés), shipped as responsive WebP variants (640 / 1024 / 1600) plus a JPEG fallback through `<picture>`. Replaced the abstract region motif with a properly-proportioned Mauritius outline SVG (full coastline + brushed-brass North-and-West arc + five labelled markers Cap Malheureux / Grand Baie / Port Louis / Tamarin / Le Morne + small north arrow + ~10 km scale bar), promoted from low-opacity watermark to a visible "Service area" card paired with the existing Language note. Merged 2026-06-10. Anton's live review: hero photo *"added successfully — may require more consideration on how it would pop better"*; channel-flow ribbon *"looks like the afterthought that it was"*; service-area graphic *"simply does not work — we may need to forgo the hand-drawn concept"*; Language placement *"awkward"*; segment / trust grids *"4 weirdly spaced tiles"*; property-segment dropdown *"almost every prospect fulfills multiple segments"*.
+- **#340 — final polish pass.** Each item from Anton's review was addressed structurally: dropped the white-card framing on the hero aside (deeper drop-shadow, **MAURITIUS · WEST COAST** chip in the bottom-left); retired the standalone workflow ribbon and inlined a hand-authored `WorkflowStepIcon` (channels / log / alert / board / summary) inside each step card on a warm-sand chip; added an **Assigned to** column to the cockpit table with initials avatars + illustrative roles (`EXAMPLE: Front desk`, `EXAMPLE: A. Ramdoyal`, `EXAMPLE: J. Fanchette`, `EXAMPLE: Unassigned`); replaced the hand-drawn region SVG with a **real public-domain NASA satellite image of Mauritius** (NASA World Wind / OnEarth WMS pseudocolor layer, 2006, sourced via Wikimedia Commons, lightly graded by `scripts/optimize-property-map.mjs` Sharp pipeline); merged Service area + Language into a single **Operating-area panel** (NASA map left, stacked Service area + Language right with a divider, ten brass-dotted town chips inline below the service-area prose, NASA credit visible in the image corner); fixed segments to a 2×2 grid; reshaped the 5-tile trust grid into an editorial wide-row list (no orphan); replaced the property-segment dropdown with a multi-checkbox group; payload now sends `meta.property_segments` (array) as the canonical field plus `meta.property_segment` (string, `'multiple'` if more than one is ticked) for backward compatibility. Merged 2026-06-11. Anton: *"that looks brilliant — thank you."*
+
+**No env vars / DB / schema changes** across the iteration. Intake handler URL unchanged (`/api/tenant/intake`); operator alert path unchanged. `/lead-rescue` (pan-vertical) is byte-identical to its production state. No new third-party dependencies (Sharp is already a Next 16 transitive dep). All visual assets are CorpFlowAI-owned (the AI-generated hero photo) or public-domain NASA imagery (the satellite map). The iteration retired three asset files (`lead-rescue-property-{hero.svg,workflow.svg,region.svg}`) and added eight new optimised raster variants (four hero, four map) plus two Sharp-based optimisation scripts.
+
+**Final Delivery Reality verdict (post-merge live verification):**
+
+```text
+- Local fix exists: YES
+- Merged to main: YES (squash-merge 9597d990)
+- Production deployment ID: live serving 9597d990 on https://corpflowai.com
+- Commit deployed: 9597d990 — style(lead-rescue): integrate workflow + real Mauritius map + multi-segment intake (#340)
+- Live URLs tested:
+    - https://corpflowai.com/lead-rescue/property-mauritius — HTTP 200, ~55 KB HTML
+    - asset paths confirmed: lead-rescue-property-{hero,map}-1024.{webp,jpg}
+    - copy confirmed: "Operating in Mauritius", "Assigned to", "Mauritius · West coast",
+      "Public domain · NASA / NASA World Wind", "tick every segment that fits"
+    - structure confirmed: 5 workflow steps with inline icon SVGs (viewBox 0 0 32 32),
+      Cap Malheureux + Le Morne town chips, multi-checkbox legend
+- Expected vs actual result: matches the polished design Anton accepted.
+- Client-facing flow usable: YES
+- Final verdict: COMPLETE
+```
+
+**Outstanding live operational test:** the full real-intake round-trip into `/admin/lead-rescue/[id]` (verifying that `qualificationJson.intake_meta.property_segments` arrives as an array, that `property_segment` falls back to `'multiple'` when more than one segment is ticked, and that the operator alert path still fires) is the next live operational test. It will be exercised the first time Anton submits or receives a genuine property pilot intake; no synthetic prospect data is being inserted to satisfy this check.
+
+**Cold-outreach lane status:** can resume — the property surface is now visually credible against the Mauritius property reference market (Beach Properties Mauritius, Expat Immobilier). The Mauritius property sales execution pack (PR #336) remains the active operating guide.
+
 ## 2026-06-10 — AI Lead Rescue Mauritius property landing page (PR [#337](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/337); `LR-Property-Mauritius-Landing-1`; PARTIAL pending visual review)
 
 <!-- AI_LEAD_RESCUE_PROPERTY_MAURITIUS_LANDING_2026_06_10_HIST -->
