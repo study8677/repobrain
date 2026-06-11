@@ -1,8 +1,10 @@
-# LuxeMaurice — Phase 2D manual property loading (curated)
+# LuxeMaurice — Manual curated private opportunities (intake workflow)
 
-**Ticket (programme umbrella, do not close on this alone):** `cmo8mjijk0000jl04l1jz0v6d`  
-**Tenant:** `luxe-maurice` only (`lux.corpflowai.com`, host-derived context)  
-**Scope:** Manual intake → publish curated listings **only**. No real IDX/feed, no CRM, automation, or AI.
+> **Repositioning (2026-06-11):** under the **LuxeMaurice Private Wealth & Lifestyle Platform** direction (`docs/LUX/LUXEMAURICE_REPOSITIONING_2026_06_11.md`), this workflow is the **canonical** intake path for *Private Opportunities*. It is no longer described as “an alternative to IDX” — IDX / MLS / external feed is **not** an active requirement.
+
+**Ticket (programme umbrella, do not close on this alone):** `cmo8mjijk0000jl04l1jz0v6d`
+**Tenant:** `luxe-maurice` only (`lux.corpflowai.com`, host-derived context)
+**Scope:** Manual intake → publish curated *private opportunities* **only**. No external real-estate feed integration is required; CRM / automation / AI remain explicitly out of scope here (separate programme docs).
 
 ---
 

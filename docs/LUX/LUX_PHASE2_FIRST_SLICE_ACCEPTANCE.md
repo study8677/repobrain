@@ -1,8 +1,10 @@
-# LuxeMaurice — Phase 2 first slice (property discovery) acceptance
+# LuxeMaurice — Phase 2 first slice (historical record)
 
-**Ticket:** `cmo8mjijk0000jl04l1jz0v6d`  
-**Host:** `https://lux.corpflowai.com/`  
-**Scope:** First slice only — not full IDX, not CRM, not automation (see `docs/LUX/LUX_DELIVERY_PROGRAMME.md`).
+> **Repositioning (2026-06-11) — read first:** this document is preserved as the **historical record** of what shipped in *Phase 2 Slice A / Slice B / Slice C* and the *Phase 2B hybrid*. The active LuxeMaurice direction has been repositioned as the **Private Wealth & Lifestyle Platform** (see `docs/LUX/LUXEMAURICE_REPOSITIONING_2026_06_11.md` and `docs/LUX/LUXEMAURICE_STRATEGIC_VISION_2030.md`). The active *Private Opportunities* surface no longer requires an IDX/MLS/external-feed decision, and the public homepage no longer renders the Phase 2B `lxf-*` feed-shaped preview cards. New acceptance criteria for the next public-surface work live under the *Vision-Aligned Public Experience* slice (separate PR). Master programme ticket `cmo8mjijk0000jl04l1jz0v6d` remains **open**.
+
+**Ticket:** `cmo8mjijk0000jl04l1jz0v6d`
+**Host:** `https://lux.corpflowai.com/`
+**Original scope (historical):** First slice only — *not full IDX, not CRM, not automation* (see `docs/LUX/LUX_DELIVERY_PROGRAMME.md`). The IDX-decision language below is **superseded for active direction**; external property data integration is no longer required.
 
 ## Recorded client inputs (reference)
 

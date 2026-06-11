@@ -3,13 +3,17 @@
 **Authoritative ticket:** `cmo8mjijk0000jl04l1jz0v6d` (**Approved / Build**).  
 **Official production URL:** `https://lux.corpflowai.com/`
 
-**Programme control (operator-recorded, 2026-05-01):** Client approved **Phase 1** direction; **Phase 1** is recorded as **complete / approved**. **Phase 2** is **active** for **property discovery / IDX planning** (first slice only — listing source **TBD**: staged curated vs real IDX/feed vs hybrid). Operator next action: *Define listing source (staged vs IDX vs hybrid) and implement first property discovery slice.* Apply ticket patch via `node scripts/lux-record-phase1-approve-initiate-phase2.mjs --execute` (Lux tenant + ticket id asserted; does not change `status`/`stage`).
+> **Repositioning (2026-06-11) — read first:** the active LuxeMaurice direction is now the **LuxeMaurice Private Wealth & Lifestyle Platform** (see `docs/LUX/LUXEMAURICE_STRATEGIC_VISION_2030.md` and `docs/LUX/LUXEMAURICE_REPOSITIONING_2026_06_11.md`). Any framing in this document of Phase 2 as *“IDX / property discovery”* is **superseded for active direction**. The active requirement is **manual-first curated private opportunities, with future optional integrations only if strategically required**. Historical audit blocks remain unchanged for the record. The master programme ticket remains **open**.
+
+**Programme control (operator-recorded, 2026-05-01 — superseded for active direction 2026-06-11):** Client approved **Phase 1** direction; **Phase 1** is recorded as **complete / approved**. **Phase 2** is **active** for the **private opportunities surface** (curated, manual-first; the prior framing of *“IDX planning”* is no longer the active requirement). Operator next action: *deliver the LuxeMaurice Vision-Aligned Public Experience (Slice 1) and continue manual-first curated private opportunities*. Historical handoff script: `node scripts/lux-record-phase1-approve-initiate-phase2.mjs --execute` (Lux tenant + ticket id asserted; does not change `status`/`stage`).
 
 ## Purpose
 
-This document prevents a common failure mode: shipping a **useful** public homepage and then accidentally treating it as “IDX site delivered” or “CRM delivered.”
+This document prevents a common failure mode: shipping a **useful** public homepage and then accidentally treating it as “platform delivered.”
 
-It classifies the current LuxeMaurice work correctly as **Phase 0** and defines the **full staged delivery programme** (Phases 1–5) that must be recorded and verified in `/change` before the ticket can be treated as operationally complete.
+It classifies the staged LuxeMaurice work and defines the **full staged delivery programme** (Phases 1–5) that must be recorded and verified in `/change` before the ticket can be treated as operationally complete.
+
+The **active** scope is the *LuxeMaurice Private Wealth & Lifestyle Platform* (see the Repositioning note at the top of this file). Historical phase notes are kept for the record.
 
 ## Current reality (what exists today)
 
@@ -17,8 +21,8 @@ It classifies the current LuxeMaurice work correctly as **Phase 0** and defines 
 - **Phase 0 / 1 public surface**: `lux.corpflowai.com` `/` is served by **Next.js** tenant marketing (`pages/index.js`). `vercel.json` may also map `/` to `lux-landing-static.html` on Lux hosts; whichever route wins in Vercel must still **200** on production.
 - **LuxeMaurice-only presentation**: when `tenant_id === 'luxe-maurice'`, SSR sets `client_ui.lux_acquisition` and the UI uses **`components/LuxeMauriceTenantPresentation.js`** (island / developer-led brand). Other tenants keep the generic `TenantSite` layout.
 - **Current lead capture path**: `/concierge` (posts to `concierge-lead-create` and creates a lead).
-- **Phase 1 → Phase 2 handoff (ticket `cmo8mjijk0000jl04l1jz0v6d` only):** after client approval is recorded, operators run `scripts/lux-ticket-phase2-initiate.mjs` (see script header). That persists **`console_json.lux_programme`** (phase statuses, first-slice scope, `operator_next_action`) and appends description notes. **Phase 2 first-slice acceptance** lives in **`docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`**. **Phase 2B hybrid:** curated cards remain primary; **Explore more properties** adds a feed-shaped mock layer (`lxf-*` ids) with the same concierge handoff — replace `feed_properties` at the adapter when IDX is chosen (see acceptance doc).
-- **Phase 2D manual curated:** operator-managed listings **without IDX** — intake, schema, and audit-friendly `manual_curated` source in leads/`/change`; see **`docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`**.
+- **Phase 1 → Phase 2 handoff (ticket `cmo8mjijk0000jl04l1jz0v6d` only):** after client approval is recorded, operators run `scripts/lux-ticket-phase2-initiate.mjs` (see script header). That persists **`console_json.lux_programme`** (phase statuses, first-slice scope, `operator_next_action`) and appends description notes. **Phase 2 first-slice acceptance** (historical record of what shipped in Slice A/B/C) lives in **`docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`**. The historical *Phase 2B* hybrid (`lxf-*` feed-shaped preview cards on the homepage) is **no longer rendered** under the active vision — see the repositioning record.
+- **Phase 2D manual curated (now the canonical private opportunities intake path):** operator-managed curated opportunities — intake, schema, and audit-friendly `manual_curated` source in leads/`/change`; see **`docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`**.
 
 ## Non‑negotiable rules (ticket truth)
 
@@ -58,19 +62,22 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
   - Basic analytics/measurement decision (what is tracked and where)
 - **Owner**: Operator + marketing owner
 - **Production verification**: conversion flow works end-to-end; operator can see leads + context
-- **Operator next action**: decide whether to go Phase 2 (IDX) or staged listings
+- **Operator next action**: proceed to Phase 2 (private opportunities surface)
 
-### Phase 2 — IDX / property discovery
+### Phase 2 — Private opportunities surface (curated, manual-first)
 
-- **Client-visible outcome**: visitors can browse and discover properties in a trusted, premium flow.
+> **Active framing (2026-06-11).** The prior framing of *Phase 2 — IDX / property discovery* is **superseded for active direction**. The historical Slice A/B/C delivery audits captured under this phase are preserved unchanged below the active text.
+
+- **Client-visible outcome**: visitors meet a quietly confident, editorial *Private Opportunities* surface — curated completed residences and development opportunities are previewed publicly, with depth available only through private advisory.
+- **Active requirement**: **manual-first curated private opportunities, with future optional integrations only if strategically required**. No IDX / MLS / external real-estate feed is required for active delivery.
 - **Scope**:
-  - IDX provider integration **or** staged listings-first (explicit decision)
-  - Search/filter and property detail experience
-  - Compliance requirements (licensing, disclaimers, data usage) captured
-- **First slice + hybrid + detail pages (LuxeMaurice, before full IDX):** listing cards on `lux.corpflowai.com`, **minimal** filter/grouping on **featured curated** inventory, plus a distinct **Explore more properties** band for feed-style previews (mock until provider wired). **`/property/<ref>`** detail pages (curated + feed) link to `/concierge` with the same property ref. Enquiry CTA per property to `/concierge` with **property context** in the lead. See **`docs/LUX/LUX_PHASE2_FIRST_SLICE_ACCEPTANCE.md`**. **Manual curated workflow (no IDX):** **`docs/LUX/LUX_PHASE2D_MANUAL_PROPERTY_WORKFLOW.md`**.
-- **Owner**: Implementer + operator (vendor coordination)
-- **Production verification**: discovery works on production URL; data freshness expectations documented
-- **Operator next action**: define how discovery feeds CRM/operator workflow (Phase 3); until then, follow `lux_programme.operator_next_action` on the ticket when set
+  - `/properties` and `/property/[slug]` reframed as *Private Opportunities* / private opportunity overview (not as a listings catalogue).
+  - Curated manual intake via the existing visual editor (`/properties/admin`) and the manual-curated workflow.
+  - Public surfaces use **published-only** Postgres rows; **no fake inventory** on the homepage.
+  - Empty states use premium *“Private opportunities are being prepared for client review”* + *“Request a private consultation”* CTA.
+- **Owner**: Implementer + operator.
+- **Production verification**: live `/` , `/properties`, `/property/[slug]`, `/concierge` on `https://lux.corpflowai.com/` reflect the vision-aligned positioning; tenant boundaries preserved; lead capture remains green.
+- **Operator next action**: continue the *LuxeMaurice Vision-Aligned Public Experience* slice and the **operator action** recorded in `docs/LUX/LUXEMAURICE_OPERATOR_TICKET_UPDATE.md`.
 
 ### Phase 3 — CRM / operator workflow in `/change`
 
@@ -198,7 +205,7 @@ Each phase below must be represented in the ticket’s narrative and acceptance 
 
 ## Open decisions (must be captured in the ticket before Phase 1–4 work)
 
-- **IDX**: choose an IDX provider vs staged listings-first?
+- **External property data integration** (resolved 2026-06-11): **not required**. The active direction is *manual-first curated private opportunities*. Any future external integration is optional and revisited only if a strategic reason emerges. The prior IDX-vs-staged-listings question is closed for active direction.
 - **Markets**: one combined market or separate France / South Africa / Russia journeys?
 - **CRM**: integrate external CRM or lightweight `/change` workflow first?
 - **First AI channel**: web, email, WhatsApp, or SMS?

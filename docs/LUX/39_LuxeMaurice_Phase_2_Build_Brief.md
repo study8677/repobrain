@@ -1,12 +1,14 @@
 # 39 — LuxeMaurice P0 Phase 2 Build Brief: `/properties` + visual property admin
 
-**Status:** Build brief created (planning / handoff; not operational delivery).  
-**Client:** LuxeMaurice / Luxmaurice  
-**Priority:** P0  
-**Master programme ticket:** `cmo8mjijk0000jl04l1jz0v6d` — **do not close** on this slice; record child work or programme notes instead.  
-**Production host:** `https://lux.corpflowai.com/`  
-**Tenant context:** `luxe-maurice` — **server-derived from hostname / session**; never accept client-supplied `tenant_id`.  
-**Integrations:** GoHighLevel **waived / not required** for this slice; do not block delivery on GHL.
+> **Repositioning preface (2026-06-11):** this brief is now read under the **LuxeMaurice Private Wealth & Lifestyle Platform** direction recorded in **`docs/LUX/LUXEMAURICE_REPOSITIONING_2026_06_11.md`** and **`docs/LUX/LUXEMAURICE_STRATEGIC_VISION_2030.md`**. The active surface is **Private Opportunities** (curated, manual-first), not a property-portal listings catalogue. The active requirement is **manual-first curated private opportunities, with future optional integrations only if strategically required**. The Slice A / Slice B / Slice C delivery audits later in this document are preserved as the historical record of what shipped; the public surfaces themselves are being repositioned by a separate *Vision-Aligned Public Experience* slice. The master programme ticket remains **open**.
+
+**Status:** Build brief created (planning / handoff; not operational delivery). Active framing repositioned 2026-06-11 (see preface).
+**Client:** LuxeMaurice / Luxmaurice
+**Priority:** P0
+**Master programme ticket:** `cmo8mjijk0000jl04l1jz0v6d` — **do not close** on this slice; record child work or programme notes instead.
+**Production host:** `https://lux.corpflowai.com/`
+**Tenant context:** `luxe-maurice` — **server-derived from hostname / session**; never accept client-supplied `tenant_id`.
+**Integrations:** GoHighLevel **waived / not required**. **External property data integration (IDX/MLS/feed): not an active requirement** — see repositioning record.
 
 **Related canonical docs (read before build):**
 
@@ -73,10 +75,11 @@ Ship **one narrow vertical slice** that includes all of:
 
 **Explicit exclusions (unless pulled in by a separate programme decision):**
 
-- Full IDX / external feed as source of truth.  
-- Public in-browser video player for ungoverned bytes.  
-- New env vars “for convenience.”  
+- External property data integration (IDX / MLS / external feed) as source of truth — **not an active requirement** under the 2026-06-11 repositioning; future external integrations are optional only if strategically required.
+- Public in-browser video player for ungoverned bytes.
+- New env vars “for convenience.”
 - Closing the master ticket.
+- Fake or feed-shaped preview inventory on public surfaces.
 
 ---
 
