@@ -28,6 +28,44 @@
 
 ---
 
+## 2026-06-12 — LuxeMaurice `/change` Upload content button: belt-and-suspenders defensive fix — stable id/name on the input + document.getElementById fallback + sprint-ticket-unconditional render + `[lux-upload]` console diagnostic (PR #350, P0 follow-up to PR #349)
+
+<!-- LUXEMAURICE_UPLOAD_CONTENT_BUTTON_DEFENSIVE_2026_06_12_HIST -->
+
+**Status:** PARTIAL — PR [#350](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/350) opened because operators still hit `Upload area is not available right now. Try reloading /change with this ticket open.` after PR [#349](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/349) deployed to Production (SHA `93249e73`, Vercel Production deployment id `5029556251`, status `success` 2026-06-12T02:51:00Z). Live production verification of PR #350 pending Vercel Production deployment + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`. Master programme `cmo8mjijk0000jl04l1jz0v6d` and sprint parent `cmqa2y2ga0000l704glnfro1f` remain **open**.
+
+**Runtime diagnostic that drove this PR:** Production SHA on `https://lux.corpflowai.com/change` confirmed to include PR #349's relaxed render guard (`{!isEstimateMode && selectedTicketId ? (...)}`) and the `input.click()` upgrade — yet the click handler still reached the non-silent unavailable branch on real C1–C4 tickets. We could not introspect the live operator-session DOM from outside (auth-gated) to prove whether (a) the upload section was missing from the DOM despite the relaxed guard, or (b) the React refs were null at click time due to a hydration / ref-attachment race. PR #350 instruments the handler so the next click either succeeds or pastes a one-line `[lux-upload]` diagnostic identifying the exact root cause.
+
+**Fix:**
+
+1. **Stable `id="lux-ticket-attachment-upload-input"` + `name="lux-ticket-attachment-upload-input"`** on the file input. Gives `document.getElementById` a deterministic anchor, and incidentally fixes the secondary "form field missing id/name" browser warning the operator noted (which the operator explicitly de-prioritised, but the fix lands here as part of the same code change).
+2. **`document.getElementById` fallback in `handleSprintUploadContentClick`** — if `luxAttachmentUploadInputRef.current` is null at click time, the handler now also tries `document.getElementById('lux-ticket-attachment-upload-input')` and `document.getElementById('lux-ticket-attachment-upload')`. If either resolves a node, the handler proceeds with scroll → focus → `input.click()` as before. The React-ref-first path is unchanged.
+3. **Render-guard strengthened** to `{selectedTicketId && (!isEstimateMode || isLuxContentSprintTicketSelected) ? (...)}`. Sprint tickets always render the upload section; no future `isEstimateMode === true` regression can hide it for the C1–C4 flow.
+4. **`[lux-upload]` diagnostic `console.warn`** on the unavailable branch. One structured line with `selectedTicketId`, `isEstimateMode`, `isLuxContentSprintTicketSelected`, ref-attached booleans, and DOM-found booleans. If the regression ever recurs, the operator pastes that one line and the next root cause is obvious — no more chained PRs without runtime evidence.
+
+**Files changed (PR #350):**
+
+* `pages/change.js` — `<input>` gains `id` + `name`; `handleSprintUploadContentClick` gains the `document.getElementById` fallback + `[lux-upload]` diagnostic; upload-section render condition adds the sprint-ticket bypass.
+* `node-tests/lux-content-sprint-upload-button.test.mjs` — **four new regression guards** locking in: (1) sprint tickets always render the section (`isLuxContentSprintTicketSelected` in the conditional), (2) input carries `id` + `name`, (3) handler falls back to `document.getElementById`, (4) diagnostic `console.warn` is emitted.
+
+**Tests + build:** `npm test` — 743 passing assertions, 53 suites, 0 failing (up from 739 in PR #349; +4 new). `npm run build` — green.
+
+**Things explicitly NOT touched (PR #350) — per operator instruction:** no CSP relaxation, no `unsafe-eval`, no general accessibility refactor (operator: do not work on accessibility warnings until the upload flow works). Also unchanged: `/api/change-attachment/upload` contract, `cmpTicketAttachment` storage, tenant / session / auth checks, media governance, `LuxContentSprintPanel` API surface, `computeIsIntakeUx`, `public/change.html`.
+
+**Live verification plan (pending):**
+
+1. Wait for Vercel Production to mark the PR #350 merge commit `Ready`.
+2. Open `https://lux.corpflowai.com/change` as a Lux operator session with the browser console open (F12 → Console).
+3. For each of C1, C2, C3, C4: select ticket → click **Upload content** → confirm the OS file picker opens immediately, **no alert**, **no fallback message**, **no `[lux-upload]` warning in the console**. If the warning DOES appear, paste the one line — its boolean fields identify the exact root cause (which lookup succeeded, whether the section is in the DOM at all).
+4. Pick a small safe test image (≤3 MB), confirm green status pill and the new attachment in the ATTACHMENTS list for review/link/publish. **Do not publish test media publicly.**
+5. Record Vercel Production deployment ID + commit SHA + Lux URL + screenshot. Flip PR #347 + PR #348 + PR #349 + PR #350 verdict to `COMPLETE` only after Jan and Anton confirm.
+
+**Rollback:** revert PR #350 — PR #349 behaviour returns; no migrations. The `id`/`name` removal would re-trigger the "form field missing id/name" warning but no functional regression beyond returning to PR #349 state.
+
+**Runbook:** `docs/runbooks/LUX_CHANGE_USABILITY_FIXES_2026_06_12.md` (extended with the `P0 follow-up — PR #350 (2026-06-12)` section, including the runtime diagnostic table).
+
+---
+
 ## 2026-06-12 — LuxeMaurice `/change` Upload content button: render guard relaxed + native file picker opens directly on click (PR #349, P0 follow-up to PR #348)
 
 <!-- LUXEMAURICE_UPLOAD_CONTENT_BUTTON_PICKER_2026_06_12_HIST -->

@@ -1,6 +1,76 @@
-# LuxeMaurice `/change` usability fixes — 2026-06-12 (PR #347, follow-up PR #348, follow-up PR #349)
+# LuxeMaurice `/change` usability fixes — 2026-06-12 (PR #347, follow-up PR #348, follow-up PR #349, follow-up PR #350)
 
-**Status:** PARTIAL — PR #347 merged (`a406f352`), PR #348 merged (`c800ef56`), and **PR #349** unblocks the "Upload content" button on the sprint child tickets that PR #348 still hid behind the intake-stage guard. Live production verification remains pending Vercel Production deployment + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`.
+**Status:** PARTIAL — PR #347 merged (`a406f352`), PR #348 merged (`c800ef56`), PR #349 merged (`93249e73`, Vercel Production deployment `5029556251` ready 2026-06-12T02:51:00Z). **PR #350** is a belt-and-suspenders defensive fix after the operator still hit "Upload area is not available right now" on PR #349's production deployment — adds stable `id`/`name` on the file input, a `document.getElementById` fallback in the click handler, a render-guard that guarantees the section is mounted whenever a sprint ticket is selected, and a one-line `console.warn` diagnostic for any future regression. Live production verification remains pending the PR #350 merge + Vercel Production + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`.
+
+## P0 follow-up — PR #350 (2026-06-12)
+
+**Symptom:** Even after PR #349 deployed to Production (SHA `93249e73`, Vercel Production deployment id `5029556251`), clicking **Upload content** on a C1–C4 Content Population Sprint ticket still surfaced:
+
+> Upload area is not available right now. Try reloading /change with this ticket open.
+
+**Diagnostic:**
+
+| Check | Result |
+|---|---|
+| Production SHA includes PR #349 (`93249e73`) | ✅ confirmed via `gh api repos/.../deployments?environment=Production` |
+| `pages/change.js` upload-section JSX condition on production HEAD | `{!isEstimateMode && selectedTicketId ? (...)}` — exactly what PR #349 deployed |
+| `pages/change.js` upload section anchor id + data-testid | `id="lux-ticket-attachment-upload"` + matching testid present |
+| `pages/change.js` file input anchor | `data-testid="lux-ticket-attachment-upload-input"` only — **no `id` or `name`** so `document.getElementById` lookups were impossible |
+| Browser fallback after click | Reached the non-silent unavailable branch → either the section was not in the DOM (some guard combination not yet ruled out) **or** the React refs were `null` at click time (ref-attachment race or partial-hydration edge case) |
+
+**Why this couldn't be diagnosed deeper from the repo:** `/change` is auth-gated; we cannot fetch its HTML server-side. The runtime DOM state during the actual click is the missing piece. PR #350 instruments the handler so the next operator click will either succeed (because of the fallback / strengthened guard) or paste a one-line diagnostic into the browser console identifying *which* of the two root causes it is.
+
+**Fix (belt-and-suspenders):**
+
+1. **Stable `id` + `name` on the file input.** `<input id="lux-ticket-attachment-upload-input" name="lux-ticket-attachment-upload-input" data-testid="lux-ticket-attachment-upload-input" type="file" ...>`. This (a) lets `handleSprintUploadContentClick` look the input up by id when the React ref is null, and (b) fixes the secondary "form field missing id/name" browser warning the operator reported.
+2. **`document.getElementById` fallback in the handler.** If `luxAttachmentUploadInputRef.current` is null, the handler now also tries `document.getElementById('lux-ticket-attachment-upload-input')` and `document.getElementById('lux-ticket-attachment-upload')`. If either succeeds, the handler proceeds with scroll → focus → click as normal. No regression to the React-ref-first path; the fallback is additive.
+3. **Render-guard strengthened.** The JSX conditional now reads `{selectedTicketId && (!isEstimateMode || isLuxContentSprintTicketSelected) ? (...)}`. Operators editing sprint tickets get the upload section unconditionally, so even a future `isEstimateMode === true` regression cannot hide it for the C1–C4 flow.
+4. **Operator-pasteable diagnostic.** When the handler reaches the unavailable branch, it now emits one structured `console.warn` line tagged `[lux-upload]` listing `selectedTicketId`, `isEstimateMode`, `isLuxContentSprintTicketSelected`, ref-attached booleans, and DOM-found booleans. If the regression ever recurs, the operator pastes the one line and the next root cause is obvious.
+
+**Files changed (PR #350):**
+
+* `pages/change.js`
+  * `<input>` gains `id="lux-ticket-attachment-upload-input"` and `name="lux-ticket-attachment-upload-input"`.
+  * `handleSprintUploadContentClick` — added `document.getElementById` fallback for both the section anchor and the input; added diagnostic `console.warn` on the unavailable branch and on successful fallback usage.
+  * Upload-section render condition: `{selectedTicketId && (!isEstimateMode || isLuxContentSprintTicketSelected) ? (...)}` — sprint tickets bypass `isEstimateMode`.
+* `node-tests/lux-content-sprint-upload-button.test.mjs`
+  * **New test** *PR #350: upload section renders unconditionally when a sprint ticket is selected* — asserts the JSX conditional includes `isLuxContentSprintTicketSelected`.
+  * **New test** *PR #350: file input carries stable id="lux-ticket-attachment-upload-input" and name attribute*.
+  * **New test** *PR #350: handleSprintUploadContentClick falls back to document.getElementById when React refs are null*.
+  * **New test** *PR #350: emits a diagnostic console.warn when the fallback path is reached*.
+  * Existing tests retained.
+
+**Tests + build (PR #350):** `npm test` — 743 passing assertions, 53 suites, 0 failing (up from 739 in PR #349; +4 new). `npm run build` — green.
+
+**What is intentionally NOT changed (PR #350):**
+
+* No CSP relaxation (operator explicitly asked: do not alter CSP, do not add `unsafe-eval`).
+* No general accessibility refactor (operator explicitly asked: do not work on accessibility warnings until the upload flow works).
+* `/api/change-attachment/upload` contract, `cmpTicketAttachment` storage, tenant / session / auth checks, media governance — all unchanged.
+* `LuxContentSprintPanel` API surface — unchanged. Only `onUploadClick` is consumed.
+* `computeIsIntakeUx` — unchanged.
+* `public/change.html` — untouched.
+
+**Live verification plan (PR #350):**
+
+1. Wait for Vercel Production to mark the PR #350 merge commit `Ready`.
+2. Open `https://lux.corpflowai.com/change` as a Lux operator session.
+3. For each of C1, C2, C3, C4:
+   * Select the ticket.
+   * Open the browser console (F12 → Console).
+   * Click **Upload content**.
+   * Expected: OS file picker opens immediately. No alert. No "Upload area is not available right now" message. No `[lux-upload]` warning in the console.
+   * If the warning DOES appear, paste the single `[lux-upload] Upload area is not in the DOM ...` line back into the ticket. The boolean fields identify the exact root cause.
+4. Pick a small safe test image (≤3 MB). Confirm the green status pill (*Uploaded and available on this ticket: …*) and the new attachment appearing in the ATTACHMENTS list. **Do not publish test media publicly.**
+5. Record Vercel Production deployment ID + commit SHA + Lux URL + screenshot in `artifacts/chat_history.md`. Flip PR #347 + PR #348 + PR #349 + PR #350 verdict to `COMPLETE` only after Jan and Anton confirm.
+
+**Rollback (PR #350):** revert PR #350 — the previous (PR #349) behaviour returns; no migrations. The `id`/`name` removal would re-trigger the "form field missing id/name" browser warning, but no functional regression beyond returning to PR #349 state.
+
+---
+
+## Original PR #347 / PR #348 / PR #349 entries
+
+**Status:** PARTIAL — PR #347 merged (`a406f352`), PR #348 merged (`c800ef56`), and PR #349 unblocked the "Upload content" button on the sprint child tickets that PR #348 still hid behind the intake-stage guard. Live production verification remains pending Vercel Production deployment + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`.
 
 ## P0 follow-up — PR #349 (2026-06-12)
 

@@ -828,11 +828,24 @@ export default function ChangeConsolePage() {
   }
 
   /**
-   * Wired into the Content sprint panel's "Upload content" button. Scrolls to the
-   * upload section (so the operator can see file picker + status messages) and
-   * focuses the file input. If the section is not currently rendered (no ticket
-   * selected, or the section ref was not attached yet) we surface a clear
-   * non-silent message instead of a no-op.
+   * Wired into the Content sprint panel's "Upload content" button. Opens the
+   * native OS file picker for the existing governed upload input.
+   *
+   * Lookup strategy (defensive — PR #350):
+   *   1. React ref `luxAttachmentUploadInputRef.current` (fast path).
+   *   2. `document.getElementById('lux-ticket-attachment-upload-input')` (fallback
+   *      for any ref-attachment race or partial-hydration edge case — the upload
+   *      input now carries a stable `id` and `name` attribute exactly for this).
+   *
+   * The fast path covers PR #348 + #349 (refs are wired and the section render
+   * guard was relaxed to `!isEstimateMode && selectedTicketId`). The fallback
+   * exists because PR #349's production rollout still surfaced
+   * "Upload area is not available right now" on real C1–C4 sprint tickets — and
+   * the safest belt-and-suspenders is to not depend solely on a React ref being
+   * attached at click time.
+   *
+   * If both lookups fail, we surface a one-line `console.warn` so operators can
+   * paste diagnostic state, and we keep the non-silent inline + alert fallback.
    */
   function handleSprintUploadContentClick() {
     if (!selectedTicketId) {
@@ -840,9 +853,40 @@ export default function ChangeConsolePage() {
       setUploadStatusKind('error');
       return;
     }
-    const section = luxAttachmentUploadSectionRef.current;
-    const input = luxAttachmentUploadInputRef.current;
-    if (!section || !input) {
+    let section = luxAttachmentUploadSectionRef.current || null;
+    let input = luxAttachmentUploadInputRef.current || null;
+    let foundVia = 'ref';
+    if ((!section || !input) && typeof document !== 'undefined') {
+      try {
+        if (!section) section = document.getElementById('lux-ticket-attachment-upload');
+        if (!input) input = document.getElementById('lux-ticket-attachment-upload-input');
+        foundVia = 'document.getElementById';
+      } catch {
+        // No DOM access (SSR / restrictive sandbox); fall through to fallback below.
+      }
+    }
+    if (!input) {
+      // Surface a one-line diagnostic so the operator can paste console state.
+      // Per PM-first-communication rule this is operator-facing; keep it short.
+      try {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[lux-upload] Upload area is not in the DOM. selectedTicketId=%s isEstimateMode=%s isLuxContentSprintTicketSelected=%s sectionRefAttached=%s inputRefAttached=%s anchorById=%s inputById=%s',
+          String(selectedTicketId || ''),
+          String(isEstimateMode),
+          String(isLuxContentSprintTicketSelected),
+          Boolean(luxAttachmentUploadSectionRef.current),
+          Boolean(luxAttachmentUploadInputRef.current),
+          typeof document !== 'undefined'
+            ? Boolean(document.getElementById('lux-ticket-attachment-upload'))
+            : 'no-document',
+          typeof document !== 'undefined'
+            ? Boolean(document.getElementById('lux-ticket-attachment-upload-input'))
+            : 'no-document',
+        );
+      } catch {
+        // logging is best-effort.
+      }
       setUploadStatus(
         'Upload area is not available right now. Try reloading /change with this ticket open. If the problem persists, contact the operator on duty.',
       );
@@ -856,14 +900,15 @@ export default function ChangeConsolePage() {
       }
       return;
     }
-    try {
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch {
-      // Older browsers ignore options; fall back to default scroll behaviour.
+    if (section) {
       try {
-        section.scrollIntoView();
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch {
-        // No DOM access (SSR or restrictive test envs) — focus call below still fires.
+        try {
+          section.scrollIntoView();
+        } catch {
+          // No DOM access (SSR or restrictive test envs) — focus + click below still fire.
+        }
       }
     }
     try {
@@ -879,11 +924,20 @@ export default function ChangeConsolePage() {
     // allow `input.click()` on a file input only inside the same user gesture, and
     // `handleSprintUploadContentClick` IS that user gesture, so the picker opens
     // synchronously. Wrapped in try/catch so a restrictive environment falls back
-    // to scroll + focus (option (a)) without throwing.
+    // to scroll + focus (option (a)) without throwing. `foundVia` is referenced so
+    // bundlers don't tree-shake the variable; it's also useful when debugging.
     try {
       input.click();
     } catch {
       // No-op: the section has already scrolled into view and the input is focused.
+    }
+    if (foundVia !== 'ref') {
+      try {
+        // eslint-disable-next-line no-console
+        console.warn('[lux-upload] used DOM fallback (%s) to reach upload input', foundVia);
+      } catch {
+        // logging is best-effort.
+      }
     }
   }
 
@@ -3337,12 +3391,14 @@ export default function ChangeConsolePage() {
            * the Intake workflow stage by design (they were created as fresh sprint
            * work items in PR #345), so the earlier `!showIntakeSurface` guard
            * silently gated them out — operators clicking the "Upload content"
-           * button on a sprint ticket reached the unavailable-state fallback. The
-           * operator needs to attach media to in-flight sprint work regardless of
-           * intake stage, so this section is always available on a selected ticket
-           * outside estimate mode.
+           * button on a sprint ticket reached the unavailable-state fallback.
+           *
+           * PR #350 belt-and-suspenders: also render unconditionally when a sprint
+           * ticket is selected, even if some future state combination makes
+           * `isEstimateMode` true. This guarantees the "Upload content" CTA in the
+           * Content sprint panel always has a target.
            */}
-          {!isEstimateMode && selectedTicketId ? (
+          {selectedTicketId && (!isEstimateMode || isLuxContentSprintTicketSelected) ? (
             <div
               id="lux-ticket-attachment-upload"
               data-testid="lux-ticket-attachment-upload"
@@ -3390,6 +3446,8 @@ export default function ChangeConsolePage() {
               >
                 <input
                   ref={luxAttachmentUploadInputRef}
+                  id="lux-ticket-attachment-upload-input"
+                  name="lux-ticket-attachment-upload-input"
                   data-testid="lux-ticket-attachment-upload-input"
                   type="file"
                   accept="image/*,video/*,application/pdf"

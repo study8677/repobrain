@@ -81,7 +81,7 @@ test('PR #349 regression guard: upload section renders without the !showIntakeSu
   const idx = src.indexOf(ANCHOR);
   assert.ok(idx > 0, 'Upload section anchor must be present');
   // The opening JSX condition is at most ~600 chars before the anchor.
-  const windowStart = Math.max(0, idx - 800);
+  const windowStart = Math.max(0, idx - 1200);
   const preceding = src.slice(windowStart, idx);
   // Walk backwards to find the most recent `{...selectedTicketId... ? (` opener.
   const openerRe = /\{[^{}\n]*selectedTicketId[^{}\n]*\?\s*\(/g;
@@ -97,8 +97,64 @@ test('PR #349 regression guard: upload section renders without the !showIntakeSu
     /!\s*showIntakeSurface/,
     `Upload section conditional must not gate on !showIntakeSurface; got: ${condition}`,
   );
-  // The condition should still respect estimate mode.
-  assert.match(condition, /!\s*isEstimateMode/);
+  // The condition must still respect estimate mode (but sprint tickets bypass it).
+  assert.match(condition, /isEstimateMode/);
+});
+
+test('PR #350: upload section renders unconditionally when a sprint ticket is selected', () => {
+  const src = readRepo('pages/change.js');
+  // The JSX conditional that opens the upload section must include
+  // `isLuxContentSprintTicketSelected` so that ANY sprint ticket renders the
+  // section regardless of `isEstimateMode` (or any future guard that creeps in).
+  const ANCHOR = 'id="lux-ticket-attachment-upload"';
+  const idx = src.indexOf(ANCHOR);
+  assert.ok(idx > 0, 'Upload section anchor must be present');
+  const windowStart = Math.max(0, idx - 1200);
+  const preceding = src.slice(windowStart, idx);
+  const openerRe = /\{[^{}\n]*selectedTicketId[^{}\n]*\?\s*\(/g;
+  let lastMatch = null;
+  let m;
+  while ((m = openerRe.exec(preceding)) !== null) {
+    lastMatch = m;
+  }
+  assert.ok(lastMatch, 'Could not locate the JSX conditional that gates the upload section');
+  const condition = lastMatch[0];
+  assert.match(
+    condition,
+    /isLuxContentSprintTicketSelected/,
+    `Upload section conditional must include isLuxContentSprintTicketSelected so sprint tickets always render; got: ${condition}`,
+  );
+});
+
+test('PR #350: file input carries stable id="lux-ticket-attachment-upload-input" and name attribute', () => {
+  const src = readRepo('pages/change.js');
+  // Stable id + name on the file input give us:
+  //   (a) a deterministic `document.getElementById` fallback when the React ref
+  //       isn't attached for any reason, and
+  //   (b) a fix for the secondary "form field missing id/name" browser warning.
+  assert.match(src, /id="lux-ticket-attachment-upload-input"/);
+  assert.match(src, /name="lux-ticket-attachment-upload-input"/);
+});
+
+test('PR #350: handleSprintUploadContentClick falls back to document.getElementById when React refs are null', () => {
+  const src = readRepo('pages/change.js');
+  assert.match(
+    src,
+    /document\.getElementById\('lux-ticket-attachment-upload-input'\)/,
+    'Must fall back to document.getElementById for the input',
+  );
+  assert.match(
+    src,
+    /document\.getElementById\('lux-ticket-attachment-upload'\)/,
+    'Must fall back to document.getElementById for the section anchor',
+  );
+});
+
+test('PR #350: emits a diagnostic console.warn when the fallback path is reached', () => {
+  const src = readRepo('pages/change.js');
+  // Operator-pasteable diagnostic so we can debug any future regression from
+  // production console output alone. Must include the upload-tag prefix.
+  assert.match(src, /\[lux-upload\] Upload area is not in the DOM/);
 });
 
 test('pages/change.js exposes a stable upload anchor id + testid for the sprint button to target', () => {
