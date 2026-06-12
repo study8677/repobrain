@@ -107,25 +107,50 @@ async function main() {
       : rows.filter((r) => String(r.status || '').trim().toLowerCase() !== 'closed');
 
     // Match the live operator queue truncation (lib/cmp/router.js shortenRequestedChange — 120 chars).
+    // Pass status / stage / workflow_state so the classifier can route terminal-closed rows
+    // into the `archived_completed` bucket instead of leaking into Smoke / Active.
     const queueRows = openish.map((r) => ({
       ticket_id: r.id,
       requested_change: shortDesc(r.description, 120),
+      status: r.status || '',
+      stage: r.stage || '',
+      workflow_state: (() => {
+        try {
+          const cj = r.consoleJson && typeof r.consoleJson === 'object' ? r.consoleJson : {};
+          const cv = cj.client_view && typeof cj.client_view === 'object' ? cj.client_view : {};
+          return cv.workflow_state || '';
+        } catch {
+          return '';
+        }
+      })(),
     }));
 
-    const { counts, programme, activeClient, propertyMedia, crmLeads, internal, archivedSmoke } =
-      groupLuxOperatorQueueTickets(queueRows);
+    const {
+      counts,
+      programme,
+      activeClient,
+      propertyMedia,
+      crmLeads,
+      internal,
+      archivedSmoke,
+      archivedCompleted,
+    } = groupLuxOperatorQueueTickets(queueRows);
 
     const enrich = (groupRows) => {
       const out = [];
       for (const g of groupRows) {
         const src = openish.find((r) => r.id === g.ticket_id);
         if (!src) continue;
+        const enrichedRow = pluck([src])[0];
         const cls = classifyLuxChangeQueueTicket({
           ticket_id: src.id,
           requested_change: src.description || '',
+          status: enrichedRow.status,
+          stage: enrichedRow.stage,
+          workflow_state: enrichedRow.workflow_state,
         });
         out.push({
-          ...pluck([src])[0],
+          ...enrichedRow,
           bucket: cls.bucket,
           badge: cls.badge,
         });
@@ -147,6 +172,7 @@ async function main() {
         crm_leads: enrich(crmLeads),
         internal: enrich(internal),
         archived_smoke: enrich(archivedSmoke),
+        archived_completed: enrich(archivedCompleted),
       },
     };
 
@@ -191,6 +217,7 @@ async function main() {
     dumpBucket('Property & media', report.buckets.property_media);
     dumpBucket('CRM / leads', report.buckets.crm_leads);
     dumpBucket('Archived smoke / test', report.buckets.archived_smoke);
+    dumpBucket('Archived / completed', report.buckets.archived_completed);
 
     process.stdout.write(lines.join('\n') + '\n');
   } finally {

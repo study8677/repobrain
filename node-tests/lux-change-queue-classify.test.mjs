@@ -113,6 +113,64 @@ test('groupLuxOperatorQueueTickets: buckets + counts + programme preserved', () 
   assert.equal(g.archivedSmoke[0].ticket_id, 'sm');
 });
 
+test('classifyLuxChangeQueueTicket: terminal-closed rows route to archived_completed', () => {
+  // Closed by `status` (canonical hard-close emits Status='Closed').
+  assert.equal(
+    classifyLuxChangeQueueTicket({ ticket_id: 'closed-by-status', requested_change: 'real client work', status: 'Closed' }).bucket,
+    'archived_completed',
+  );
+  // Closed by `stage` (e.g. some historical migration paths).
+  assert.equal(
+    classifyLuxChangeQueueTicket({ ticket_id: 'closed-by-stage', requested_change: 'real client work', stage: 'Closed' }).bucket,
+    'archived_completed',
+  );
+  // Closed by `workflow_state` only.
+  assert.equal(
+    classifyLuxChangeQueueTicket({ ticket_id: 'closed-by-wf', requested_change: 'real client work', workflow_state: 'closed' }).bucket,
+    'archived_completed',
+  );
+});
+
+test('classifyLuxChangeQueueTicket: archived_completed wins over archived_smoke when row is also closed', () => {
+  // Closed historical smoke row — should surface as archived_completed (terminal), not archived_smoke (open-but-test).
+  assert.equal(
+    classifyLuxChangeQueueTicket({ ticket_id: 'sm-closed', requested_change: 'Phase 4C.1 attachment review smoke test', status: 'Closed' }).bucket,
+    'archived_completed',
+  );
+});
+
+test('classifyLuxChangeQueueTicket: programme id beats closed status (programme always visible)', () => {
+  assert.equal(
+    classifyLuxChangeQueueTicket({ ticket_id: LUX_PARENT_PROGRAMME_TICKET_ID, requested_change: 'Programme', status: 'Closed' }).bucket,
+    'programme',
+  );
+});
+
+test('groupLuxOperatorQueueTickets: archivedCompleted bucket + counts + closed smoke is archived_completed not smoke', () => {
+  const g = groupLuxOperatorQueueTickets([
+    { ticket_id: 'sm-open', requested_change: 'smoke test' },
+    { ticket_id: 'sm-closed', requested_change: 'Phase 4C.1 attachment review smoke', status: 'Closed' },
+    { ticket_id: 'real-closed', requested_change: 'Real client request', status: 'Closed' },
+    { ticket_id: LUX_PARENT_PROGRAMME_TICKET_ID, requested_change: 'Programme' },
+  ]);
+  assert.equal(g.counts.programme, 1);
+  assert.equal(g.counts.archivedSmoke, 1, 'open smoke still routes to archived_smoke');
+  assert.equal(g.counts.archivedCompleted, 2, 'both closed rows route to archived_completed');
+  assert.equal(g.archivedCompleted.length, 2);
+  assert.equal(g.archivedCompleted[0].ticket_id, 'sm-closed');
+  assert.equal(g.archivedCompleted[1].ticket_id, 'real-closed');
+});
+
+test('groupLuxOperatorQueueTickets: archivedCompleted is empty when no closed rows are passed (live operator queue default)', () => {
+  const g = groupLuxOperatorQueueTickets([
+    { ticket_id: LUX_PARENT_PROGRAMME_TICKET_ID, requested_change: 'Programme' },
+    { ticket_id: 'x', requested_change: 'active client refinement' },
+    { ticket_id: 'pm', requested_change: 'Gallery publish gate' },
+  ]);
+  assert.equal(g.counts.archivedCompleted, 0);
+  assert.equal(g.archivedCompleted.length, 0);
+});
+
 test('buildLuxChangeConsoleChrome: queue + badge tokens for new buckets', () => {
   const c = buildLuxChangeConsoleChrome();
   assert.equal(typeof c.shellStyle, 'function');

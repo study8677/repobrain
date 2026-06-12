@@ -238,9 +238,15 @@ Idempotency is tracked on `console_json.lux_request_meta.classify_leadin_v1=true
 
 ## 8. Operator handoff (post-formalization)
 
-When the four child tickets are live, the operator desk on `https://lux.corpflowai.com/change` will show four new rows classified into the **Property & media** bucket (titles contain `property` / `gallery` / `publish` / `listing`). Counts strip:
+When the four child tickets are live, the operator desk on `https://lux.corpflowai.com/change` will show four new rows classified into the **Property & media** bucket (titles contain `property` / `gallery` / `publish` / `listing`).
 
-> Programme (1) · Active (1) · **Property (4)** · CRM (0) · Internal (0) · Smoke (18, hidden by default)
+### 8a. Operator desk after 2026-06-11 queue cleanup
+
+The 18 historical Phase 4C.1 attachment-review smoke / test artifact tickets that previously populated the Smoke bucket were **hard-closed** on 2026-06-11 by `scripts/lux-close-phase4c1-smoke-tickets.mjs --execute` (see `docs/runbooks/LUX_OPERATOR_QUEUE_CLEANUP_2026_06_11.md`). Since `lib/cmp/router.js#ticket-operator-queue` server-side filters `status='Closed'` rows, the default operator desk now reads:
+
+> Programme (1) · Active (1) · **Property (4)** · CRM (0) · Internal (0) · Smoke (0)
+
+The 4 in Property & media is the **sprint children C1–C4** — intentional active work, not noise. The 18 closed historical rows remain auditable via `node scripts/lux-queue-audit.mjs --include-closed`, where they now appear under the dedicated **Archived / completed** bucket added by the same cleanup packet to `lib/client/lux-change-queue-classify.js`.
 
 Each child opens with `awaiting_operator_review` and the operator advances workflow per the same conventions used today for Phase 4B requests.
 

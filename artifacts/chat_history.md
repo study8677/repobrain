@@ -28,6 +28,42 @@
 
 ---
 
+## 2026-06-12 — LuxeMaurice operator queue cleanup — 18 historical Phase 4C.1 smoke / test artifact tickets hard-closed (audit preserved); `archived_completed` classifier bucket added
+
+<!-- LUXEMAURICE_OPERATOR_QUEUE_CLEANUP_2026_06_11_HIST -->
+
+**Status:** **COMPLETE in CMP / DB / local verification.** Production verification = open `https://lux.corpflowai.com/change` with a Lux operator session and visually confirm Smoke (0) on the default desk and both protected ids still visible / open. No deletes; no protected ticket mutated; audit history, attachments, messages preserved.
+
+**Why this work exists:** PR [#343](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/343) made the public surface brand-ready; PR [#345](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/345) formalized the Content Population Sprint that turns it commercially usable. Before the sprint can be operated cleanly, the `/change` operator desk had to lose **18 historical Phase 4C.1 attachment-review smoke / test artifact tickets** that still appeared as `status=Open / stage=Intake / workflow=awaiting_operator_review` on the `luxe-maurice` tenant. They are repeatable round-trip smoke output (and one operator test draft from 2026-05-07: `cmov9fs050000kz04070wi23k`, title *"Make changes to the website appearance"*, description *"Let's test this function"*), not real client work.
+
+**Non-negotiables (held throughout):** no deletes; no mutation of master programme `cmo8mjijk0000jl04l1jz0v6d`; no mutation of active content sprint parent `cmqa2y2ga0000l704glnfro1f`; tenant locked to `luxe-maurice`; no new env vars; no schema migration; canonical `buildHardCloseConsoleJsonPatch` reused for identical hard-close semantics with the rest of the repo.
+
+**Tooling added in this packet:**
+
+- **`lib/cmp/_lib/lux-phase4c1-smoke-cleanup.js`** — pure helpers (no DB / fs / env reads): `TARGET_TICKETS` (18 audited ids), `PROTECTED_TICKETS` (`cmo8mjijk0…`, `cmqa2y2ga0…`), `KNOWN_OPERATOR_TEST_DRAFTS` (per-id signature for the one 2026-05-07 operator test draft `cmov9fs050000kz04070wi23k` — accepted only if title + description + 0 messages + 0 attachments still match the inspected signature exactly), `preflightConfigCheck`, `preWriteCheck`, `applyHardCloseAndAppendMessage`.
+- **`scripts/lux-close-phase4c1-smoke-tickets.mjs`** — CLI orchestrator. Dry-run by default; `--execute` writes; `--output=<path>` snapshots JSON. Refuses without `POSTGRES_URL`. Per-row pre-write re-check before each write. Any non-`already-closed` refusal aborts the **entire** batch — nothing is written in a partially-bad run.
+- **`scripts/lux-queue-audit.mjs`** — extended to pass `status / stage / workflow_state` through to the classifier, so closed rows surface in the new `archived_completed` bucket under `--include-closed`.
+- **`lib/client/lux-change-queue-classify.js`** — added `archived_completed` bucket: terminal-closed rows (status `Closed`, stage `Closed`, or `client_view.workflow_state='closed'`) route there. Programme ids still win. Live `/change` is unaffected because the API server-side filters `status='Closed'` before the classifier runs.
+- **`node-tests/lux-phase4c1-smoke-cleanup.test.mjs`** (25 unit tests) + extensions to **`node-tests/lux-change-queue-classify.test.mjs`** for the new bucket.
+- **`docs/runbooks/LUX_OPERATOR_QUEUE_CLEANUP_2026_06_11.md`** — canonical runbook (what, why, guards, execution evidence, reversibility).
+
+**Per-row hard-close mutation:** `status='Closed'`, `stage='Closed'`, `consoleJson` merged via `buildHardCloseConsoleJsonPatch` (sets `client_view.workflow_state='closed'` + `workflow_next_action` + `progress_message` + `closure.{kind:'hard_close',reason,context_note,decided_at}`), and one assistant-role closure message appended to `consoleJson.messages[]` (`source: 'lux-queue-cleanup-2026-06-11'`) — prior messages preserved verbatim. Closure text: *"Closed during 2026-06-11 LuxeMaurice operator queue cleanup — historical Phase 4C.1 smoke/test artifact. Audit history, attachments, and messages preserved."*
+
+**Execution evidence (live DB, 2026-06-12 00:00–00:10 UTC):**
+
+1. Dry-run: `node scripts/lux-close-phase4c1-smoke-tickets.mjs --output=.lux-verify/cleanup-dryrun.json` → `would_close=18, already_closed=0, refused=0, not_found=0`.
+2. Execute: `node scripts/lux-close-phase4c1-smoke-tickets.mjs --execute --output=.lux-verify/cleanup-execute.json` → `closed=18, already_closed=0, refused=0`.
+3. Re-audit default view: `Programme (1) · Active (1) · Property (4 sprint children C1–C4) · CRM (0) · Internal (0) · Smoke (0)`.
+4. Re-audit with `--include-closed`: `Archived / completed (32) = 18 just-closed + 14 pre-existing closed historical rows`. All 18 cleanup targets present in `archived_completed`; both protected ids absent from the cleanup result set.
+
+**Expectation note vs the 2026-06-11 packet.** The packet expected post-cleanup `Property (0)`. Live count is `Property (4)` — that is the four sprint children C1–C4 from PR #345 (homepage imagery, first real opportunity, demo cleanup, Jan validation). Intentional active work, not cleanup leakage.
+
+**Tests / build:** `npm test` (684 pass / 0 fail) and `npm run build` both green locally.
+
+**Cross-references:** `docs/LUX/39_LuxeMaurice_Phase_2_Build_Brief.md` § 16 (operator queue cleanup), § 15 (content sprint), § 14 (PR #343 audit); `docs/LUX/LUX_DELIVERY_PROGRAMME.md` Phase 2 cleanup note; `docs/LUX/LUX_CONTENT_POPULATION_SPRINT.md` § 8a (operator desk post-cleanup state); `docs/runbooks/LUX_OPERATOR_QUEUE_CLEANUP_2026_06_11.md` (canonical runbook).
+
+---
+
 ## 2026-06-11 — LuxeMaurice vision-aligned public experience live on production (PR [#343](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/343); programme ticket `cmo8mjijk0000jl04l1jz0v6d` remains open; **slice COMPLETE**)
 
 <!-- LUXEMAURICE_VISION_ALIGNED_PUBLIC_EXPERIENCE_2026_06_11_HIST -->

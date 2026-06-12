@@ -479,6 +479,22 @@ Each child carries both `parent_programme_ticket=cmo8mjijk0000jl04l1jz0v6d` (so 
 
 ---
 
+## 16. Operator queue cleanup — 2026-06-11
+
+**Why this section exists.** Before the content sprint can be operated cleanly, the `/change` operator desk had to lose the 18 historical **Phase 4C.1 attachment-review smoke / test artifact** tickets that still showed as `status=Open / stage=Intake / workflow=awaiting_operator_review` on the `luxe-maurice` tenant. The cleanup is hard-close (audit-preserving), not delete.
+
+- **Runbook (canonical):** `docs/runbooks/LUX_OPERATOR_QUEUE_CLEANUP_2026_06_11.md`.
+- **Pure helpers (unit-tested):** `lib/cmp/_lib/lux-phase4c1-smoke-cleanup.js` — `TARGET_TICKETS` (18 ids), `PROTECTED_TICKETS` (`cmo8mjijk0000jl04l1jz0v6d`, `cmqa2y2ga0000l704glnfro1f`), `KNOWN_OPERATOR_TEST_DRAFTS` (per-id signature for the one 2026-05-07 operator test draft `cmov9fs050000kz04070wi23k`), `preWriteCheck`, `applyHardCloseAndAppendMessage` (uses the canonical `buildHardCloseConsoleJsonPatch`).
+- **CLI:** `scripts/lux-close-phase4c1-smoke-tickets.mjs` (dry-run by default; `--execute`; `--output=<path>` snapshot).
+- **Classifier:** `lib/client/lux-change-queue-classify.js` now has an `archived_completed` bucket; terminal-closed rows route there when `status / stage / workflow_state` are passed through (audit tooling does this; the live `/change` API doesn’t, because it server-side filters `status='Closed'`).
+- **Tests (new + extended):** `node-tests/lux-phase4c1-smoke-cleanup.test.mjs` (25 unit tests), `node-tests/lux-change-queue-classify.test.mjs` (extended with `archived_completed` cases).
+
+**Execution evidence (2026-06-11).** Dry-run: `would_close=18, refused=0`. Execute: `closed=18, refused=0`. Post-cleanup audit default view: `Programme (1) · Active (1) · Property (4 sprint children) · CRM (0) · Internal (0) · Smoke (0)`. Audit view with `--include-closed`: `Archived / completed (32) = 18 just-closed + 14 pre-existing closed`. All 18 cleanup targets present in `archived_completed`; both protected ids untouched.
+
+**Non-negotiables held.** No deletes; no protected ticket mutated; tenant locked to `luxe-maurice`; no schema migration; no new env vars; canonical `buildHardCloseConsoleJsonPatch` used (same semantics as every other hard-close in the repo); per-row pre-write re-check before each write; any non-`already-closed` refusal aborts the whole batch.
+
+---
+
 ## Output summary (for Anton / PM)
 
 | Item | Value |
@@ -492,3 +508,4 @@ Each child carries both `parent_programme_ticket=cmo8mjijk0000jl04l1jz0v6d` (so 
 | **Next Cursor prompt** | §11 |
 | **Vision-aligned public experience (PR #343)** | §14 — **COMPLETE** (live-verified 2026-06-11 on `lux.corpflowai.com`). Programme §8 Reality Gate still **PARTIAL** under Slice C scope (first real client-published listing + editor E2E + governed public imagery). |
 | **Vision-aligned content population sprint** | §15 — formalized 2026-06-11 in CMP (sprint parent `cmqa2y2ga0000l704glnfro1f`, four `Property & media` children C1–C4). **PARTIAL** until Reality Gate is live-verified and Jan + Anton sign off; closes the §14 commercial-usability gap. |
+| **Operator queue cleanup** | §16 — 2026-06-11. 18 historical Phase 4C.1 smoke / test artifact tickets hard-closed via `scripts/lux-close-phase4c1-smoke-tickets.mjs --execute`; canonical `buildHardCloseConsoleJsonPatch` used; both protected ids (`cmo8mjijk0000jl04l1jz0v6d`, `cmqa2y2ga0000l704glnfro1f`) untouched. Operator desk default view now reads `Programme (1) · Active (1) · Property (4) · CRM (0) · Internal (0) · Smoke (0)`; audit view with `--include-closed` shows `Archived / completed (32)`. **COMPLETE** in CMP / DB; production verification = open `https://lux.corpflowai.com/change` with a Lux operator session and confirm Smoke (0) and that both protected ids remain visible and open. |
