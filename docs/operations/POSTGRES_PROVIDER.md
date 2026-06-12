@@ -181,6 +181,98 @@ Before any env entry is deleted from Vercel or Infisical, search the repo for th
 
 ---
 
+## 5c. Incident: 2026-05-24 — `_prisma_migrations` row for `20260514120000_lux_listings` stuck in `failed` (P3009)
+
+**Symptom (CI):** Every push/PR run of the `test` workflow (`.github/workflows/test.yml`) prints the following inside the `Prisma migrate deploy (optional)` step and exits with code 1:
+
+```text
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "neondb", schema "public" at
+  "ep-<endpoint>-pooler.<region>.aws.neon.tech"
+
+2 migrations found in prisma/migrations
+
+Error: P3009
+
+migrate found failed migrations in the target database, new migrations will not be applied.
+Read more about how to resolve migration issues in a production database:
+  https://pris.ly/d/migrate-resolve
+
+The `20260514120000_lux_listings` migration started at 2026-05-24 23:05:37.324871 UTC failed
+```
+
+The step is `continue-on-error: true` (test.yml lines 93–100), so this does **not** fail the parent `test` job. The PR check rollup still reports `test: SUCCESS` and PRs remain mergeable.
+
+**Symptom (no customer-facing impact):** None. Vercel Production deploys are unaffected because Vercel does not run `prisma migrate deploy` in its build pipeline — schema changes in this repo are applied through `scripts/apply-ensure-schema-build.mjs` (idempotent DDL during `vercel build`) and Prisma migrations are the CI-only path. The `lux_listings` table is present and Lux marketing surfaces have been serving normally throughout.
+
+**Root cause:** The `lux_listings` table was created at runtime via the older `POST /api/factory/postgres/ensure-schema` idempotent DDL path **before** the Prisma migration was added on 2026-05-14 (see also `docs/operations/ENSURE_POSTGRES_SCHEMA.md`). When `prisma migrate deploy` later attempted to run, `CREATE TABLE "lux_listings"` raised an "already exists" error and Prisma persisted the migration as `failed` in the `_prisma_migrations` table. From that point onward Prisma's production safety logic (P3009) refuses to apply any new migrations until the failed row is resolved. This is **operational hygiene drift**, not a code regression — the schema is already where the migration intended it to be.
+
+The migration author left the one-shot remediation in the SQL header itself:
+
+```startLine:endLine:filepath
+1:4:prisma/migrations/20260514120000_lux_listings/migration.sql
+-- LuxeMaurice Phase 2 — Postgres-backed manual property catalogue (read APIs first).
+-- If this table was already created via POST /api/factory/postgres/ensure-schema, run once:
+--   npx prisma migrate resolve --applied 20260514120000_lux_listings
+```
+
+**Verification before remediation (mandatory):** confirm the table really exists in production before marking the migration `applied`. Without this check, an operator could mask a genuinely-failed migration. From any Postgres client connected to the Neon production database:
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_name = 'lux_listings';
+```
+
+Expected: one row returned, `table_name = 'lux_listings'`. If zero rows are returned, **do not** run the remediation below — surface the finding (the table is genuinely missing, which is a different and more serious problem than a stale `_prisma_migrations` row).
+
+If the verification returns the row, also sanity-check the failed-row state in `_prisma_migrations` so the operator knows what is about to be flipped:
+
+```sql
+SELECT migration_name, started_at, finished_at, rolled_back_at, logs
+FROM _prisma_migrations
+WHERE migration_name = '20260514120000_lux_listings';
+```
+
+Expected: one row with `finished_at IS NULL` and `rolled_back_at IS NULL` (Prisma's representation of "failed and not yet resolved"), `started_at = 2026-05-24 23:05:37.324871 UTC`, and `logs` containing the original "already exists" error.
+
+**Remediation (one-shot, operator-only, production DB):** mark the migration as applied so Prisma knows its effects are present and stops returning P3009. Run once against the production Neon DB:
+
+```bash
+POSTGRES_URL='<prod-neon-pooled-url>' npx prisma migrate resolve --applied 20260514120000_lux_listings
+```
+
+The remediation:
+
+- writes one row in `_prisma_migrations` (sets `finished_at` and clears the failure marker) — does **not** touch `lux_listings` or any other application table;
+- is idempotent — running it a second time prints `Migration 20260514120000_lux_listings is already recorded as applied in the database.` and exits 0;
+- is **not** to be confused with `--rolled-back`, which would tell Prisma the migration was undone and is appropriate **only** when the table genuinely does not exist.
+
+**After remediation — verification:**
+
+1. Re-run the `test` workflow on any commit (e.g. `gh workflow run test.yml --ref main` or push a no-op commit). The `Prisma migrate deploy (optional)` step body should print `No pending migrations to apply.` and exit 0 instead of P3009.
+2. Re-query `_prisma_migrations` (same `SELECT` as above). Expected: `finished_at` is now a non-null timestamp (the remediation time) and `rolled_back_at` is still null. `logs` retains the original failure history for audit.
+3. Record outcome in `artifacts/chat_history.md` (operator-facing) per `.cursor/rules/delivery-reality.mdc` — deployment id is N/A (no app deploy occurs), but the commit that triggers the verifying CI re-run and the workflow run id should both be captured.
+
+**Operator-authorization boundary:** this is touching the production database. Per `.cursor/rules/security-sensitive-changes.mdc` and `.cursor/rules/predeploy-decision-checks.mdc`, an agent must **not** execute `migrate resolve` autonomously. The only steps an agent may take without further approval are:
+
+- read-only inspection (`SELECT` queries, log fetches);
+- documentation updates (this file, the chat history, related runbooks);
+- preparing a one-line remediation command for the operator to paste.
+
+Steps that require explicit Anton approval (or another operator with prod DB access): pasting the `POSTGRES_URL='…'` value, running the `migrate resolve` command, and triggering the verifying re-run.
+
+**Why the CI step is allowed to fail (do not "fix" by removing `continue-on-error`):** the step's intent (`.github/workflows/test.yml` lines 91–100) is to give a useful signal when migrations *can* be applied automatically, without blocking unrelated work when production-DB hygiene drifts. If `continue-on-error` were removed, every PR — even pure UI / docs / test changes (cf. PR #352) — would be blocked by a stale migration row that the PR did not introduce and cannot fix. The correct response is to clean the `_prisma_migrations` row (this section), not to weaken the workflow gate.
+
+**Cross-references:**
+
+- `.github/workflows/test.yml` — the optional Prisma step (`continue-on-error: true`).
+- `prisma/migrations/20260514120000_lux_listings/migration.sql` — migration SQL with self-documenting remediation header.
+- `docs/operations/ENSURE_POSTGRES_SCHEMA.md` — the older `POST /api/factory/postgres/ensure-schema` idempotent DDL path that created the table before the Prisma migration existed.
+- `https://pris.ly/d/migrate-resolve` — official Prisma guidance on P3005 / P3009 resolution paths.
+
+---
+
 ## 6. Related
 
 - `docs/operations/MONITORING_ARCHITECTURE.md` — canonical component map for every monitor in the stack. § 2 monitor #9 names `diagnose-postgres-env.yml` (this doc's § 4b/§ 5b playbook); § 6.1 (known blind spots) is built on top of this doc's § 3 wording; live-endpoint floor for DB connectivity proofs is § 5.
