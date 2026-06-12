@@ -2037,6 +2037,65 @@ export default function ChangeConsolePage() {
       }
     : null;
 
+  /**
+   * Palette-aware tokens for the attachment review panel.
+   *
+   * PR #352 — Replaces grey-on-dark slate values with warm Lux ivory / charcoal /
+   * gold tokens whenever a Lux operator chrome is present, so the attachment
+   * cards and summary boxes have legible contrast for Jan / Anton. Falls back to
+   * the existing slate values for non-Lux operators (Core / other tenants),
+   * which keep the dark operator shell. Behaviour is unchanged in both cases.
+   */
+  const luxAttachInk = luxChangeChrome
+    ? {
+        cardBg: luxChangeChrome.white,
+        cardBorder: luxChangeChrome.border,
+        summaryCellBg: luxChangeChrome.sand,
+        summaryCellBorder: luxChangeChrome.border,
+        label: luxChangeChrome.textLabel,
+        body: luxChangeChrome.text,
+        muted: luxChangeChrome.textMuted,
+        accent: luxChangeChrome.gold,
+        accentSoftBg: 'rgba(168,132,44,0.08)',
+        accentSoftBorder: 'rgba(168,132,44,0.32)',
+        inputBg: luxChangeChrome.white,
+        inputBorder: luxChangeChrome.border,
+        inputText: luxChangeChrome.text,
+        warnText: '#92400e',
+        warnBg: 'rgba(217,119,6,0.10)',
+        warnBorder: 'rgba(217,119,6,0.35)',
+        dangerText: '#9f1239',
+        dangerBg: 'rgba(190,18,60,0.08)',
+        dangerBorder: 'rgba(190,18,60,0.35)',
+        successText: '#166534',
+        successBg: 'rgba(22,163,74,0.10)',
+        successBorder: 'rgba(22,163,74,0.35)',
+      }
+    : {
+        cardBg: 'rgba(2,6,23,0.40)',
+        cardBorder: 'rgba(148,163,184,0.18)',
+        summaryCellBg: 'rgba(2,6,23,0.40)',
+        summaryCellBorder: 'rgba(148,163,184,0.18)',
+        label: '#cbd5e1',
+        body: '#e2e8f0',
+        muted: '#94a3b8',
+        accent: '#a5b4fc',
+        accentSoftBg: 'rgba(99,102,241,0.08)',
+        accentSoftBorder: 'rgba(129,140,248,0.25)',
+        inputBg: 'rgba(2,6,23,0.65)',
+        inputBorder: 'rgba(148,163,184,0.25)',
+        inputText: '#e2e8f0',
+        warnText: '#fbbf24',
+        warnBg: 'rgba(251,191,36,0.08)',
+        warnBorder: 'rgba(251,191,36,0.32)',
+        dangerText: '#fecdd3',
+        dangerBg: 'rgba(244,63,94,0.12)',
+        dangerBorder: 'rgba(244,63,94,0.35)',
+        successText: '#dcfce7',
+        successBg: 'rgba(34,197,94,0.10)',
+        successBorder: 'rgba(34,197,94,0.35)',
+      };
+
   const dollarsOur = cv?.actual_cost_to_client_usd ?? cv?.display_amount_usd ?? null;
   const dollarsMarket = cv?.market_reference_usd ?? cv?.full_market_value_usd ?? null;
   const hoursBand = formatHoursBand(cv?.effort_hours_low, cv?.effort_hours_high);
@@ -3687,31 +3746,35 @@ export default function ChangeConsolePage() {
               defaultOpen={Boolean(luxChangeChrome)}
             >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 900, color: '#cbd5e1', letterSpacing: '0.08em' }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: luxAttachInk.label, letterSpacing: '0.08em' }}>
                 ATTACHMENTS
-                <span style={{ marginLeft: 8, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.04em' }}>
-                  · operator review
+                <span style={{ marginLeft: 8, fontWeight: 700, color: luxAttachInk.muted, letterSpacing: '0.04em' }}>
+                  · review · link · publish
                 </span>
               </div>
-              <div style={{ marginTop: 6, fontSize: 11, color: '#64748b' }}>
-                Tenant-private until reviewed; public only after link + publish on an allowed slot (hero, gallery, or
-                card).
+              <div style={{ marginTop: 6, fontSize: 12, color: luxAttachInk.body, lineHeight: 1.5 }}>
+                Files attached here stay private to this ticket until you mark them <strong>reviewed</strong>, link
+                them to a property, and <strong>publish</strong> on an allowed slot (hero, gallery, or card).
               </div>
               <div
+                data-testid="lux-attachment-replace-guidance"
                 style={{
                   marginTop: 8,
-                  fontSize: 11,
-                  color: '#a5b4fc',
-                  lineHeight: 1.45,
-                  border: '1px solid rgba(129,140,248,0.25)',
+                  fontSize: 12,
+                  color: luxAttachInk.body,
+                  lineHeight: 1.5,
+                  border: `1px solid ${luxAttachInk.accentSoftBorder}`,
                   borderRadius: 10,
-                  padding: '8px 10px',
-                  background: 'rgba(99,102,241,0.08)',
+                  padding: '10px 12px',
+                  background: luxAttachInk.accentSoftBg,
                 }}
               >
-                Phase 4D.3 · Replace media safely: upload a new attachment, mark it reviewed, link it to the property,
-                publish it, then archive the old attachment. You may set the archive reason to e.g.{' '}
-                <span style={{ color: '#e2e8f0' }}>replaced by &lt;attachment_id or filename&gt;</span>.
+                <div style={{ fontWeight: 800, color: luxAttachInk.label, marginBottom: 2 }}>
+                  Replace media safely
+                </div>
+                To replace an image, upload the new file, mark it reviewed, link it to the property, publish it on the
+                same slot, then archive the old file. In the archive reason you can write, for example,{' '}
+                <em style={{ color: luxAttachInk.label }}>replaced by new-hero.png</em>.
               </div>
               <div
                 style={{
@@ -3720,7 +3783,7 @@ export default function ChangeConsolePage() {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                   gap: 8,
                   fontSize: 11,
-                  color: '#cbd5e1',
+                  color: luxAttachInk.body,
                 }}
               >
                 {[
@@ -3735,16 +3798,19 @@ export default function ChangeConsolePage() {
                 ].map(([k, v]) => (
                   <div
                     key={k}
+                    data-testid="lux-attachment-summary-cell"
                     style={{
-                      border: '1px solid rgba(148,163,184,0.18)',
+                      border: `1px solid ${luxAttachInk.summaryCellBorder}`,
                       borderRadius: 10,
-                      padding: '8px 10px',
-                      background: 'rgba(2,6,23,0.40)',
+                      padding: '10px 12px',
+                      background: luxAttachInk.summaryCellBg,
                       minWidth: 0,
                     }}
                   >
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.04em' }}>{k}</div>
-                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 900, color: '#e2e8f0' }}>{v}</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: luxAttachInk.muted, letterSpacing: '0.04em' }}>
+                      {k}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 18, fontWeight: 900, color: luxAttachInk.label }}>{v}</div>
                   </div>
                 ))}
               </div>
@@ -3757,7 +3823,7 @@ export default function ChangeConsolePage() {
                   alignItems: 'center',
                 }}
               >
-                <label style={{ fontSize: 11, color: '#94a3b8', display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label style={{ fontSize: 12, color: luxAttachInk.body, display: 'flex', gap: 8, alignItems: 'center' }}>
                   Show
                   <select
                     value={attachmentOperatorFilter}
@@ -3765,9 +3831,9 @@ export default function ChangeConsolePage() {
                     style={{
                       padding: '8px 10px',
                       borderRadius: 10,
-                      border: '1px solid rgba(148,163,184,0.25)',
-                      background: 'rgba(2,6,23,0.65)',
-                      color: '#e2e8f0',
+                      border: `1px solid ${luxAttachInk.inputBorder}`,
+                      background: luxAttachInk.inputBg,
+                      color: luxAttachInk.inputText,
                       fontSize: 12,
                       minWidth: 180,
                     }}
@@ -3779,12 +3845,15 @@ export default function ChangeConsolePage() {
                     ))}
                   </select>
                 </label>
-                <span style={{ fontSize: 11, color: '#64748b' }}>
-                  Phase 4D.4 · client-side filters only; does not change what is public.
+                <span
+                  data-testid="lux-attachment-filter-note"
+                  style={{ fontSize: 11, color: luxAttachInk.muted }}
+                >
+                  Filter this ticket&rsquo;s attachments. Filters do not change what is public.
                 </span>
               </div>
               {attachmentsBusy ? (
-                <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8' }}>Loading attachments…</div>
+                <div style={{ marginTop: 10, fontSize: 12, color: luxAttachInk.muted }}>Loading attachments…</div>
               ) : null}
               {attachmentsError ? (
                 <div
@@ -3792,9 +3861,9 @@ export default function ChangeConsolePage() {
                     marginTop: 10,
                     padding: '8px 10px',
                     borderRadius: 10,
-                    border: '1px solid rgba(244,63,94,0.35)',
-                    background: 'rgba(244,63,94,0.10)',
-                    color: '#fecdd3',
+                    border: `1px solid ${luxAttachInk.dangerBorder}`,
+                    background: luxAttachInk.dangerBg,
+                    color: luxAttachInk.dangerText,
                     fontSize: 12,
                     ...changeTextContainStyle(),
                   }}
@@ -3832,11 +3901,12 @@ export default function ChangeConsolePage() {
                   return (
                     <div
                       key={aid}
+                      data-testid="lux-attachment-card"
                       style={{
-                        border: `1px solid ${isArchived ? 'rgba(244,63,94,0.35)' : 'rgba(148,163,184,0.18)'}`,
+                        border: `1px solid ${isArchived ? luxAttachInk.dangerBorder : luxAttachInk.cardBorder}`,
                         borderRadius: 12,
-                        background: isArchived ? 'rgba(244,63,94,0.06)' : 'rgba(2,6,23,0.45)',
-                        padding: 12,
+                        background: isArchived ? luxAttachInk.dangerBg : luxAttachInk.cardBg,
+                        padding: 14,
                         minWidth: 0,
                         ...changeTextContainStyle(),
                       }}
@@ -3853,9 +3923,9 @@ export default function ChangeConsolePage() {
                         <div
                           style={{
                             minWidth: 0,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: 800,
-                            color: '#e2e8f0',
+                            color: luxAttachInk.label,
                             display: 'flex',
                             flexWrap: 'wrap',
                             gap: 8,
@@ -3935,19 +4005,23 @@ export default function ChangeConsolePage() {
                         </div>
                       </div>
                       {isLuxMeta && (showTestMediaHint || showCleanupCandidate) ? (
-                        <div style={{ marginTop: 6, fontSize: 10, color: '#64748b', lineHeight: 1.45 }}>
-                          Phase 4D.5 · Badges are advisory only (not security). Hard delete is out of scope — use
-                          Archive when retiring smoke or QA fixtures.
+                        <div
+                          data-testid="lux-attachment-badge-note"
+                          style={{ marginTop: 6, fontSize: 11, color: luxAttachInk.muted, lineHeight: 1.5 }}
+                        >
+                          These badges are operator hints, not security rules. To retire a smoke or test file, use{' '}
+                          <strong style={{ color: luxAttachInk.body }}>Archive</strong> &mdash; nothing is hard-deleted
+                          from this screen.
                         </div>
                       ) : null}
                       <div
                         style={{
                           marginTop: 6,
-                          fontSize: 11,
-                          color: '#94a3b8',
+                          fontSize: 12,
+                          color: luxAttachInk.muted,
                           display: 'flex',
                           flexWrap: 'wrap',
-                          gap: 8,
+                          gap: 10,
                         }}
                       >
                         {a.media_type ? <span>Type: {String(a.media_type)}</span> : null}
@@ -3956,13 +4030,13 @@ export default function ChangeConsolePage() {
                         {a.intended_use ? <span>Use: {String(a.intended_use).replaceAll('_', ' ')}</span> : null}
                         {a.created_at ? <span>Added: {new Date(a.created_at).toLocaleString()}</span> : null}
                         {isLuxMeta ? (
-                          <span style={{ fontWeight: 800, color: isArchived ? '#fecdd3' : '#cbd5e1' }}>
+                          <span style={{ fontWeight: 800, color: isArchived ? luxAttachInk.dangerText : luxAttachInk.body }}>
                             Lifecycle: {isArchived ? 'Archived' : 'Active'}
                           </span>
                         ) : null}
                       </div>
                       {isLuxMeta && (a.archived_at || a.archive_reason || a.restored_at) ? (
-                        <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8', display: 'grid', gap: 4 }}>
+                        <div style={{ marginTop: 8, fontSize: 12, color: luxAttachInk.muted, display: 'grid', gap: 4 }}>
                           {a.archived_at ? (
                             <div>
                               Archived{a.archived_by ? ` by ${String(a.archived_by)}` : null} ·{' '}
@@ -3970,7 +4044,7 @@ export default function ChangeConsolePage() {
                             </div>
                           ) : null}
                           {a.archive_reason ? (
-                            <div style={{ color: '#cbd5e1', whiteSpace: 'pre-wrap', ...changeTextContainStyle() }}>
+                            <div style={{ color: luxAttachInk.body, whiteSpace: 'pre-wrap', ...changeTextContainStyle() }}>
                               Reason: {String(a.archive_reason)}
                             </div>
                           ) : null}
@@ -4123,8 +4197,11 @@ export default function ChangeConsolePage() {
                                       gap: 8,
                                     }}
                                   >
-                                    <div style={{ fontSize: 10, fontWeight: 800, color: '#a5b4fc', letterSpacing: '0.04em' }}>
-                                      Phase 4C.3 / 4D.1 / 4D.2 · public slot (Lux host only)
+                                    <div
+                                      data-testid="lux-attachment-public-slot-label"
+                                      style={{ fontSize: 11, fontWeight: 800, color: luxAttachInk.accent, letterSpacing: '0.04em' }}
+                                    >
+                                      Public slot &mdash; visible on the LuxeMaurice site when published
                                     </div>
                                     {String(slot).toLowerCase() === 'card' ? (
                                       <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.45 }}>
@@ -4376,8 +4453,11 @@ export default function ChangeConsolePage() {
                       </div>
                       {isLuxMeta ? (
                         <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-                          <div style={{ fontSize: 10, fontWeight: 800, color: '#a5b4fc', letterSpacing: '0.04em' }}>
-                            Phase 4D.3 · lifecycle
+                          <div
+                            data-testid="lux-attachment-lifecycle-label"
+                            style={{ fontSize: 12, fontWeight: 800, color: luxAttachInk.label, letterSpacing: '0.04em' }}
+                          >
+                            Archive or restore this attachment
                           </div>
                           {!isArchived ? (
                             <label style={{ fontSize: 10, color: '#94a3b8', display: 'grid', gap: 4 }}>
@@ -4442,9 +4522,20 @@ export default function ChangeConsolePage() {
                             </button>
                           </div>
                           {showTestMediaHint && !isArchived && !showCleanupCandidate ? (
-                            <div style={{ fontSize: 10, color: '#fbbf24', lineHeight: 1.45 }}>
-                              Phase 4D.5 · This attachment still matches public Lux slot heuristics (hero / gallery /
-                              card). Unpublish first, then archive when finished.
+                            <div
+                              data-testid="lux-attachment-published-warning"
+                              style={{
+                                fontSize: 12,
+                                color: luxAttachInk.warnText,
+                                lineHeight: 1.5,
+                                padding: '8px 10px',
+                                borderRadius: 8,
+                                border: `1px solid ${luxAttachInk.warnBorder}`,
+                                background: luxAttachInk.warnBg,
+                              }}
+                            >
+                              This file is still linked to a public slot (hero, gallery, or card). Unpublish it from
+                              the property first, then archive once you have replaced it.
                             </div>
                           ) : null}
                           {showTestMediaHint && !isArchived ? (
@@ -4561,8 +4652,12 @@ export default function ChangeConsolePage() {
 
                           {status === 'reviewed' && !isArchived ? (
                             <div style={{ marginTop: 6, display: 'grid', gap: 8 }}>
-                              <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                                Phase 4C.2 · link reviewed media to a property (still private; not published).
+                              <div
+                                data-testid="lux-attachment-link-hint"
+                                style={{ fontSize: 12, color: luxAttachInk.body, lineHeight: 1.5 }}
+                              >
+                                Link this reviewed file to a property or opportunity. Linking keeps it private until
+                                you also <strong>publish</strong> it on an allowed slot.
                               </div>
                               <div
                                 style={{
@@ -4679,34 +4774,51 @@ export default function ChangeConsolePage() {
               </div>
               {attachments.length > 0 && filteredAttachments.length === 0 ? (
                 <div
+                  data-testid="lux-attachment-filter-empty"
                   style={{
                     marginTop: 10,
                     padding: '10px 12px',
                     borderRadius: 10,
-                    border: '1px solid rgba(148,163,184,0.2)',
-                    background: 'rgba(15,23,42,0.45)',
+                    border: `1px solid ${luxAttachInk.cardBorder}`,
+                    background: luxAttachInk.summaryCellBg,
                     fontSize: 12,
-                    color: '#94a3b8',
+                    color: luxAttachInk.body,
                   }}
                 >
-                  No attachments match this filter. Choose All or another filter to see items again.
+                  No attachments match this filter. Choose <strong>All</strong> or another filter to see items again.
                 </div>
               ) : null}
-              <div
+              <details
+                data-testid="lux-attachment-technical-details"
                 style={{
                   marginTop: 12,
                   fontSize: 11,
-                  color: '#64748b',
+                  color: luxAttachInk.muted,
                   lineHeight: 1.5,
-                  borderTop: '1px solid rgba(148,163,184,0.12)',
+                  borderTop: `1px solid ${luxAttachInk.cardBorder}`,
                   paddingTop: 10,
                 }}
               >
-                Phase 4D.4 / 4D.5 · Cleanup: this console does not hard-delete bytes. Archive remains the safe operator
-                action. Phase 4D.5 adds smoke/test hints and an optional one-click archive with a standard reason — no
-                auto-archive and no bulk delete. Any future hard-delete needs a separate Lux-scoped policy and explicit
-                approval.
-              </div>
+                <summary
+                  style={{
+                    cursor: 'pointer',
+                    listStyle: 'none',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: luxAttachInk.muted,
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  Technical details
+                </summary>
+                <div style={{ marginTop: 6, color: luxAttachInk.muted, lineHeight: 1.5 }}>
+                  This console never permanently deletes attachment bytes. <strong style={{ color: luxAttachInk.body }}>
+                  Archive</strong> is the safe operator action and keeps an audit trail. Smoke/test badges and the
+                  one-click archive-with-standard-reason are operator hints only &mdash; there is no automatic archive
+                  and no bulk delete. Any future hard-delete would need a separate Lux-scoped policy and explicit
+                  approval.
+                </div>
+              </details>
             </div>
             </LuxChangeCollapsibleSection>
           ) : null}

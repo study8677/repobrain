@@ -28,6 +28,48 @@
 
 ---
 
+## 2026-06-12 — LuxeMaurice `/change` attachment panel readability + operator-language cleanup: palette-aware `luxAttachInk` (warm ivory / charcoal / gold tokens), removed Phase 4C/4D/5D engineering labels from operator UI, plain-English copy ("Replace media safely", "Archive or restore this attachment", "Filter this ticket's attachments"), collapsed `<details>` "Technical details" for hard-delete policy notes (PR #352, P0 UX cleanup follow-up to PR #351)
+
+<!-- LUXEMAURICE_ATTACHMENT_PANEL_READABILITY_2026_06_12_HIST -->
+
+**Status:** PARTIAL — PR [#352](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/352) opened after PR [#351](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/351) merged (`7e38fe5a`) and deployed to Vercel Production (deployment id `5031164616`, status `success` 2026-06-12T06:32:39Z). The upload pipeline now works end-to-end (PR #351 closed that loop), but Jan/Anton report the attachment panel itself is hard to read (grey-on-grey contrast) and exposes implementation-phase labels ("Phase 4D.3", "Phase 4D.4", "Phase 4D.5", "Phase 4C.2", "Phase 4C.3 / 4D.1 / 4D.2", "client-side filters") that mean nothing to a content operator and actively imply the page is in some intermediate beta state. PR #352 is a UI language + readability cleanup only — **behaviour is unchanged** (no API change, no storage change, no review/link/publish/archive/restore logic change, no tenant/session/auth-check change, no media-governance change). Live production verification pending PR #352 merge + Vercel Production "Ready" + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`. Master programme `cmo8mjijk0000jl04l1jz0v6d` and sprint parent `cmqa2y2ga0000l704glnfro1f` remain **open**.
+
+**Root cause:** Two parallel issues. (1) The attachment panel JSX hard-codes slate-on-navy tokens (`#cbd5e1`, `#94a3b8`, `#64748b`, `rgba(2,6,23,0.40)`) that come from the generic dark operator shell; Lux operators are on a warm ivory / charcoal / gold palette (per `lib/client/luxe-maurice-brand-theme.js` + `lib/client/lux-change-console-theme.js`), so the contrast is wrong. (2) Operator-facing copy was written by engineers documenting the Phase 4 attachment lifecycle as they shipped it (PRs #344+); nobody rewrote it for the content-operator audience after the feature stabilised.
+
+**Fix:**
+
+1. **Palette-aware `luxAttachInk` helper** added in `pages/change.js` next to the existing `luxInk`. When `luxChangeChrome` is present (Lux operator), it exposes warm tokens — `cardBg = chrome.white`, `summaryCellBg = chrome.sand`, `label = chrome.textLabel`, `body = chrome.text`, `muted = chrome.textMuted`, `accent = chrome.gold`, plus warn / danger / success variants in muted warm tones. For non-Lux operators (Core / other tenants) it falls back to the existing slate palette so the dark shell is unchanged.
+2. **Visible operator copy rewritten** (JS code comments / JSDoc retained for engineer context):
+   * `Phase 4D.3 · Replace media safely: upload a new attachment, …` → block titled **"Replace media safely"** with plain-English body.
+   * `Phase 4D.4 · client-side filters only; does not change what is public.` → **"Filter this ticket's attachments. Filters do not change what is public."**
+   * `Phase 4D.5 · Badges are advisory only …` → **"These badges are operator hints, not security rules. To retire a smoke or test file, use Archive — nothing is hard-deleted from this screen."**
+   * `Phase 4C.3 / 4D.1 / 4D.2 · public slot (Lux host only)` → **"Public slot — visible on the LuxeMaurice site when published"**
+   * `Phase 4D.3 · lifecycle` → **"Archive or restore this attachment"**
+   * `Phase 4D.5 · This attachment still matches public Lux slot heuristics …` → **"This file is still linked to a public slot (hero, gallery, or card). Unpublish it from the property first, then archive once you have replaced it."** (shown in a soft warn pill using `luxAttachInk.warnBg / warnBorder / warnText`).
+   * `Phase 4C.2 · link reviewed media …` → **"Link this reviewed file to a property or opportunity. Linking keeps it private until you also publish it on an allowed slot."**
+   * `Phase 4D.4 / 4D.5 · Cleanup: this console does not hard-delete bytes. …` → moved into a `<details data-testid="lux-attachment-technical-details">` block titled **"Technical details"**, closed by default. The hard-delete-policy text remains for audit, just not at the top of the operator's attention.
+3. **Per-card body palette swap** — card outer (`background`, `border`), file-name headline color, file-metadata row (Type / MIME / Size / Use / Added / Lifecycle), archive-detail row, empty-filter pill — all now reach for `luxAttachInk` tokens instead of hard-coded slate. Padding bumped from `12` to `14` on the card and `8 10` to `10 12` on summary cells for breathing room.
+4. **Stable test hooks** added: `data-testid="lux-attachment-replace-guidance"`, `lux-attachment-summary-cell`, `lux-attachment-filter-note`, `lux-attachment-filter-empty`, `lux-attachment-card`, `lux-attachment-badge-note`, `lux-attachment-public-slot-label`, `lux-attachment-lifecycle-label`, `lux-attachment-published-warning`, `lux-attachment-link-hint`, `lux-attachment-technical-details`.
+
+**Files changed (PR #352):**
+
+* `pages/change.js` — new `luxAttachInk` helper (~50 lines); attachment-panel header + summary boxes + filter row + loading/error pill + per-card body + cleanup footer rewritten to plain English + palette tokens; cleanup/hard-delete policy moved into a collapsed `<details>` block.
+* `node-tests/lux-attachment-panel-readability.test.mjs` — **13 new regression guards** covering: `luxAttachInk` palette-aware helper present; no `Phase 4C` / `Phase 4D` / `Phase 5D` / `client-side filters` string in operator-rendered copy (comments stripped before assertion); "Replace media safely" / "Archive or restore" / filter / public-slot / link-hint / published-warning / badges-note plain-English copy present; cleanup policy lives in `<details><summary>Technical details</summary>`; attachment cards + summary cells reach for `luxAttachInk` tokens; **existing review/link/publish/archive/restore handlers (`submitAttachmentReview`, `submitAttachmentPropertyLink`, `submitAttachmentPropertyPublish`, `submitAttachmentPropertyUnpublish`, `submitAttachmentArchive`, `submitAttachmentRestore`) still present and PR #351 ATTACHMENTS list render guard preserved**; empty-filter state uses plain-English copy + palette tokens.
+* `docs/runbooks/LUX_CHANGE_USABILITY_FIXES_2026_06_12.md` — extended with `P0 UX cleanup — PR #352 (2026-06-12)` section.
+* `artifacts/chat_history.md` — this entry.
+
+**Things explicitly NOT touched (PR #352) — per operator instruction:** no upload API change, no `cmpTicketAttachment` storage change, no review / link / publish / archive / restore behaviour change, no tenant/session/auth-check change, no media-governance change, no public-media-rules change, no publication-governance change, no env-var change, no CSP change, no accessibility refactor beyond `data-testid` hooks, `computeIsIntakeUx` unchanged, `LuxContentSprintPanel` API surface unchanged, non-Lux operator dark shell unchanged (slate fallback preserved in `luxAttachInk`), `public/change.html` untouched.
+
+**Tests/build (local):** `npm test` → **765 / 765 pass** (was 752 after PR #351; +13 new guards in PR #352). `npm run build` → green (Next.js production build). No linter errors in modified files.
+
+**Rollback:** revert PR #352 — PR #351 behaviour returns; no migrations.
+
+**Runbook:** `docs/runbooks/LUX_CHANGE_USABILITY_FIXES_2026_06_12.md` (extended with `P0 UX cleanup — PR #352 (2026-06-12)` section).
+
+**Production verification plan (post-merge):** open `https://lux.corpflowai.com/change` as Lux operator, select a C1/C2/C3/C4 sprint ticket, scroll to ATTACHMENTS, and confirm: attachment card + summary boxes are clearly readable (warm ivory card); the top hint reads **"Replace media safely"** (not `Phase 4D.3 …`); filter note reads **"Filter this ticket's attachments. Filters do not change what is public."** (not `Phase 4D.4 · client-side filters …`); each card shows **"Archive or restore this attachment"** (not `Phase 4D.3 · lifecycle`); cleanup/hard-delete policy is inside a closed-by-default **"Technical details"** disclosure at the bottom; review / mark reviewed / link / publish / archive / restore controls still work exactly as before (upload a small safe file, mark reviewed, archive it — do not publish test media publicly). Record commit SHA, Vercel Production deployment id, URLs hit, and expected-vs-actual readability result against `.cursor/rules/delivery-reality.mdc` § Delivery Reality Audit before flipping the verdict to **COMPLETE**.
+
+---
+
 ## 2026-06-12 — LuxeMaurice `/change` Upload content end-to-end: ATTACHMENTS list render guard relaxed for sprint tickets + structured `[lux-upload]` pipeline diagnostics + verbatim server-error surfacing + in-section "Just uploaded" confirmation + lenient empty-MIME tolerance (PR #351, P0 follow-up to PR #350)
 
 <!-- LUXEMAURICE_UPLOAD_CONTENT_END_TO_END_2026_06_12_HIST -->
