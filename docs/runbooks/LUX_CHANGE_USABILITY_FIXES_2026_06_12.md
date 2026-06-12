@@ -1,4 +1,59 @@
-# LuxeMaurice `/change` usability fixes — 2026-06-12 (PR #347)
+# LuxeMaurice `/change` usability fixes — 2026-06-12 (PR #347, follow-up PR #348)
+
+**Status:** PARTIAL — PR #347 merged (`a406f352`) and **PR #348** wires the regressed "Upload content" button to the existing governed attachment pipeline. Live production verification (TASK 6 + PR #348 button reach) remains pending Vercel Production deployment + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`.
+
+## P0 follow-up — PR #348 (2026-06-12)
+
+**Regression:** After PR #347 merged, the new "Upload content" CTA on C1–C4 Content Population Sprint tickets rendered as a static, non-clickable affordance because `pages/change.js` passed no `onUploadClick` handler to `<LuxContentSprintPanel>` and the React `/change` console had no inline attachment-upload UI at all (the upload UI lived only in `public/change.html`, which is a different surface). Operators saw the button but could not start an upload.
+
+**Definition of Done:** Clicking "Upload content" on any C1–C4 ticket reaches the existing governed attachment pipeline (`POST /api/change-attachment/upload` → `lib/server/change-attachments.js` → `cmpTicketAttachment` + `lux_request_meta.attachments` annotation), without creating a second upload system, a new public route, a new env var, or weakening tenant / session / auth checks.
+
+**Files changed (PR #348):**
+
+* `pages/change.js`
+  * New state: `uploadBusy`, `uploadStatus`, `uploadStatusKind`, refs `luxAttachmentUploadInputRef` / `luxAttachmentUploadSectionRef`.
+  * New helpers: `readFileAsBase64`, `clientMimeAllowed`, `uploadFileToTicket`, `handleAttachmentUploadInputChange`, `handleSprintUploadContentClick`.
+  * New section in the right-rail render (`!showIntakeSurface && !isEstimateMode && selectedTicketId`) titled **Upload to this ticket** with stable anchor `id="lux-ticket-attachment-upload"` and `data-testid="lux-ticket-attachment-upload"`, plus `data-testid="lux-ticket-attachment-upload-input"` on the `<input type="file">` and `data-testid="lux-ticket-attachment-upload-status"` on the status pill. The input refuses non-image / non-video / non-PDF files client-side, matches the server's documented default allowlist (`image/, video/, application/pdf` per `lib/server/change-attachments.js`), enforces the ~3 MB hint, and on success calls `loadAttachmentsForTicket(ticketId)` so the existing ATTACHMENTS section refreshes inline.
+  * `<LuxContentSprintPanel onUploadClick={handleSprintUploadContentClick} />` — the click handler scrolls the upload section into view, focuses the file input, and if the section is not mounted (no ticket selected, ref not attached) surfaces a non-silent `alert(...)` plus an inline error status — never a silent no-op.
+* `node-tests/lux-content-sprint-upload-button.test.mjs` — **new**, 9 regression guards:
+  1. `LuxContentSprintPanel` renders a real `<button onClick={onUploadClick}>` when a handler is provided.
+  2. The static fallback (`lux-content-sprint-upload-cta-static`) still exists when no handler is provided.
+  3. `pages/change.js` wires `onUploadClick={handleSprintUploadContentClick}`.
+  4. `handleSprintUploadContentClick` calls `scrollIntoView` + `focus` + the unavailable fallback (alert + status message).
+  5. The stable upload anchor (`id="lux-ticket-attachment-upload"` and matching `data-testid`) is present, with the section ref and input ref wired.
+  6. The upload path goes through `POST /api/change-attachment/upload` and refreshes the attachments list via `loadAttachmentsForTicket`.
+  7. The client-side MIME pre-check matches the server allowlist (`image/`, `video/`, `application/pdf`) — no allowlist drift.
+  8. Oversize / wrong-type files surface a non-silent error pill (`setUploadStatusKind('error')`, `lux-ticket-attachment-upload-status`).
+  9. One shared FileReader-based `readFileAsBase64` helper exists — no duplicated upload state.
+
+**Tests + build (PR #348):** `npm test` — 738 passing assertions, 53 suites, 0 failing (up from 729 in PR #347; +9 new). `npm run build` — green.
+
+**What is intentionally NOT changed (PR #348):**
+
+* Attachment API contract (`POST /api/change-attachment/upload`) — unchanged.
+* Attachment storage (Postgres `CmpTicketAttachment` row + `lux_request_meta.attachments` annotation in `console_json`) — unchanged.
+* Tenant / admin session resolution in `resolveUploadScope` and `assertTicketAccess` — unchanged.
+* Media governance rules (review → link → publish on allowed slots) — unchanged; the upload pill explicitly reminds the operator that nothing becomes public from the upload step alone.
+* `public/change.html` (the static intake page) — untouched.
+
+**Live verification plan (PR #348):**
+
+1. Wait for Vercel Production to mark the PR #348 merge commit `Ready`.
+2. Open `https://lux.corpflowai.com/change` as a Lux operator session.
+3. For each of C1, C2, C3, C4 (children of sprint `cmqa2y2ga0000l704glnfro1f`):
+   * Select the ticket.
+   * Confirm the **Add content** panel renders a clickable "Upload content" button (not the static affordance).
+   * Click the button. Verify the page scrolls to the **Upload to this ticket** section and the file input is focused.
+   * Optionally pick a small, safe test image (≤3 MB). Verify the status pill turns green ("Uploaded and available on this ticket: …") and the new attachment appears in the existing ATTACHMENTS list below for review/link/publish.
+   * Do **not** publish test media publicly.
+4. Open a non-sprint ticket and confirm the **Upload to this ticket** section still renders (the upload UI is per-ticket, not per-sprint-code) and behaves identically.
+5. Record the Vercel Production deployment ID + commit SHA, the Lux URL, and a screenshot in `artifacts/chat_history.md`. Flip the PR #347 + PR #348 verdict to `COMPLETE` only after both Jan and Anton confirm the upload reaches a real attachment row.
+
+**Rollback:** revert PR #348 — the static button affordance from PR #347 returns; existing attachment review / link / publish flows are unaffected; no migrations.
+
+---
+
+## Original PR #347 entry
 
 **Status:** PARTIAL — code merged + tests + production build green; **live production verification (TASK 6) pending** Vercel Production deployment + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`.
 

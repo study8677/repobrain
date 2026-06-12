@@ -28,6 +28,40 @@
 
 ---
 
+## 2026-06-12 — LuxeMaurice `/change` Upload content button wired to the existing governed attachment pipeline (PR #348, follow-up to PR #347)
+
+<!-- LUXEMAURICE_UPLOAD_CONTENT_BUTTON_WIRING_2026_06_12_HIST -->
+
+**Status:** PARTIAL — PR [#348](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/348) opened to fix a P0 regression introduced by PR [#347](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/347): the new "Upload content" button on the C1–C4 Content Population Sprint tickets rendered as a static, non-clickable affordance. Live production verification is pending Vercel Production deployment + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`. Master programme `cmo8mjijk0000jl04l1jz0v6d` and sprint parent `cmqa2y2ga0000l704glnfro1f` remain **open**; no DB row changed.
+
+**Root cause:** PR #347 introduced `<LuxContentSprintPanel>` with an optional `onUploadClick` prop, but `pages/change.js` never passed a handler. The panel therefore rendered the *static* fallback (`data-testid="lux-content-sprint-upload-cta-static"`) instead of the real `<button>`, and on top of that the React `/change` console had no inline attachment-upload UI at all (the upload UI lived only in `public/change.html`, which is a different surface). Operators saw a button they could not click.
+
+**Fix:** wired the existing governed attachment endpoint (`POST /api/change-attachment/upload`, served by `lib/server/change-attachments.js`, persisted on `cmpTicketAttachment` + auto-annotated into `console_json.lux_request_meta.attachments` for Lux tickets) into a small inline upload section on `pages/change.js`. The "Upload content" CTA now scrolls the section into view and focuses the file input. No second upload system, no new API, no new public route, no new env var; tenant / session / auth checks unchanged.
+
+**Files changed (PR #348):**
+
+* `pages/change.js` — new state (`uploadBusy`, `uploadStatus`, `uploadStatusKind`), refs (`luxAttachmentUploadInputRef`, `luxAttachmentUploadSectionRef`), helpers (`readFileAsBase64`, `clientMimeAllowed`, `uploadFileToTicket`, `handleAttachmentUploadInputChange`, `handleSprintUploadContentClick`). New "Upload to this ticket" section with stable anchor `id="lux-ticket-attachment-upload"` + `data-testid="lux-ticket-attachment-upload"` (and `…-input` / `…-status` for the file input and status pill). Client-side MIME pre-check matches the server allowlist (`image/`, `video/`, `application/pdf` per `cfg('CORPFLOW_CHANGE_UPLOAD_ALLOWED_MIME', …)`); ~3 MB hint matches `CORPFLOW_CHANGE_UPLOAD_MAX_BYTES` default. On success, the existing `loadAttachmentsForTicket(ticketId)` refreshes the ATTACHMENTS section inline. `handleSprintUploadContentClick` calls `scrollIntoView` + `focus`; if the section is not mounted (no ticket selected) it surfaces `alert(...)` + an inline error pill — never a silent no-op.
+* `<LuxContentSprintPanel onUploadClick={handleSprintUploadContentClick} />` — wires the panel to the new handler so the real `<button>` branch renders.
+* `node-tests/lux-content-sprint-upload-button.test.mjs` — **new**, 9 regression guards covering: real `<button>` vs static fallback, panel wiring, scroll + focus + unavailable-state messaging, stable anchor presence, single governed endpoint reuse, allowlist alignment, oversize / wrong-type non-silent feedback, single shared `readFileAsBase64` helper.
+
+**Tests + build:** `npm test` — 738 passing assertions, 53 suites, 0 failing (up from 729 in PR #347; +9 new). `npm run build` — green.
+
+**Things explicitly NOT touched (PR #348):** the `/api/change-attachment/upload` contract, `cmpTicketAttachment` storage, `resolveUploadScope` / `assertTicketAccess` tenancy / session checks, media governance (review → link → publish on allowed slots), and `public/change.html`. Demo opportunity is still hidden from public surfaces per PR #347.
+
+**Live verification plan (pending):**
+
+1. Wait for Vercel Production to mark the PR #348 merge commit `Ready`.
+2. Open `https://lux.corpflowai.com/change` as a Lux operator session.
+3. For each of C1, C2, C3, C4: select ticket → click **Upload content** → confirm the page scrolls to *Upload to this ticket* and the file input is focused → (optional) pick a small safe test image and verify it appears in the ATTACHMENTS list for review/link/publish → **do not publish test media publicly**.
+4. Open a non-sprint ticket and confirm the Upload section still renders (per-ticket, not per-sprint-code).
+5. Record Vercel Production deployment ID + commit SHA + Lux URL + screenshot. Flip verdict to `COMPLETE` only after both Jan and Anton confirm the upload reaches a real attachment row.
+
+**Rollback:** revert PR #348 — static button affordance from PR #347 returns; existing attachment review / link / publish flows unaffected; no migrations.
+
+**Runbook:** `docs/runbooks/LUX_CHANGE_USABILITY_FIXES_2026_06_12.md` (extended with a `P0 follow-up — PR #348 (2026-06-12)` section).
+
+---
+
 ## 2026-06-12 — LuxeMaurice `/change` usability overhaul — CRM noise filter, Media workspace rename, Add content panel for sprint tickets C1–C4, demo opportunity removed from public surfaces (PR #347)
 
 <!-- LUXEMAURICE_CHANGE_USABILITY_FIXES_2026_06_12_HIST -->
