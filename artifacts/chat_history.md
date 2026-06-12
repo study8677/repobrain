@@ -28,6 +28,40 @@
 
 ---
 
+## 2026-06-12 — LuxeMaurice `/change` Upload content end-to-end: ATTACHMENTS list render guard relaxed for sprint tickets + structured `[lux-upload]` pipeline diagnostics + verbatim server-error surfacing + in-section "Just uploaded" confirmation + lenient empty-MIME tolerance (PR #351, P0 follow-up to PR #350)
+
+<!-- LUXEMAURICE_UPLOAD_CONTENT_END_TO_END_2026_06_12_HIST -->
+
+**Status:** PARTIAL — PR [#351](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/351) opened to close the end-to-end loop after PR [#350](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/350) deployed to Production (SHA `2815b9d8`, Vercel Production deployment id `5030579182`, status `success` 2026-06-12T05:18:26Z). After PR #350 the OS file picker opens, the file is uploaded successfully through the existing governed `POST /api/change-attachment/upload`, and `loadAttachmentsForTicket` runs — but the operator never saw the new row because the per-ticket ATTACHMENTS list collapsible at `pages/change.js:3523` was still gated on `!showIntakeSurface`, the *same* intake-stage block PR #349 removed from the *upload section* but not from the *list section* right next to it. Live production verification of PR #351 pending Vercel Production + Jan/Anton walk-through per `.cursor/rules/delivery-reality.mdc`. Master programme `cmo8mjijk0000jl04l1jz0v6d` and sprint parent `cmqa2y2ga0000l704glnfro1f` remain **open**.
+
+**Root cause (traced):** Sprint child tickets C1–C4 sit in `Intake` workflow stage by design (created by PR #345). `computeIsIntakeUx(ticket) === true` → `showIntakeSurface === true` → the ATTACHMENTS list at line 3523 was never rendered for those tickets, regardless of whether attachments existed. The upload was succeeding all along; the visual confirmation the operator was looking for was hidden by exactly the same one-line guard pattern PR #349 had fixed elsewhere. The operator reasonably interpreted "no row in ATTACHMENTS" as "the file was dropped".
+
+**Fix:**
+
+1. **Primary — ATTACHMENTS list render-guard relaxed.** Changed `{!showIntakeSurface && !isEstimateMode && selectedTicketId && attachments.length > 0 ? (...)}` → `{selectedTicketId && (!isEstimateMode || isLuxContentSprintTicketSelected) && attachments.length > 0 ? (...)}`. Sprint tickets always show their attachments list; non-sprint tickets retain `!isEstimateMode` behaviour. Mirrors PR #349 / #350's sprint-ticket bypass on the upload section.
+2. **Defensive — verbatim server-error surfacing.** `uploadFileToTicket` now formats failed responses as `Upload failed (HTTP <status>): <server error text>`; network errors surface distinctly; uncaught exceptions surface their `.message` text. No silent drop.
+3. **Defensive — lenient MIME pre-check.** `clientMimeAllowed('')` now returns `true`. The Windows file picker hands back `file.type === ''` for legitimate images, which previously produced a confusing client-side false negative. The server's canonical allowlist (`image/,video/,application/pdf`) still rejects bad types.
+4. **Defensive — in-section "Just uploaded" confirmation.** New `lastUploadedAttachment` state + green pill (`data-testid="lux-ticket-attachment-upload-last"`) shows file name, size, MIME, and current attachments count immediately after upload — the operator no longer depends on the (potentially below-the-fold) ATTACHMENTS list alone.
+5. **Defensive — structured `[lux-upload]` diagnostics at every pipeline step.** `console.warn` lines for file picked (name, size, type, ticket), POST sent (ticket, file name, base64 length), response (status + truncated body), refresh result (count), FileReader empty result, network error, caught exception, handler-error. Future regressions diagnose themselves from the browser console.
+6. **Defensive — file-input value reset in `finally`** covering both success AND failure paths, using the React ref first with `document.getElementById` fallback so re-picking the same file always works.
+
+**Files changed (PR #351):**
+
+* `pages/change.js` — ATTACHMENTS list render-guard relaxed; `clientMimeAllowed('')` → `true`; `uploadFileToTicket` rewritten for verbatim error surfacing + structured diagnostics + `lastUploadedAttachment` + safe reset in `finally`; `handleAttachmentUploadInputChange` adds diagnostic + handler-error surfacing; new state + in-section "Just uploaded" green pill.
+* `node-tests/lux-content-sprint-upload-button.test.mjs` — 9 new regression guards locking in the sprint ATTACHMENTS render, the exact POST payload contract, refresh wiring, success-state surfacing (pill + "Just uploaded" line), verbatim error surfacing (no silent drop), input reset in `finally` with id fallback, lenient empty-MIME tolerance, and every `[lux-upload]` diagnostic line.
+
+**Tests + build:** `npm test` — 752 passing, 53 suites, 0 failing (up from 743 in PR #350; +9 new). `npm run build` — green.
+
+**Things explicitly NOT touched (PR #351) — per operator instruction:** no new upload system, no second API path, no public media route, no `cmpTicketAttachment` storage change, no media-governance change, no tenant/session/auth-check change, no env-var change, no CSP / `unsafe-eval` change, no accessibility refactor beyond PR #350's id+name, `computeIsIntakeUx` unchanged, `LuxContentSprintPanel` API surface unchanged, `public/change.html` untouched.
+
+**Live verification plan (pending):** Open `https://lux.corpflowai.com/change` with browser console open (F12). For each C1–C4: select ticket → click **Upload content** → pick a small safe file → confirm (a) green status pill `Uploaded and available on this ticket: <name> (<size> KB). Scroll down to ATTACHMENTS …`, (b) green "Just uploaded" line inside the upload card, (c) ATTACHMENTS section now renders below with review · link · publish controls on the new row, (d) ordered `[lux-upload]` console lines showing picked → POST → response status=200 → refreshed count. Re-pick the SAME file to verify input reset. **Do not publish test media publicly.** Record Vercel Production deployment ID + commit SHA + Lux URL + screenshot. Flip PR #347 + #348 + #349 + #350 + #351 verdict to `COMPLETE` only after Jan and Anton confirm.
+
+**Rollback:** revert PR #351 — PR #350 behaviour returns; no migrations.
+
+**Runbook:** `docs/runbooks/LUX_CHANGE_USABILITY_FIXES_2026_06_12.md` (extended with `P0 follow-up — PR #351 (2026-06-12)` section).
+
+---
+
 ## 2026-06-12 — LuxeMaurice `/change` Upload content button: belt-and-suspenders defensive fix — stable id/name on the input + document.getElementById fallback + sprint-ticket-unconditional render + `[lux-upload]` console diagnostic (PR #350, P0 follow-up to PR #349)
 
 <!-- LUXEMAURICE_UPLOAD_CONTENT_BUTTON_DEFENSIVE_2026_06_12_HIST -->

@@ -540,6 +540,14 @@ export default function ChangeConsolePage() {
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const [uploadStatusKind, setUploadStatusKind] = useState(/** @type {'idle'|'info'|'ok'|'error'} */ ('idle'));
+  // PR #351 — last successful upload, surfaced as an in-section "just uploaded"
+  // line so the operator sees confirmation directly inside the upload card even
+  // when the bigger ATTACHMENTS list is below the fold or collapsed.
+  const [lastUploadedAttachment, setLastUploadedAttachment] = useState(
+    /** @type {{attachment_id: string, file_name: string, byte_size: number, content_type: string, at: string} | null} */ (
+      null
+    ),
+  );
   const luxAttachmentUploadInputRef = useRef(null);
   const luxAttachmentUploadSectionRef = useRef(null);
   const [attachmentReviewBusyId, setAttachmentReviewBusyId] = useState('');
@@ -715,9 +723,16 @@ export default function ChangeConsolePage() {
   }
 
   /**
-   * Server-enforced limits live in `lib/server/change-attachments.js`. This is a
-   * client-side pre-check so the operator gets immediate feedback instead of a
-   * round-trip error.
+   * Server-enforced limits live in `lib/server/change-attachments.js`. The client
+   * pre-check is intentionally lenient — it only catches *obvious* problems (huge
+   * file, plainly-disallowed type) so the operator gets immediate feedback. The
+   * server is the source of truth for the allowlist and the size limit.
+   *
+   * PR #351 — `clientMimeAllowed` now tolerates an empty / unknown `file.type`
+   * because some browsers (notably Windows when picking files without an
+   * extension-to-MIME registry hit) hand us `''` for legitimate images. The
+   * canonical check happens server-side; rejecting on `''` here just produced a
+   * confusing client-side false negative on valid files.
    */
   const LUX_UPLOAD_MAX_BYTES_HINT = 3 * 1024 * 1024;
   const LUX_UPLOAD_ALLOWED_MIME_PREFIXES = ['image/', 'video/'];
@@ -725,7 +740,7 @@ export default function ChangeConsolePage() {
 
   function clientMimeAllowed(contentType) {
     const ct = String(contentType || '').toLowerCase();
-    if (!ct) return false;
+    if (!ct) return true; // tolerate unknown — server enforces canonical allowlist
     if (LUX_UPLOAD_ALLOWED_MIME_EXACT.includes(ct)) return true;
     return LUX_UPLOAD_ALLOWED_MIME_PREFIXES.some((p) => ct.startsWith(p));
   }
@@ -734,6 +749,10 @@ export default function ChangeConsolePage() {
    * Send one file through `POST /api/change-attachment/upload` (governed pipeline)
    * and refresh the attachments list so the operator can immediately review / link
    * / publish.
+   *
+   * PR #351 — Surface a one-line `[lux-upload]` diagnostic at each step so any
+   * silent-drop regression is recoverable from the browser console alone, and
+   * push verbatim server error text into the status pill (no swallowing).
    *
    * @param {string} ticketId
    * @param {File} file
@@ -745,14 +764,27 @@ export default function ChangeConsolePage() {
       return;
     }
     if (!file) return;
+    try {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[lux-upload] picked file name=%s size=%s type=%s ticket=%s',
+        String(file.name || ''),
+        String(file.size || 0),
+        String(file.type || '<empty>'),
+        String(ticketId || ''),
+      );
+    } catch {
+      // logging is best-effort.
+    }
     if (file.size > LUX_UPLOAD_MAX_BYTES_HINT) {
       setUploadStatus(
-        `File is too large for this upload (max ${Math.round(LUX_UPLOAD_MAX_BYTES_HINT / 1024 / 1024)} MB). Please use a smaller asset or speak to the operator about a larger ingest path.`,
+        `File is too large for this upload (max ${Math.round(LUX_UPLOAD_MAX_BYTES_HINT / 1024 / 1024)} MB; this file is ${(file.size / 1024 / 1024).toFixed(2)} MB). Please use a smaller asset or speak to the operator about a larger ingest path.`,
       );
       setUploadStatusKind('error');
       return;
     }
-    const contentType = String(file.type || '').trim() || 'application/octet-stream';
+    const rawContentType = String(file.type || '').trim();
+    const contentType = rawContentType || 'application/octet-stream';
     if (!clientMimeAllowed(contentType)) {
       setUploadStatus(
         `Unsupported file type "${contentType}". Allowed: images, videos, PDF. (The server applies the canonical allowlist.)`,
@@ -761,53 +793,132 @@ export default function ChangeConsolePage() {
       return;
     }
     setUploadBusy(true);
-    setUploadStatus(`Uploading ${file.name}…`);
+    setUploadStatus(`Uploading ${file.name} (${(file.size / 1024).toFixed(1)} KB, ${contentType})…`);
     setUploadStatusKind('info');
     try {
       const data_base64 = await readFileAsBase64(file);
       if (!data_base64) {
+        try {
+          // eslint-disable-next-line no-console
+          console.warn('[lux-upload] FileReader returned empty result for %s', file.name);
+        } catch {
+          // logging best-effort.
+        }
         setUploadStatus('Could not read the file in this browser. Try a different file or browser.');
         setUploadStatusKind('error');
         return;
       }
-      const r = await fetch('/api/change-attachment/upload', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticket_id: ticketId,
-          file_name: String(file.name || 'upload.bin').slice(0, 240),
-          content_type: contentType,
-          data_base64,
-        }),
-      });
+      try {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[lux-upload] POST /api/change-attachment/upload ticket=%s file_name=%s base64_len=%s',
+          String(ticketId || ''),
+          String(file.name || ''),
+          String(data_base64.length || 0),
+        );
+      } catch {
+        // logging best-effort.
+      }
+      let r;
+      try {
+        r = await fetch('/api/change-attachment/upload', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticket_id: ticketId,
+            file_name: String(file.name || 'upload.bin').slice(0, 240),
+            content_type: contentType,
+            data_base64,
+          }),
+        });
+      } catch (netErr) {
+        const msg = String(netErr?.message || netErr || 'network_error');
+        try {
+          // eslint-disable-next-line no-console
+          console.warn('[lux-upload] network error: %s', msg);
+        } catch {
+          // logging best-effort.
+        }
+        setUploadStatus(`Upload failed: network error (${msg}). Check your connection or try again.`);
+        setUploadStatusKind('error');
+        return;
+      }
       const j = await r.json().catch(() => ({}));
+      try {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[lux-upload] response status=%s body=%s',
+          String(r.status),
+          JSON.stringify(j).slice(0, 500),
+        );
+      } catch {
+        // logging best-effort.
+      }
       if (!r.ok) {
         const err = String(j?.error || j?.detail || j?.hint || `http_${r.status}`);
-        setUploadStatus(`Upload failed: ${err}`);
+        setUploadStatus(`Upload failed (HTTP ${r.status}): ${err}`);
         setUploadStatusKind('error');
         return;
       }
       const warn = j && typeof j.lux_meta_warning === 'string' ? j.lux_meta_warning : '';
       setUploadStatus(
         warn
-          ? `Uploaded ${j.file_name || file.name}. Metadata warning: ${warn}`
-          : `Uploaded and available on this ticket: ${j.file_name || file.name}.`,
+          ? `Uploaded ${j.file_name || file.name} (${(file.size / 1024).toFixed(1)} KB). Metadata warning: ${warn}`
+          : `Uploaded and available on this ticket: ${j.file_name || file.name} (${(file.size / 1024).toFixed(1)} KB). Scroll down to ATTACHMENTS to review, link, and publish.`,
       );
       setUploadStatusKind(warn ? 'info' : 'ok');
+      setLastUploadedAttachment({
+        attachment_id: j.attachment_id || '',
+        file_name: j.file_name || file.name,
+        byte_size: typeof j.byte_size === 'number' ? j.byte_size : file.size,
+        content_type: j.content_type || contentType,
+        at: new Date().toISOString(),
+      });
       try {
-        await loadAttachmentsForTicket(ticketId);
-      } catch {
+        const refreshed = await loadAttachmentsForTicket(ticketId);
+        try {
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[lux-upload] refreshed attachments for ticket=%s count=%s',
+            String(ticketId || ''),
+            String(Array.isArray(refreshed) ? refreshed.length : 'unknown'),
+          );
+        } catch {
+          // logging best-effort.
+        }
+      } catch (refreshErr) {
+        try {
+          // eslint-disable-next-line no-console
+          console.warn('[lux-upload] attachments refresh failed: %s', String(refreshErr?.message || refreshErr));
+        } catch {
+          // logging best-effort.
+        }
         // Non-fatal: the upload succeeded; the operator can refresh manually.
       }
     } catch (e) {
-      setUploadStatus(`Upload failed: ${String(e?.message || e)}`);
+      const msg = String(e?.message || e || 'unknown_error');
+      try {
+        // eslint-disable-next-line no-console
+        console.warn('[lux-upload] caught exception: %s', msg);
+      } catch {
+        // logging best-effort.
+      }
+      setUploadStatus(`Upload failed: ${msg}`);
       setUploadStatusKind('error');
     } finally {
       setUploadBusy(false);
-      if (luxAttachmentUploadInputRef.current) {
+      // Reset the input value so the operator can pick the SAME file again after a
+      // success or failure (otherwise the `change` event won't fire for an
+      // identical re-selection — browser-level behaviour, not React).
+      const inp =
+        luxAttachmentUploadInputRef.current ||
+        (typeof document !== 'undefined'
+          ? document.getElementById('lux-ticket-attachment-upload-input')
+          : null);
+      if (inp) {
         try {
-          luxAttachmentUploadInputRef.current.value = '';
+          inp.value = '';
         } catch {
           // Reading-only browsers ignore this; harmless.
         }
@@ -818,11 +929,26 @@ export default function ChangeConsolePage() {
   function handleAttachmentUploadInputChange(e) {
     try {
       const files = e?.target?.files;
-      if (!files || !files.length) return;
+      if (!files || !files.length) {
+        try {
+          // eslint-disable-next-line no-console
+          console.warn('[lux-upload] input change with no files');
+        } catch {
+          // logging best-effort.
+        }
+        return;
+      }
       const ticketId = String(selectedTicketId || attachmentsTicketId || '').trim();
       uploadFileToTicket(ticketId, files[0]);
     } catch (err) {
-      setUploadStatus(`Upload failed: ${String(err?.message || err)}`);
+      const msg = String(err?.message || err || 'unknown_error');
+      try {
+        // eslint-disable-next-line no-console
+        console.warn('[lux-upload] input change handler error: %s', msg);
+      } catch {
+        // logging best-effort.
+      }
+      setUploadStatus(`Upload failed: ${msg}`);
       setUploadStatusKind('error');
     }
   }
@@ -3506,6 +3632,27 @@ export default function ChangeConsolePage() {
                   {uploadStatus}
                 </div>
               ) : null}
+              {lastUploadedAttachment ? (
+                <div
+                  data-testid="lux-ticket-attachment-upload-last"
+                  style={{
+                    marginTop: 10,
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    padding: '8px 10px',
+                    borderRadius: 10,
+                    color: '#bbf7d0',
+                    border: '1px solid rgba(74,222,128,0.35)',
+                    background: 'rgba(74,222,128,0.08)',
+                  }}
+                >
+                  <strong>Just uploaded:</strong> {lastUploadedAttachment.file_name}{' '}
+                  ({(lastUploadedAttachment.byte_size / 1024).toFixed(1)} KB,{' '}
+                  {lastUploadedAttachment.content_type}). It is now attached to this ticket
+                  and ready for review · link · publish in the ATTACHMENTS section below
+                  (current count: {attachments.length}).
+                </div>
+              ) : null}
               <div
                 style={{
                   marginTop: 8,
@@ -3520,7 +3667,19 @@ export default function ChangeConsolePage() {
             </div>
           ) : null}
 
-          {!showIntakeSurface && !isEstimateMode && selectedTicketId && attachments.length > 0 ? (
+          {/*
+           * Render the per-ticket ATTACHMENTS list whenever a ticket is selected,
+           * we are not in estimate-only mode, and the ticket has attachments.
+           *
+           * PR #351 — Sprint child tickets C1–C4 sit in the Intake workflow stage by
+           * design (created by PR #345), so the earlier `!showIntakeSurface` guard
+           * silently hid this section for the exact tickets the Add content panel
+           * targets. Operators uploaded a file successfully through the governed
+           * pipeline but never saw the new attachment row, so they reasonably
+           * concluded "the file was dropped". Mirroring the bypass we applied to
+           * the upload-section render guard in PR #350.
+           */}
+          {selectedTicketId && (!isEstimateMode || isLuxContentSprintTicketSelected) && attachments.length > 0 ? (
             <LuxChangeCollapsibleSection
               chrome={luxChangeChrome}
               summary="This ticket · attachments, review, link, publish"
