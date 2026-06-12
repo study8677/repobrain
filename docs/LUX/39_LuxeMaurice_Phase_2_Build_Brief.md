@@ -456,7 +456,26 @@ Delivery Reality Audit (Vision-aligned public experience):
 - Final verdict (vision-aligned public experience slice): COMPLETE — brand-fidelity rebuild live-verified on lux.corpflowai.com.
 ```
 
-Programme master ticket **`cmo8mjijk0000jl04l1jz0v6d`** — **remains open**. Vision-aligned public experience is **live-verified**; **first real client-published listing**, **editor E2E on production**, and **governed public imagery on a real listing** remain the open programme gates (Slice C scope).
+Programme master ticket **`cmo8mjijk0000jl04l1jz0v6d`** — **remains open**. Vision-aligned public experience is **live-verified**; **first real client-published listing**, **editor E2E on production**, and **governed public imagery on a real listing** remain the open programme gates (Slice C scope) — operationally pursued under § 15.
+
+---
+
+## 15. Vision-aligned content population sprint — operational programme (2026-06-11)
+
+**Why this section exists.** The § 14 surface is brand-ready but **not yet commercially usable** — there is no real homepage imagery, no real published private opportunity, and five legacy `lm-*` preview slugs remain reachable. The sprint that closes this gap is formalized in **`docs/LUX/LUX_CONTENT_POPULATION_SPRINT.md`** and tracked in CMP via:
+
+- **Sprint parent:** `cmqa2y2ga0000l704glnfro1f` (`LuxeMaurice Content Population Sprint`, enriched with `console_json.lux_programme_meta`).
+- **Children (Property & media bucket on `/change`):**
+  - C1 `cmqa57uyt0000xf803uav5x8x` — Homepage property imagery package.
+  - C2 `cmqa57ve00001xf80tpgmjeiz` — First real private opportunity.
+  - C3 `cmqa57vlg0002xf805d7azdk2` — Demo / preview opportunities hidden from public.
+  - C4 `cmqa57vsr0003xf80y543sx20` — Jan validation E2E.
+
+Each child carries both `parent_programme_ticket=cmo8mjijk0000jl04l1jz0v6d` (so it surfaces under the existing programme) and `parent_sprint_ticket=cmqa2y2ga0000l704glnfro1f` (sprint linkage). The CMP write itself was produced by **`scripts/lux-content-sprint-formalize.mjs`** (idempotent, dry-run by default) followed by a one-line classifier patch in **`scripts/lux-content-sprint-classify-fix.mjs`** so all four children classify cleanly under **Property & media** in the live operator queue.
+
+**Non-negotiables (cross-link to PR #342 / PR #343):** no IDX / MLS reintroduced; no fake inventory; no auto-publish; no new env vars; tenant isolation preserved; **master `cmo8mjijk0000jl04l1jz0v6d` is not closed by this sprint**.
+
+**Reality Gate** for this sprint is in `docs/LUX/LUX_CONTENT_POPULATION_SPRINT.md` § 5; the sprint stays **PARTIAL** until all six live conditions hold on `https://lux.corpflowai.com/` and Jan + Anton both sign off on the sprint parent ticket `cmqa2y2ga0000l704glnfro1f`.
 
 ---
 
@@ -472,3 +491,4 @@ Programme master ticket **`cmo8mjijk0000jl04l1jz0v6d`** — **remains open**. Vi
 | **Engineer handoff** | §10 |
 | **Next Cursor prompt** | §11 |
 | **Vision-aligned public experience (PR #343)** | §14 — **COMPLETE** (live-verified 2026-06-11 on `lux.corpflowai.com`). Programme §8 Reality Gate still **PARTIAL** under Slice C scope (first real client-published listing + editor E2E + governed public imagery). |
+| **Vision-aligned content population sprint** | §15 — formalized 2026-06-11 in CMP (sprint parent `cmqa2y2ga0000l704glnfro1f`, four `Property & media` children C1–C4). **PARTIAL** until Reality Gate is live-verified and Jan + Anton sign off; closes the §14 commercial-usability gap. |

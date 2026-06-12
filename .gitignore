@@ -25,5 +25,7 @@ vanguard/audit/
 # Re-generated locally; never committed.
 .lux-vision-screenshots/
 .smoke-screenshots/
-# Production verification HTML + screenshots for PR #343 (live audit only).
+# Local verification snapshots used by Lux operator scripts: production-audit
+# HTML/screenshots from PR #343 verification, queue audits, ticket inspects,
+# sprint-formalization dry-run/execute snapshots. Re-generated locally; never committed.
 .lux-verify/
