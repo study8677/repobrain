@@ -39,19 +39,26 @@ const APEX_PATHS = [
 
 const LUX_STATIC_PATHS = ['/', '/concierge'];
 
-// `lm-phase2d-manual-demo` is a demo / placeholder entry in the staged catalog
-// (see `lib/client/luxe-maurice-staged-properties.js#isLuxStagedDemoSlug`) and is
-// intentionally absent from the public sitemap so search engines and operators do
-// not surface it as real opportunity inventory.
-const LUX_PROPERTY_REFS = [
-  'lm-nc-ridge',
-  'lm-villa-belombre',
-  'lm-pent-plateau',
-  'lm-pipeline-q4',
-  'lxf-grand-baie-apt',
-  'lxf-tamarin-villa',
-  'lxf-poste-lafayette',
-];
+// Placeholder property slugs are intentionally absent from the public sitemap.
+//
+// The four non-demo `lm-*` staged entries (`lm-nc-ridge`, `lm-villa-belombre`,
+// `lm-pent-plateau`, `lm-pipeline-q4`) and the three legacy `lxf-*` feed
+// references (`lxf-grand-baie-apt`, `lxf-tamarin-villa`, `lxf-poste-lafayette`)
+// still resolve via `resolveLuxPropertyRef` so existing bookmarks do not 404,
+// but they no longer have client-approved imagery and would be advertised to
+// Google as empty placeholder property pages — contradicting the LuxeMaurice
+// brand doctrine ("Confidence at distance", "Invited. Not advertised. Curated
+// access"; see `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md`).
+//
+// The 2026-06-12 audit (`docs/runbooks/LUX_CONTENT_SPRINT_C3_PLACEHOLDER_CLEANUP.md`)
+// captured the leak. This module is the single source of truth for what is
+// advertised on the Lux sitemap, so the C3 cleanup is a single-constant edit
+// here. The first real C2 opportunity slug is appended back to this list when
+// Jan's content lands and Anton publishes (see Content Population Sprint C2).
+//
+// `lm-phase2d-manual-demo` has always been excluded for the same reason via
+// `lib/client/luxe-maurice-staged-properties.js#isLuxStagedDemoSlug`.
+const LUX_PROPERTY_REFS = [];
 
 function isLuxHost(host) {
   if (!host) return false;

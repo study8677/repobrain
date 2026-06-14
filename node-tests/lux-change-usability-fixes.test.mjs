@@ -66,13 +66,41 @@ test('TASK 3 + 4 — change.js detects sprint tickets, renders panel, collapses 
   assert.match(change, /Advanced workflow state/);
 });
 
-test('TASK 5 — sitemap.xml.js does not advertise lm-phase2d-manual-demo', () => {
+test('TASK 5 — sitemap.xml.js does not advertise any placeholder property slug (C3 cleanup, 2026-06-12)', () => {
+  // Original PR #347 intent (TASK 5): demo slug `lm-phase2d-manual-demo` must
+  // not be in the sitemap. That intent is preserved.
+  //
+  // Updated 2026-06-12 (C3 placeholder cleanup): the 2026-06-12 live audit of
+  // https://lux.corpflowai.com/sitemap.xml found the four non-demo `lm-*` slugs
+  // and three `lxf-*` slugs all served 200 with zero <img> tags and the default
+  // monogram as page title - i.e. discoverable as empty placeholder property
+  // pages, contradicting the LuxeMaurice brand doctrine. None of them have
+  // real client-approved content, so none should be advertised on the sitemap.
+  // See docs/runbooks/LUX_CONTENT_SPRINT_C3_PLACEHOLDER_CLEANUP.md § 8 for the
+  // canonical fix and rationale. Direct slug navigation still resolves via
+  // resolveLuxPropertyRef for backward-compat bookmarks - only public
+  // discoverability is closed.
+  //
+  // When Jan's first real C2 opportunity slug is approved + published, it is
+  // appended back to LUX_PROPERTY_REFS in the same module; this test then
+  // legitimately fails on the new slug and is updated to allowlist it.
   const sm = readRepo('pages/sitemap.xml.js');
-  assert.equal(sm.includes("'lm-phase2d-manual-demo'"), false);
-  // But the other staged refs must still appear so SEO of real-ish editorial slugs
-  // does not regress.
-  for (const slug of ['lm-nc-ridge', 'lm-villa-belombre', 'lm-pent-plateau', 'lm-pipeline-q4']) {
-    assert.ok(sm.includes(`'${slug}'`), `sitemap should still include ${slug}`);
+  const placeholderSlugs = [
+    'lm-phase2d-manual-demo',
+    'lm-nc-ridge',
+    'lm-villa-belombre',
+    'lm-pent-plateau',
+    'lm-pipeline-q4',
+    'lxf-grand-baie-apt',
+    'lxf-tamarin-villa',
+    'lxf-poste-lafayette',
+  ];
+  for (const slug of placeholderSlugs) {
+    assert.equal(
+      sm.includes(`'${slug}'`),
+      false,
+      `sitemap must not advertise the placeholder slug ${slug} (C3 cleanup, no real client-approved content)`,
+    );
   }
 });
 

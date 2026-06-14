@@ -48,7 +48,10 @@ describe('sitemap.xml / buildEntries', () => {
 
   it('returns lux entries for the luxe.* alias too', () => {
     const { paths } = buildEntries('luxe.corpflowai.com');
-    assert.ok(paths.length > APEX_PATHS.length);
+    // Lux sitemap shape: 2 static lux paths + N property refs (currently 0 per
+    // the C3 placeholder cleanup; grows back to 1+ when Jan's first real C2
+    // opportunity slug is appended to LUX_PROPERTY_REFS).
+    assert.equal(paths.length, 2 + LUX_PROPERTY_REFS.length);
     assert.match(paths[0].loc, /^https:\/\/lux\.corpflowai\.com/);
   });
 

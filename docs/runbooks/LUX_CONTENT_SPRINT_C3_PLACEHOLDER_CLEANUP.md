@@ -188,7 +188,54 @@ Record the audit in:
 
 ---
 
-## 8. Related
+## 8. Canonical executed path (post-2026-06-12) — single-constant sitemap edit
+
+After PR #354 merged, the 2026-06-12 code-path audit found that **all 8 placeholder slugs are static JavaScript constants, not Postgres rows**:
+
+- The 5 `lm-*` slugs live in `lib/client/luxe-maurice-staged-properties.js` (the `lm-phase2d-manual-demo` one is already correctly stripped from public surfaces via `getPublicLuxStagedProperties()` / `demo: true`).
+- The 3 `lxf-*` slugs live in `lib/client/luxe-maurice-feed-properties.js` (the module header explicitly says they are "no longer rendered on public surfaces" and only kept so old bookmarks resolve).
+- `/properties` (the listing page) already correctly excludes all of them — it queries published `lux_listings` rows from Postgres, which is empty, so it renders the premium empty state.
+- `/property/<slug>` (the detail page) routes via `resolveLuxPropertyRef`, which resolves both staged and feed entries — that's the backward-compatibility behaviour for bookmarks.
+- **The discoverability leak is entirely one place: the hard-coded `LUX_PROPERTY_REFS` array in `pages/sitemap.xml.js`.** That array is what Google sees on `https://lux.corpflowai.com/sitemap.xml`.
+
+### Recommended single-PR fix
+
+Set `LUX_PROPERTY_REFS = []` in `pages/sitemap.xml.js` (with a header comment documenting the rationale). That single edit:
+
+- Drops all 7 placeholder URLs from the Lux sitemap on the next Production deploy (the 8th, `lm-phase2d-manual-demo`, has never been in the sitemap).
+- Does **not** delete any data, code, or audit history.
+- Does **not** touch `pages/property/[slug].js`, the resolver, or the editorial render shell — bookmarks still resolve as before (per the explicit "backward compatibility" intent in `lib/client/luxe-maurice-feed-properties.js`).
+- Does **not** change tenant boundaries, auth, sessions, or media governance.
+- Tests pass without modification — `node-tests/sitemap-host-aware.test.mjs` asserts on `LUX_PROPERTY_REFS.length` only (the array adapts) and the per-host expected behaviour is unchanged.
+- Maps cleanly to **option (a)** from § 3 above for all 7 slugs at once, with the additional simplification that no per-slug DB write or visibility flag flip is needed.
+
+### Why this is preferred over the § 3 options as originally written
+
+The § 3 per-slug matrix was written before the 2026-06-12 code-path audit. That matrix assumed the slugs were DB-backed (`lux_listings` rows) and described per-slug `UPDATE lux_listings SET visibility_status='preview'` writes. With the code-path audit, we now know that's not where they live — they're JS constants. So:
+
+- The § 3 option (a) per-slug DB writes are **not required** — the single constant edit achieves the same public-discoverability outcome with zero DB touches.
+- The § 3 option (b) "replace with a real published listing from C2" remains valid: when Jan's first real opportunity goes live, its slug is appended back to `LUX_PROPERTY_REFS` so the new opportunity is discoverable on Google. That is a follow-on edit to the same array — no schema, no migration, no new mechanism.
+- The § 3 option (c) "label explicitly as illustrative" remains a future option, but it's a separate UX decision (banner copy + design) and is not required to ship C3.
+
+### Out of scope for the canonical fix
+
+- Adding a `noindex` meta to `pages/property/[slug].js` for placeholder slugs (would add a new conditional branch — violates the "do not expand workflow complexity" constraint).
+- Returning 404 from `/property/<placeholder-slug>` for anonymous traffic (same reason; also breaks the explicit backward-compatibility intent in `lib/client/luxe-maurice-feed-properties.js`).
+- Deleting `LUXE_MAURICE_STAGED_PROPERTIES` or `LUXE_MAURICE_FEED_PROPERTIES` entries (deletes audit / historical context for no operational benefit; the resolver path needs them).
+
+### Backward-compatibility trade-off recorded
+
+After the canonical fix is merged + deployed:
+
+- **Google / search engines:** stop seeing the 7 placeholder URLs in the sitemap, gradually drop them from the index over their normal recrawl cycle.
+- **Direct visitors with bookmarks:** still see the existing editorial shell on `/property/<placeholder-slug>` (200 OK, no images, monogram title — same as today). This is the explicit "no 404 for old bookmarks" intent baked into the feed-properties module.
+- **The 5 `lm-*` slugs:** still navigable directly as before; only the public discoverability surface is closed.
+
+If we later decide to also 404 anonymous traffic on placeholder slugs, that is a separate PR and an explicit UX decision — out of scope for the canonical C3 fix.
+
+---
+
+## 9. Related
 
 - `docs/LUX/LUX_CONTENT_POPULATION_SPRINT.md` § 3 C3 — sprint strategy + updated audit.
 - `docs/runbooks/LUX_CHANGE_USABILITY_FIXES_2026_06_12.md` — PR #347-#352 chain that landed the readable attachment panel feeding C2.
