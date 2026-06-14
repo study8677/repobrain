@@ -82,12 +82,22 @@ import PublicSiteFooter from './PublicSiteFooter.js';
  *    operator alert path is unchanged.
  *
  * Doctrine compliance:
- *  - Single offer rule preserved (USD 150 launch pilot, invoiced after
- *    intake review; no card on the page).
+ *  - Single offer rule preserved: the public page advertises only the
+ *    launch pilot. No monthly continuation figure is shown on the page;
+ *    continuation, if elected, is quoted operator-side after the
+ *    7-day pilot per the operator-side pricing guide.
+ *  - Mauritius-local payment framing: the launch pilot is invoiced as
+ *    the MUR equivalent of USD 150 on a local pro-forma, paid by bank
+ *    transfer to a Mauritius bank account, with proof of payment
+ *    shared manually and setup beginning only after manual
+ *    confirmation. This local-on-the-public-page framing is permitted
+ *    on the Mauritius property surface only — see
+ *    `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` § *Mauritius
+ *    property page localisation note*. The pan-vertical `/lead-rescue`
+ *    page continues to use the USD-anchor / USD-invoice trust copy.
  *  - Required no-guarantee copy is present verbatim:
  *    "We do not guarantee new revenue. We help make sure existing
  *    enquiries are captured, visible, and followed up."
- *  - Required payment trust copy is present.
  *  - The user-required line "We do not replace WhatsApp Business."
  *    is present verbatim in the hero subhead block.
  *  - CTA describes the buyer action ("Request the Mauritius property
@@ -398,6 +408,42 @@ const styles = {
     color: palette.faint, fontWeight: 600, marginTop: 8,
   },
   pricingBody: { color: palette.muted, fontSize: 15, lineHeight: 1.6 },
+  paymentSteps: {
+    marginTop: 20,
+    padding: '24px 26px',
+    background: palette.paper,
+    border: `1px solid ${palette.hairlineSoft}`,
+    borderRadius: 4,
+  },
+  paymentStepsHeading: {
+    fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase',
+    color: palette.teal, fontWeight: 700, marginBottom: 16,
+  },
+  paymentList: {
+    margin: 0, padding: 0, listStyle: 'none',
+    display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '12px 24px',
+  },
+  paymentListItem: {
+    display: 'flex', alignItems: 'flex-start', gap: 12,
+    fontSize: 14, color: palette.ink, lineHeight: 1.5,
+  },
+  paymentListBullet: {
+    width: 6, height: 6, borderRadius: '50%',
+    background: palette.brass,
+    flex: '0 0 auto', marginTop: 7,
+  },
+  paymentListLabel: {
+    color: palette.ink, fontWeight: 600,
+  },
+  continuationNote: {
+    marginTop: 18,
+    padding: '14px 18px',
+    background: palette.tealSoft,
+    borderLeft: `2px solid ${palette.teal}`,
+    fontSize: 13, color: palette.ink, lineHeight: 1.6,
+    maxWidth: 720,
+  },
   intakeCard: {
     marginTop: 36, padding: '32px 32px 28px',
     background: palette.paper, border: `1px solid ${palette.hairlineSoft}`,
@@ -722,7 +768,7 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
                 Property enquiries do not get lost on purpose. <span style={styles.h1Accent}>They get lost between channels.</span>
               </h1>
               <p style={styles.lead}>
-                Buyers and tenants reach you on WhatsApp, Facebook, your website form, listing portals, and calls — sometimes the same person on three of them in one weekend. The enquiry that does not get a reply within a day is the one that quietly walks to another agency.
+                Property enquiries often arrive through WhatsApp, Facebook, website forms, listing portals, and calls — but after the first reply, follow-up can become hard to see. The enquiry that quietly walks to another agency is usually the one no one realised was still waiting for a reply.
               </p>
               <p style={styles.trustLine}>
                 We do not replace WhatsApp Business. We make sure the enquiries inside it are logged, visible, and followed up.
@@ -922,16 +968,48 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
 
         <section style={styles.section}>
           <div style={styles.sectionLabel}>Pricing &amp; path</div>
-          <h2 style={styles.h2}>One offer. One price. No buyer payment decision on this page.</h2>
+          <h2 style={styles.h2}>One launch pilot. Local pro-forma. No card on the page.</h2>
           <div style={styles.pricingCard}>
             <div>
               <div style={styles.pricingNumber}>USD 150</div>
-              <div style={styles.pricingLabel}>Launch pilot · 48-hour setup</div>
+              <div style={styles.pricingLabel}>Launch pilot · invoiced as the MUR equivalent</div>
             </div>
             <div style={styles.pricingBody}>
-              You request the pilot outline below. We review your intake within two business hours, confirm the first lead source we should connect, and email a USD invoice through the agreed route. Payment is handled after intake review. You do not enter card or banking details on this page. Once payment lands, the 48-hour clock starts and we run the pilot for seven monitored days.
+              Submitting the form does not commit you to payment. After we review your intake within two business hours, we issue a local pro-forma invoice in Mauritian rupees — the MUR equivalent of USD 150 at the day&rsquo;s rate, with the final MUR amount confirmed on the invoice itself. You pay by bank transfer to a Mauritius bank account, share the proof of payment, and the 48-hour setup begins only after we manually confirm receipt. No card details, no online checkout, and no automated subscription on this page.
             </div>
           </div>
+          <div style={styles.paymentSteps} aria-label="How payment works on the Mauritius property pilot">
+            <div style={styles.paymentStepsHeading}>How payment works</div>
+            <ul style={styles.paymentList} className="lr-property-payment-list">
+              <li style={styles.paymentListItem}>
+                <span style={styles.paymentListBullet} aria-hidden="true" />
+                <span><span style={styles.paymentListLabel}>Intake review first</span> — within two business hours of submitting the form.</span>
+              </li>
+              <li style={styles.paymentListItem}>
+                <span style={styles.paymentListBullet} aria-hidden="true" />
+                <span><span style={styles.paymentListLabel}>No card or banking details on this page</span> — and no online checkout.</span>
+              </li>
+              <li style={styles.paymentListItem}>
+                <span style={styles.paymentListBullet} aria-hidden="true" />
+                <span><span style={styles.paymentListLabel}>Local pro-forma invoice</span> — issued in MUR, with the day&rsquo;s rate noted.</span>
+              </li>
+              <li style={styles.paymentListItem}>
+                <span style={styles.paymentListBullet} aria-hidden="true" />
+                <span><span style={styles.paymentListLabel}>Bank transfer</span> — to a Mauritius bank account.</span>
+              </li>
+              <li style={styles.paymentListItem}>
+                <span style={styles.paymentListBullet} aria-hidden="true" />
+                <span><span style={styles.paymentListLabel}>Proof of payment shared manually</span> — email or WhatsApp is fine.</span>
+              </li>
+              <li style={styles.paymentListItem}>
+                <span style={styles.paymentListBullet} aria-hidden="true" />
+                <span><span style={styles.paymentListLabel}>Setup starts after manual confirmation</span> — never automatically.</span>
+              </li>
+            </ul>
+          </div>
+          <p style={styles.continuationNote}>
+            If you choose to continue after the pilot, ongoing monitoring is quoted separately after review. There is no auto-renewal, and no monthly figure is published on this page.
+          </p>
         </section>
 
         <section id="pilot-outline" style={styles.section}>
@@ -972,7 +1050,7 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
               </button>
             </form>
             <p style={styles.formNote}>
-              Payment links and invoice details are issued after intake review. Do not enter card or banking details on this page. We only store what is needed to run the lead log: business name, contact name, channel, and basic enquiry detail.
+              Submitting this form does not commit you to payment. There is no automated subscription, no online checkout, and no card or banking details on this page. We review fit first, then confirm the local pro-forma invoice and the setup steps. The pilot is manually onboarded after payment is confirmed by bank transfer. We only store what is needed to run the lead log: business name, contact name, channel, and basic enquiry detail.
             </p>
             <p style={styles.noGuarantee}>
               We do not guarantee new revenue. We help make sure existing enquiries are captured, visible, and followed up.
@@ -981,7 +1059,7 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
         </section>
 
         <div style={styles.footerWrap}>
-          <PublicSiteFooter extra="AI Lead Rescue Mauritius property edition is powered by CorpFlowAI. The USD 150 launch pilot is invoiced after intake review; this page collects intake only and does not collect card or banking details. Calls in English; written workflow supports French summaries and French enquiry handling on request, with reviewed replies." />
+          <PublicSiteFooter extra="AI Lead Rescue Mauritius property edition is powered by CorpFlowAI. The launch pilot is invoiced as the MUR equivalent of USD 150 on a local pro-forma after intake review; this page collects intake only, does not collect card or banking details, and does not create any automated subscription. Calls in English; written workflow supports French summaries and French enquiry handling on request, with reviewed replies." />
         </div>
       </main>
 
@@ -1077,6 +1155,9 @@ export default function AiLeadRescuePropertyMauritiusLanding({ host = '' }) {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
           .lr-property-checkbox-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .lr-property-payment-list {
             grid-template-columns: minmax(0, 1fr) !important;
           }
           .lr-property-trust-list-item {

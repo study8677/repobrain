@@ -15,6 +15,16 @@
 - LinkedIn DMs: no link in the first message. Send the link in message 2 only after the prospect signals interest.
 - Forbidden phrases (per `JE-2026-06-01-4` § 4.5 + brand doctrine): *buy now, pay now, instant, guaranteed, fully autonomous, never miss a lead again, replace your team, 10x your business*.
 
+### Mauritius property variant — use the property-specific blocks
+
+The blocks in this file target the **apex `/lead-rescue`** page (pan-vertical, USD-anchor invoicing). For prospects in **Mauritius property** (real estate agencies, villa rental operators, property managers, serviced-apartment / short-term rentals), use the paste-ready blocks in **`docs/marketing/AI_LEAD_RESCUE_MAURITIUS_OUTREACH_COPY_V1.md` § 7.1.1** instead.
+
+Why a separate set:
+
+- The property-Mauritius blocks link to **`https://corpflowai.com/lead-rescue/property-mauritius`** (not the apex), because the property page has a property-specific operator view, segment-fit copy, and a different payment trust block.
+- The property-Mauritius blocks use the **local pro-forma framing** the property page itself uses: *"invoiced as the MUR equivalent of USD 150 on a local pro-forma, bank transfer to a Mauritius bank account, proof of payment shared manually before setup."* This localisation is permitted **only on the Mauritius property surface** per `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` § *Mauritius property page localisation note* — the apex `/lead-rescue` and all other surfaces continue to use the USD-invoice framing in this file.
+- Continuation pricing (USD 99 / month operator-side per `docs/sales/AI_LEAD_RESCUE_PRICING_GUIDE.md` § 1) is **never mentioned in first-touch outreach** on either surface; it is quoted only after the 7-day pilot if the buyer opts in.
+
 ## 1. WhatsApp script (1:1, warm contact)
 
 ### 1.1 Opener (first message after a real reason to reach out)
@@ -222,9 +232,11 @@ the page doesn't answer, ask me directly and I'll tell you straight.
 
 ### 7.2 *"How much?"*
 
-**One-line:** *"USD 150 launch pilot — invoiced after we review your intake. Everything is on the page."*
+**One-line (apex `/lead-rescue`):** *"USD 150 launch pilot — invoiced after we review your intake. Everything is on the page."*
 
-**Extended (only if asked):**
+**One-line (Mauritius property `/lead-rescue/property-mauritius`):** *"MUR equivalent of USD 150 on a local pro-forma — bank transfer to a Mauritius bank account, no card on the page. Setup starts after manual confirmation."*
+
+**Extended (only if asked, apex):**
 
 ```text
 USD 150, one-time, for the 48-hour pilot setup — that includes one
@@ -232,6 +244,19 @@ lead-source connection, owner alerts, the daily lead list, and 7
 days of monitoring after we go live. If you want to continue
 monitoring after the pilot we'll discuss it then; nothing is
 auto-renewed.
+```
+
+**Extended (only if asked, Mauritius property):**
+
+```text
+The pilot is invoiced as the MUR equivalent of USD 150 on a local
+pro-forma — the final MUR amount is confirmed on the invoice itself
+at the day's rate. You pay by bank transfer to a Mauritius bank
+account and share the proof of payment manually. The 48-hour setup
+begins only after we manually confirm the wire has cleared. No card
+on the page, no online checkout, no automated subscription. If you
+want to continue monitoring after the 7-day pilot, we discuss it
+then; nothing on the page commits you to that.
 ```
 
 ### 7.3 *"We already use WhatsApp"*

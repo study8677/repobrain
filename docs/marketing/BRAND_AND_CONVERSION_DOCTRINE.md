@@ -269,6 +269,20 @@ The page must not ask the buyer to pick a region, currency, or payment route bef
 
 Do not use **Choose payment path**, **Choose your region**, **Start intake — Mauritius**, **Start intake — International**, or any equivalent route-as-CTA wording.
 
+### Mauritius property page localisation note
+
+The Mauritius property page (`/lead-rescue/property-mauritius`) is the **only** AI Lead Rescue surface permitted to localise the public-page payment framing. On that surface only, the required payment trust copy is permitted to read as:
+
+**"After we review your intake, we issue a local pro-forma invoice in Mauritian rupees — the MUR equivalent of USD 150 — paid by bank transfer to a Mauritius bank account, with proof of payment shared manually before the 48-hour setup begins."**
+
+Doctrine constraints on this localisation:
+
+- The canonical anchor remains **USD 150**. The MUR equivalent is the operator-side conversion at the day's SBM rate per `docs/sales/AI_LEAD_RESCUE_PRICING_GUIDE.md` § 1.3 (round to nearest MUR 100). The page may say *"MUR equivalent of USD 150"* but must not preset a fixed MUR figure that would silently age as the exchange rate moves.
+- **Single-offer rule still applies** — the page advertises only the launch pilot. **Continuation pricing remains operator-side / post-review** and is **never** shown on the public page on either surface (apex `/lead-rescue` or Mauritius property). Continuation is quoted manually after the 7-day pilot if the buyer opts in.
+- **No buyer payment decision on the page.** No card collection, no online checkout, no automated subscription, no buyer-selected payment route — manual local pro-forma is the entire path.
+- **Pan-vertical `/lead-rescue` is unchanged** by this localisation. It continues to use the apex required payment trust copy above ("USD invoice through the agreed route").
+- **Any additional landing surface** that wants to localise the public-page payment framing requires an explicit doctrine update **here** before the surface ships. Silent loosening of the single-offer rule across surfaces is a doctrine violation.
+
 Preferred global CTA:
 
 - Start my 48-hour setup

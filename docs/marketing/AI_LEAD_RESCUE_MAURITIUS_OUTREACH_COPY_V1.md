@@ -390,14 +390,28 @@ this small. https://corpflowai.com/lead-rescue
 
 ### 6.9 *"Can we do this in MUR / EUR instead of USD?"*
 
+For prospects coming in via the **pan-vertical `/lead-rescue` page** (apex; English / business default):
+
 ```text
-The pilot is invoiced in USD on the public side - it keeps the
-single-offer rule simple. After we qualify your intake, we can
-arrange the actual invoice in MUR (for Mauritius local) or EUR
-(for some international cases) on the operator side. The
+The pilot is invoiced in USD on the apex public side - it keeps
+the single-offer rule simple. After we qualify your intake, we
+can arrange the actual invoice in MUR (for Mauritius local) or
+EUR (for some international cases) on the operator side. The
 operator-side currency is just an invoicing convenience; the
 work and the price are the same.
 ```
+
+For prospects coming in via the **Mauritius property page (`/lead-rescue/property-mauritius`)**, the answer is shorter because the property page already states the local framing:
+
+```text
+For the Mauritius property pilot it's already local. The pro-forma
+is in MUR (the equivalent of USD 150 at the day's rate, confirmed
+on the invoice) and you pay by bank transfer to a Mauritius bank
+account - same work, same scope as the apex pilot, just the
+invoice in your local currency.
+```
+
+The localisation is permitted **only on the Mauritius property surface** per `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` § *Mauritius property page localisation note*. Do not use the second answer for prospects who landed on `/lead-rescue` (apex) - they get the first answer.
 
 ### 6.10 *"Nothing - just silence."*
 
@@ -440,6 +454,123 @@ mental list overnight.
 ```
 
 **Suggested visual for LinkedIn post variant:** the social card webp is fine; alternatively a still from the walkthrough at the moment the morning summary appears.
+
+#### 7.1.1 Mauritius property page variant — paste-ready (links to `/lead-rescue/property-mauritius`)
+
+When reaching out **specifically about the Mauritius property page** (warm-network agents, villa rental operators, property managers, serviced-apartment / short-term-rental owners), use the blocks below. They differ from the master copy in three ways:
+
+1. The page link is the **property-Mauritius page** (`https://corpflowai.com/lead-rescue/property-mauritius`), not the apex `/lead-rescue`.
+2. The opener is **pain-led for property** (the property-vertical buyer-problem line above) without renaming the offer.
+3. The pricing line uses the **local pro-forma framing** that matches the property page itself: *"invoiced as the MUR equivalent of USD 150 on a local pro-forma, bank transfer to a Mauritius bank account, proof of payment shared manually before setup begins."* Do **not** mention monthly continuation in first-touch outreach (single-offer rule); continuation is discussed only after the 7-day pilot.
+
+##### 7.1.1.1 WhatsApp opener (Mauritius property)
+
+```text
+Hi {first name} - quick reason I'm messaging.
+
+For most Mauritius property operators I speak to, enquiries
+arrive across WhatsApp, Facebook, the website, listing portals,
+and calls - and after the first reply, follow-up becomes hard
+to see. We've put together a 48-hour pilot specifically for
+Mauritius property operators that connects one of those lead
+sources to a daily lead list, sends an instant alert to the
+owner or operator, and surfaces follow-ups due each morning.
+
+The pilot is invoiced as the MUR equivalent of USD 150 on a
+local pro-forma - bank transfer to a Mauritius bank account,
+no card on the page. Setup starts only after manual
+confirmation of payment.
+
+Page (with the operator view, the workflow, and the intake form):
+https://corpflowai.com/lead-rescue/property-mauritius
+```
+
+##### 7.1.1.2 LinkedIn DM (Mauritius property, no link first)
+
+```text
+Hi {first name}, thanks for connecting.
+
+Quick reason I reached out: most Mauritius property operators
+I speak to say enquiries arrive across WhatsApp, Facebook, the
+website, listing portals, and calls - and after the first
+reply, follow-up becomes hard to see.
+
+We've opened a 48-hour pilot specifically for Mauritius
+property operators that captures, alerts, and tracks every
+enquiry without replacing WhatsApp Business or your CRM. The
+pilot is invoiced locally as the MUR equivalent of USD 150 on
+a Mauritius pro-forma - no card on the page, manually
+onboarded after bank transfer.
+
+Want me to send you the property-specific page?
+```
+
+If they reply *yes / send it / similar*, message 2 = single line + link:
+
+```text
+Here's the page (built for Mauritius property): https://corpflowai.com/lead-rescue/property-mauritius
+The intake form is at the bottom; we review within ~2 business hours and send the pro-forma invoice on the agreed bank-transfer route.
+```
+
+##### 7.1.1.3 Email body (Mauritius property)
+
+```text
+Subject: A few viewing or enquiry follow-ups probably slipped through last week
+
+Hi {first name},
+
+For most Mauritius property operators I speak to, enquiries
+arrive in three or four channels (WhatsApp, Facebook, the
+website form, listing portals, calls) - and after the first
+reply, follow-up becomes hard to see. The enquiry that
+quietly walks to another agency is usually the one no one
+realised was still waiting for a reply.
+
+We've put together a 48-hour pilot specifically for Mauritius
+property operators - real estate agencies, villa rental
+operators, property managers, and serviced-apartment / STR
+businesses. It connects one of your existing lead sources to
+a daily lead list, sends an instant alert to the owner or
+operator, shows the follow-ups due each morning, and runs a
+7-day monitoring window.
+
+How payment works:
+- Submitting the form does not commit you to payment.
+- We review your intake within ~2 business hours.
+- The pilot is invoiced as the MUR equivalent of USD 150 on
+  a local pro-forma; the final MUR amount is confirmed on the
+  invoice itself.
+- You pay by bank transfer to a Mauritius bank account and
+  share the proof of payment manually.
+- The 48-hour setup begins only after we confirm the wire
+  has cleared. No card on the page, no online checkout, no
+  automated subscription.
+
+If it fits, the property-specific page (with the operator view,
+the workflow, and the intake form) is:
+
+https://corpflowai.com/lead-rescue/property-mauritius
+
+We don't promise more leads. We help make sure existing
+enquiries are captured, visible, and followed up. If you
+choose to continue after the pilot, ongoing monitoring is
+quoted separately after review.
+
+Happy to answer any questions.
+
+{Anton}
+CorpFlowAI Ltd. (Mauritius)
+support@corpflowai.com
+```
+
+##### 7.1.1.4 Forbidden in property-Mauritius outreach
+
+In addition to the global voice rules and forbidden vocabulary in § 5 / § 8 of `docs/sales/AI_LEAD_RESCUE_OUTREACH_SCRIPTS.md`, do **not** in property-Mauritius outreach:
+
+- Mention any **monthly** figure in first-touch outreach (single-offer rule; continuation is post-pilot only).
+- Use **online checkout / Stripe / pay-with-card** language anywhere — there is no card path.
+- Imply the form **auto-approves** the pilot. The pilot is manually onboarded after manual confirmation of bank-transfer receipt.
+- Use the apex `/lead-rescue` page link when the conversation is about the property surface. The two surfaces have different payment trust copy by doctrine.
 
 ### 7.2 Clinics / wellness / dental / beauty
 

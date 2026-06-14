@@ -107,9 +107,9 @@ The single-offer rule is non-negotiable. **Do not invent tiers, discounts, or ad
 
 See `docs/sales/AI_LEAD_RESCUE_PRICING_GUIDE.md` for the canonical numbers, what is included, what is excluded, when to quote custom, the manual-invoice path, and the no-guaranteed-revenue language. Headline:
 
-- **Mauritius pilot setup:** USD 150 (operator-side equivalent ≈ MUR 7,000 on the invoice; MUR rounding allowed for buyer convenience but never below USD 150 in spirit).
+- **Mauritius pilot setup:** USD 150 (operator-side equivalent ≈ MUR 7,000 on the invoice; MUR rounding allowed for buyer convenience but never below USD 150 in spirit). The Mauritius property page (`/lead-rescue/property-mauritius`) is permitted to localise the public-page framing to *"MUR equivalent of USD 150 on a local pro-forma"* per `docs/marketing/BRAND_AND_CONVERSION_DOCTRINE.md` § *Mauritius property page localisation note* — pan-vertical `/lead-rescue` continues to use the USD-anchor framing.
 - **International pilot setup:** USD 150 (no MUR conversion; invoiced in USD; SBM wire is the warm-network primary route).
-- **Monthly monitoring (post-pilot only):** USD 49 / month international, MUR 1,900 / month Mauritius — **never advertised on the public page**, only offered after the pilot demonstrates value. The `MONITORING_OFFERED → MONTHLY_ACTIVE` status transition lives in the operator cockpit (`docs/operations/AI_LEAD_RESCUE_OPERATOR_RUNBOOK.md` § *Status pipeline*).
+- **Monthly monitoring (post-pilot only):** **USD 99 / month** international, **~MUR 4,500 / month** Mauritius (operator-side conversion at the day's SBM rate, rounded to nearest MUR 100). **Never advertised on the public page** on either surface — only quoted manually after the pilot demonstrates value. The `MONITORING_OFFERED → MONTHLY_ACTIVE` status transition lives in the operator cockpit (`docs/operations/AI_LEAD_RESCUE_OPERATOR_RUNBOOK.md` § *Status pipeline*). Canonical figures live in `docs/sales/AI_LEAD_RESCUE_PRICING_GUIDE.md` § 1; if this section ever drifts from the pricing guide, the pricing guide wins.
 
 These numbers are **deliberately conservative** because the window is structurally pre-proof. They are not a long-term price floor; they are the launch pilot.
 
