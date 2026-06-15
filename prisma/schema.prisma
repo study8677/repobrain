@@ -9,21 +9,21 @@ datasource db {
 }
 
 model Lead {
-  id        String   @id @default(cuid())
-  tenantId  String?  @map("tenant_id")
-  name      String
-  email     String
-  contact   String?  @map("contact")
-  message   String?  @map("message")
-  phone     String?  @map("phone")
-  intent    String
-  market    String?  @map("market")
-  listing   String?  @map("listing")
-  status    String   @default("NEW")
-  qualificationJson Json? @map("qualification_json")
-  score      String? @map("score")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(cuid())
+  tenantId          String?  @map("tenant_id")
+  name              String
+  email             String
+  contact           String?  @map("contact")
+  message           String?  @map("message")
+  phone             String?  @map("phone")
+  intent            String
+  market            String?  @map("market")
+  listing           String?  @map("listing")
+  status            String   @default("NEW")
+  qualificationJson Json?    @map("qualification_json")
+  score             String?  @map("score")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@index([tenantId])
   @@map("leads")
@@ -47,13 +47,18 @@ model Tenant {
 }
 
 model AuthUser {
-  id           String  @id @default(cuid())
-  username     String  @unique
-  passwordHash String  @map("password_hash")
-  passwordSalt String  @map("password_salt")
-  level        String
-  tenantId     String? @map("tenant_id")
-  enabled      Boolean @default(true)
+  id            String  @id @default(cuid())
+  username      String  @unique
+  passwordHash  String  @map("password_hash")
+  passwordSalt  String  @map("password_salt")
+  level         String
+  tenantId      String? @map("tenant_id")
+  enabled       Boolean @default(true)
+  /// IM-1: blanket cross-tenant access capability for operators only. See
+  /// docs/operations/OPERATOR_MULTI_TENANT_CREDENTIAL_V1.md §2.6. DB CHECK
+  /// constraint (auth_users_factory_master_admin_only) enforces level='admin'
+  /// when true; no application code reads this column in IM-1.
+  factoryMaster Boolean @default(false) @map("factory_master")
 
   createdAt   DateTime  @default(now()) @map("created_at")
   lastLoginAt DateTime? @map("last_login_at")
@@ -191,10 +196,14 @@ model TelemetryEvent {
   cmpTicketId String?  @map("cmp_ticket_id")
   cmpAction   String?  @map("cmp_action")
   payload     Json?    @map("payload_json")
+  /// IM-1: audit identity of the user who caused this event (auth_users.id).
+  /// Nullable for backfill safety; new operator-mediated writes populate it in IM-7.
+  actorUserId String?  @map("actor_user_id")
 
   @@index([tenantId])
   @@index([eventType])
   @@index([occurredAt])
+  @@index([actorUserId])
   @@map("telemetry_events")
 }
 
@@ -225,6 +234,34 @@ model TenantHostname {
   @@map("tenant_hostnames")
 }
 
+/// IM-1 (2026-06-15) — Multi-tenant user membership matrix.
+/// One row grants `user_id` the right to act inside `tenant_id`. Soft-revocation
+/// via `revoked_at`; partial unique index on `(user_id, tenant_id) WHERE revoked_at IS NULL`
+/// is enforced at the DB level (Prisma cannot express partial indexes in this schema;
+/// see lib/server/postgres-ensure-schema-statements.js and the IM-1 migration).
+/// No production code reads this table in IM-1; the helper getEffectiveMemberships(user_id)
+/// arrives in IM-2.
+/// Canonical spec: docs/operations/OPERATOR_MULTI_TENANT_CREDENTIAL_V1.md §2.3.
+model UserTenantMembership {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  tenantId   String    @map("tenant_id")
+  role       String    @default("member")
+  capability String?
+  enabled    Boolean   @default(true)
+  grantedAt  DateTime  @default(now()) @map("granted_at")
+  /// `'system'` for IM-1 back-fill rows; auth_users.id for manual grants.
+  grantedBy  String    @default("system") @map("granted_by")
+  revokedAt  DateTime? @map("revoked_at")
+  disabledAt DateTime? @map("disabled_at")
+  notes      String?
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([userId, enabled, revokedAt], name: "user_tenant_memberships_user_enabled_revoked_idx")
+  @@map("user_tenant_memberships")
+}
+
 /// Append-only automation spine: agents and webhooks post here first.
 model AutomationEvent {
   id             String   @id @default(cuid())
@@ -238,12 +275,16 @@ model AutomationEvent {
   riskTier       String   @default("low") @map("risk_tier")
   status         String   @default("accepted")
   payload        Json?    @map("payload_json")
+  /// IM-1: audit identity of the user who caused this event (auth_users.id).
+  /// Nullable for backfill safety; new operator-mediated writes populate it in IM-7.
+  actorUserId    String?  @map("actor_user_id")
 
   @@unique([tenantScope, idempotencyKey], name: "automation_events_scope_idem")
   @@index([tenantId])
   @@index([tenantScope])
   @@index([eventType])
   @@index([occurredAt])
+  @@index([actorUserId])
   @@map("automation_events")
 }
 
@@ -345,4 +386,100 @@ model GrowthTouchpoint {
   @@index([tenantId])
   @@index([contactId])
   @@map("growth_touchpoints")
+}
+
+/// Chat Widget v0 — per-tenant configuration for the embeddable text-only chatbot.
+/// Anonymous-public widget; no operator session at runtime. Tenant resolved from host
+/// via `tenant_hostnames`. Kill switch is `enabled` field; AI columns are placeholders
+/// for a future tier (no LLM call in v0).
+model ChatWidgetConfig {
+  id                     String   @id @default(cuid())
+  tenantId               String   @unique @map("tenant_id")
+  enabled                Boolean  @default(false)
+  brandName              String   @map("brand_name")
+  brandAccent            String?  @map("brand_accent")
+  brandLogoUrl           String?  @map("brand_logo_url")
+  greeting               String   @default("Hi! How can we help today?")
+  flowJson               Json     @map("flow_json")
+  flowVersion            Int      @default(1) @map("flow_version")
+  notifyVia              String   @default("automation_event") @map("notify_via")
+  notifyEmail            String?  @map("notify_email")
+  allowedOrigins         Json     @default("[]") @map("allowed_origins_json")
+  rateLimitPerWindow     Int      @default(30) @map("rate_limit_per_window")
+  rateLimitWindowSeconds Int      @default(300) @map("rate_limit_window_seconds")
+  aiBudgetMonthlyUsd     Float    @default(0) @map("ai_budget_monthly_usd")
+  aiBudgetSpentUsd       Float    @default(0) @map("ai_budget_spent_usd")
+  aiBudgetMonthYyyymm    String?  @map("ai_budget_month_yyyymm")
+  messagesThisMonth      Int      @default(0) @map("messages_this_month")
+  messagesMonthYyyymm    String?  @map("messages_month_yyyymm")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("chat_widget_configs")
+}
+
+/// Chat Widget v0 — one row per visitor session. Lead snapshot fields populate as
+/// the flow advances. Status: active | completed | abandoned. Notification status
+/// recorded so retries / observability are possible later.
+model ChatWidgetThread {
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")
+  sourceHost  String?   @map("source_host")
+  sourcePath  String?   @map("source_path")
+  ipHash      String?   @map("ip_hash")
+  userAgent   String?   @map("user_agent")
+  leadName    String?   @map("lead_name")
+  leadEmail   String?   @map("lead_email")
+  leadPhone   String?   @map("lead_phone")
+  requestType String?   @map("request_type")
+  leadMessage String?   @map("lead_message")
+  status      String    @default("active")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  ticketId    String?   @map("ticket_id")
+  notifiedAt  DateTime? @map("notified_at")
+  notifyError String?   @map("notify_error")
+  flowVersion Int       @default(1) @map("flow_version")
+  currentNode String?   @map("current_node")
+
+  messages ChatWidgetMessage[]
+
+  @@index([tenantId, startedAt])
+  @@index([tenantId, status])
+  @@map("chat_widget_threads")
+}
+
+/// Chat Widget v0 — one row per step (bot prompt or user response).
+model ChatWidgetMessage {
+  id        String   @id @default(cuid())
+  threadId  String   @map("thread_id")
+  tenantId  String   @map("tenant_id")
+  direction String
+  nodeId    String?  @map("node_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  thread ChatWidgetThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("chat_widget_messages")
+}
+
+/// Chat Widget v0 — sliding-window rate limiter rows. One row per
+/// (tenant, ip_hash, window_start_minute). Pruned by app logic on write
+/// (rows older than 24h dropped opportunistically).
+model ChatWidgetRateLimit {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  ipHash      String   @map("ip_hash")
+  windowStart DateTime @map("window_start")
+  count       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, ipHash, windowStart], name: "chat_widget_rate_limits_t_ip_w")
+  @@index([tenantId, ipHash])
+  @@index([windowStart])
+  @@map("chat_widget_rate_limits")
 }

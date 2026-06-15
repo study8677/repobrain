@@ -28,6 +28,70 @@
 
 ---
 
+## 2026-06-15 — Multi-tenant **IM-1 schema packet** (additive, behaviour-free) — first implementation packet from the approved r2 membership-matrix design in `docs/operations/OPERATOR_MULTI_TENANT_CREDENTIAL_V1.md`. Ships the foundation for the `user_tenant_memberships` membership matrix without changing any visible behaviour: a new `user_tenant_memberships` table with a partial-unique `(user_id, tenant_id) WHERE revoked_at IS NULL` index for soft-revoke semantics, a new `auth_users.factory_master boolean NOT NULL DEFAULT false` column guarded by a Postgres CHECK constraint (`auth_users_factory_master_admin_only` — admins-only), and new `automation_events.actor_user_id` + `telemetry_events.actor_user_id` nullable audit columns (each with a single-column index). Anton's `factory_master=true` flip is **NOT** applied as part of the migration — it is a separate operator step run via `scripts/promote-factory-master.mjs --username=anton` only after the schema deploys and Anton has confirmed his auth_users row via the read-only verification query in the DRA. All DDL is additive (`create table if not exists`, `add column if not exists`, `do $$ ... if not exists ... end $$` block for the CHECK) and applies on every Vercel build via the existing `scripts/apply-ensure-schema-build.mjs`; a formal `prisma/migrations/20260615080000_im_1_user_tenant_memberships/migration.sql` is the historical record (`prisma migrate resolve --applied` post-deploy if ensure-schema landed it first per existing convention). Files: `lib/server/postgres-ensure-schema-statements.js` (8 new statements appended), `prisma/schema.prisma` (3 model edits + 1 new model `UserTenantMembership`), the migration SQL, `scripts/seed-user-tenant-memberships.mjs` (idempotent backfill from `auth_users.tenant_id` for `level='tenant'` rows only), `scripts/promote-factory-master.mjs --username=<name>` (separate one-off, idempotent, refuses `level='tenant'` rows). Tests added (no live DB required): `node-tests/im-1-schema-shape.test.mjs` asserts the DDL strings declare every column / index / constraint named in the design doc §2.3 + §2.6; `node-tests/im-1-seed-idempotency.test.mjs` exercises the seeder in-memory and proves it is idempotent on re-run, never seeds admin / orphan / disabled rows, and treats revoked rows as absent so a re-grant succeeds.
+
+<!-- MULTI_TENANT_IM_1_SCHEMA_2026_06_15_HIST -->
+
+**Status:** **PARTIAL** per `.cursor/rules/delivery-reality.mdc` — schema deltas, scripts, and tests are in the repo and all local gates green (792/792 `npm test`, clean `npx next build --webpack`, clean `npx prisma validate`, zero lint errors). PR + merge SHA + Vercel Production deployment ID + Ready timestamp + live SQL verification + backfill dry-run/real-run + Anton-row promotion are appended to this bullet by Cursor as each step lands. Cannot flip to COMPLETE until the live SQL verification confirms every column / constraint / index from §2.3 + §2.6 is present on production Neon AND the back-fill seed reports `inserted=0` on its second `--dry-run` AND (optional) Anton's `factory_master=true` row is set after his explicit confirmation of which auth_users row is his.
+
+**Why this matters:** Without IM-1, the membership matrix is design-only and IM-2..IM-8 cannot start. Because the entire delta is additive (no DROP, no RENAME, no NOT-NULL backfill on existing rows, no production code path reads the new fields), the blast radius is limited to "schema present but unused" — worst-case rollback is to drop the table + columns, with zero data loss for tenant clients or operators.
+
+**Boundary discipline:** IM-1 ships on the dedicated branch `feat/platform-multi-tenant-im-1` (off origin/main, no inherited unrelated work). The visual-separation v1 work and the stream-boundary doc work that were also approved in the same session ship on their own separate PRs — not bundled here — per the stream-boundary rule in `docs/operations/MULTI_TENANT_CONTAINMENT_AND_VISUAL_SEPARATION_AUDIT.md`. The chatbot work under `lib/server/chat-widget/` and the Living Word delivery scripts under `scripts/*living-word-mauritius*.mjs` are owned by their own delivery streams and are not touched by this packet.
+
+**Delivery Reality Audit (IM-1) — appended as evidence lands:**
+
+```text
+Delivery Reality Audit (IM-1):
+- Local fix exists: YES
+- Merged to main: <PENDING — Cursor appends PR # + merge SHA after merge>
+- Production deployment ID: <PENDING — Cursor appends Vercel deployment ID + Ready timestamp>
+- Commit deployed: <PENDING>
+- Live URLs tested:
+    None required for IM-1 (schema-only; no client-facing surface changes by design).
+    Required live verification on Production after deploy:
+      1) Read-only SQL on production Neon — 6 queries (see PR description for the exact block):
+         (a) auth_users.factory_master exists + DEFAULT false
+         (b) CHECK constraint auth_users_factory_master_admin_only is present
+         (c) actor_user_id columns + indexes on both event tables
+         (d) user_tenant_memberships table columns + types
+         (e) 4 indexes on user_tenant_memberships (3 regular + 1 partial-unique)
+         (f) SELECT id, username, level, tenant_id, factory_master FROM auth_users
+               WHERE level='admin' AND enabled=true ORDER BY username
+             — Anton confirms the exact row BEFORE any factory_master write.
+      2) node scripts/seed-user-tenant-memberships.mjs --dry-run
+         → inspect WOULD-INSERT log → run without --dry-run → re-run with --dry-run
+         → second-run reports inserted=0 (proves idempotency).
+      3) Optional after step (f) confirmation:
+         node scripts/promote-factory-master.mjs --username=anton --dry-run
+         → inspect WOULD-PROMOTE log → run without --dry-run → re-run reports NO-OP.
+- Expected vs actual result: <PENDING — Cursor appends after step 2 + 3>
+- Client-facing flow usable: N/A — schema-only. lux.corpflowai.com/change,
+    living-word-mauritius.corpflowai.com/change, core.corpflowai.com/change, /login,
+    and every CMP API path read zero new columns and zero new rows.
+- No runtime behaviour change: YES (repo-wide grep confirms no production code
+    references the new fields; only Prisma schema, the DDL list, the migration files,
+    the IM-1 scripts, the IM-1 tests, and the design docs).
+- No new env vars: YES (.env.template unchanged; both scripts use the existing
+    scripts/bootstrap-repo-env.mjs flow; CORPFLOW_CORE_HOST is an IM-2 introduction).
+- Existing tests still pass: YES (792/792, +10 new IM-1 tests, zero regressions).
+- Rollback plan:
+    (a) Revert PR on main.
+    (b) On the Production DB:
+        BEGIN;
+        DROP TABLE IF EXISTS user_tenant_memberships;
+        ALTER TABLE auth_users DROP CONSTRAINT IF EXISTS auth_users_factory_master_admin_only;
+        ALTER TABLE auth_users      DROP COLUMN IF EXISTS factory_master;
+        ALTER TABLE automation_events DROP COLUMN IF EXISTS actor_user_id;
+        ALTER TABLE telemetry_events  DROP COLUMN IF EXISTS actor_user_id;
+        COMMIT;
+        npx prisma migrate resolve --rolled-back 20260615080000_im_1_user_tenant_memberships
+    Rollback is itself a separate packet, run with Anton's per-packet approval.
+    Non-destructive (no in-flight tenant or operator data depends on the new fields).
+- Final verdict: PARTIAL (will flip when steps 1+2 succeed and Anton confirms his row)
+```
+
+---
+
 ## 2026-06-15 — LuxeMaurice Content Population Sprint **C3 placeholder cleanup live-verified COMPLETE**: PR #356 merged + Vercel Production Ready + `https://lux.corpflowai.com/sitemap.xml` returns 0 `/property/` URLs (was 7), all 8 placeholder slugs absent, `/properties` premium empty state intact, bookmark back-compat preserved, C1/C2/C4 untouched and remain Open per the read-only audit
 
 <!-- LUXEMAURICE_C3_PLACEHOLDER_CLEANUP_LIVE_VERIFIED_2026_06_15_HIST -->
