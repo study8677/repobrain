@@ -32,42 +32,81 @@
 
 <!-- MULTI_TENANT_IM_2_READ_APIS_2026_06_15_HIST -->
 
-**Status:** **PARTIAL** per `.cursor/rules/delivery-reality.mdc` — code, tests, and all local gates green (810/810 `npm test` = +18 from IM-1's 792 baseline, clean `npx next build --webpack`, clean `npx prisma validate`, zero lint errors). PR # + merge SHA + Vercel Production deployment ID + Ready timestamp + live endpoint verification on `core.corpflowai.com` are appended below as each step lands. Cannot flip to **COMPLETE** until live `GET https://core.corpflowai.com/api/membership/effective` confirms the expected 401/400/403/200 contract on Production AND a tenant-host call to `/api/membership/list` returns `403 SWITCH_NOT_ALLOWED_FROM_HOST` AND `lux.corpflowai.com/` + `lux.corpflowai.com/change` remain green (no regression — IM-2 touches no rendering code).
+**Status:** **COMPLETE** per `.cursor/rules/delivery-reality.mdc` — IM-2 PR #363 merged at `2026-06-15T07:32:01Z` (squash, merge SHA `8f4c2b5f42b5c6201c25ae61b0c68233132a44c1`), Vercel Production deployment **`5061242008`** Ready at `2026-06-15T07:32:55Z` (54 s after merge) serving the merge SHA, and all 9 read-only Production probes returned the exact contract expected (5 IM-2 endpoint checks on `core.corpflowai.com` + `lux.corpflowai.com` with the exact `UNAUTHENTICATED` / `UNEXPECTED_USER_ID` / `SWITCH_NOT_ALLOWED_FROM_HOST` / `METHOD_NOT_ALLOWED` envelopes; 4 regression checks on `lux.corpflowai.com/`, `lux.corpflowai.com/change`, `core.corpflowai.com/`, `core.corpflowai.com/api/factory/health`). Local gates green at merge (810/810 `npm test` = +18 from IM-1's 792 baseline, clean `npx next build --webpack`, clean `npx prisma validate`, zero lint errors). No production writes, no backfill, and no factory-master promotion were performed for IM-2 (out of scope).
 
 **Why this matters:** IM-1 only added the schema. IM-2 is the first packet that lets future surfaces (the picker UX in IM-3, the session enrichment in IM-5, the CMP enforcement layer in IM-6) call a single canonical function for "what tenants is this user actually allowed to see?" without each one reinventing the rules. The 12 tampering vectors prove that the read APIs cannot be bypassed by URL / host-header / body / cookie / method tampering — which is the security baseline that IM-5 / IM-6 will inherit unchanged when they ship their write paths and switch flows.
 
 **Boundary discipline:** IM-2 ships on the dedicated branch `feat/platform-multi-tenant-im-2` (off `origin/main` at `93701206`, the merged stream-boundary commit). The IM-1 schema work was already merged separately (PR #359 / #361 — IM-1 row in this file is **COMPLETE**). The visual-separation v1 work, the chatbot work under `lib/server/chat-widget/`, the Living Word delivery scripts under `scripts/*living-word-mauritius*.mjs`, and the apex Search Console rollout are owned by their own delivery streams and are not touched by this packet. Future IM-3 / IM-4 / IM-5 / IM-6 / IM-7 / IM-8 packets each ship their own PR off a fresh `feat/platform-multi-tenant-im-<n>` branch.
 
-**Delivery Reality Audit (IM-2) — appended as evidence lands:**
+**Delivery Reality Audit (IM-2) — Production-verified:**
 
 ```text
 Delivery Reality Audit (IM-2):
 - Local fix exists: YES
-- Merged to main: <PENDING — Cursor appends PR # + merge SHA after merge>
-- Production deployment ID: <PENDING — Cursor appends Vercel deployment ID + Ready timestamp>
-- Commit deployed: <PENDING>
-- Live URLs tested:
-    Required live verification on Production after deploy (all read-only — no writes
-    are performed against production data for IM-2):
-      1) GET https://core.corpflowai.com/api/membership/effective
-           (no session cookie)  → expect 401 UNAUTHENTICATED
-      2) GET https://core.corpflowai.com/api/membership/effective?user_id=anything
-           (no session cookie)  → expect 400 UNEXPECTED_USER_ID (proves tampering
-             is rejected BEFORE the auth check, so the error message is visible
-             to anyone probing the endpoint — desirable for audit)
-      3) GET https://lux.corpflowai.com/api/membership/effective
-           → expect 403 SWITCH_NOT_ALLOWED_FROM_HOST (tenant host cannot call
-             the read API; future IM-5 switch-tenant uses the same gate)
-      4) GET https://lux.corpflowai.com/api/membership/list?user_id=anyone
-           → expect 403 SWITCH_NOT_ALLOWED_FROM_HOST
-      5) POST https://core.corpflowai.com/api/membership/effective
-           → expect 405 METHOD_NOT_ALLOWED + Allow: GET
-      6) Regression sanity: GET https://lux.corpflowai.com/, /change,
-           https://core.corpflowai.com/, https://core.corpflowai.com/api/factory/health
-           → all still 200 (IM-2 touches zero rendering / zero existing handlers).
-- Expected vs actual result: <PENDING — Cursor appends after Production checks>
-- Client-facing flow usable: N/A — endpoints are Core-host operator surface only.
-    Lux + Living Word client surfaces unchanged.
+- Merged to main: YES — PR #363 squashed to main at 2026-06-15T07:32:01Z
+    Merge SHA: 8f4c2b5f42b5c6201c25ae61b0c68233132a44c1
+    Title: feat(platform): IM-2 read-side membership API + 12-vector tampering tests
+- Production deployment ID: 5061242008 (GitHub Deployments API row),
+    environment=Production, status=success, Ready at 2026-06-15T07:32:55Z
+    (54 seconds after merge)
+- Commit deployed: 8f4c2b5f42b5c6201c25ae61b0c68233132a44c1 (matches merge SHA)
+- Live URLs tested (read-only Production checks — no writes, no backfill,
+    no factory-master promotion performed):
+
+    [DRA1] GET https://core.corpflowai.com/api/membership/effective  (no cookie)
+      HTTP/1.1 401 Unauthorized
+      Content-Type: application/json; charset=utf-8
+      Body: {"ok":false,"error":"UNAUTHENTICATED","reason":"missing"}
+      → PASS  (expected 401, error code matches contract)
+
+    [DRA2] GET https://core.corpflowai.com/api/membership/effective?user_id=anything  (no cookie)
+      HTTP/1.1 400 Bad Request
+      Content-Type: application/json; charset=utf-8
+      Body: {"ok":false,"error":"UNEXPECTED_USER_ID","message":"GET /api/membership/effective returns the session user's own matrix only. To query another user, use GET /api/membership/list?user_id=<id> (requires factory_master)."}
+      → PASS  (guardrail #1 satisfied — query tampering rejected before auth so
+        it is visible in access logs; error message points operator at the
+        factory_master-only sibling endpoint)
+
+    [DRA3] GET https://lux.corpflowai.com/api/membership/effective
+      HTTP/1.1 403 Forbidden
+      Content-Type: application/json; charset=utf-8
+      Body: {"ok":false,"error":"SWITCH_NOT_ALLOWED_FROM_HOST","message":"This endpoint is only available on a Core host. Switch to the Core host (e.g. core.corpflowai.com) and retry.","host":"lux.corpflowai.com"}
+      → PASS  (tenant host correctly rejected; host echoed back for audit)
+
+    [DRA4] GET https://lux.corpflowai.com/api/membership/list?user_id=anyone
+      HTTP/1.1 403 Forbidden
+      Content-Type: application/json; charset=utf-8
+      Body: {"ok":false,"error":"SWITCH_NOT_ALLOWED_FROM_HOST","message":"This endpoint is only available on a Core host. Switch to the Core host (e.g. core.corpflowai.com) and retry.","host":"lux.corpflowai.com"}
+      → PASS  (tenant-host host gate fires before any session / user_id checks
+        — IM-5 switch-tenant will inherit the same gate)
+
+    [DRA5] POST https://core.corpflowai.com/api/membership/effective
+      HTTP/1.1 405 Method Not Allowed
+      Allow: GET
+      Content-Type: application/json; charset=utf-8
+      Body: {"ok":false,"error":"METHOD_NOT_ALLOWED"}
+      → PASS  (state-changing methods rejected; Allow header present)
+
+    Regression sanity — IM-2 touches zero rendering code; the 4 customer-facing
+    surfaces must remain green:
+
+    [REG1] GET https://lux.corpflowai.com/                              → 200 OK
+           (LuxeMaurice landing HTML; "<title>LuxeMaurice — Private Wealth & ...")
+    [REG2] GET https://lux.corpflowai.com/change                        → 200 OK
+           (Change Console renders)
+    [REG3] GET https://core.corpflowai.com/                             → 200 OK
+           (CorpFlow Core landing renders)
+    [REG4] GET https://core.corpflowai.com/api/factory/health           → 200 OK
+           {"ok":true,"status":"healthy","checks":{"database_configured":true,
+            "sovereign_session_configured":true,"admin_operator_ready":true,
+            "runtime_config_valid":true},...}
+      → PASS × 4  (zero regression on customer-facing surfaces)
+
+- Expected vs actual result: 9 / 9 probes PASS with exact contract match
+    (status code + error code string + message body + Allow header where applicable).
+- Client-facing flow usable: YES — Lux landing + Change Console both 200;
+    Core landing + factory health both 200. IM-2 endpoints are Core-host
+    operator surface only and do not change anything client-facing.
 - No runtime behaviour change for existing callers: YES (existing routes untouched;
     new dispatch branches only fire for the two new pathSeg values).
 - No new env vars: YES (.env.template unchanged; `requireCoreHost` reuses the
@@ -78,16 +117,19 @@ Delivery Reality Audit (IM-2):
     READS .user_id / .typ — IM-5 will be the packet that enriches it).
 - No CMP enforcement change: YES (lib/cmp/router.js untouched; IM-6 owns that).
 - No UI change: YES (pages/change.js + components/* untouched).
-- Existing tests still pass: YES (810/810 local; baseline before IM-2 was 792).
+- No production writes / no backfill / no factory_master promotion: YES, all
+    verification was read-only HTTP GETs / one HTTP POST that the API rejects
+    with 405 before any DB call is made.
+- Existing tests still pass: YES (810/810 local at merge; baseline before IM-2
+    was 792 = +18 IM-2 tests).
 - New tests: 18 (vectors v1–v12 plus v5b / v11b / v11c sub-vectors plus three
     extras: disabled-row, unknown-user, blank-user).
-- Rollback plan: revert PR; the two new routes disappear; helper + host-policy
-    modules become unreferenced and inert; no schema / session / UI / CMP /
-    cron / env-var changes to undo. Blast radius is strictly "two new 404s
-    would re-appear" if a future caller had already started using the routes.
-- Final verdict: PARTIAL (will flip to COMPLETE only after step 6 regression
-    sanity + steps 1–5 endpoint contract checks against lux.corpflowai.com
-    and core.corpflowai.com on Production)
+- Rollback plan: revert PR #363; the two new routes disappear (would return
+    404); helper + host-policy + membership-api modules become unreferenced
+    and inert; no schema / session / UI / CMP / cron / env-var changes to undo.
+    Blast radius is strictly "two new 404s would re-appear" if a future caller
+    had already started using the routes.
+- Final verdict: COMPLETE
 ```
 
 ---
