@@ -28,6 +28,48 @@
 
 ---
 
+## 2026-06-15 — Multi-tenant **IM-4 tenant-host "Switch workspace" link + additive `/api/ui/context` field** — fourth implementation packet from the approved r2 membership-matrix design in `docs/operations/OPERATOR_MULTI_TENANT_CREDENTIAL_V1.md` (§10 IM-4). Adds a single tenant-host affordance — a plain `<a href="https://core.corpflowai.com/change" data-cf-switch-workspace="true">Switch workspace</a>` rendered conditionally inside the canonical Next.js `pages/change.js` — backed by an additive `effective_memberships_count` integer field on `GET /api/ui/context`. New files: `lib/ui/tenant-host-switch-link.js` (pure helpers: `shouldShowSwitchLink({ surface, sessionLogged, effectiveMembershipsCount }) → boolean`, `coreSwitchUrl({ coreHostsEnv }) → string`, `computeEffectiveMembershipsCountForUiContext(sess, { getEffectiveMembershipsFn }) → number | null`; the third helper takes the Prisma-backed `getEffectiveMemberships` via DI so the file stays browser-safe and unit-testable in isolation); `node-tests/tenant-host-switch-link.test.mjs` (8 tests, ~20-row truth table covering surface=core / surface=null / anonymous / count=null / count=0 / count=1 / count=2 / count=50 / fractional / string / NaN / Infinity / missing args, plus `coreSwitchUrl` env parsing + sanitisation including the `attacker.example.com" onclick=alert(1)` defense case); `node-tests/ui-context-memberships-count.test.mjs` (13 tests covering null session, undefined session, anonymous, env-master no-`user_id`, whitespace-only `user_id`, DB-backed 0 / 1 / 3 memberships, factory_master 12-tenant expansion, helper throws → null (guardrail #6), malformed payload → 0, "never returns a tenant identity" guardrail #5). Edited: `api/factory_router.js` — adds two new imports (`getEffectiveMemberships`, `computeEffectiveMembershipsCountForUiContext`) and one new field on the `/api/ui/context` JSON response (`effective_memberships_count`), value computed inside `handleUiContext` by calling the new helper with `getEffectiveMembershipsFn: getEffectiveMemberships` injected; `pages/change.js` — adds one import block and one conditional `<a>` render block at the top of the page body (above the existing debug banner), gated by `shouldShowSwitchLink({ surface: uiContext?.surface, sessionLogged: session?.logged_in === true, effectiveMembershipsCount: uiContext?.effective_memberships_count })`.
+
+<!-- MULTI_TENANT_IM_4_SWITCH_WORKSPACE_LINK_2026_06_15_HIST -->
+
+**Why this matters:** IM-2 shipped the read-only membership API but nothing in the UI consumed it. IM-4 is the smallest possible packet that makes the membership matrix visible to a real user — without owning any of the harder concerns IM-5 will own (session shape change, `acting_tenant_id`, switch/leave POST endpoints, cookie re-issue, login redirect resolver). The link is intentionally described as **navigation to Core**, not as workspace switching: clicking it lands the operator on `core.corpflowai.com/change`, where IM-3 (picker UX) will eventually live. This packet does not call any switch endpoint, does not re-issue a cookie, and does not write anything. It also does not list other tenant identities on the tenant host (guardrail #5: the affordance reveals only the *existence* of more than one workspace via the integer count — never names, IDs, or hostnames).
+
+**Boundary discipline:** IM-4 ships on the dedicated branch `feat/platform-multi-tenant-im-4` (off `origin/main` at `1e59944e`, the merged IM-2 DRA commit). The IM-3 picker UX, the IM-5 session enrichment + switch endpoints, the IM-6 CMP enforcement layer, and IM-7 / IM-8 are not touched by this packet. Zero schema change, zero new env vars, zero new endpoints (only an additive field on an existing one), zero writes, zero backfill, zero `factory_master=true` promotion, zero test data seeding (all out of scope per Anton's guardrail #7). Visual-separation v1, Living Word delivery, chatbot, marketing, and tenant delivery streams are explicitly out of scope.
+
+**Local gates (pre-merge):** `npm test` = **831 / 831** pass (was 810 on `main`; +21 from this packet: 8 helper tests + 13 context-field tests). `npx prisma validate` = `The schema at prisma/schema.prisma is valid 🚀`. `npm run build` = clean Next build, `/change` route renders ✓. `ReadLints` on the 5 touched + new files = zero lint errors.
+
+**Delivery Reality Audit (IM-4) — PLACEHOLDER pending Preview verification:**
+
+```text
+Delivery Reality Audit (IM-4):
+- Local fix exists: YES
+- Merged to main: NO (open PR pending Anton's review)
+- Production deployment ID: PENDING
+- Commit deployed: PENDING
+- Live URLs tested (preview before merge):
+    [P1] GET <preview>/api/ui/context (no cookie, on Core preview host)
+         → expect 200 with effective_memberships_count: null (anonymous)
+    [P2] GET <preview>/api/ui/context (no cookie, on tenant preview host)
+         → expect 200 with effective_memberships_count: null (anonymous on tenant host)
+    [P3] GET <preview>/change (tenant preview host, anonymous)
+         → expect 200 HTML, MUST NOT contain "Switch workspace"
+    [P4] GET <preview>/change (Core preview host, anonymous)
+         → expect 200 HTML, MUST NOT contain "Switch workspace"
+    [P5] curl <preview>/api/membership/effective (no cookie, on Core preview host)
+         → expect 401 UNAUTHENTICATED (IM-2 regression check)
+- Expected vs actual result: PENDING
+- Client-facing flow usable: PENDING
+- No production writes / no backfill / no factory_master promotion: YES (out of scope)
+- No schema change / no new env vars / no new endpoints: YES (only one additive field
+    on /api/ui/context)
+- Final verdict: PARTIAL — local complete, awaiting Preview verification on the PR
+    branch then Production verification post-merge per .cursor/rules/delivery-reality.mdc.
+```
+
+**Next gates (per `.cursor/rules/predeploy-decision-checks.mdc`):** Preview deploy → preview probes P1–P5 → Anton review → squash merge → Vercel Production deploy → re-run P1–P5 against Production `core.corpflowai.com` and `lux.corpflowai.com` → flip verdict to **COMPLETE** with full DRA appended here. No deploy / DNS / billing / secrets / DB-write work in this packet.
+
+---
+
 ## 2026-06-15 — Multi-tenant **IM-2 read-side membership API + tampering tests** — implementation packet (read-only API surface, additive, no schema change). Second implementation packet from the approved r2 membership-matrix design in `docs/operations/OPERATOR_MULTI_TENANT_CREDENTIAL_V1.md`. Ships the helper, two Core-host-only read endpoints, and the 12-vector tampering test suite — with **zero** session-shape change, **zero** UI change, **zero** CMP enforcement change, **zero** tenant picker work, **zero** writes to `user_tenant_memberships`, and **zero** new env vars (`requireCoreHost` deliberately reuses the existing `CORPFLOW_CORE_HOSTS` resolver in `lib/server/host-tenant-context.js` — single source of truth for Core vs tenant surface). New files: `lib/server/effective-memberships.js` (helper `getEffectiveMemberships(userId, { prismaClient? })` with defensive in-JS re-check that factory_master expansion only fires for `level='admin' AND enabled=true`, bounded to `tenant_status='Active'`, never cached; tags each row `source='explicit' | 'factory_master'`); `lib/server/host-policy.js` (thin wrapper exposing `requireCoreHost(req)` / `isCoreHost(req)` / `assertCoreHostOrReject(req, res)`); `lib/server/membership-api.js` (handlers for the two endpoints below); `node-tests/user-tenant-membership-tampering.test.mjs` (18 tests: vectors v1–v12 plus v5b / v11b / v11c sub-vectors plus three extras). Edited: `api/factory_router.js` — adds **6 lines** (one named import + two `pathSeg ===` branches), no existing route logic touched. Endpoints: `GET /api/membership/effective` returns the session user's own effective matrix only — `?user_id=` triggers explicit `400 UNEXPECTED_USER_ID` (per Anton's guardrail #1, query tampering must be visible not silent); `GET /api/membership/list?user_id=<id>` requires Core host + admin-level session + DB-backed `auth_users.factory_master=true`; tenant hosts always receive `403 SWITCH_NOT_ALLOWED_FROM_HOST`. Session payloads without `user_id` (legacy env-master / PIN) receive `400 NO_USER_ID_IN_SESSION` — explicit so the IM-8 deprecation of those legacy paths is observable.
 
 <!-- MULTI_TENANT_IM_2_READ_APIS_2026_06_15_HIST -->

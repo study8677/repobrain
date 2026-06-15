@@ -67,6 +67,8 @@ import {
   handleChangeAttachmentUpload,
 } from '../lib/server/change-attachments.js';
 import { handleMembershipEffective, handleMembershipList } from '../lib/server/membership-api.js';
+import { getEffectiveMemberships } from '../lib/server/effective-memberships.js';
+import { computeEffectiveMembershipsCountForUiContext } from '../lib/ui/tenant-host-switch-link.js';
 import { handleLuxPropertyMedia } from '../lib/server/lux-property-media.js';
 import { handleLuxPropertyMediaList } from '../lib/server/lux-published-property-media.js';
 import { tryHandleLuxListingsPublicRead } from '../lib/server/lux-listings-public.js';
@@ -704,6 +706,19 @@ async function handleUiContext(req, res) {
 
   const hostSessionConflict = getTenantHostSessionConflict(req);
 
+  /**
+   * IM-4 (2026-06-15) — additive `effective_memberships_count` field on
+   * /api/ui/context. The helper lives in `lib/ui/tenant-host-switch-link.js`
+   * (browser-safe, unit-testable in isolation) and we inject the
+   * Prisma-backed `getEffectiveMemberships` here so production exercises the
+   * same code path as the tests. The helper guarantees null-on-error
+   * semantics (guardrail #6: never 5xx) and only ever returns a number or
+   * null — never tenant identities (guardrail #5).
+   */
+  const effective_memberships_count = await computeEffectiveMembershipsCountForUiContext(sess, {
+    getEffectiveMembershipsFn: getEffectiveMemberships,
+  });
+
   return res.status(200).json({
     ok: true,
     host: ctx.host,
@@ -723,6 +738,7 @@ async function handleUiContext(req, res) {
     core_login_url,
     tenant_host_session_mismatch: Boolean(hostSessionConflict),
     tenant_host_session: hostSessionConflict,
+    effective_memberships_count,
   });
 }
 

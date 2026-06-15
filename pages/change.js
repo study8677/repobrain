@@ -44,6 +44,12 @@ import {
   normalizeLuxContentSprintCode,
 } from '../lib/client/lux-content-sprint-guidance.js';
 import LuxContentSprintPanel from '../components/LuxContentSprintPanel.js';
+import {
+  SWITCH_WORKSPACE_DATA_ATTR,
+  SWITCH_WORKSPACE_LINK_TEXT,
+  coreSwitchUrl,
+  shouldShowSwitchLink,
+} from '../lib/ui/tenant-host-switch-link.js';
 
 function normalizeLocale(raw) {
   const s = String(raw || '').trim().toLowerCase().replace(/_/g, '-');
@@ -2223,9 +2229,59 @@ export default function ChangeConsolePage() {
     busy,
   ]);
 
+  /**
+   * IM-4 (2026-06-15) — tenant-host "Switch workspace" affordance.
+   *
+   * Pure decision (no DOM, no fetch) — `shouldShowSwitchLink` enforces:
+   *   surface === 'tenant'  (Core hosts get nothing)
+   *   session.logged_in === true  (anonymous gets nothing)
+   *   uiContext.effective_memberships_count > 1  (single-membership gets nothing)
+   *
+   * Renders a plain `<a>` to Core /change — this is NAVIGATION TO CORE, not
+   * tenant switching. IM-5 owns the actual switch (session shape change,
+   * `acting_tenant_id`, switch / leave endpoints, cookie re-issue).
+   *
+   * IM-4 guardrail #5: the link reveals only the existence of >1 workspace.
+   * It does NOT list tenant names, ids, or hostnames — that is intentional.
+   */
+  const showSwitchWorkspaceLink = shouldShowSwitchLink({
+    surface: uiContext?.surface,
+    sessionLogged: session?.logged_in === true,
+    effectiveMembershipsCount: uiContext?.effective_memberships_count,
+  });
+
   return (
     <div ref={changeRootRef} style={luxChangeChrome ? luxChangeChrome.shellStyle() : changePageShellStyle({ background: '#020617', minHeight: '100vh' })}>
       <div style={pageInner}>
+      {showSwitchWorkspaceLink ? (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid rgba(148, 163, 184, 0.35)',
+            background: 'rgba(15, 23, 42, 0.55)',
+            fontSize: 12,
+            color: '#e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+          data-cf-switch-workspace-container="true"
+        >
+          <a
+            href={coreSwitchUrl({ coreHostsEnv: null })}
+            {...{ [SWITCH_WORKSPACE_DATA_ATTR]: 'true' }}
+            style={{
+              color: '#bae6fd',
+              textDecoration: 'underline',
+              fontWeight: 600,
+            }}
+          >
+            {SWITCH_WORKSPACE_LINK_TEXT}
+          </a>
+        </div>
+      ) : null}
       {showChangeDebugBanner ? (
         <div
           style={{
