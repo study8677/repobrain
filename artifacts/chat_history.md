@@ -90,6 +90,105 @@ Delivery Reality Audit (IM-1):
 - Final verdict: PARTIAL (will flip when steps 1+2 succeed and Anton confirms his row)
 ```
 
+### Live-verification evidence (2026-06-15 UTC+4) — verdict flips to COMPLETE
+
+**Delivery pipeline:**
+
+- PR: [#359](https://github.com/antonvdberg-bit/corpflow-ai-command-center/pull/359) `feat(platform): IM-1 multi-tenant user membership schema (additive, behaviour-free)`.
+- Merge: squash-merged onto `main` as commit `1c46dfbc150877ea8b39ec336cc18869e1ed906e`, branch `feat/platform-multi-tenant-im-1` deleted, 8 files / 798 insertions / 22 deletions exactly as committed.
+- Vercel Production: deployment `5059820786` (GitHub Deployments id) backing URL `https://corpflow-ai-command-center-eac894ukm-corpflowai.vercel.app`, state `success` ("Deployment has completed") at `2026-06-15T04:26:28Z`. Apex `https://core.corpflowai.com/api/factory/health` returned `{"ok":true,"status":"healthy"}` immediately after deploy.
+
+**Production read-only schema verification (executed via `scripts/verify-im-1-schema.mjs` against the production `POSTGRES_URL`; no secrets printed):**
+
+| # | Check | Result |
+|---|---|---|
+| (a) | `auth_users.factory_master` exists | `boolean`, `NOT NULL`, default `false` |
+| (b) | `auth_users_factory_master_admin_only` CHECK constraint | `CHECK (((factory_master = false) OR (level = 'admin'::text)))` |
+| (c-1) | `actor_user_id` columns | both `automation_events` and `telemetry_events` have it, `text`, nullable |
+| (c-2) | `actor_user_id` indexes | `automation_events_actor_user_id_idx`, `telemetry_events_actor_user_id_idx` both present |
+| (d) | `user_tenant_memberships` columns | 11 columns in spec order: `id`, `user_id`, `tenant_id`, `role` (default `member`), `capability`, `enabled` (default `true`), `granted_at` (default `now()`), `granted_by` (default `system`), `revoked_at`, `disabled_at`, `notes` |
+| (e) | `user_tenant_memberships` indexes | `_pkey` (id), `tenant_id_idx`, `user_id_idx`, `user_enabled_revoked_idx`, and the partial unique `user_tenant_memberships_user_tenant_active_unique ON (user_id, tenant_id) WHERE (revoked_at IS NULL)` |
+
+**Production auth_users posture (read-only, surfaced for Anton; no writes):**
+
+- `SELECT ... FROM auth_users WHERE level='admin' AND enabled=true` → **0 rows.**
+- `SELECT ... FROM auth_users WHERE level='admin'` (including disabled) → **0 rows.**
+- `SELECT level, enabled, COUNT(*) FROM auth_users GROUP BY level, enabled` → only `{level=tenant, enabled=true, row_count=5}`.
+
+**Consequence:** the optional `factory_master=true` promotion is **N/A in today's production** — there is no admin DB row to promote. Anton's factory access is unchanged and continues via the env-based `MASTER_ADMIN_KEY` (confirmed by `/api/factory/health` reporting `admin_operator_ready: true` and `factory_browser_admin_configured: true`). When IM-5/IM-8 lands and the bootstrap+`<tenant>@corpflowai.com` pattern is replaced with proper admin DB rows, Anton can run `scripts/promote-factory-master.mjs --username=<his admin username>` once and the partial-unique + CHECK constraint make the operation safe-and-idempotent.
+
+**Back-fill (executed via `scripts/seed-user-tenant-memberships.mjs`):**
+
+```
+[dry-run]  start dry_run=true memberships_before=0 candidates=5
+[dry-run]  WOULD-INSERT × 5 (4 luxe-maurice, 1 living-word-mauritius)
+[dry-run]  done dry_run=true inserted=5 skipped_existing=0 skipped_orphan_tenant=0 memberships_after=0
+[real-run] start dry_run=false memberships_before=0 candidates=5
+[real-run] INSERTED × 5
+[real-run] done dry_run=false inserted=5 skipped_existing=0 skipped_orphan_tenant=0 memberships_after=5
+[re-dry]   start dry_run=true memberships_before=5 candidates=5
+[re-dry]   done dry_run=true inserted=0 skipped_existing=5 skipped_orphan_tenant=0 memberships_after=5
+```
+
+The re-dry-run reports `inserted=0 skipped_existing=5` → **idempotency proven**.
+
+**Post-backfill table state (read-only, via `scripts/verify-im-1-post-backfill.mjs`):**
+
+- 5 rows total, all `revoked_at IS NULL` (active), all `role='member'`, all `granted_by='system'`, all carrying notes `IM-1 back-fill from auth_users.tenant_id`.
+- Tenant distribution: `luxe-maurice` 4, `living-word-mauritius` 1.
+- All 5 memberships join cleanly to an `auth_users` row with `level='tenant'` AND `enabled=true`. `orphan_user_id=0`, `orphan_tenant_id=0`.
+- `auth_users.factory_master` distribution: 5 rows / **all `false`** (nobody promoted; column inert).
+
+**Runtime smoke checks (live GET, post-deploy + post-backfill):**
+
+| URL | Method | Result |
+|---|---|---|
+| `https://core.corpflowai.com/api/factory/health` | GET | 200, `{"ok":true,"status":"healthy", admin_operator_ready: true, factory_browser_admin_configured: true, ...}` |
+| `https://lux.corpflowai.com/` | GET | 200, 59 909 bytes (unchanged content) |
+| `https://lux.corpflowai.com/change` | GET | 200, 6 754 bytes (unchanged content) |
+| `https://living-word-mauritius.corpflowai.com/` | GET | 200, 18 945 bytes (unchanged content) |
+
+Zero behaviour change on the customer-facing surface. No CMP API path, `/login`, `/change`, tenant public surface, or factory route changed between the pre-merge state and post-merge / post-backfill state.
+
+**Boundary discipline preserved:**
+
+- IM-1 PR #359 contained **only** the 8 IM-1 files (schema DDL, Prisma schema, formal migration, two operator scripts, two unit-test files, the IM-1 chat-history bullet). The visual-separation v1 work and the stream-boundary doc work each ship on their own separate future PR. The chatbot work and the Living Word tenant delivery scripts are owned by their own delivery streams and were never touched by this packet.
+
+**Delivery Reality Audit (IM-1) — FINAL:**
+
+```text
+Delivery Reality Audit (IM-1):
+- Local fix exists: YES
+- Merged to main: YES (PR #359, squash commit 1c46dfbc150877ea8b39ec336cc18869e1ed906e)
+- Production deployment ID: 5059820786
+- Commit deployed: 1c46dfbc150877ea8b39ec336cc18869e1ed906e
+- Vercel deployment URL: https://corpflow-ai-command-center-eac894ukm-corpflowai.vercel.app
+- Production deploy state: success @ 2026-06-15T04:26:28Z
+- Live URLs tested:
+    GET https://core.corpflowai.com/api/factory/health → 200 ok=true healthy
+    GET https://lux.corpflowai.com/                    → 200 59909 bytes
+    GET https://lux.corpflowai.com/change              → 200  6754 bytes
+    GET https://living-word-mauritius.corpflowai.com/  → 200 18945 bytes
+- Schema verification on production Neon: PASSED (6/6 + 5 diagnostic counts)
+- Backfill dry-run / real / re-dry-run:
+    inserted=5 / inserted=5 / inserted=0 skipped_existing=5 — idempotency PROVEN
+- Post-backfill table state:
+    5 active rows, all role=member granted_by=system with IM-1 marker note,
+    0 orphan_user_id, 0 orphan_tenant_id, factory_master=false on all 5 rows
+- Anton factory_master promotion:
+    NOT EXECUTED — production has 0 level='admin' rows.
+    Optional step is structurally not applicable today.
+    Anton's factory access unchanged (env-based MASTER_ADMIN_KEY).
+- Client-facing flow usable: YES — schema-only PR, all customer surfaces serve as before.
+- No runtime behaviour change: YES — no production code path reads the new fields.
+- No new env vars: YES — .env.template unchanged.
+- Existing tests still pass: YES (792/792 on PR; CI ran the same set after merge).
+- Rollback plan: documented in PR #359 description (drop table + drop constraint + drop columns + prisma migrate resolve --rolled-back).
+- Final verdict: COMPLETE
+```
+
+**IM-2 status:** not started. IM-2 scope (membership read APIs / helpers + the 12 tampering tests in credential doc §9.5b) will be proposed in a separate packet for Anton's explicit approval before any code is written.
+
 ---
 
 ## 2026-06-15 — LuxeMaurice Content Population Sprint **C3 placeholder cleanup live-verified COMPLETE**: PR #356 merged + Vercel Production Ready + `https://lux.corpflowai.com/sitemap.xml` returns 0 `/property/` URLs (was 7), all 8 placeholder slugs absent, `/properties` premium empty state intact, bookmark back-compat preserved, C1/C2/C4 untouched and remain Open per the read-only audit
