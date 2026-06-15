@@ -32,41 +32,138 @@
 
 <!-- MULTI_TENANT_IM_4_SWITCH_WORKSPACE_LINK_2026_06_15_HIST -->
 
+**Status:** **COMPLETE** per `.cursor/rules/delivery-reality.mdc` — IM-4 PR #365 merged at `2026-06-15T09:31:24Z` (squash, merge SHA `d6d9946199aaf9dd0cc9e224282b5e087b773c23`), Vercel Production deployment **`5062513477`** Ready at `2026-06-15T09:32:17Z` (~53 seconds after merge) serving the merge SHA, and all 11 read-only Production probes returned the exact contract expected (2 `/api/ui/context` probes confirming the additive `effective_memberships_count: null` field on both Core and tenant hosts for anonymous; 2 `/change` HTML probes confirming the tenant-host HTML carries no "Switch workspace" string or `data-cf-switch-workspace` data attribute for anonymous on either Core or Lux; 5 IM-2 regression probes confirming byte-identical envelopes on Production; 2 additional landing-page regression probes — `lux.corpflowai.com/` and `core.corpflowai.com/` — both still 200 with the expected `<title>`). Local gates green at merge (831/831 `npm test` = +21 from IM-2's 810 baseline, clean `npx next build --webpack`, clean `npx prisma validate`, zero lint errors). No production writes, no backfill, no `factory_master=true` promotion, and no test data seeding were performed for IM-4 (out of scope per the IM-4 approval guardrails).
+
 **Why this matters:** IM-2 shipped the read-only membership API but nothing in the UI consumed it. IM-4 is the smallest possible packet that makes the membership matrix visible to a real user — without owning any of the harder concerns IM-5 will own (session shape change, `acting_tenant_id`, switch/leave POST endpoints, cookie re-issue, login redirect resolver). The link is intentionally described as **navigation to Core**, not as workspace switching: clicking it lands the operator on `core.corpflowai.com/change`, where IM-3 (picker UX) will eventually live. This packet does not call any switch endpoint, does not re-issue a cookie, and does not write anything. It also does not list other tenant identities on the tenant host (guardrail #5: the affordance reveals only the *existence* of more than one workspace via the integer count — never names, IDs, or hostnames).
 
 **Boundary discipline:** IM-4 ships on the dedicated branch `feat/platform-multi-tenant-im-4` (off `origin/main` at `1e59944e`, the merged IM-2 DRA commit). The IM-3 picker UX, the IM-5 session enrichment + switch endpoints, the IM-6 CMP enforcement layer, and IM-7 / IM-8 are not touched by this packet. Zero schema change, zero new env vars, zero new endpoints (only an additive field on an existing one), zero writes, zero backfill, zero `factory_master=true` promotion, zero test data seeding (all out of scope per Anton's guardrail #7). Visual-separation v1, Living Word delivery, chatbot, marketing, and tenant delivery streams are explicitly out of scope.
 
-**Local gates (pre-merge):** `npm test` = **831 / 831** pass (was 810 on `main`; +21 from this packet: 8 helper tests + 13 context-field tests). `npx prisma validate` = `The schema at prisma/schema.prisma is valid 🚀`. `npm run build` = clean Next build, `/change` route renders ✓. `ReadLints` on the 5 touched + new files = zero lint errors.
-
-**Delivery Reality Audit (IM-4) — PLACEHOLDER pending Preview verification:**
+**Delivery Reality Audit (IM-4) — Production-verified:**
 
 ```text
 Delivery Reality Audit (IM-4):
 - Local fix exists: YES
-- Merged to main: NO (open PR pending Anton's review)
-- Production deployment ID: PENDING
-- Commit deployed: PENDING
-- Live URLs tested (preview before merge):
-    [P1] GET <preview>/api/ui/context (no cookie, on Core preview host)
-         → expect 200 with effective_memberships_count: null (anonymous)
-    [P2] GET <preview>/api/ui/context (no cookie, on tenant preview host)
-         → expect 200 with effective_memberships_count: null (anonymous on tenant host)
-    [P3] GET <preview>/change (tenant preview host, anonymous)
-         → expect 200 HTML, MUST NOT contain "Switch workspace"
-    [P4] GET <preview>/change (Core preview host, anonymous)
-         → expect 200 HTML, MUST NOT contain "Switch workspace"
-    [P5] curl <preview>/api/membership/effective (no cookie, on Core preview host)
-         → expect 401 UNAUTHENTICATED (IM-2 regression check)
-- Expected vs actual result: PENDING
-- Client-facing flow usable: PENDING
-- No production writes / no backfill / no factory_master promotion: YES (out of scope)
-- No schema change / no new env vars / no new endpoints: YES (only one additive field
-    on /api/ui/context)
-- Final verdict: PARTIAL — local complete, awaiting Preview verification on the PR
-    branch then Production verification post-merge per .cursor/rules/delivery-reality.mdc.
+- Merged to main: YES — PR #365 squashed to main at 2026-06-15T09:31:24Z
+    Merge SHA: d6d9946199aaf9dd0cc9e224282b5e087b773c23
+    Title: feat(platform): IM-4 tenant-host Switch workspace link + additive /api/ui/context field
+- Production deployment ID: 5062513477 (GitHub Deployments API row),
+    environment=Production, status=success, Ready at 2026-06-15T09:32:17Z
+    (~53 seconds after merge)
+    environment_url: https://corpflow-ai-command-center-q6z02chna-corpflowai.vercel.app
+- Commit deployed: d6d9946199aaf9dd0cc9e224282b5e087b773c23 (matches merge SHA)
+- Live URLs tested (read-only Production checks — no writes, no backfill, no
+    factory_master promotion, no test data seeding performed):
+
+    Additive field contract on /api/ui/context (the only contract change in IM-4):
+
+    [CTX1] GET https://core.corpflowai.com/api/ui/context  (no cookie, Core host)
+      HTTP/1.1 200 OK
+      Content-Type: application/json; charset=utf-8
+      Body (last 60 chars): "...tenant_host_session":null,"effective_memberships_count":null}
+      Full body confirms 17 existing fields unchanged + 1 new field appended.
+      No other-tenant identity in the response (guardrail #5).
+      → PASS  (Core host anonymous → effective_memberships_count: null)
+
+    [CTX2] GET https://lux.corpflowai.com/api/ui/context  (no cookie, tenant host)
+      HTTP/1.1 200 OK
+      Content-Type: application/json; charset=utf-8
+      Body (last 60 chars): "...tenant_host_session":null,"effective_memberships_count":null}
+      Full body: host=lux.corpflowai.com, surface=tenant, tenant_id=luxe-maurice
+      (the host's OWN tenant id — pre-existing field, not an IM-4 leak),
+      resolved_tenant_name=luxe-maurice (pre-existing), no OTHER tenant
+      identities anywhere in the response (guardrail #5).
+      → PASS  (Tenant host anonymous → effective_memberships_count: null)
+
+    Tenant-host /change HTML cleanliness (the only UI change in IM-4):
+
+    [HTML1] GET https://lux.corpflowai.com/change  (no cookie, tenant host)
+      HTTP/1.1 200 OK
+      Content-Type: text/html; charset=utf-8
+      Content-Length: 6748 bytes
+      Contains 'Switch workspace': false
+      Contains 'data-cf-switch-workspace': false
+      → PASS  (anonymous on Lux → Switch workspace link correctly suppressed)
+
+    [HTML2] GET https://core.corpflowai.com/change  (no cookie, Core host)
+      HTTP/1.1 200 OK
+      Content-Type: text/html; charset=utf-8
+      Content-Length: 6748 bytes
+      Contains 'Switch workspace': false
+      Contains 'data-cf-switch-workspace': false
+      → PASS  (Core host → Switch workspace link always suppressed, guardrail #3)
+
+    Regression — 4 customer-facing surfaces (per .cursor/rules/predeploy-decision-checks.mdc):
+
+    [REG1] GET https://lux.corpflowai.com/                              → 200 OK
+           Title: "LuxeMaurice — Private Wealth & Lifestyle Platform for Mauritius"
+           Content-Length: 58171 bytes
+           Contains 'Switch workspace': false (not expected to — Lux landing is public)
+    [REG2] GET https://lux.corpflowai.com/change                        → 200 OK (= HTML1)
+    [REG3] GET https://core.corpflowai.com/                             → 200 OK
+           Title: "CorpFlowAI — Practical AI-assisted workflow systems"
+           Content-Length: 16264 bytes
+    [REG4] GET https://core.corpflowai.com/api/factory/health           → 200 OK
+           Body: {"ok":true,"status":"healthy","checks":{"database_configured":true,
+                  "sovereign_session_configured":true,"admin_operator_ready":true,
+                  "runtime_config_valid":true},...}
+      → PASS × 4  (zero regression on customer-facing surfaces)
+
+    Regression — IM-2 read-side membership API (5 contracts must remain byte-identical):
+
+    [IM2A] GET https://core.corpflowai.com/api/membership/effective  (no cookie)
+      HTTP/1.1 401 Unauthorized
+      Body: {"ok":false,"error":"UNAUTHENTICATED","reason":"missing"}
+      → PASS  (byte-identical to IM-2 DRA1)
+
+    [IM2B] GET https://core.corpflowai.com/api/membership/effective?user_id=anything
+      HTTP/1.1 400 Bad Request
+      Body: {"ok":false,"error":"UNEXPECTED_USER_ID","message":"GET /api/membership/effective
+             returns the session user's own matrix only. To query another user, use
+             GET /api/membership/list?user_id=<id> (requires factory_master)."}
+      → PASS  (byte-identical to IM-2 DRA2)
+
+    [IM2C] GET https://lux.corpflowai.com/api/membership/effective
+      HTTP/1.1 403 Forbidden
+      Body: {"ok":false,"error":"SWITCH_NOT_ALLOWED_FROM_HOST","message":"This endpoint is
+             only available on a Core host. Switch to the Core host (e.g. core.corpflowai.com)
+             and retry.","host":"lux.corpflowai.com"}
+      → PASS  (byte-identical to IM-2 DRA3)
+
+    [IM2D] GET https://lux.corpflowai.com/api/membership/list?user_id=anyone
+      HTTP/1.1 403 Forbidden
+      Body: {"ok":false,"error":"SWITCH_NOT_ALLOWED_FROM_HOST","message":"This endpoint is
+             only available on a Core host. Switch to the Core host (e.g. core.corpflowai.com)
+             and retry.","host":"lux.corpflowai.com"}
+      → PASS  (byte-identical to IM-2 DRA4)
+
+    [IM2E] POST https://core.corpflowai.com/api/membership/effective
+      HTTP/1.1 405 Method Not Allowed
+      Allow: GET
+      Body: {"ok":false,"error":"METHOD_NOT_ALLOWED"}
+      → PASS  (byte-identical to IM-2 DRA5; Allow header present)
+
+- Expected vs actual result: 11 / 11 probes PASS with exact contract match
+    (status code + Content-Type + body string + Allow header where applicable).
+- Client-facing flow usable: YES — Lux landing + Change Console both 200; Core
+    landing + factory health both 200; Switch workspace link correctly absent
+    on both /change routes for anonymous (the only HTML behaviour IM-4 changes).
+- No runtime behaviour change for existing callers: YES (existing /api/ui/context
+    fields preserved; only one new additive field appended; IM-2 endpoints
+    byte-identical; the only HTML change is one conditional <a> block that
+    evaluates to nothing for the anonymous probes used here).
+- No new env vars: YES (.env.template unchanged).
+- No schema change: YES (zero edits to prisma/schema.prisma, zero edits to
+    lib/server/postgres-ensure-schema-statements.js, zero new migration files).
+- No session-shape change: YES (session.payload contract unchanged; IM-4 only
+    READS .user_id / .ok — IM-5 will be the packet that enriches session shape).
+- No CMP enforcement change: YES (lib/cmp/router.js untouched; IM-6 owns that).
+- No IM-3 picker UX: YES (no picker component, no /api/membership/* write path).
+- No production writes / no backfill / no factory_master promotion / no test
+    data seeding: YES, all out of scope per Anton's IM-4 guardrail #7.
+- Final verdict: COMPLETE
 ```
 
-**Next gates (per `.cursor/rules/predeploy-decision-checks.mdc`):** Preview deploy → preview probes P1–P5 → Anton review → squash merge → Vercel Production deploy → re-run P1–P5 against Production `core.corpflowai.com` and `lux.corpflowai.com` → flip verdict to **COMPLETE** with full DRA appended here. No deploy / DNS / billing / secrets / DB-write work in this packet.
+**What this unlocks:** IM-5 (session enrichment + switch / leave POST endpoints + cookie re-issue + login redirect resolver) and IM-3 (picker UX) can now both ship without first having to design the navigation-to-Core affordance — IM-4 is the visible "doorway" they each open into. IM-6 (CMP enforcement) gets the same `effective_memberships_count` field for free on `/api/ui/context` if it ever needs to render a count-aware operator hint.
 
 ---
 
