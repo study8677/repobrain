@@ -154,7 +154,7 @@ def load_module_files(module_path: Path, workspace: Path) -> list[SourceFile]:
             continue
         if fpath.suffix.lower() not in SOURCE_EXTENSIONS:
             continue
-        if _is_artifact(fpath):
+        if _is_artifact(fpath, module_path):
             continue
 
         try:
@@ -192,13 +192,19 @@ def load_module_files(module_path: Path, workspace: Path) -> list[SourceFile]:
     return files
 
 
-def _is_artifact(fpath: Path) -> bool:
+def _is_artifact(fpath: Path, module_path: Path | None = None) -> bool:
     """Check if a file is a build artifact that should be skipped.
 
     Checks directory names, file patterns, and heuristics for
     generated/bundled/compiled files.
     """
-    parts = fpath.parts
+    if module_path is not None:
+        try:
+            parts = fpath.relative_to(module_path).parts
+        except ValueError:
+            parts = fpath.parts
+    else:
+        parts = fpath.parts
     fname = fpath.name.lower()
 
     # Directory-based: any parent dir is an artifact directory

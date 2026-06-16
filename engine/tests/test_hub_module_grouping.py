@@ -60,6 +60,24 @@ def test_load_module_files_limits_workspace_root_to_direct_files(tmp_path: Path)
     assert [item.rel_path for item in loaded] == ["main.go"]
 
 
+def test_load_module_files_keeps_top_level_static_source_module(tmp_path: Path) -> None:
+    """A real top-level static/ source module should not be treated as an artifact."""
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "app.js").write_text("export function run() { return true; }\n", encoding="utf-8")
+
+    nested_static = static_dir / "nested" / "static"
+    nested_static.mkdir(parents=True)
+    (nested_static / "generated.js").write_text("export const generated = true;\n", encoding="utf-8")
+
+    modules = detect_modules(tmp_path)
+    assert "static" in modules
+
+    loaded = load_module_files(resolve_module_path(tmp_path, "static"), tmp_path)
+
+    assert [item.rel_path for item in loaded] == ["static/app.js"]
+
+
 def test_typescript_grouping_uses_local_import_edges(tmp_path: Path) -> None:
     """Related TS/JS files should group together through semantic import keys."""
     _write_text(
