@@ -258,7 +258,7 @@ Per `SERVER_AGENT_ACCESS_AND_EXECUTION_BOUNDARY_V1.md` § 10, lifting either § 
 | 6 | `JE-YYYY-MM-DD-N` decision row | `JE-2026-06-15-1` | **Drafted.** |
 | 7 | Anton approves the merge (AAP § 3 gate) | (this is the actual gate) | **Pending Anton's review of the docs-only PR.** |
 
-When item 7 lands, Step 2 of `SELF_HOSTED_OPS_STACK_V1.md` flips **BLOCKED → AUTHORIZED-PENDING-INSTALL**. The install runbook itself (`UPTIME_KUMA_ON_EXEC01_INSTALL_RUNBOOK_V1`) is a **separate follow-up packet** — not authored by the authorization packet, not yet on a queue. After Anton merges the authorization packet, Cursor authors the install runbook at L1, Anton runs it at L3 per `SERVER_AGENT_ACCESS_AND_EXECUTION_BOUNDARY_V1.md` § 5.4, and the K1–K5 live-check template in the authorization packet § 9 flips Step 2 → COMPLETE.
+When item 7 lands, Step 2 of `SELF_HOSTED_OPS_STACK_V1.md` flips **BLOCKED → AUTHORIZED-PENDING-INSTALL**. **Status update 2026-06-16:** PR #367 merged 2026-06-15 (item 7 satisfied); the install runbook follow-up packet `docs/runbooks/UPTIME_KUMA_ON_EXEC01_INSTALL_RUNBOOK_V1.md` has now been authored at L1 by Cursor (`JE-2026-06-16-1`). Step 2 has therefore advanced one more notch: **AUTHORIZED-PENDING-INSTALL → INSTALL-RUNBOOK-AUTHORED-PENDING-OPERATOR-EXECUTION**. The runbook is 14 sections including a § 5 operator-paste shell-block sequence, a § 6 SSH-tunnel command, § 8 monitor specs for the eight URLs, § 9 alert routing (Kuma's own Telegram bot PRIMARY, n8n SECONDARY-only never on critical-outage path), § 10 three-level rollback, § 11 K1–K5 verification block with PASS/FAIL signals, § 12 evidence template, and § 13 closure update points. **No L3 commands typed by Cursor.** Anton runs the runbook at L3 per the § 5.4 pattern in `SERVER_AGENT_ACCESS_AND_EXECUTION_BOUNDARY_V1.md`; the K1–K5 live checks in § 11 of the runbook (mirrored from the authorization packet § 9 template) flip Step 2 → COMPLETE.
 
 ### 5.3 Lower-cost fallbacks recorded for the change-log only (no longer the chosen path)
 
@@ -350,9 +350,9 @@ secret_logged_or_committed       : NO  (must always be NO; if YES, follow SECURI
 Captured-by: <operator name>
 Captured-at (UTC): <fill in>
 
-### 7.4 Step 2 — Uptime Kuma evidence (deferred until install packet lands)
+### 7.4 Step 2 — Uptime Kuma evidence (template authored 2026-06-16; pending operator L3 execution)
 
-Until the gate in § 5.2 is passed, this section stays empty. When Kuma is up, paste the table from § 5.4 here with real timestamps.
+Until the operator runs `docs/runbooks/UPTIME_KUMA_ON_EXEC01_INSTALL_RUNBOOK_V1.md` end-to-end at L3 and § 11 of the runbook returns K1=PASS / K2=PASS / K3=PASS / K4=PASS / K5=PASS, this section stays empty. The evidence shape is the § 12 *Evidence template* of the runbook — paste the filled-in block here verbatim (no secrets, no tokens, no chat ids; see runbook § 12.2 for the credential-incident guard). The accompanying closure PR per § 13 of the runbook flips Step 2 from `INSTALL-RUNBOOK-AUTHORED-PENDING-OPERATOR-EXECUTION` → `COMPLETE` and appends the corresponding `JE-YYYY-MM-DD-N` row to `docs/decisions/JOURNAL.md`.
 
 ---
 
