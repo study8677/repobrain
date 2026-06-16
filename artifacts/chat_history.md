@@ -28,7 +28,158 @@
 
 ---
 
-## 2026-06-16 — Multi-tenant **IM-5 session enrichment + switch/leave POST endpoints + CSRF + redirect policy + login redirect resolver** — fifth implementation packet from the approved r2 membership-matrix design in `docs/operations/OPERATOR_MULTI_TENANT_CREDENTIAL_V1.md` (§10 IM-5). Makes the membership matrix operationally usable by adding two new state-changing Core-host-only endpoints (`POST /api/membership/switch`, `POST /api/membership/leave`), extending the DB-backed session payload with two additive fields (`acting_tenant_id`, `session_version`), issuing a CSRF cookie at session-mint, and shipping a tightly-tested login redirect resolver helper. Branched off `origin/main` at `c123d6de` (the merged IM-4 DRA commit). **Status: PARTIAL — local gates green, PR open, awaiting Production verification per Anton's IM-5 approval correction #5 (read-only unauthenticated only).**
+## 2026-06-16 — Multi-tenant **IM-5 session enrichment + switch/leave POST endpoints + CSRF + redirect policy + login redirect resolver** — fifth implementation packet from the approved r2 membership-matrix design in `docs/operations/OPERATOR_MULTI_TENANT_CREDENTIAL_V1.md` (§10 IM-5). Makes the membership matrix operationally usable by adding two new state-changing Core-host-only endpoints (`POST /api/membership/switch`, `POST /api/membership/leave`), extending the DB-backed session payload with two additive fields (`acting_tenant_id`, `session_version`), issuing a CSRF cookie at session-mint, and shipping a tightly-tested login redirect resolver helper. Branched off `origin/main` at `c123d6de` (the merged IM-4 DRA commit).
+
+**Status:** **COMPLETE** per `.cursor/rules/delivery-reality.mdc` — IM-5 PR #368 merged at `2026-06-16T02:48:37Z` (squash, merge SHA `3fb996638fb20fe3e0ffecd99a93daac1dd8ad94`), Vercel Production deployment **`5073819402`** Ready at `2026-06-16T02:49:30Z` (~53 seconds after merge) serving the merge SHA, and all 17 read-only unauthenticated Production probes returned the exact contract expected per Anton's IM-5 approval correction #5. Local gates green at merge (903/903 `npm test` = +67 from IM-4's 836 baseline across 4 new test files, clean `npx prisma validate`, clean `npm run build` for all 17 routes, zero lint errors on all 10 touched files). No `automation_events` writes (correction #1), no schema/env/CMP changes, no picker UI, no tenant delivery files, no `factory_master` promotion, no test user creation, no seeding, no production data writes (corrections #1, #4, #5, #7 all honored).
+
+**Delivery Reality Audit (IM-5) — Production-verified:**
+
+```text
+Delivery Reality Audit (IM-5):
+- Local fix exists: YES
+- Merged to main: YES — PR #368 squashed to main at 2026-06-16T02:48:37Z
+    Merge SHA: 3fb996638fb20fe3e0ffecd99a93daac1dd8ad94
+    Title: feat(platform): IM-5 session enrichment + switch/leave POST endpoints
+           + CSRF + redirect policy + login redirect resolver
+- Production deployment ID: 5073819402 (GitHub Deployments API row),
+    environment=Production, status=success, Ready at 2026-06-16T02:49:30Z
+    (~53 seconds after merge)
+    environment_url: https://corpflow-ai-command-center-cxy9xp578-corpflowai.vercel.app
+- Commit deployed: 3fb996638fb20fe3e0ffecd99a93daac1dd8ad94 (matches merge SHA)
+- Live URLs tested (read-only unauthenticated Production checks — no
+  cookies, no CSRF tokens, no writes, no backfill, no factory_master
+  promotion, no test user creation; per Anton's IM-5 correction #5):
+
+  (1) IM-5 endpoint rejection probes (6):
+  ✓ POST https://core.corpflowai.com/api/membership/switch (no cookie)
+      → 401 UNAUTHENTICATED
+      body: {"ok":false,"error":"UNAUTHENTICATED","reason":"missing"}
+      X-Matched-Path: /api/factory_router
+      ETag: W/"39-LX3Mw72n0aCk4Ms3a7ZpMr8PBkY"
+  ✓ POST https://core.corpflowai.com/api/membership/leave (no cookie)
+      → 401 UNAUTHENTICATED (identical ETag — byte-stable shape)
+  ✓ POST https://lux.corpflowai.com/api/membership/switch (no cookie)
+      → 403 SWITCH_NOT_ALLOWED_FROM_HOST, host: lux.corpflowai.com
+      ETag: W/"c9-jPs/WCAkgVG/qrJs5b4XZAaBAto"
+      (gate order proof: tenant-host check fires before session check —
+       returns 403 even with no cookie, per the IM-5 handler design)
+  ✓ POST https://lux.corpflowai.com/api/membership/leave (no cookie)
+      → 403 SWITCH_NOT_ALLOWED_FROM_HOST (identical ETag — byte-stable)
+  ✓ GET  https://core.corpflowai.com/api/membership/switch
+      → 405 METHOD_NOT_ALLOWED, Allow: POST
+      ETag: W/"29-gv8Uas1N8Mn8DoyqR7XkEDwRDec"
+  ✓ GET  https://core.corpflowai.com/api/membership/leave
+      → 405 METHOD_NOT_ALLOWED, Allow: POST (identical ETag — byte-stable)
+
+  (2) /api/ui/context additive-field probes (2):
+  ✓ GET https://core.corpflowai.com/api/ui/context (anonymous)
+      → 200, acting_tenant_id: null (NEW IM-5 additive field present),
+      effective_memberships_count: null (IM-4 field preserved),
+      all 18 pre-IM-5 keys present and unchanged (20 total keys —
+      alphabetical: acting_tenant_id, billing_exempt,
+      change_console_readiness, core_login_url,
+      effective_memberships_count, host, login_route, mode, ok,
+      resolved_tenant_name, root_domain, session, show_approve_build,
+      suggested_tenant_console_url, surface, tenant_host_session,
+      tenant_host_session_mismatch, tenant_id, tenant_registered,
+      token_credit_balance_usd)
+  ✓ GET https://lux.corpflowai.com/api/ui/context (anonymous)
+      → 200, surface: tenant, tenant_id: luxe-maurice,
+      acting_tenant_id: null, effective_memberships_count: null,
+      tenant_host_session_mismatch: false (gate behavior unchanged)
+
+  (3) IM-2 regression probes (5):
+  ✓ GET  https://core.corpflowai.com/api/membership/effective (anon)
+      → 401 UNAUTHENTICATED
+      ETag: W/"39-LX3Mw72n0aCk4Ms3a7ZpMr8PBkY"
+      (BYTE-IDENTICAL ETag to IM-5 401 responses — same envelope shape)
+  ✓ GET  https://core.corpflowai.com/api/membership/effective?user_id=anything
+      → 400 UNEXPECTED_USER_ID, with full message about
+        /api/membership/list factory_master requirement
+  ✓ GET  https://lux.corpflowai.com/api/membership/effective (anon)
+      → 403 SWITCH_NOT_ALLOWED_FROM_HOST
+      ETag: W/"c9-jPs/WCAkgVG/qrJs5b4XZAaBAto"
+      (BYTE-IDENTICAL ETag to IM-5 403 responses)
+  ✓ GET  https://lux.corpflowai.com/api/membership/list?user_id=anyone
+      → 403 SWITCH_NOT_ALLOWED_FROM_HOST (same ETag)
+  ✓ POST https://core.corpflowai.com/api/membership/effective
+      → 405 METHOD_NOT_ALLOWED, Allow: GET (distinct Allow value vs IM-5
+        endpoints proves contract preserved: read endpoints stay GET-only,
+        write endpoints stay POST-only)
+
+  (4) IM-4 regression probes (3):
+  ✓ GET https://lux.corpflowai.com/change (anon)
+      → 200, body 6754 bytes,
+      "Switch workspace" string: NOT present in HTML,
+      data-cf-switch-workspace attribute: NOT present
+      (correct — anonymous user, no membership count → IM-4 gate
+       returns false → link not rendered)
+  ✓ GET https://core.corpflowai.com/change (anon)
+      → 200, body 6754 bytes,
+      "Switch workspace" string: NOT present,
+      data-cf-switch-workspace attribute: NOT present
+      (correct — IM-4 only renders link on tenant hosts, not on Core)
+  ✓ /api/ui/context still returns effective_memberships_count (covered
+    by (2) above — verified on both Core and Lux)
+
+  (5) Customer-facing regression URLs (4):
+  ✓ GET https://lux.corpflowai.com/        → 200, content-type text/html,
+      body 59909 bytes, <title>: "LuxeMaurice — Private Wealth &
+      Lifestyle Platform for Mauritius"
+  ✓ GET https://lux.corpflowai.com/change  → 200, 6754 bytes
+  ✓ GET https://core.corpflowai.com/       → 200, content-type text/html,
+      body 16289 bytes, <title>: "CorpFlowAI — Practical AI-assisted
+      workflow systems"
+  ✓ GET https://core.corpflowai.com/api/factory/health → 200,
+      content-type application/json,
+      body: {"ok":true,"status":"healthy","checks":{
+        "database_configured":true,
+        "sovereign_session_configured":true,
+        "admin_operator_ready":true,
+        "runtime_config_valid":true
+      }, …all readiness checks passed.
+
+- Expected vs actual result: ALL 17 probes returned the exact status
+  code, exact error code, exact header value, and exact response shape
+  expected. Byte-stable envelopes confirmed via ETag equality between
+  IM-5 endpoints and matching-shape IM-2 endpoints (W/"39-…" for 401
+  UNAUTHENTICATED, W/"c9-…" for 403 SWITCH_NOT_ALLOWED_FROM_HOST,
+  W/"29-…" for 405 METHOD_NOT_ALLOWED).
+- Client-facing flow usable: YES — all 4 customer-facing URLs (Lux
+  landing, Lux Change Console shell, Core landing, Core factory health)
+  return 200 with expected content. The 4 IM-5 endpoint rejection probes
+  prove the new POST endpoints are present, routed through
+  /api/factory_router, gated by Core-host + session + CSRF in the
+  documented order, and do not 5xx anonymous traffic. The 2 /api/ui/
+  context probes prove the additive acting_tenant_id field is shipping.
+  No 5xx anywhere; no platform errors; no MIDDLEWARE_INVOCATION_FAILED;
+  no degraded routes.
+- Final verdict: **COMPLETE**
+
+Authenticated switch/leave verification was NOT performed (per Anton's
+IM-5 correction #5 — out of scope unless explicitly authorized;
+no test user creation, no seeding, no factory_master promotion, no
+production data writes performed in this packet or this verification).
+The 14-vector tampering test suite in node-tests/im-5-switch-leave-
+tampering.test.mjs (30 tests, all passing locally and in CI) covers
+the authenticated paths (success, MEMBERSHIP_NOT_FOUND, 503 Prisma
+failure, CSRF mismatch, body shape errors, redirect-policy enforcement)
+deterministically with fake req/res + dependency-injected
+getEffectiveMembershipsFn, so the gate logic is fully exercised
+without ever touching a live DB-backed user session.
+
+Notes on the merge content (2 extra commits between IM-5 push and
+merge ref): PR #367 (Uptime Kuma authorization, docs-only) landed on
+main between my IM-5 push and merge; a routine merge-of-main into the
+IM-5 feature branch incorporated those docs. Files changed by that
+incorporation: 10 docs files (AGENTS.md, chat_history.md,
+MONITORING_ARCHITECTURE.md, SERVER_AGENT_ACCESS_AND_EXECUTION_BOUNDARY
+_V1.md, the new Uptime Kuma authorization docs/decisions ADR + packet,
+phase-1A live-verification artifact, SELF_HOSTED_OPS_STACK_V1.md,
+CORPFLOW_SHARED_TODO.md, JOURNAL.md). NO IM-5 code files modified by
+the merge incorporation — the deployed IM-5 code is byte-identical to
+what was tested locally and what passed CI on the IM-5 branch.
+```
 
 **New files (4):** `lib/server/csrf.js` (double-submit token: 32-byte entropy → 43-char base64url; `corpflow_csrf` cookie NOT HttpOnly, SameSite=Lax, Secure; `X-CorpFlow-CSRF` header; constant-time validate via `crypto.timingSafeEqual`; missing/malformed/mismatched returns stable reason codes; on failure the existing `corpflow_session` cookie is NOT cleared per correction #2); `lib/server/redirect-policy.js` (pure `validateRedirectTarget(target, allowedHostnames, opts)` helper — rejects protocol-relative `//evil.com`, UNC `\\evil.com`, backslash variants, `javascript:` / `data:` / `vbscript:` / `file:` / `http:` schemes, CR/LF/NUL/tab header injection, literal `..` and `%2e%2e` path traversal, port + userinfo in host, malformed hostnames, length > 2048; accepts only same-origin paths under SAFE_PATH_CHARS_RE and absolute https:// URLs whose lowercased hostname is in the allow-list; plus `safeDefaultRedirect(coreHostsEnv)` for the fallback URL); `lib/server/login-redirect.js` (pure `resolveLoginRedirect(sessionPayload, requestedNext, opts)` helper — DI-injected `getEffectiveMembershipsFn` and `tenantHostnameLookupFn`; 4-rule decision tree returning one of `requested_next` / `single_membership` / `multi_membership` / `admin_default` / `anonymous_default` reasons; unsafe `next` is silently dropped, never 4xx login per correction #3); `lib/server/switch-leave-api.js` (`handleMembershipSwitch` + `handleMembershipLeave` — 9-step gate order: method → Core-host (reuses IM-2 `requireCoreHost`) → session present → DB-backed (`user_id`) → CSRF → body shape → effective-membership (reuses IM-2 `getEffectiveMemberships`) → cookie re-issue → JSON response; defensive try/catch around all DB calls returns 503 `SWITCH_TEMPORARILY_UNAVAILABLE` without ever clearing the existing session cookie; NO `automation_events` or other production writes per correction #1 — TODO comment marks the IM-7 audit-packet integration point only).
 
