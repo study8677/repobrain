@@ -28,6 +28,12 @@
 
 ---
 
+## 2026-06-18 — **Google Vids marketing automation content engine candidate (docs-only).** Captured Google Vids / Gemini Workspace AI-avatar video creation as **`SERIOUS-CANDIDATE / EVALUATE-FIRST`** for a future CorpFlow marketing automation content engine — not implementation. Source: [Google Workspace blog — AI avatars in Google Vids](https://workspace.google.com/blog/ai-and-machine-learning/how-to-create-professional-work-videos-with-ai-avatars-in-google-vids). New doc: `docs/product/MARKETING_AUTOMATION_CONTENT_ENGINE_CANDIDATES.md`. Anton signal: prior use + ~80% initial workflow value at free/low friction; manual-first Vids with n8n orchestration TBD pending API eval; adjacent paths Gemini API / AI Studio / Veo / Drive if Vids API limited. Complements (does not replace) approved LR Playwright+FFmpeg walkthrough pipeline. Future video target: **AI-generated/avatar, not human video**. Verdict: **CANDIDATE CAPTURED — NO IMPLEMENTATION AUTHORIZED**.
+
+<!-- GOOGLE_VIDS_MARKETING_CONTENT_ENGINE_CANDIDATE_2026_06_18_HIST -->
+
+---
+
 ## 2026-06-18 — **Social Intents chat destination reference (docs-only).** Captured [Social Intents](https://www.socialintents.com/) as a **REFERENCE-ONLY / DESTINATION-SHAPE** benchmark for future CorpFlow Chat / Concierge — not an approved vendor or install. New doc: `docs/product/CHAT_DESTINATION_REFERENCE_SOCIAL_INTENTS.md`. Key distinction: Social Intents routes into external team tools (Teams, Slack, Google Chat); CorpFlow destination is a **native concierge surface** with n8n + internal workflows and external channels as adapters. Guardrails: no Social Intents/Chatwoot/Open WebUI/Dify installs, no env vars, no app code, no public chat endpoints, no containers, no n8n changes, no restic. Verdict: **REFERENCE CAPTURED — NO IMPLEMENTATION AUTHORIZED**.
 
 <!-- SOCIAL_INTENTS_CHAT_DESTINATION_REF_2026_06_18_HIST -->
