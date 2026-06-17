@@ -10,7 +10,7 @@
 - `docs/automation-framework.md` (`POST /api/automation/ingest` contract).
 - `docs/n8n/automation-forward-recipe.md` (channel separation; envelope shape).
 
-**Verdict (current):** **PARTIAL** — public production probes from L1 confirm the producer side is live and wired; the four secret-bearing / admin-bearing checks (ingest test, `automation_events` read-back, n8n consumer execution, Uptime Kuma monitors) are gated on the operator and on a separate Kuma-install packet. See § 5.
+**Verdict (current):** **PARTIAL-CONSUMER-CONFIRMATION** (Step 1) + **COMPLETE** (Step 2) — Step 1 producer ingest and `automation_events` read-back are **PASS** (§ 7.1 / § 7.2, captured 2026-06-16T23:36:34Z); n8n consumer evidence is **PARTIAL / STRONGLY INDICATED** (§ 7.3 — succeeded execution at matching timestamp observed; payload/event-type and forward-secret validation not independently inspected inside n8n execution detail). Step 1 is **not** marked COMPLETE. Step 2 (Uptime Kuma) is COMPLETE end-to-end per `JE-2026-06-16-3`. See § 8.
 
 ---
 
@@ -302,53 +302,59 @@ If at any point the operator suspects the ingest secret or forward secret has le
 
 ## 7. Operator evidence blocks (paste here once the recipes in § 3 / § 4 are run)
 
-These blocks are **placeholders**. The operator pastes redacted output captured per the rules in § 3.3 and § 4.2. Until they are filled in, this artifact stays at **PARTIAL**.
+These blocks record operator evidence captured per the rules in § 3.3 and § 4.2. § 7.1 and § 7.2 are **PASS** (2026-06-16T23:36:34Z). § 7.3 is **PARTIAL / STRONGLY INDICATED** — n8n execution success at matching timestamp observed; internal execution input/body not safely inspectable in n8n UI this round. Step 1 verdict is **PARTIAL-CONSUMER-CONFIRMATION**, not COMPLETE.
 
-### 7.1 Step 1 — ingest evidence
-
-```
-status_code      : <fill in>
-content_length   : <fill in>
-body_preview     : <first 200 chars after redaction per § 3.3>
-used_idempotency : <the idempotency_key chosen in § 3.2>
-```
-
-Captured-by: <operator name>
-Captured-at (UTC): <fill in>
-Replay-deduped run (status_code + body_preview, optional): <fill in>
-
-### 7.2 Step 1 — `automation_events` read-back evidence
+### 7.1 Step 1 — ingest evidence — **PASS**
 
 ```
-status_code         : <fill in>
-total_returned      : <fill in>
+status_code      : 200
+content_length   : 186
+body_preview     : {"ok":true,"id":"cmqha6wi80000l104f7gwr5fc","occurred_at":"2026-06-16T23:36:34.065Z","tenant_scope":"global","event_type":"ops.self_hosted.test.v1","risk_tier":"low","status":"accepted"}
+used_idempotency : self-hosted-ops-stack-v1-step-1-20260616-233629
+```
+
+Captured-by: Anton
+Captured-at (UTC): 2026-06-16T23:36:34Z
+Replay-deduped run (status_code + body_preview, optional): not separately exercised this round
+
+### 7.2 Step 1 — `automation_events` read-back evidence — **PASS**
+
+```
+status_code         : 200
+total_returned      : 100
+match_reason        : idempotencyKey
 match_event_type    : ops.self_hosted.test.v1
 match_tenant_scope  : global
 match_risk_tier     : low
 match_source        : self-hosted-ops-stack-v1-step-1
-match_idempotency   : <same value as 7.1 used_idempotency>
-match_created_at    : <fill in>
-match_id_first8     : <fill in>
+match_idempotency   : self-hosted-ops-stack-v1-step-1-20260616-233629
+match_created_at    : 2026-06-16T23:36:34.065Z
+match_id_first8     : cmqha6wi...
 ```
 
-Captured-by: <operator name>
-Captured-at (UTC): <fill in>
+**Implementation note (evidence-script adjustment, not a product failure):** the live `GET /api/automation/events` response uses **camelCase** fields (`eventType`, `idempotencyKey`, `tenantScope`, `riskTier`, `occurredAt`) rather than the snake_case names expected by the original § 4 evidence script. The operator used a camelCase-safe read-back script; matching was performed on `idempotencyKey`.
 
-### 7.3 Step 1 — n8n consumer evidence (operator pastes only after he has logged into n8n admin)
+Captured-by: Anton
+Captured-at (UTC): 2026-06-16T23:36:34Z
 
-n8n executions tab shows a **new run** for the `corpflow-automation` webhook within seconds of § 3.2.
+### 7.3 Step 1 — n8n consumer evidence — **PARTIAL / STRONGLY INDICATED**
+
+n8n executions list showed a **succeeded** execution at a timestamp matching § 7.1 / § 7.2. The operator could not safely locate internal execution input/body details in the n8n UI this round, so payload/event-type and forward-secret validation were **not independently inspected** — recorded honestly as partial rather than overstated.
 
 ```
-n8n_executions_tab_url           : <kept off-repo; operator confirms he saw it>
-matching_execution_started_at   : <UTC timestamp from n8n executions list>
-matching_execution_status        : success | error | skipped
-incoming_event_type              : ops.self_hosted.test.v1
-forward_secret_header_validated  : true | false  (Y if n8n's IF/Function node compared x-corpflow-automation-forward-secret OK)
-secret_logged_or_committed       : NO  (must always be NO; if YES, follow SECURITY_OR_INCIDENT.md immediately)
+matching_execution_started_at   : 2026-06-16T23:36:34Z
+matching_execution_status        : success
+n8n_execution_id                 : 1124
+n8n_execution_duration           : 6ms
+n8n_workflow_version             : 90e75d5c
+incoming_event_type              : not visually confirmed inside execution detail
+forward_secret_header_validated  : not visually confirmed; success is strongly indicative but not independently inspected
+secret_logged_or_committed       : NO
+operator_note                    : n8n executions list showed a succeeded execution at Jun 17 03:36:34 local time (UTC+4), matching the ingest/read-back timestamp 2026-06-16T23:36:34Z. Operator could not safely locate the internal execution input/body details in n8n UI, so § 7.3 is recorded as partial rather than overstated.
 ```
 
-Captured-by: <operator name>
-Captured-at (UTC): <fill in>
+Captured-by: Anton
+Captured-at (UTC): 2026-06-16T23:36:34Z
 
 ### 7.4 Step 2 — Uptime Kuma install evidence (operator-executed 2026-06-16; K1–K4 PASS, K5 PASS-by-construction, all 8 sub-probes Up — sub-probe 8 added later same day)
 
@@ -451,25 +457,37 @@ Authorization basis:  PR #367 / JE-2026-06-15-1 / ADR docs/decisions/20260615-up
 
 ---
 
-## 8. Verdict (current — updated 2026-06-16 after Monitor 8 / n8n sub-probe add)
+## 8. Verdict (current — updated 2026-06-16 after Step 1 operator evidence capture)
+
+```text
+Delivery Reality Audit (Step 1 — n8n automation-forward live verification):
+- Local fix exists:                       YES (producer wiring live on Vercel Production; harmless test event accepted and persisted)
+- Merged to main:                         pending this docs-only evidence PR (JE-2026-06-16-4)
+- Production deployment ID:               n/a — no Vercel deploy required for evidence capture (existing Production app served the ingest)
+- Commit deployed:                        n/a — evidence is live operational truth on existing Production
+- Live URLs tested:                       POST https://core.corpflowai.com/api/automation/ingest (200 accepted); GET https://core.corpflowai.com/api/automation/events (200 read-back match); n8n executions list (succeeded execution at matching timestamp — § 7.3)
+- Expected vs actual result:              § 7.1 ingest PASS / § 7.2 automation_events read-back PASS / § 7.3 n8n consumer PARTIAL-STRONGLY-INDICATED (execution success at matching timestamp; payload/event-type and forward-secret not independently inspected inside n8n execution detail)
+- Client-facing flow usable:              YES for producer path (ingest accepted, row persisted, factory-only read-back confirmed); consumer path strongly indicated but not fully verified inside n8n execution detail
+- Final verdict:                          PARTIAL-CONSUMER-CONFIRMATION (NOT COMPLETE)
+```
+
+**Step 1 status (2026-06-16, later same day):** Producer ingest **PASS** (`ops.self_hosted.test.v1` accepted 2026-06-16T23:36:34Z). Database read-back **PASS** (matched on `idempotencyKey` via camelCase-safe script — see § 7.2 implementation note). n8n consumer **PARTIAL / STRONGLY INDICATED** — execution #1124 succeeded at matching timestamp (6 ms, workflow version `90e75d5c`); `incoming_event_type` and `forward_secret_header_validated` were **not** visually confirmed inside n8n execution detail. **Step 1 is not marked COMPLETE.** To reach COMPLETE, a future round must independently inspect n8n execution input (confirm `event_type: ops.self_hosted.test.v1`) and forward-secret validation (or document an equivalent auditable check). Monitor # 13 sub-probe 8 (`/healthz`) confirms n8n *liveness* only — it does **not** substitute for § 7.3 consumer verification.
 
 ```text
 Delivery Reality Audit (Step 2 — Uptime Kuma install on corpflow-exec-01-u69678; all 8 sub-probes Up):
 - Local fix exists:                       YES (live container on the box; ~/uptime-kuma-data/ persistent; sub-probe 8 added inside Kuma UI 2026-06-16 — JE-2026-06-16-3)
-- Merged to main:                         install closure PR #373 merged 2026-06-16T07:01:15Z at a9157216 (JE-2026-06-16-2). Sub-probe 8 add docs-sync PR (this PR, JE-2026-06-16-3) pending Anton's merge.
+- Merged to main:                         YES — install closure PR #373 merged 2026-06-16T07:01:15Z at a9157216 (JE-2026-06-16-2); sub-probe 8 docs-sync PR #376 merged 2026-06-16T08:53:46Z at 1809a8e5 (JE-2026-06-16-3)
 - Production deployment ID:               n/a — does not deploy to Vercel
-- Commit deployed:                        n/a — runs on `corpflow-exec-01-u69678` (L3), not Vercel. Repository state: `a9157216` (PR #373 merge) + this PR.
+- Commit deployed:                        n/a — runs on `corpflow-exec-01-u69678` (L3), not Vercel
 - Live URLs tested:                       all 8 monitors Up (§ 7.4 monitors 1–7 + sub-probe 8); off-box public unreachability of host:3001 confirmed (curl exit 28); SSH-tunnel UI reachable; sub-probe 8 Telegram alert path test-confirmed
-- Expected vs actual result:              K1=PASS / K2=PASS / K3=PASS (all 8 sub-probes Up — earlier K3=PASS-WITH-DEFERRAL state closed) / K4=PASS (extended to sub-probe 8) / K5=PASS-BY-CONSTRUCTION (n8n still not in alert path; sub-probe 8 monitors n8n's *availability* but its alert routes around n8n entirely)
-- Client-facing flow usable:              YES — all 8 monitored surfaces (seven CorpFlow public floor URLs + n8n `/healthz`) return their expected responses to Kuma's probes; alerts route to operator's Telegram chat via Kuma's own bot independently of n8n
+- Expected vs actual result:              K1=PASS / K2=PASS / K3=PASS (all 8 sub-probes Up) / K4=PASS / K5=PASS-BY-CONSTRUCTION
+- Client-facing flow usable:              YES — all 8 monitored surfaces return expected responses to Kuma's probes; alerts route via Kuma's own bot independently of n8n
 - Final verdict:                          COMPLETE
 ```
 
-**Step 2 status (2026-06-16, end of day):** Uptime Kuma is installed at L3 on `corpflow-exec-01-u69678`, loopback-bound to `127.0.0.1:3001`, probing all 8 surfaces (seven CorpFlow public floor URLs + n8n `/healthz`) every 60 s with Telegram-direct alerting via Kuma's own BotFather bot (separate from in-repo `TELEGRAM_BOT_TOKEN`). Sub-probe 8 was added by Anton inside Kuma's UI through the SSH tunnel later the same day (`JE-2026-06-16-3`); Telegram alert path test-confirmed for sub-probe 8 specifically. **Blind spot # 7 of `MONITORING_ARCHITECTURE.md` § 6 (no third-location uptime monitoring) is closed end-to-end.** No deferred sub-probes remain.
+**Step 2 status (unchanged):** Uptime Kuma COMPLETE end-to-end per `JE-2026-06-16-3`. No deferred sub-probes remain.
 
-**Step 1 status (unchanged by this PR):** Still **PARTIAL**. Step 1 will move to COMPLETE when § 7.1 + § 7.2 + § 7.3 are filled in by the operator (or § 7.3 explicitly opted out of as "n8n admin not accessed in this round"). The closure PR for Step 1 is a separate future PR; it is not bundled into this docs-sync PR. (Note: Monitor # 13's sub-probe 8 in Kuma is a *liveness* check on n8n's `/healthz`. It does **not** verify the automation-forward end-to-end flow — that is what Step 1 § 7.1 / § 7.2 / § 7.3 cover.)
-
-**Step 3 status (unchanged by this PR):** Eligibility gate **fully** satisfied as of 2026-06-16 — Step 2 is COMPLETE end-to-end. Step 3 (restic) authoring is now eligible for the next packet round, but **not** initiated by this PR — the user has directed *"Do not proceed to restic"* until they explicitly authorize the Step 3 restic packet.
+**Step 3 status (unchanged):** Eligibility gate fully satisfied (Step 2 = COMPLETE). Step 3 (restic) **not** initiated — held on explicit *"Do not proceed to restic"* directive until separate authorization.
 
 ---
 
@@ -479,4 +497,5 @@ Delivery Reality Audit (Step 2 — Uptime Kuma install on corpflow-exec-01-u6967
 - **2026-06-15 (later same day)** — § 5 reworked from "BLOCKED" to "PENDING AUTHORIZATION PACKET, no longer generally blocked" once `UPTIME_KUMA_ON_EXEC01_AUTHORIZATION_V1` was authored at L1.
 - **2026-06-16** — § 5.2 status update + § 7.4 evidence-paste pointer added when the install runbook follow-up packet `UPTIME_KUMA_ON_EXEC01_INSTALL_RUNBOOK_V1` was authored at L1 (PR #370 / `JE-2026-06-16-1`, merged 2026-06-16T03:47:12Z at `8121b19e`).
 - **2026-06-16 (later same day)** — § 7.4 filled in with operator-executed install evidence; § 8 verdict flipped from PARTIAL → COMPLETE-WITH-N8N-DEFERRED for Step 2; closure PR #373 opened by Cursor at L1 and merged 2026-06-16T07:01:15Z at `a9157216` (`JE-2026-06-16-2`). Monitor 8 / n8n explicitly deferred (operator chose deferral over guessing the URL family). Step 3 (restic) eligibility gate substantively satisfied but Step 3 NOT initiated by this PR per user instruction.
-- **2026-06-16 (end of same day, after PR #373 merge)** — Anton confirmed canonical n8n health URL family (`<n8n-host>/healthz` — n8n v1.x anonymous health endpoint, GET-only, returns `{"status":"ok"}` 200, no auth, no state mutation) and added sub-probe 8 inside Kuma's UI through the SSH tunnel; sub-probe Up at 60 s; Telegram alert path test-confirmed for sub-probe 8. § 7.4 heading + opening paragraph + monitors-table row 8 + K3 row + Verdict line + Notes/deviations bullet updated; § 8 DRA flipped from COMPLETE-WITH-N8N-DEFERRAL → COMPLETE; Step 3 eligibility now fully satisfied (still not initiated per user instruction). Recorded by `JE-2026-06-16-3` and this docs-sync PR. No new code, no new envs, no new container, no n8n migration, no port-binding change, no widening of the § 5.5 carve-out — sub-probe 8 add is entirely a Kuma UI configuration change inside the existing carve-out.
+- **2026-06-16 (end of same day, after PR #373 merge)** — Anton confirmed canonical n8n health URL family (`<n8n-host>/healthz` — n8n v1.x anonymous health endpoint, GET-only, returns `{"status":"ok"}` 200, no auth, no state mutation) and added sub-probe 8 inside Kuma's UI through the SSH tunnel; sub-probe Up at 60 s; Telegram alert path test-confirmed for sub-probe 8. § 7.4 heading + opening paragraph + monitors-table row 8 + K3 row + Verdict line + Notes/deviations bullet updated; § 8 DRA flipped from COMPLETE-WITH-N8N-DEFERRAL → COMPLETE; Step 3 eligibility now fully satisfied (still not initiated per user instruction). Recorded by `JE-2026-06-16-3` and docs-sync PR #376.
+- **2026-06-16 (later same day, after Step 2 closure)** — § 7.1 ingest evidence **PASS** + § 7.2 `automation_events` read-back evidence **PASS** + § 7.3 n8n consumer evidence **PARTIAL / STRONGLY INDICATED** (execution #1124 succeeded at matching timestamp 2026-06-16T23:36:34Z; payload/event-type and forward-secret not independently inspected inside n8n execution detail). § 7.2 implementation note added (live API returns camelCase fields; operator used camelCase-safe read-back script). § 8 Step 1 DRA added with verdict **PARTIAL-CONSUMER-CONFIRMATION** (Step 1 **not** marked COMPLETE). Recorded by `JE-2026-06-16-4` and this docs-only evidence PR. No L3 commands by Cursor; no secrets; no env vars; no app code; no restic; no new self-hosted tools.
