@@ -1,0 +1,57 @@
+---
+description: Auto-merge standing permission for docs-only library/candidate/reference capture PRs
+alwaysApply: true
+---
+
+# Library / candidate / reference capture — auto-merge
+
+Anton has **standing permission** to auto-merge without separate manual approval when **all** conditions below hold.
+
+## Allowed auto-merge class
+
+`LIBRARY-CAPTURE / CANDIDATE-CAPTURE / REFERENCE-ONLY / DESTINATION-SHAPE`
+
+## Allowed content (docs capture only)
+
+- Product candidates, tool references, article references
+- Roadmap / destination-shape notes, evaluation candidates, benchmark products
+- Marketing automation candidates, future chat/concierge references
+- AI / video / article generation candidate notes
+- Operator-supplied rationale for why a tool is worth tracking
+
+## Allowed paths (unless repo convention says otherwise)
+
+- `docs/product/**`, `docs/strategy/**`, `docs/research/**`, `docs/tools/**`
+- `artifacts/chat_history.md`
+- Lightweight index in `docs/CORPFLOW_SHARED_TODO.md` **only if** a relevant future-candidates/library section already exists
+- `docs/decisions/JOURNAL.md` **only if** repo convention requires a JE row
+
+## Auto-merge requirements
+
+- Docs-only PR; `git diff --name-only` limited to approved paths above (plus this rule file when updating policy)
+- No app/runtime code, `.env*`, new env var names, secrets, tokens, credentials, private URLs, chat IDs, passwords, API keys, or Infisical paths
+- No n8n workflow changes; no L3/server commands
+- No containers, Docker Compose, GitHub Actions, scripts, cron, systemd, migrations, Prisma, API routes, middleware, package files, or Vercel config
+- PR body or captured doc must state **`NO IMPLEMENTATION AUTHORIZED`**
+- Status wording must be `REFERENCE-ONLY`, `CANDIDATE-CAPTURED`, `SERIOUS-CANDIDATE / EVALUATE-FIRST`, or `DESTINATION-SHAPE` — **not** `AUTHORIZED`, `SELECTED`, `IMPLEMENTING`, or `COMPLETE`
+- Preserve standing holds: no restic (unless separately authorized), no new self-hosted tools, no Chatwoot/Open WebUI/Dify/Coolify/Langfuse/AgentSpan/OpenJarvis/generic chatbot frameworks, no n8n migration, no public port exposure, no additional containers
+
+## Pre-merge verification
+
+1. `git diff --stat` is docs-only
+2. `git diff --name-only` ⊆ approved paths
+3. Scan for obvious secret-like strings
+4. CI green if it runs; if docs-only and CI skipped by convention, record why no runtime verification was needed
+
+## Do not auto-merge if
+
+- Any app/runtime, env, infrastructure, monitoring, backup, n8n, deployment, auth, database, or production-behavior change
+- Implementation wording or tool authorization ambiguity
+- CI fails or merge conflicts exist
+- PR is not clearly docs-only
+
+If blocked, **stop and ask Anton**.
+
+## Post-merge response format
+
+Report: **Status** / **What I checked** / **What changed** / **Merge SHA** / **Current state** / **Confirmation that no implementation was authorized**
