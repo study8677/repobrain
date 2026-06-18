@@ -1,5 +1,7 @@
 # CorpFlow Chat / Concierge — destination reference (Social Intents)
 
+**Library:** CorpFlow Candidate & Reference Library (`docs/product/README.md`)
+
 **Status:** `REFERENCE-ONLY / DESTINATION-SHAPE`
 
 **Verdict:** `REFERENCE CAPTURED — NO IMPLEMENTATION AUTHORIZED`

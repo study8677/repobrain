@@ -1,5 +1,7 @@
 # Marketing automation content engine — candidate evaluation
 
+**Library:** CorpFlow Candidate & Reference Library (`docs/product/README.md`)
+
 **Status:** `SERIOUS-CANDIDATE / EVALUATE-FIRST` (Google Vids primary row)
 
 **Verdict:** `CANDIDATE CAPTURED — NO IMPLEMENTATION AUTHORIZED`

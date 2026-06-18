@@ -1,57 +1,64 @@
 ---
-description: Auto-merge standing permission for docs-only library/candidate/reference capture PRs
+description: Auto-merge standing permission for CorpFlow Candidate & Reference Library docs-only PRs
 alwaysApply: true
 ---
 
-# Library / candidate / reference capture — auto-merge
+# CorpFlow Candidate & Reference Library — auto-merge
 
-Anton has **standing permission** to auto-merge without separate manual approval when **all** conditions below hold.
+**Canonical library name:** `CorpFlow Candidate & Reference Library`
 
-## Allowed auto-merge class
+Anton has **standing permission** to auto-merge without separate manual approval when a PR **clearly belongs to this library** and **all** conditions below hold.
 
-`LIBRARY-CAPTURE / CANDIDATE-CAPTURE / REFERENCE-ONLY / DESTINATION-SHAPE`
-
-## Allowed content (docs capture only)
+## Library scope (docs capture only)
 
 - Product candidates, tool references, article references
-- Roadmap / destination-shape notes, evaluation candidates, benchmark products
-- Marketing automation candidates, future chat/concierge references
-- AI / video / article generation candidate notes
+- Benchmark products, future roadmap references, destination-shape notes
+- Marketing automation candidates, AI video/article generation candidates
+- Future chat/concierge references
 - Operator-supplied rationale for why a tool is worth tracking
+
+**Index:** `docs/product/README.md`
 
 ## Allowed paths (unless repo convention says otherwise)
 
 - `docs/product/**`, `docs/strategy/**`, `docs/research/**`, `docs/tools/**`
 - `artifacts/chat_history.md`
-- Lightweight index in `docs/CORPFLOW_SHARED_TODO.md` **only if** a relevant future-candidates/library section already exists
+- `.cursor/rules/library-capture-auto-merge.mdc` (when updating this policy)
+- Lightweight index in `docs/CORPFLOW_SHARED_TODO.md` **only if** a relevant library section already exists
 - `docs/decisions/JOURNAL.md` **only if** repo convention requires a JE row
 
-## Auto-merge requirements
+## Allowed capture statuses
 
-- Docs-only PR; `git diff --name-only` limited to approved paths above (plus this rule file when updating policy)
+- `REFERENCE-ONLY`, `DESTINATION-SHAPE`, `CANDIDATE-CAPTURED`, `SERIOUS-CANDIDATE / EVALUATE-FIRST`, `NO IMPLEMENTATION AUTHORIZED`
+
+**Do not use** `AUTHORIZED`, `SELECTED`, `IMPLEMENTING`, or `COMPLETE` unless Anton **separately and explicitly** authorizes implementation.
+
+## Auto-merge requirements (narrow)
+
+- Docs-only PR; `git diff --name-only` ⊆ allowed paths above
 - No app/runtime code, `.env*`, new env var names, secrets, tokens, credentials, private URLs, chat IDs, passwords, API keys, or Infisical paths
 - No n8n workflow changes; no L3/server commands
-- No containers, Docker Compose, GitHub Actions, scripts, cron, systemd, migrations, Prisma, API routes, middleware, package files, or Vercel config
+- No Docker/containers, GitHub Actions, scripts, cron, systemd, database/schema changes, API routes, middleware, package files, Vercel config, or public endpoints
 - PR body or captured doc must state **`NO IMPLEMENTATION AUTHORIZED`**
-- Status wording must be `REFERENCE-ONLY`, `CANDIDATE-CAPTURED`, `SERIOUS-CANDIDATE / EVALUATE-FIRST`, or `DESTINATION-SHAPE` — **not** `AUTHORIZED`, `SELECTED`, `IMPLEMENTING`, or `COMPLETE`
 - Preserve standing holds: no restic (unless separately authorized), no new self-hosted tools, no Chatwoot/Open WebUI/Dify/Coolify/Langfuse/AgentSpan/OpenJarvis/generic chatbot frameworks, no n8n migration, no public port exposure, no additional containers
 
 ## Pre-merge verification
 
 1. `git diff --stat` is docs-only
-2. `git diff --name-only` ⊆ approved paths
-3. Scan for obvious secret-like strings
-4. CI green if it runs; if docs-only and CI skipped by convention, record why no runtime verification was needed
+2. `git diff --name-only` ⊆ allowed paths
+3. No secret-like strings, tokens, private URLs, chat IDs, API keys, passwords, or Infisical paths
+4. PR explicitly says **`NO IMPLEMENTATION AUTHORIZED`**
+5. CI/checks green if applicable
 
 ## Do not auto-merge if
 
+- PR is not clearly a **CorpFlow Candidate & Reference Library** update
 - Any app/runtime, env, infrastructure, monitoring, backup, n8n, deployment, auth, database, or production-behavior change
 - Implementation wording or tool authorization ambiguity
 - CI fails or merge conflicts exist
-- PR is not clearly docs-only
 
 If blocked, **stop and ask Anton**.
 
 ## Post-merge response format
 
-Report: **Status** / **What I checked** / **What changed** / **Merge SHA** / **Current state** / **Confirmation that no implementation was authorized**
+Report: **Status** / **What I checked** / **What changed** / **Merge SHA** / **Confirmation that this was a CorpFlow Candidate & Reference Library update** / **Confirmation that no implementation was authorized**

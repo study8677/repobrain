@@ -28,6 +28,12 @@
 
 ---
 
+## 2026-06-18 — **CorpFlow Candidate & Reference Library — canonical name + index (docs-only).** Established standing library name **`CorpFlow Candidate & Reference Library`** with index at `docs/product/README.md`; updated `.cursor/rules/library-capture-auto-merge.mdc` with canonical name, allowed statuses, and narrowed auto-merge guardrails; tagged existing captures (Social Intents, Google Vids) as library members. Auto-merge applies only to PRs clearly belonging to this library. Verdict: **NO IMPLEMENTATION AUTHORIZED**.
+
+<!-- CORPFLOW_CANDIDATE_REFERENCE_LIBRARY_2026_06_18_HIST -->
+
+---
+
 ## 2026-06-18 — **Google Vids marketing automation content engine candidate (docs-only).** Captured Google Vids / Gemini Workspace AI-avatar video creation as **`SERIOUS-CANDIDATE / EVALUATE-FIRST`** for a future CorpFlow marketing automation content engine — not implementation. Source: [Google Workspace blog — AI avatars in Google Vids](https://workspace.google.com/blog/ai-and-machine-learning/how-to-create-professional-work-videos-with-ai-avatars-in-google-vids). New doc: `docs/product/MARKETING_AUTOMATION_CONTENT_ENGINE_CANDIDATES.md`. Anton signal: prior use + ~80% initial workflow value at free/low friction; manual-first Vids with n8n orchestration TBD pending API eval; adjacent paths Gemini API / AI Studio / Veo / Drive if Vids API limited. Complements (does not replace) approved LR Playwright+FFmpeg walkthrough pipeline. Future video target: **AI-generated/avatar, not human video**. Verdict: **CANDIDATE CAPTURED — NO IMPLEMENTATION AUTHORIZED**.
 
 <!-- GOOGLE_VIDS_MARKETING_CONTENT_ENGINE_CANDIDATE_2026_06_18_HIST -->
