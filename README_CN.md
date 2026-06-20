@@ -540,6 +540,13 @@ Antigravity 在事实题上**比 Codex 快 2.1x**，在审计题上跟 Codex 速
       <sub><b>主要贡献者</b> · 创意建议 · 项目管理员 · 项目构想与反馈</sub>
     </td>
     <td align="center" width="20%">
+      <a href="https://github.com/h13181278389">
+        <img src="https://github.com/h13181278389.png" width="80" /><br/>
+        <b>h13181278389</b>
+      </a><br/>
+      <sub><b>核心贡献者</b> · 感谢你对 Antigravity 的支持、反馈与贡献</sub>
+    </td>
+    <td align="center" width="20%">
       <a href="https://github.com/devalexanderdaza">
         <img src="https://github.com/devalexanderdaza.png" width="80" /><br/>
         <b>Alexander Daza</b>

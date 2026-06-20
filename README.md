@@ -510,6 +510,13 @@ Ideas are contributions too! Open an [issue](https://github.com/study8677/antigr
       <sub><b>Major Contributor</b> · Creative suggestions · Project administrator · Project ideation & feedback</sub>
     </td>
     <td align="center" width="20%">
+      <a href="https://github.com/h13181278389">
+        <img src="https://github.com/h13181278389.png" width="80" /><br/>
+        <b>h13181278389</b>
+      </a><br/>
+      <sub><b>Core Contributor</b> · Thank you for your support, feedback, and contributions to Antigravity</sub>
+    </td>
+    <td align="center" width="20%">
       <a href="https://github.com/devalexanderdaza">
         <img src="https://github.com/devalexanderdaza.png" width="80" /><br/>
         <b>Alexander Daza</b>
