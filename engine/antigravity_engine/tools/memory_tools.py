@@ -92,8 +92,8 @@ def search_memory_md(
             return completed.stdout.strip()
         if completed.returncode in (0, 1):
             return "No matching memory lines found."
-    except FileNotFoundError:
-        # Fallback for environments without ripgrep installed.
+    except OSError:
+        # Fallback for environments where ripgrep is missing or cannot run.
         pass
 
     matches = []
