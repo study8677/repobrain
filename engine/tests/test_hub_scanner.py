@@ -212,6 +212,20 @@ def test_full_scan_detects_entry_points_from_pyproject(tmp_path: Path) -> None:
     assert "ag_cli/cli.py" in report.entry_points
 
 
+def test_full_scan_detects_src_layout_entry_points_from_pyproject(tmp_path: Path) -> None:
+    """Entry points in src-layout Python packages should be detected."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[project.scripts]\nag = "ag_cli.cli:app"\n', encoding="utf-8"
+    )
+    cli_dir = tmp_path / "src" / "ag_cli"
+    cli_dir.mkdir(parents=True)
+    (cli_dir / "cli.py").write_text("app = 'hello'\n", encoding="utf-8")
+
+    report = full_scan(tmp_path)
+
+    assert "src/ag_cli/cli.py" in report.entry_points
+
+
 def test_full_scan_detects_common_entry_files(tmp_path: Path) -> None:
     """Common entry-point filenames are detected as fallback."""
     (tmp_path / "main.py").write_text("if __name__ == '__main__': pass\n", encoding="utf-8")

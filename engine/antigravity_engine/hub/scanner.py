@@ -388,6 +388,7 @@ def _read_entry_points(root: Path, config_contents: dict[str, str]) -> dict[str,
                 for _cmd, ref in scripts.items():
                     mod = ref.split(":")[0].replace(".", "/") + ".py"
                     candidates.append(mod)
+                    candidates.append(f"src/{mod}")
             except Exception:
                 pass
 
