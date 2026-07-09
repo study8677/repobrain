@@ -62,6 +62,28 @@ class Settings(BaseSettings):
         description="Default model name for OpenAI-compatible chat completions.",
     )
 
+    # Local host runner (experimental, no API key) Configuration
+    AG_HOST_RUNNER: str = Field(
+        default="",
+        description="Experimental local host runner for ag-ask, e.g. 'codex'.",
+    )
+    AG_HOST_MODEL: str = Field(
+        default="gpt-5.3-codex-spark",
+        description="Model passed to the local host runner.",
+    )
+    AG_HOST_TIMEOUT_SECONDS: float = Field(
+        default=240.0,
+        description="Timeout in seconds for local host runner calls.",
+    )
+    AG_HOST_MAX_CONTEXT_CHARS: int = Field(
+        default=60000,
+        description="Maximum prompt size passed to the local host runner.",
+    )
+    AG_REFRESH_SCAN_ONLY: bool = Field(
+        default=False,
+        description="Run refresh without LLM analysis and write scan artifacts only.",
+    )
+
     # Memory Configuration
     MEMORY_FILE: str = "memory/agent_memory.md"
     MEMORY_SUMMARY_FILE: str = "memory/agent_summary.md"

@@ -242,13 +242,13 @@ A typical first session is **ag-setup → ag-refresh → ag-ask**.
 
 ### `ag-setup` — first-time configuration
 
-Run this **once per project**, right after installing the plugin. Interactive picker for the LLM provider (OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA NIM / Ollama local / any OpenAI-compatible endpoint), then writes `.env` to the project root with `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `AG_ASK_TIMEOUT_SECONDS`. Also ensures `.env` is in `.gitignore`. Skip it if you already have a working `.env`.
+Run this **once per project**, right after installing the plugin. Interactive picker for the LLM provider (OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA NIM / Ollama local / any OpenAI-compatible endpoint), then writes `.env` to the project root with `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `AG_ASK_TIMEOUT_SECONDS`. It can also write an explicit local Codex host-runner config for experimental no-API-key `ag-ask`. Also ensures `.env` is in `.gitignore`. Skip it if you already have a working `.env`.
 
 ### `ag-refresh` — build / refresh the knowledge base
 
 Deploys the multi-agent cluster to read your code: each module gets its own Agent that produces a knowledge doc under `.antigravity/agents/*.md`, plus a `map.md` routing index. Run after install, after significant code changes, or when `ag-ask` returns stale answers. The first refresh auto-creates `.antigravity/` — no separate init step needed. Pass `quick` for an incremental update, `failed-only` to rerun only previously failed modules.
 
-Time: a few minutes for small repos, longer for large ones. Requires `ag-setup` to have completed.
+Time: a few minutes for small repos, longer for large ones. Requires `ag-setup` to have completed. Full LLM refresh requires an API-key/OpenAI-compatible provider; local host-runner mode can use `AG_REFRESH_SCAN_ONLY=1 ag-refresh --workspace .` for scan artifacts.
 
 ### `ag-ask` — routed Q&A on the codebase
 
@@ -430,9 +430,9 @@ The default sandbox is for trusted local workspaces, not untrusted code isolatio
 | `ag init <dir>` | Inject cognitive architecture templates | No |
 | `ag init <dir> --force` | Re-inject, overwriting existing files | No |
 | `ag refresh --workspace <dir>` | CLI convenience wrapper around the knowledge-hub refresh pipeline | Yes |
-| `ag ask "question" --workspace <dir>` | CLI convenience wrapper around the routed project Q&A flow | Yes |
+| `ag ask "question" --workspace <dir>` | CLI convenience wrapper around the routed project Q&A flow | Yes, or local Codex host runner |
 | `ag-refresh` | Multi-agent self-learning of codebase, generates module knowledge docs + `conventions.md` + `structure.md` | Yes |
-| `ag-ask "question"` | Router → ModuleAgent/GitAgent routed Q&A | Yes |
+| `ag-ask "question"` | Router → ModuleAgent/GitAgent routed Q&A | Yes, or local Codex host runner |
 | `ag-mcp --workspace <dir>` | **Start MCP server** — exposes `ask_project` + `refresh_project` to Claude Code | Yes |
 | `ag report "message"` | Log a finding to `.antigravity/memory/` | No |
 | `ag log-decision "what" "why"` | Log an architectural decision | No |
@@ -473,7 +473,7 @@ antigravity-workspace-template/
 
 **CLI** (`pip install .../cli`) — Zero LLM deps. Injects templates, logs reports & decisions offline.
 
-**Engine** (`pip install .../engine`) — Repository knowledge runtime. Powers `ag-ask`, `ag-refresh`, `ag-mcp`. Uses the OpenAI-compatible endpoint written by `ag-setup` (OpenAI, DeepSeek, Groq, DashScope, NVIDIA NIM, Ollama, or custom).
+**Engine** (`pip install .../engine`) — Repository knowledge runtime. Powers `ag-ask`, `ag-refresh`, `ag-mcp`. Uses the OpenAI-compatible endpoint written by `ag-setup` (OpenAI, DeepSeek, Groq, DashScope, NVIDIA NIM, Ollama, or custom). Experimental local mode can set `AG_HOST_RUNNER=codex` so `ag-ask` runs through the user's local `codex login` instead of an API key; this is for personal/local use and is not a hosted product backend.
 
 **Skill packaging:**
 - `engine/antigravity_engine/skills/graph-retrieval/` — graph-oriented retrieval tools for structure and call-path reasoning.

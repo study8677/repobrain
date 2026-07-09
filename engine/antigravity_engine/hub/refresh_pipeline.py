@@ -250,16 +250,32 @@ async def refresh_pipeline(workspace: Path, quick: bool = False, failed_only: bo
         render_knowledge_graph_markdown,
         render_knowledge_graph_mermaid,
     )
-    refresh_scan_only = os.environ.get("AG_REFRESH_SCAN_ONLY", "0").strip() in {"1", "true", "yes"}
+    from antigravity_engine.config import get_settings
+
+    settings = get_settings()
+    scan_only_raw = os.environ.get("AG_REFRESH_SCAN_ONLY")
+    if scan_only_raw is None:
+        refresh_scan_only = bool(settings.AG_REFRESH_SCAN_ONLY)
+    else:
+        refresh_scan_only = scan_only_raw.strip().lower() in {"1", "true", "yes"}
     model: str | None = None
 
     if not refresh_scan_only:
         from agents import set_tracing_disabled
-        from antigravity_engine.config import get_settings
         from antigravity_engine.hub.agents import create_model
+        from antigravity_engine.hub.host_runner import normalize_host_runner_name
 
         set_tracing_disabled(True)
-        settings = get_settings()
+        if (
+            normalize_host_runner_name(settings.AG_HOST_RUNNER)
+            and not settings.OPENAI_API_KEY
+            and not settings.OPENAI_BASE_URL
+        ):
+            raise ValueError(
+                "AG_HOST_RUNNER is only supported for ag-ask. For no-key refresh, "
+                "run `AG_REFRESH_SCAN_ONLY=1 ag-refresh --workspace .` to build "
+                "local scan artifacts, or configure OPENAI_* for full LLM refresh."
+            )
         model = create_model(settings)
 
     ag_dir = _ensure_refresh_workspace_initialized(workspace)

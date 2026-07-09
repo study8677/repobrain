@@ -15,6 +15,15 @@ Use Bash:
 AG_ASK_TIMEOUT_SECONDS="${AG_ASK_TIMEOUT_SECONDS:-120}" ag-ask "$ARGUMENTS" --workspace "$PWD"
 ```
 
+If `.env` sets `AG_HOST_RUNNER=codex`, the same command uses the user's local
+Codex CLI login for `ag-ask` instead of an API key. This host-runner mode is
+ask-only; refresh should use scan-only artifacts or a configured `OPENAI_*`
+provider.
+
+如果 `.env` 设置了 `AG_HOST_RUNNER=codex`，同一个命令会通过用户本机 Codex CLI
+登录运行 `ag-ask`，不走 API key。这个 host-runner 模式只支持 ask；refresh
+应使用 scan-only 产物或已配置的 `OPENAI_*` provider。
+
 使用 Bash：
 
 ```bash

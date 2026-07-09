@@ -190,12 +190,28 @@ async def ask_pipeline(workspace: Path, question: str) -> str:
         is unchanged.
     """
     from antigravity_engine.config import get_settings
+    from antigravity_engine.hub.host_runner import (
+        HostRunnerError,
+        is_host_runner_enabled,
+        normalize_host_runner_name,
+    )
+
+    settings = get_settings()
+    host_runner = normalize_host_runner_name(settings.AG_HOST_RUNNER)
+    if host_runner:
+        if not is_host_runner_enabled(host_runner):
+            raise HostRunnerError(
+                f"Unsupported AG_HOST_RUNNER={settings.AG_HOST_RUNNER!r}. "
+                "Supported values: codex."
+            )
+        return await _ask_with_host_runner(workspace, question, settings)
+
     from antigravity_engine.hub._providers import (
         get_provider_chain,
         run_with_provider_failover,
     )
 
-    providers = get_provider_chain(get_settings())
+    providers = get_provider_chain(settings)
 
     async def _once() -> str:
         return await _ask_pipeline_once(workspace, question)
@@ -227,6 +243,101 @@ async def _ask_pipeline_once(workspace: Path, question: str) -> str:
         print("[1/4] Structured facts were insufficient; falling back to legacy swarm.", file=sys.stderr)
 
     return await _ask_with_legacy_swarm(workspace, question)
+
+
+async def _ask_with_host_runner(workspace: Path, question: str, settings) -> str:
+    """Run an explicit local host runner instead of the Agent SDK provider path."""
+    from antigravity_engine.hub.host_runner import run_host_runner
+
+    retrieval_mode = os.environ.get("AG_ASK_RETRIEVAL_FIRST", "1").strip().lower()
+    retrieval_evidence: str | None = None
+    if retrieval_mode in {"1", "true", "yes", "2"}:
+        retrieval_evidence = _build_retrieval_semantic_answer(workspace, question)
+        if retrieval_evidence and retrieval_mode == "2":
+            print("[1/2] Retrieval-first answer hit; skipping host runner.", file=sys.stderr)
+            return retrieval_evidence
+
+    print("[1/2] Gathering project context for local host runner...", file=sys.stderr)
+    context_parts = [_build_ask_context(workspace, question)]
+    agent_context = _build_host_runner_agent_context(workspace, question)
+    if agent_context:
+        context_parts.append(agent_context)
+    context = "\n\n".join(part for part in context_parts if part.strip())
+    graph_context = _build_graph_skill_context(workspace, question) if _is_structure_query(question) else None
+
+    print(
+        f"[2/2] Asking local host runner '{settings.AG_HOST_RUNNER}'...",
+        file=sys.stderr,
+    )
+    return await run_host_runner(
+        runner=settings.AG_HOST_RUNNER,
+        workspace=workspace,
+        question=question,
+        context=context,
+        retrieval_evidence=retrieval_evidence,
+        graph_context=graph_context,
+        model=settings.AG_HOST_MODEL,
+        timeout_seconds=settings.AG_HOST_TIMEOUT_SECONDS,
+        max_context_chars=settings.AG_HOST_MAX_CONTEXT_CHARS,
+    )
+
+
+def _build_host_runner_agent_context(workspace: Path, question: str) -> str:
+    """Build compact map.md/agent.md context for local host runners."""
+    ag_dir = workspace / ".antigravity"
+    agents_dir = ag_dir / "agents"
+    parts: list[str] = []
+
+    map_path = ag_dir / "map.md"
+    if map_path.is_file():
+        try:
+            map_text = map_path.read_text(encoding="utf-8")[:20_000]
+            parts.append("## .antigravity/map.md\n\n" + map_text)
+        except OSError:
+            pass
+
+    if not agents_dir.is_dir():
+        return "\n\n".join(parts)
+
+    question_tokens = set(_question_tokens(question))
+    scored_docs: list[tuple[int, str, str]] = []
+    for label, path in _iter_agent_docs(agents_dir):
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        searchable = f"{label}\n{content[:4000]}".lower()
+        score = sum(1 for token in question_tokens if token in searchable)
+        if label.lower() in question.lower():
+            score += 5
+        scored_docs.append((score, label, content))
+
+    scored_docs.sort(key=lambda item: (-item[0], item[1]))
+    selected = [item for item in scored_docs if item[0] > 0][:3]
+    if not selected:
+        selected = scored_docs[:2]
+
+    for _, label, content in selected:
+        marker = ""
+        if _is_fallback_doc(content):
+            marker = "\n\n[Note: this is a fallback file-list document, not full LLM analysis.]"
+        parts.append(f"## .antigravity/agents/{label}\n{marker}\n\n{content[:25_000]}")
+
+    if parts:
+        return "## Antigravity Agent Knowledge\n\n" + "\n\n".join(parts)
+    return ""
+
+
+def _iter_agent_docs(agents_dir: Path) -> list[tuple[str, Path]]:
+    """Return readable agent.md document labels and paths."""
+    docs: list[tuple[str, Path]] = []
+    for item in sorted(agents_dir.iterdir(), key=lambda path: path.name):
+        if item.is_file() and item.suffix == ".md":
+            docs.append((item.name, item))
+        elif item.is_dir() and not item.name.startswith("."):
+            for md_file in sorted(item.glob("*.md")):
+                docs.append((f"{item.name}/{md_file.name}", md_file))
+    return docs
 
 
 async def _ask_with_legacy_swarm(workspace: Path, question: str) -> str:

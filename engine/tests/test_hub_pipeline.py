@@ -124,6 +124,31 @@ async def test_refresh_pipeline_creates_conventions(tmp_path: Path, monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_refresh_scan_only_can_be_enabled_from_env_file(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """No-key refresh can run in scan-only mode from project .env."""
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.delenv("AG_REFRESH_SCAN_ONLY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    (tmp_path / ".env").write_text(
+        "AG_REFRESH_SCAN_ONLY=1\nAG_HOST_RUNNER=codex\n",
+        encoding="utf-8",
+    )
+
+    from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.refresh_pipeline import refresh_pipeline
+
+    reset_settings()
+
+    status = await refresh_pipeline(tmp_path, quick=False)
+
+    assert status.stages["conventions"] == "skipped"
+    assert (tmp_path / ".antigravity" / "scan_report.json").exists()
+
+
+@pytest.mark.asyncio
 async def test_ask_pipeline_returns_answer(tmp_path: Path, monkeypatch) -> None:
     """ask_pipeline returns an answer string."""
     monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
@@ -152,6 +177,133 @@ async def test_ask_pipeline_returns_answer(tmp_path: Path, monkeypatch) -> None:
         answer = await pipeline_mod.ask_pipeline(tmp_path, "What framework?")
 
     assert "FastAPI" in answer
+
+
+@pytest.mark.asyncio
+async def test_ask_pipeline_uses_codex_host_runner_without_model_config(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """AG_HOST_RUNNER=codex bypasses the Agent SDK model path."""
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.setenv("AG_HOST_RUNNER", "codex")
+    monkeypatch.setenv("AG_HOST_MODEL", "gpt-5.3-codex-spark")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    from antigravity_engine.config import reset_settings
+    reset_settings()
+
+    ag_dir = tmp_path / ".antigravity"
+    ag_dir.mkdir()
+    (ag_dir / "conventions.md").write_text("Python + FastAPI", encoding="utf-8")
+    (ag_dir / "map.md").write_text("api: FastAPI application module", encoding="utf-8")
+    agents_dir = ag_dir / "agents"
+    agents_dir.mkdir()
+    (agents_dir / "api.md").write_text("FastAPI agent says routes live here.", encoding="utf-8")
+
+    async def _fake_host_runner(**kwargs):
+        assert kwargs["runner"] == "codex"
+        assert kwargs["model"] == "gpt-5.3-codex-spark"
+        assert "FastAPI" in kwargs["context"]
+        assert "FastAPI agent says" in kwargs["context"]
+        return "host runner answer"
+
+    def _unexpected_create_model(*args, **kwargs):
+        raise AssertionError("create_model should not be called in host mode")
+
+    monkeypatch.setattr(
+        "antigravity_engine.hub.host_runner.run_host_runner",
+        _fake_host_runner,
+    )
+    monkeypatch.setattr(
+        "antigravity_engine.hub.agents.create_model",
+        _unexpected_create_model,
+    )
+
+    from antigravity_engine.hub.ask_pipeline import ask_pipeline
+
+    answer = await ask_pipeline(tmp_path, "What framework?")
+
+    assert answer == "host runner answer"
+
+
+@pytest.mark.asyncio
+async def test_ask_pipeline_rejects_unknown_host_runner(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.setenv("AG_HOST_RUNNER", "codexx")
+
+    from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.host_runner import HostRunnerError
+
+    reset_settings()
+
+    from antigravity_engine.hub.ask_pipeline import ask_pipeline
+
+    with pytest.raises(HostRunnerError, match="Unsupported AG_HOST_RUNNER"):
+        await ask_pipeline(tmp_path, "What framework?")
+
+
+@pytest.mark.asyncio
+async def test_ask_pipeline_host_runner_preserves_retrieval_first_mode(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.setenv("AG_HOST_RUNNER", "codex")
+    monkeypatch.setenv("AG_ASK_RETRIEVAL_FIRST", "2")
+    (tmp_path / "app.py").write_text("def target_func():\n    return 1\n", encoding="utf-8")
+
+    from antigravity_engine.config import reset_settings
+    reset_settings()
+
+    async def _unexpected_host_runner(**kwargs):
+        raise AssertionError("host runner should be skipped by retrieval-first mode")
+
+    monkeypatch.setattr(
+        "antigravity_engine.hub.host_runner.run_host_runner",
+        _unexpected_host_runner,
+    )
+
+    from antigravity_engine.hub.ask_pipeline import ask_pipeline
+
+    answer = await ask_pipeline(tmp_path, "Where is target_func defined?")
+
+    assert "target_func" in answer
+    assert "app.py" in answer
+
+
+@pytest.mark.asyncio
+async def test_ask_pipeline_host_runner_failure_does_not_include_env_key(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.setenv("AG_HOST_RUNNER", "codex")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-secret-value")
+
+    from antigravity_engine.config import reset_settings
+    from antigravity_engine.hub.host_runner import HostRunnerError
+
+    reset_settings()
+
+    async def _fake_host_runner(**kwargs):
+        raise HostRunnerError("Codex host runner failed: no credentials available")
+
+    monkeypatch.setattr(
+        "antigravity_engine.hub.host_runner.run_host_runner",
+        _fake_host_runner,
+    )
+
+    from antigravity_engine.hub.ask_pipeline import ask_pipeline
+
+    with pytest.raises(HostRunnerError) as excinfo:
+        await ask_pipeline(tmp_path, "What framework?")
+
+    assert "sk-test-secret-value" not in str(excinfo.value)
 
 
 def test_build_ask_context_includes_root_and_memory_docs(tmp_path: Path) -> None:

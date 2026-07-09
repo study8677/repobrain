@@ -94,7 +94,7 @@
 
 ### `ag-setup` —— 首次配置
 
-每个项目跑**一次**，在安装插件后立即执行。交互式选择 LLM 提供商（OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA NIM / Ollama 本地 / 任意 OpenAI 兼容端点），然后在项目根目录写入 `.env`，包含 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`、`AG_ASK_TIMEOUT_SECONDS`，并把 `.env` 加入 `.gitignore`。如果已经有可用的 `.env` 可跳过。
+每个项目跑**一次**，在安装插件后立即执行。交互式选择 LLM 提供商（OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA NIM / Ollama 本地 / 任意 OpenAI 兼容端点），然后在项目根目录写入 `.env`，包含 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`、`AG_ASK_TIMEOUT_SECONDS`。也可以选择本地 Codex host-runner 实验模式，让无 API key 的 `ag-ask` 通过本机 `codex login` 运行。命令会把 `.env` 加入 `.gitignore`。如果已经有可用的 `.env` 可跳过。
 
 ```
 # Claude Code
@@ -118,7 +118,7 @@
 /ag-refresh quick
 ```
 
-耗时：小仓库几分钟，大仓库更久。需要先完成 `ag-setup`。
+耗时：小仓库几分钟，大仓库更久。需要先完成 `ag-setup`。完整 LLM refresh 仍需要 API key / OpenAI-compatible provider；本地 host-runner 模式下可用 `AG_REFRESH_SCAN_ONLY=1 ag-refresh --workspace .` 生成本地扫描知识产物。
 
 ### `ag-ask` —— 路由问答
 
@@ -237,9 +237,9 @@ ag init my-project && cd my-project
 | `ag init <dir>` | 注入认知架构模板 | 否 |
 | `ag init <dir> --force` | 重新注入，覆盖已有文件 | 否 |
 | `ag refresh --workspace <dir>` | CLI 便捷包装，调用知识库 refresh 流程 | 是 |
-| `ag ask "问题" --workspace <dir>` | CLI 便捷包装，调用路由式项目问答流程 | 是 |
+| `ag ask "问题" --workspace <dir>` | CLI 便捷包装，调用路由式项目问答流程 | 是，或本地 Codex host runner |
 | `ag-refresh` | 多智能体自主学习代码库，生成模块知识文档 + `conventions.md` + `structure.md` | 是 |
-| `ag-ask "问题"` | Router → ModuleAgent/GitAgent 路由问答 | 是 |
+| `ag-ask "问题"` | Router → ModuleAgent/GitAgent 路由问答 | 是，或本地 Codex host runner |
 | `ag-mcp --workspace <dir>` | **启动 MCP 服务器** —— 向 Claude Code 暴露 `ask_project` + `refresh_project` 工具 | 是 |
 | `ag report "内容"` | 记录发现到 `.antigravity/memory/` | 否 |
 | `ag log-decision "决策" "原因"` | 记录架构决策 | 否 |
@@ -276,7 +276,7 @@ antigravity-workspace-template/
 
 **CLI**（`pip install .../cli`）—— 零 LLM 依赖。注入模板，离线记录报告和决策。
 
-**Engine**（`pip install .../engine`）—— 代码库知识运行时。驱动 `ag-ask`、`ag-refresh`、`ag-mcp`。使用 `ag-setup` 写入的 OpenAI-compatible endpoint（OpenAI、DeepSeek、Groq、DashScope、NVIDIA NIM、Ollama 或自定义端点）。
+**Engine**（`pip install .../engine`）—— 代码库知识运行时。驱动 `ag-ask`、`ag-refresh`、`ag-mcp`。使用 `ag-setup` 写入的 OpenAI-compatible endpoint（OpenAI、DeepSeek、Groq、DashScope、NVIDIA NIM、Ollama 或自定义端点）。实验性本地模式可设置 `AG_HOST_RUNNER=codex`，让 `ag-ask` 使用用户本机 `codex login`，不走 API key；这个能力只面向个人本地使用，不作为托管产品后端承诺。
 
 **新增 skill 封装更新：**
 - `engine/antigravity_engine/skills/graph-retrieval/` —— 面向结构与调用路径推理的图谱检索工具。

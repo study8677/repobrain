@@ -12,8 +12,8 @@
 
 1. **Marketplace add** — clones the plugin manifest into Claude Code's cache.
 2. **Install** — first session triggers `hooks/install_engine.py`, which auto-installs the engine CLI (`ag-ask`, `ag-refresh`, `ag-mcp`) via `pipx` (preferred), `pip --user` fallback, or prints a manual command if both fail. Cross-platform (macOS / Linux / Windows).
-3. **Setup** — interactive: choose your LLM provider (OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA / Ollama), paste your API key, writes a `.env` to the current project root and ensures it's git-ignored.
-4. **Refresh** — runs `ag-refresh` directly and builds `.antigravity/` for the current project. The first refresh creates the project knowledge directory automatically.
+3. **Setup** — interactive: choose your LLM provider (OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA / Ollama), paste your API key, writes a `.env` to the current project root and ensures it's git-ignored. For local Codex users, setup can instead write `AG_HOST_RUNNER=codex` for experimental no-API-key `ag-ask`.
+4. **Refresh** — runs `ag-refresh` directly and builds `.antigravity/` for the current project. The first refresh creates the project knowledge directory automatically. Full LLM refresh requires an API key; Codex host-runner mode uses scan-only refresh artifacts.
 5. **Ask** — runs `ag-ask` directly and queries the refreshed project knowledge base.
 
 MCP is optional. If you want tool-style integration in an MCP-compatible host,
@@ -56,6 +56,29 @@ You can also keep using the raw CLI directly: `ag-refresh --workspace <project>`
 If your Codex build supports MCP and you want tool-style integration, register
 `ag-mcp --workspace <project>` separately in your Codex MCP configuration.
 
+### Codex host-runner mode without an API key
+
+If you are only using Antigravity locally and your Codex CLI is already logged
+in with ChatGPT, you can use the experimental host runner for `ag-ask`:
+
+```
+codex login status
+cat >> .env <<'EOF'
+AG_HOST_RUNNER=codex
+AG_HOST_MODEL=gpt-5.3-codex-spark
+AG_HOST_TIMEOUT_SECONDS=240
+AG_HOST_MAX_CONTEXT_CHARS=60000
+AG_REFRESH_SCAN_ONLY=1
+EOF
+
+ag-refresh --workspace .      # scan-only artifacts, no API key
+ag-ask "what does this project do?" --workspace .
+```
+
+This mode is ask-only and depends on the user's local Codex installation and
+login. It is not a hosted product backend and does not replace API-key-backed
+full refresh.
+
 ## Verifying
 
 - **Claude Code**: `/antigravity:ag-ask "what does the engine do?"` should run `ag-ask` and print a routed answer.
@@ -67,7 +90,7 @@ Same four commands ship to both hosts. Claude Code namespaces them as `/antigrav
 
 | Claude Code | Codex CLI | What it does |
 |---|---|---|
-| `/antigravity:ag-setup` | `/ag-setup` | **First-time setup** — interactive `.env` writer (LLM provider + key + model) |
+| `/antigravity:ag-setup` | `/ag-setup` | **First-time setup** — interactive `.env` writer (LLM provider + key + model, or local Codex host runner) |
 | `/antigravity:ag-refresh [quick]` | `/ag-refresh [quick]` | Rebuild / incrementally update the project knowledge base |
 | `/antigravity:ag-ask <question>` | `/ag-ask <question>` | Routed Q&A on the current codebase |
 | `/antigravity:ag-init <name>` | `/ag-init <name>` | Scaffold a new multi-agent repo from this template |
