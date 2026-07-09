@@ -3,7 +3,7 @@
 ## Normal Claude Code Flow
 
 ```bash
-/plugin marketplace add study8677/antigravity-workspace-template
+/plugin marketplace add study8677/repobrain
 /plugin install antigravity@antigravity
 /antigravity:ag-setup
 /antigravity:ag-refresh
@@ -24,7 +24,7 @@ This means the engine CLI is not installed or its bin directory is not on `PATH`
 Install it manually:
 
 ```bash
-pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
+pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
 ```
 
 This is not an API key failure. Do not rerun setup unless `/antigravity:ag-setup` has never completed.

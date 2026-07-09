@@ -291,7 +291,7 @@ workflow safer or more accurate.
 
 ---
 
-**Questions or ideas?** Open an issue on GitHub or [propose a contribution](https://github.com/study8677/antigravity-workspace-template/issues).
+**Questions or ideas?** Open an issue on GitHub or [propose a contribution](https://github.com/study8677/repobrain/issues).
 
 **Next:** [Full Index](README.md)
 

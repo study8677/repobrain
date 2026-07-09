@@ -126,7 +126,7 @@ def _run_hub(workspace: Path, *args: str) -> int:
     console.print(
         "[red]Engine not installed. Install: pip install ./engine "
         "or pip install \"git+https://github.com/study8677/"
-        "antigravity-workspace-template.git#subdirectory=engine\"[/red]"
+        "repobrain.git#subdirectory=engine\"[/red]"
     )
     return 1
 

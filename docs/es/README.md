@@ -143,11 +143,11 @@ R: Desde abril 2026, `ag-refresh` produce claims JSON estructurados con evidenci
 Bienvenemos contribuciones en todos los niveles:
 
 ### Reportar Issues
-¿Encontraste un bug? [Abre un issue](https://github.com/study8677/antigravity-workspace-template/issues)
+¿Encontraste un bug? [Abre un issue](https://github.com/study8677/repobrain/issues)
 
 ### Sugerir Ideas
 ¿Tienes una idea arquitectónica? ¡Las ideas también son contribuciones!
-[Propón tu pensamiento](https://github.com/study8677/antigravity-workspace-template/issues/new)
+[Propón tu pensamiento](https://github.com/study8677/repobrain/issues/new)
 
 ### Enviar Código
 ¿Listo para codificar? Consulta la [Hoja de Ruta](ROADMAP.md) Fase 9 para áreas abiertas.
@@ -158,9 +158,9 @@ Bienvenemos contribuciones en todos los niveles:
 ## 📞 Soporte
 
 - 📖 **Documentación**: ¡Estás leyéndola! (o consulta [README.md](../../README.md))
-- 🐛 **Reportes de Bugs**: [GitHub Issues](https://github.com/study8677/antigravity-workspace-template/issues)
-- 💡 **Solicitudes de Características**: [GitHub Discussions](https://github.com/study8677/antigravity-workspace-template/discussions)
-- 👥 **Comunidad**: [Dale una estrella al repo](https://github.com/study8677/antigravity-workspace-template) para mantenerte actualizado
+- 🐛 **Reportes de Bugs**: [GitHub Issues](https://github.com/study8677/repobrain/issues)
+- 💡 **Solicitudes de Características**: [GitHub Discussions](https://github.com/study8677/repobrain/discussions)
+- 👥 **Comunidad**: [Dale una estrella al repo](https://github.com/study8677/repobrain) para mantenerte actualizado
 
 ## 👥 Contribuidores
 

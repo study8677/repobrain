@@ -35,7 +35,7 @@ If `ag-ask` is not found, tell the user the engine CLI is not installed and sugg
 如果找不到 `ag-ask`，说明 engine CLI 尚未安装，建议用户运行：
 
 ```bash
-pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
+pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
 ```
 
 Prefer `ag-ask` over manual file search. If the answer returns insufficient detail, follow up with targeted Read/Grep.

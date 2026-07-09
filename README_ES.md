@@ -2,9 +2,11 @@
 
 <img src="docs/assets/logo.png" alt="Antigravity Workspace" width="200"/>
 
-# Antigravity
+# RepoBrain
 
 ### Motor de conocimiento de repositorios, portable entre IDEs, para Q&A de codebases con evidencia.
+
+<sub>Anteriormente conocido como <b>Antigravity Workspace Template</b> — el mismo proyecto, nuevo nombre.</sub>
 
 `ag-refresh` construye la capa de conocimiento portable; `ag-ask` enruta preguntas
 al contexto de módulo correcto y responde con evidencia de código. Plugins, CLI y
@@ -14,8 +16,8 @@ Idioma: [English](README.md) | [中文](README_CN.md) | **Español**
 
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
-[![CI](https://img.shields.io/github/actions/workflow/status/study8677/antigravity-workspace-template/test.yml?style=for-the-badge&label=CI)](https://github.com/study8677/antigravity-workspace-template/actions)
-[![DeepWiki](https://img.shields.io/badge/DeepWiki-Docs-blue?style=for-the-badge&logo=gitbook&logoColor=white)](https://deepwiki.com/study8677/antigravity-workspace-template)
+[![CI](https://img.shields.io/github/actions/workflow/status/study8677/repobrain/test.yml?style=for-the-badge&label=CI)](https://github.com/study8677/repobrain/actions)
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-Docs-blue?style=for-the-badge&logo=gitbook&logoColor=white)](https://deepwiki.com/study8677/repobrain)
 [![NLPM](https://img.shields.io/badge/NLPM-audited-7C3AED?style=for-the-badge)](https://github.com/xiaolai/nlpm-for-claude)
 
 <br/>
@@ -145,15 +147,15 @@ Crea un **nuevo** proyecto desde la plantilla Antigravity. Dos modos: `quick` (a
 **Opción A — Instalación de una línea como plugin de Claude Code / Codex CLI (recomendado)**
 ```bash
 # Claude Code (auto-instala el motor Python en la primera sesión vía SessionStart hook)
-/plugin marketplace add study8677/antigravity-workspace-template
+/plugin marketplace add study8677/repobrain
 /plugin install antigravity@antigravity
 /antigravity:ag-setup            # interactivo: elige proveedor LLM, pega API key, escribe .env
 /antigravity:ag-refresh          # el primer refresh crea .antigravity/ automáticamente
 /antigravity:ag-ask "¿Cómo funciona este proyecto?"
 
 # Codex CLI (instala el motor manualmente primero; los hooks de Codex aún no son soportados)
-pipx install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
-codex plugin marketplace add study8677/antigravity-workspace-template
+pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
+codex plugin marketplace add study8677/repobrain
 /ag-setup                        # mismos comandos en Codex, sin el prefijo antigravity:
 /ag-refresh
 /ag-ask "¿Cómo funciona este proyecto?"
@@ -168,8 +170,8 @@ Después de instalar y configurar dispondrás de los comandos slash `ag-ask <pre
 **Opción B — Instalación manual: motor + CLI vía pip**
 ```bash
 # 1. Instalar motor + CLI
-pip install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=cli"
-pip install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
+pip install "git+https://github.com/study8677/repobrain.git#subdirectory=cli"
+pip install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
 
 # 2. Configurar .env (cualquier API compatible con OpenAI)
 cd mi-proyecto
@@ -192,7 +194,7 @@ claude mcp add antigravity ag-mcp -- --workspace $(pwd)
 
 **Opción C — Solo archivos de contexto (cualquier IDE, sin LLM)**
 ```bash
-pip install git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=cli
+pip install git+https://github.com/study8677/repobrain.git#subdirectory=cli
 ag init mi-proyecto && cd mi-proyecto
 # Los archivos de entrada del IDE hacen bootstrap hacia AGENTS.md; el contexto dinámico vive en .antigravity/
 ```
@@ -241,7 +243,7 @@ ag init mi-proyecto && cd mi-proyecto
 ## Dos Paquetes, Un Flujo de Trabajo
 
 ```
-antigravity-workspace-template/
+repobrain/
 ├── cli/                     # ag CLI — ligero, instalable con pip
 │   └── templates/           # .cursorrules, CLAUDE.md, .antigravity/, ...
 └── engine/                  # Motor multi-agente + Knowledge Hub
@@ -349,7 +351,7 @@ Claude Code no necesita leer cientos de archivos de documentación — puede lla
 
 ```bash
 # Instalar motor
-pip install "git+https://github.com/study8677/antigravity-workspace-template.git#subdirectory=engine"
+pip install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
 
 # Refrescar base de conocimiento primero (ModuleAgents aprenden cada módulo)
 ag-refresh --workspace /ruta/al/proyecto
@@ -511,7 +513,7 @@ Reporte completo (datos, metodología, tablas por celda, advertencias):
 
 ## Contribuyendo
 
-¡Las ideas también son contribuciones! Abre un [issue](https://github.com/study8677/antigravity-workspace-template/issues) para reportar bugs, sugerir funcionalidades o proponer arquitectura.
+¡Las ideas también son contribuciones! Abre un [issue](https://github.com/study8677/repobrain/issues) para reportar bugs, sugerir funcionalidades o proponer arquitectura.
 
 ## Contribuidores
 
@@ -596,7 +598,7 @@ Reporte completo (datos, metodología, tablas por celda, advertencias):
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=study8677/antigravity-workspace-template&type=Date)](https://star-history.com/#study8677/antigravity-workspace-template&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=study8677/repobrain&type=Date)](https://star-history.com/#study8677/repobrain&Date)
 
 ## Licencia
 

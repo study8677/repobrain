@@ -3,7 +3,7 @@
 ## Claude Code
 
 ```
-/plugin marketplace add study8677/antigravity-workspace-template
+/plugin marketplace add study8677/repobrain
 /plugin install antigravity@antigravity
 /antigravity:ag-setup
 /antigravity:ag-refresh
@@ -25,7 +25,7 @@ An example MCP config lives at `docs/examples/antigravity.mcp.json`.
 You can also add the marketplace from a local checkout:
 
 ```
-/plugin marketplace add /absolute/path/to/antigravity-workspace-template
+/plugin marketplace add /absolute/path/to/repobrain
 ```
 
 ## Codex CLI
@@ -33,14 +33,14 @@ You can also add the marketplace from a local checkout:
 Codex CLI does not auto-run install hooks (as of April 2026), so install the engine first:
 
 ```
-pipx install /absolute/path/to/antigravity-workspace-template/engine
+pipx install /absolute/path/to/repobrain/engine
 ag-refresh --help    # verify
 ```
 
 Then register and install the plugin:
 
 ```
-codex plugin marketplace add /absolute/path/to/antigravity-workspace-template
+codex plugin marketplace add /absolute/path/to/repobrain
 ```
 
 Codex auto-discovers slash commands from the plugin's `commands/` directory (no manifest entry required), so the same four commands are available without the `antigravity:` prefix:

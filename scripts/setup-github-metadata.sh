@@ -6,10 +6,10 @@
 
 set -euo pipefail
 
-REPO="study8677/antigravity-workspace-template"
+REPO="study8677/repobrain"
 
 DESCRIPTION="Give Claude Code, Cursor, Codex CLI a ChatGPT for your codebase. Multi-agent knowledge engine, grounded Q&A with file paths and line numbers. Works in any AI IDE."
-HOMEPAGE="https://deepwiki.com/study8677/antigravity-workspace-template"
+HOMEPAGE="https://deepwiki.com/study8677/repobrain"
 
 # 20 topic slugs — GitHub's cap. Ordered by discovery value.
 TOPICS=(
