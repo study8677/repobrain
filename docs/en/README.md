@@ -1,6 +1,6 @@
-# 📚 Antigravity Documentation
+# 📚 RepoBrain Documentation
 
-Welcome to the documentation for **Antigravity** — a cross-IDE repository
+Welcome to the documentation for **RepoBrain** — a cross-IDE repository
 knowledge engine for grounded codebase Q&A.
 
 ## 🎯 Quick Navigation
@@ -42,7 +42,7 @@ server.
 
 | Task | Documentation |
 |------|----------------|
-| Get started with Antigravity | [Quick Start](QUICK_START.md) |
+| Get started with RepoBrain | [Quick Start](QUICK_START.md) |
 | Build a custom tool | [Zero-Config Features](ZERO_CONFIG.md) |
 | Initialize a new project from this template | [Zero-Config Features](ZERO_CONFIG.md) |
 | Connect to an MCP server | [MCP Integration](MCP_INTEGRATION.md) |
@@ -89,7 +89,7 @@ server.
 
 ## 🔗 External Resources
 
-- 🌐 [Antigravity Official Docs](https://docs.antigravity.dev/)
+- 🌐 [RepoBrain Official Docs](https://docs.antigravity.dev/)
 - 📘 [MCP Protocol Specification](https://modelcontextprotocol.io/)
 - 🐍 [Python Documentation](https://docs.python.org/3/)
 - 🐳 [Docker Documentation](https://docs.docker.com/)

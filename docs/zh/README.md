@@ -1,6 +1,6 @@
-# 📚 Antigravity 工作区文档（中文）
+# 📚 RepoBrain 工作区文档（中文）
 
-欢迎来到 **Antigravity** 中文文档。它是一个跨 IDE 的代码库知识引擎，
+欢迎来到 **RepoBrain** 中文文档。它是一个跨 IDE 的代码库知识引擎，
 用于构建可移植、基于证据的 repository knowledge layer，并支持带源码证据的代码库问答。
 
 ## 🎯 快速导航
@@ -96,7 +96,7 @@
 
 ## 🔗 外部资源
 
-- 🌐 [Antigravity 官方文档](https://docs.antigravity.dev/)
+- 🌐 [RepoBrain 官方文档](https://docs.antigravity.dev/)
 - 📘 [MCP 协议规范](https://modelcontextprotocol.io/)
 - 🐍 [Python 文档](https://docs.python.org/3/)
 - 🐳 [Docker 文档](https://docs.docker.com/)

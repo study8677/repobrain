@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" alt="Antigravity Workspace" width="200"/>
+<img src="docs/assets/logo.png" alt="RepoBrain" width="200"/>
 
 # RepoBrain
 
@@ -36,12 +36,12 @@ Idioma: [English](README.md) | [中文](README_CN.md) | **Español**
 <br/>
 
 <div align="center">
-<img src="docs/assets/before_after.png" alt="Before vs After Antigravity" width="800"/>
+<img src="docs/assets/before_after.png" alt="Before vs After RepoBrain" width="800"/>
 </div>
 
 <br/>
 
-## ¿Por qué Antigravity?
+## ¿Por qué RepoBrain?
 
 > El techo de capacidad de un AI Agent = **la calidad del contexto que puede leer.**
 
@@ -49,16 +49,16 @@ El motor es el núcleo: `ag-refresh` despliega un clúster multi-agente que lee 
 
 **En vez de darle a Claude Code / Codex un `grep` del repositorio para que busque por su cuenta, dale un ChatGPT para tu repositorio.**
 
-**Comparado de tú a tú con Codex CLI y Claude Code en 36 preguntas sobre 3 bases de código Python reales (`fastapi`, `requests`, `sqlmodel`) — Antigravity 99% en búsquedas factuales, 97% en auditoría/seguridad, 2.1× más rápido que Codex en factuales.** [Ver comparativa abajo.](#comparativa-directa-antigravity-vs-codex-cli-vs-claude-code-2026-05-09)
+**Comparado de tú a tú con Codex CLI y Claude Code en 36 preguntas sobre 3 bases de código Python reales (`fastapi`, `requests`, `sqlmodel`) — RepoBrain 99% en búsquedas factuales, 97% en auditoría/seguridad, 2.1× más rápido que Codex en factuales.** [Ver comparativa abajo.](#comparativa-directa-repobrain-vs-codex-cli-vs-claude-code-2026-05-09)
 
 ```
-Enfoque tradicional:                    Enfoque Antigravity:
+Enfoque tradicional:                    Enfoque RepoBrain:
   CLAUDE.md = 5000 líneas de docs         Claude Code llama ask_project("¿cómo funciona auth?")
   El agente lee todo, olvida la mitad     Router → ModuleAgent lee código real, devuelve respuesta exacta
   La tasa de alucinación sigue alta       Fundamentado en código real, rutas de archivo y git
 ```
 
-| Problema | Sin Antigravity | Con Antigravity |
+| Problema | Sin RepoBrain | Con RepoBrain |
 |:---------|:---------------|:----------------|
 | El agente olvida el estilo de código | Repites las mismas correcciones | Lee `.antigravity/conventions.md` — lo hace bien a la primera |
 | Incorporar un codebase nuevo | El agente adivina la arquitectura | `ag-refresh` → ModuleAgents aprenden cada módulo |
@@ -126,7 +126,7 @@ Requiere una base de conocimiento — si ves "sin índice" o respuestas vacías,
 
 ### `ag-init` — andamiar un nuevo repo multi-agente
 
-Crea un **nuevo** proyecto desde la plantilla Antigravity. Dos modos: `quick` (andamio rápido, copia limpia) y `full` (añade runtime profile, `.env`, archivo de misión, config de sandbox, `git init` opcional). Es para **empezar un repo nuevo** — **no** lo necesitas antes de `ag-refresh` en un proyecto existente.
+Crea un **nuevo** proyecto desde la plantilla RepoBrain. Dos modos: `quick` (andamio rápido, copia limpia) y `full` (añade runtime profile, `.env`, archivo de misión, config de sandbox, `git init` opcional). Es para **empezar un repo nuevo** — **no** lo necesitas antes de `ag-refresh` en un proyecto existente.
 
 ```
 # Claude Code
@@ -161,9 +161,11 @@ codex plugin marketplace add study8677/repobrain
 /ag-ask "¿Cómo funciona este proyecto?"
 ```
 
+Nota: el ID del plugin/paquete sigue siendo `antigravity`; migrará en una versión futura.
+
 Codex CLI auto-descubre los comandos slash desde el directorio `commands/` del plugin, así que los mismos cuatro comandos están disponibles sin el prefijo `antigravity:` (`/ag-setup`, `/ag-refresh`, `/ag-ask`, `/ag-init`). También puedes seguir usando el CLI directo (`ag-refresh --workspace .`, `ag-ask "..." --workspace .`).
 
-Si la sesión actual de Claude Code dice que la herramienta MCP de Antigravity no está conectada, reinicia Claude Code una vez y vuelve a ejecutar `/antigravity:ag-refresh`. Es un problema de carga de sesión, no de API key. Consulta [troubleshooting](docs/en/TROUBLESHOOTING.md).
+Si la sesión actual de Claude Code dice que la herramienta MCP de RepoBrain no está conectada, reinicia Claude Code una vez y vuelve a ejecutar `/antigravity:ag-refresh`. Es un problema de carga de sesión, no de API key. Consulta [troubleshooting](docs/en/TROUBLESHOOTING.md).
 
 Después de instalar y configurar dispondrás de los comandos slash `ag-ask <pregunta>`, `ag-refresh`, `ag-init <nombre>` en ambos hosts, y del servidor MCP `antigravity` (`ask_project` + `refresh_project`). Ver [INSTALL.md](INSTALL.md) para detalles de instalación y troubleshooting.
 
@@ -455,7 +457,7 @@ escribir a disco, pero `full` aún puede conservar fragmentos de código. Ver
 
 ---
 
-## Comparativa directa: Antigravity vs Codex CLI vs Claude Code (2026-05-09)
+## Comparativa directa: RepoBrain vs Codex CLI vs Claude Code (2026-05-09)
 
 Benchmark asimétrico sobre tres bases de código Python reales — `fastapi/fastapi`,
 `psf/requests`, `fastapi/sqlmodel` — preguntando a cada herramienta **las mismas
@@ -464,24 +466,24 @@ nivel de razonamiento; Codex y Claude tuvieron acceso de lectura al workspace.
 Codex actuó como evaluador (rúbrica de 4 ejes, 0-3 cada uno; todas las
 afirmaciones verificadas contra el código fuente real).
 
-| Tipo de pregunta | Antigravity | Codex CLI | Claude Code |
+| Tipo de pregunta | RepoBrain | Codex CLI | Claude Code |
 |:---|:---:|:---:|:---:|
 | 15 búsquedas factuales | **179/180 (99%)** | 179/180 (99%) | 178/180 (99%) |
 | 12 síntesis (tour del proyecto / arquitectura) | 116/144 (81%) | **144/144 (100%)** | 136/144 (94%) |
 | 9 auditoría / seguridad | **105/108 (97%)** | 104/108 (96%) | 98/108 (91%) |
 
-**Factuales + auditoría combinadas (24 celdas): Antigravity 284/288, Codex
-283/288, Claude 276/288.** Antigravity supera ligeramente a ambas — y es más
+**Factuales + auditoría combinadas (24 celdas): RepoBrain 284/288, Codex
+283/288, Claude 276/288.** RepoBrain supera ligeramente a ambas — y es más
 rápido que Codex en cada pregunta individual.
 
 **Latencia** (segundos por pregunta de promedio, mismo proxy):
 
-| Tipo de pregunta | Antigravity | Codex | Claude |
+| Tipo de pregunta | RepoBrain | Codex | Claude |
 |:---|:---:|:---:|:---:|
 | Factual | **56s** | 119s | 42s |
 | Auditoría | 160s | 177s | **100s** |
 
-Antigravity es **2.1× más rápido que Codex en factuales** y empata con Codex en
+RepoBrain es **2.1× más rápido que Codex en factuales** y empata con Codex en
 auditoría, manteniendo o superando su precisión. Claude es el más rápido en
 auditoría pero pierde 7 puntos de precisión.
 

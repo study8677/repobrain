@@ -54,7 +54,7 @@
 <br/>
 
 <div align="center">
-<img src="docs/assets/before_after.png" alt="Before vs After Antigravity" width="800"/>
+<img src="docs/assets/before_after.png" alt="Before vs After RepoBrain" width="800"/>
 </div>
 
 <br/>
@@ -72,13 +72,15 @@
 /antigravity:ag-ask "How does auth work?"
 ```
 
+> Note: the plugin/package ID is still `antigravity`; it will migrate in a future release.
+
 > **99% factual · 2.1× faster than Codex CLI · works in any AI IDE.**
-> [Head-to-head benchmark ↓](#head-to-head-eval-antigravity-vs-codex-cli-vs-claude-code-2026-05-09)
+> [Head-to-head benchmark ↓](#head-to-head-eval-repobrain-vs-codex-cli-vs-claude-code-2026-05-09)
 > Codex CLI users — drop the `antigravity:` prefix; the same four slash commands ship there too.
 
 ---
 
-## Why Antigravity?
+## Why RepoBrain?
 
 **Cross-IDE repository knowledge engine for grounded codebase Q&A.** Same `.antigravity/` knowledge layer reads in every IDE; one engine, every host.
 
@@ -89,16 +91,16 @@
 **Instead of handing Claude Code / Codex a repo-wide `grep` and making it hunt on its own, give it a ChatGPT for your repository.**
 
 ```
-Traditional approach:              Antigravity approach:
+Traditional approach:              RepoBrain approach:
   CLAUDE.md = 5000 lines of docs     Claude Code calls ask_project("how does auth work?")
   Agent reads it all, forgets most   Router → ModuleAgent reads actual source, returns exact answer
   Hallucination rate stays high      Grounded in real code, file paths, and git history
 ```
 
 <details>
-<summary><b>Four concrete failure modes Antigravity fixes</b> — click to expand</summary>
+<summary><b>Four concrete failure modes RepoBrain fixes</b> — click to expand</summary>
 
-| Problem | Without Antigravity | With Antigravity |
+| Problem | Without RepoBrain | With RepoBrain |
 |:--------|:-------------------|:-----------------|
 | Agent forgets coding style | Repeats the same corrections | Reads `.antigravity/conventions.md` — gets it right the first time |
 | Onboarding a new codebase | Agent guesses at architecture | `ag-refresh` → ModuleAgents self-learn each module |
@@ -111,7 +113,7 @@ Architecture is **files + a live Q&A engine**, not plugins. Portable across any 
 
 ---
 
-## Head-to-Head Eval: Antigravity vs Codex CLI vs Claude Code (2026-05-09)
+## Head-to-Head Eval: RepoBrain vs Codex CLI vs Claude Code (2026-05-09)
 
 Asymmetric benchmark on three real-world Python codebases — `fastapi/fastapi`,
 `psf/requests`, `fastapi/sqlmodel` — asking each tool **the same 36 questions**
@@ -119,24 +121,24 @@ across three difficulty bands. All three tools used `gpt-5.5` with high
 reasoning effort; Codex and Claude had full read access to the workspace.
 Codex was the grader (4-axis 0–3 rubric, scores verified against actual source).
 
-| Question type | Antigravity | Codex CLI | Claude Code |
+| Question type | RepoBrain | Codex CLI | Claude Code |
 |:---|:---:|:---:|:---:|
 | 15 factual lookups | **179/180 (99%)** | 179/180 (99%) | 178/180 (99%) |
 | 12 synthesis (project / arch tour) | 116/144 (81%) | **144/144 (100%)** | 136/144 (94%) |
 | 9 audit / security | **105/108 (97%)** | 104/108 (96%) | 98/108 (91%) |
 
-**Combined factual + audit (24 cells): Antigravity 284/288, Codex 283/288,
-Claude 276/288.** Antigravity edges out both — at lower latency than Codex on
+**Combined factual + audit (24 cells): RepoBrain 284/288, Codex 283/288,
+Claude 276/288.** RepoBrain edges out both — at lower latency than Codex on
 every single question.
 
 **Latency** (mean wall-clock per question, same proxy):
 
-| Question type | Antigravity | Codex | Claude |
+| Question type | RepoBrain | Codex | Claude |
 |:---|:---:|:---:|:---:|
 | Factual | **56s** | 119s | 42s |
 | Audit | 160s | 177s | **100s** |
 
-Antigravity is **2.1× faster than Codex on factual** and on par with Codex on
+RepoBrain is **2.1× faster than Codex on factual** and on par with Codex on
 audit, while matching or beating it on correctness. Claude is fastest on
 audit but loses 7 percentage points of correctness.
 
@@ -260,7 +262,7 @@ Requires a knowledge base — if you see "no index" or empty answers, run `ag-re
 
 ### `ag-init` — scaffold a new multi-agent repo
 
-Creates a **new** project from the Antigravity template. Two modes: `quick` (fast scaffold, clean copy) and `full` (adds runtime profile, `.env`, mission file, sandbox config, optional `git init`). This is for **starting a new repo** — you do **not** need it before `ag-refresh` on an existing project.
+Creates a **new** project from the RepoBrain template. Two modes: `quick` (fast scaffold, clean copy) and `full` (adds runtime profile, `.env`, mission file, sandbox config, optional `git init`). This is for **starting a new repo** — you do **not** need it before `ag-refresh` on an existing project.
 
 > The plugin also bundles the `agent-repo-init` skill (the same backend that `ag-init` invokes — Codex / Claude can also match it by description) and the optional `ag-mcp` MCP server (`ask_project` + `refresh_project`) for tool-style integration.
 
@@ -524,14 +526,14 @@ Ideas are contributions too! Open an [issue](https://github.com/study8677/repobr
         <img src="https://github.com/h13181278389.png" width="80" /><br/>
         <b>h13181278389</b>
       </a><br/>
-      <sub><b>Core Contributor</b> · Thank you for your support, feedback, and contributions to Antigravity</sub>
+      <sub><b>Core Contributor</b> · Thank you for your support, feedback, and contributions to RepoBrain</sub>
     </td>
     <td align="center" width="20%">
       <a href="https://github.com/flyw1015">
         <img src="https://github.com/flyw1015.png" width="80" /><br/>
         <b>flyw1015</b>
       </a><br/>
-      <sub><b>Core Contributor</b> · Thank you for your support, feedback, and contributions to Antigravity</sub>
+      <sub><b>Core Contributor</b> · Thank you for your support, feedback, and contributions to RepoBrain</sub>
     </td>
     <td align="center" width="20%">
       <a href="https://github.com/devalexanderdaza">

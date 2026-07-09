@@ -1,6 +1,6 @@
-# 📚 Documentación de Antigravity Workspace
+# 📚 Documentación de RepoBrain
 
-Bienvenido a la documentación de **Antigravity**: un motor de conocimiento de
+Bienvenido a la documentación de **RepoBrain**: un motor de conocimiento de
 repositorios, portable entre IDEs, para preguntas sobre codebases con evidencia
 de archivos.
 
@@ -103,7 +103,7 @@ Llama cualquier API compatible con OpenAI mediante la herramienta integrada `cal
 
 ## 🔗 Recursos Externos
 
-- 🌐 [Docs Oficial de Antigravity](https://docs.antigravity.dev/)
+- 🌐 [Docs Oficial de RepoBrain](https://docs.antigravity.dev/)
 - 📘 [Especificación del Protocolo MCP](https://modelcontextprotocol.io/)
 - 🐍 [Documentación de Python](https://docs.python.org/3/)
 - 🐳 [Documentación de Docker](https://docs.docker.com/)
@@ -179,6 +179,6 @@ Este proyecto está bajo la licencia **MIT**. Ver [LICENSE](../../LICENSE) para 
 **Última Actualización:** Abril 2026
 **Versión:** Fase 10 (Knowledge Hub) ✅ — pipeline de evidencia estructurada + soporte multi-lenguaje
 
-**¡Feliz construcción con Antigravity!** 🚀
+**¡Feliz construcción con RepoBrain!** 🚀
 
 Enlace amigo: [LINUX DO](https://linux.do/)
