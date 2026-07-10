@@ -1,6 +1,6 @@
 {
   "name": "repobrain",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Repository knowledge engine plugin. Bundles CLI-backed slash commands (rb-setup / rb-init / rb-refresh / rb-ask) plus the agent-repo-init skill. Works in both Claude Code and Codex CLI.",
   "author": {
     "name": "RepoBrain Team",

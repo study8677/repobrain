@@ -76,8 +76,6 @@
 /repobrain:rb-ask "How does auth work?"
 ```
 
-> Note: the plugin/package ID is still `repobrain`; it will migrate in a future release.
-
 > **99% factual · 2.1× faster than Codex CLI · works in any AI IDE.**
 > [Head-to-head benchmark ↓](#head-to-head-eval-repobrain-vs-codex-cli-vs-claude-code-2026-05-09)
 > Codex CLI users — drop the `repobrain:` prefix; the same four slash commands ship there too.
@@ -168,7 +166,7 @@ Full report (data, methodology, per-cell tables, caveats):
 
 ## Quick Start
 
-**Plugin install for Claude Code / Codex CLI** (recommended — the engine CLI auto-installs on first session via SessionStart hook):
+**Plugin install for Claude Code / Codex CLI** (recommended — the `rb` CLI and engine auto-install together on Claude's first session):
 
 ```bash
 # Claude Code
@@ -180,6 +178,7 @@ Full report (data, methodology, per-cell tables, caveats):
 
 # Codex CLI (manual engine install — Codex hooks are not yet supported)
 pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
+pipx inject --force --include-apps repobrain-engine "git+https://github.com/study8677/repobrain.git#subdirectory=cli"
 codex plugin marketplace add study8677/repobrain
 /rb-setup
 /rb-refresh
@@ -244,6 +243,7 @@ Same four slash commands ship to both **Claude Code** and **Codex CLI**. Claude 
 | `/repobrain:rb-init <name>` | `/rb-init <name>` | Scaffold a new multi-agent repo from this template |
 
 A typical first session is **rb-setup → rb-refresh → rb-ask**.
+If installation or provider setup looks wrong, run `rb doctor --workspace .`.
 
 <details>
 <summary><b>What each slash command actually does</b></summary>

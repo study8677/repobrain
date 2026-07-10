@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PLUGIN_VERSION = "0.3.0"
+
+
+def _engine_package_version() -> str:
+    pyproject = (REPO_ROOT / "engine" / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version = "([^"]+)"$', pyproject, flags=re.MULTILINE)
+    if match is None:
+        raise AssertionError("engine/pyproject.toml has no project version")
+    return match.group(1)
 
 
 def test_plugin_versions_are_in_sync() -> None:
     """Claude, Codex, marketplace, and engine package versions stay aligned."""
+    plugin_version = _engine_package_version()
     manifest = json.loads(
         (REPO_ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
     )
@@ -28,11 +37,11 @@ def test_plugin_versions_are_in_sync() -> None:
         REPO_ROOT / "engine" / "repobrain_engine" / "__init__.py"
     ).read_text(encoding="utf-8")
 
-    assert manifest["version"] == PLUGIN_VERSION
-    assert codex_manifest["version"] == PLUGIN_VERSION
-    assert marketplace["plugins"][0]["version"] == PLUGIN_VERSION
-    assert f'version = "{PLUGIN_VERSION}"' in engine_pyproject
-    assert f'__version__ = "{PLUGIN_VERSION}"' in engine_init
+    assert manifest["version"] == plugin_version
+    assert codex_manifest["version"] == plugin_version
+    assert marketplace["plugins"][0]["version"] == plugin_version
+    assert f'version = "{plugin_version}"' in engine_pyproject
+    assert f'__version__ = "{plugin_version}"' in engine_init
 
 
 def test_plugin_manifests_do_not_auto_register_mcp() -> None:

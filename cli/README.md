@@ -6,4 +6,5 @@ memory helpers into any repository. Install `engine/` as well when you need the
 
 ```bash
 rb init <target_dir>
+rb doctor --workspace <project>
 ```

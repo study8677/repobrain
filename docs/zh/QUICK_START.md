@@ -120,6 +120,7 @@ pytest engine/tests/test_hub_pipeline.py -v
 ```bash
 # 检查 engine CLI
 rb-ask --help
+rb doctor --workspace .
 
 # 检查 OpenAI-compatible 配置
 echo $OPENAI_BASE_URL

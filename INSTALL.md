@@ -11,7 +11,7 @@
 ```
 
 1. **Marketplace add** — clones the plugin manifest into Claude Code's cache.
-2. **Install** — first session triggers `hooks/install_engine.py`, which auto-installs the engine CLI (`rb-ask`, `rb-refresh`, `rb-mcp`) via `pipx` (preferred), `pip --user` fallback, or prints a manual command if both fail. Cross-platform (macOS / Linux / Windows).
+2. **Install** — first session triggers `hooks/install_engine.py`, which installs the engine (`rb-ask`, `rb-refresh`, `rb-mcp`) and injects the `rb` CLI into the same `pipx` environment. It falls back to `pip --user` or prints manual commands if installation fails. Cross-platform (macOS / Linux / Windows).
 3. **Setup** — interactive: choose your LLM provider (OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA / Ollama), paste your API key, writes a `.env` to the current project root and ensures it's git-ignored. For local Codex users, setup can instead write `RB_HOST_RUNNER=codex` for experimental no-API-key `rb-ask`.
 4. **Refresh** — runs `rb-refresh` directly and builds `.repobrain/` for the current project. The first refresh creates the project knowledge directory automatically. Full LLM refresh requires an API key; Codex host-runner mode uses scan-only refresh artifacts.
 5. **Ask** — runs `rb-ask` directly and queries the refreshed project knowledge base.
@@ -30,11 +30,12 @@ You can also add the marketplace from a local checkout:
 
 ## Codex CLI
 
-Codex CLI does not auto-run install hooks (as of April 2026), so install the engine first:
+Codex CLI does not auto-run install hooks (as of April 2026), so install the engine and inject the CLI first:
 
 ```
 pipx install /absolute/path/to/repobrain/engine
-rb-refresh --help    # verify
+pipx inject --force --include-apps repobrain-engine /absolute/path/to/repobrain/cli
+rb doctor --help     # verify CLI + engine availability
 ```
 
 Then register and install the plugin:
@@ -83,6 +84,7 @@ full refresh.
 
 - **Claude Code**: `/repobrain:rb-ask "what does the engine do?"` should run `rb-ask` and print a routed answer.
 - **Codex CLI**: `/rb-ask "what does the engine do?"` (or `rb-ask "..." --workspace <project>` from the shell) should print a routed answer.
+- **Diagnostics**: `rb doctor --workspace <project>` should report engine, provider, knowledge freshness, and log locations without exposing the API key.
 
 ## Available slash commands
 
@@ -131,7 +133,7 @@ pipx uninstall repobrain-engine
 
 ## Troubleshooting
 
-**`rb-ask` / `rb-refresh` not found after install**
+**`rb` / `rb-ask` / `rb-refresh` not found after install**
 The user-pip bin directory may not be on PATH. The installer prints the path; add it to your shell rc file (`~/.zshrc`, `~/.bashrc`, etc.).
 
 **Optional MCP tool is not connected**
@@ -144,7 +146,7 @@ The default slash commands do not require MCP. If you manually enabled `rb-mcp`,
 No. `/rb-refresh` initializes the current project's `.repobrain/` directory automatically. `/rb-init` is for scaffolding a new repository from the RepoBrain template.
 
 **Hook timed out**
-Slow network during first install. Increase the `timeout` in `hooks/hooks.json` or run `pipx install <plugin-root>/engine` manually before restarting.
+The first install allows up to 15 minutes for the engine dependency set. On a slower network, run `pipx install <plugin-root>/engine` followed by `pipx inject --force --include-apps repobrain-engine <plugin-root>/cli` before restarting.
 
 **Codex CLI marketplace add fails or does not auto-load the plugin**
 Codex's marketplace/plugin workflow varies by CLI build. If `codex plugin marketplace add <path>` rejects the repo, or if your build only registers the marketplace without installing plugins, register the MCP server directly via your local Codex CLI MCP config and load skills + commands from `<path>/skills/` and `<path>/commands/` manually.

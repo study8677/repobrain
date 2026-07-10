@@ -13,7 +13,7 @@
       "name": "repobrain",
       "source": "./",
       "description": "Repository knowledge engine: CLI-backed slash commands (rb-setup / rb-init / rb-refresh / rb-ask) for both Claude Code and Codex CLI, agent-repo-init skill, and optional MCP server.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "category": "developer-tools",
       "keywords": ["mcp", "knowledge-graph", "multi-agent", "scaffolding"]
     }

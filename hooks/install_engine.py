@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""SessionStart hook: ensure `rb-mcp` is on PATH.
+"""SessionStart hook: ensure the RepoBrain CLI and engine are on PATH.
 
 Single cross-platform installer for Claude Code's plugin SessionStart hook.
 Idempotent and silent on the happy path. All output goes to stderr (stdout
 on a hook is interpreted as injected context).
 
 Strategy:
-  1. If rb-mcp is already on PATH at the bundled engine version, exit 0.
+  1. If all RepoBrain commands are on PATH at the bundled versions, exit 0.
   2. Ensure pipx exists:
        - macOS with Homebrew → `brew install pipx`
        - Otherwise → `python -m pip install --user pipx`
      Both paths require no sudo.
   3. `pipx ensurepath` and prepend the pipx bin dir to PATH for the current
      process so the next `pipx install` finds the freshly placed shim.
-  4. `pipx install --force <plugin_root>/engine`.
+  4. `pipx install --force <plugin_root>/engine`, then inject the bundled CLI
+     into the same environment with `--include-apps`.
   5. If pipx remains unavailable, fall back to `pip install --user --upgrade`.
   6. On total failure, print a clear manual-install message and exit 1.
 """
@@ -25,6 +26,10 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+
+ENGINE_PACKAGE = "repobrain-engine"
+REQUIRED_COMMANDS = ("rb", "rb-ask", "rb-refresh", "rb-mcp")
 
 
 def log(msg: str) -> None:
@@ -105,10 +110,10 @@ def pipx(args: list[str]) -> int:
     return run([sys.executable or "python", "-m", "pipx", *args])
 
 
-def read_project_version(engine_dir: Path) -> str | None:
-    """Read the plugin-bundled engine version from pyproject.toml."""
+def read_project_version(package_dir: Path) -> str | None:
+    """Read a bundled package version from its ``pyproject.toml``."""
     try:
-        text = (engine_dir / "pyproject.toml").read_text(encoding="utf-8")
+        text = (package_dir / "pyproject.toml").read_text(encoding="utf-8")
     except OSError:
         return None
     match = re.search(r'^version\s*=\s*"([^"]+)"', text, flags=re.MULTILINE)
@@ -137,9 +142,59 @@ def get_installed_engine_version() -> str | None:
     return match.group(1) if match else None
 
 
-def needs_engine_install_or_upgrade(installed: str | None, expected: str | None) -> bool:
-    """Return True unless the installed engine is exactly the bundled version."""
-    return not (installed and expected and installed == expected)
+def get_installed_cli_version() -> str | None:
+    """Return the installed ``rb`` CLI version, if it can be queried."""
+    rb = shutil.which("rb")
+    if rb is None:
+        return None
+    try:
+        completed = subprocess.run(
+            [rb, "version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except Exception:
+        return None
+    if completed.returncode != 0:
+        return None
+    output = (completed.stdout or completed.stderr).strip()
+    match = re.search(r"(\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.]+)?)", output)
+    return match.group(1) if match else None
+
+
+def required_commands_available() -> bool:
+    """Return whether every command promised by the plugin is on PATH."""
+    return all(has(command) for command in REQUIRED_COMMANDS)
+
+
+def installation_is_current(
+    installed_engine: str | None,
+    expected_engine: str | None,
+    installed_cli: str | None,
+    expected_cli: str | None,
+) -> bool:
+    """Return whether versions and all public commands match the bundle."""
+    return (
+        installed_engine == expected_engine
+        and installed_cli == expected_cli
+        and None not in (installed_engine, expected_engine, installed_cli, expected_cli)
+        and required_commands_available()
+    )
+
+
+def installed_bundle_is_current(
+    expected_engine: str | None,
+    expected_cli: str | None,
+) -> bool:
+    """Query PATH and confirm the installed bundle matches expected versions."""
+    return installation_is_current(
+        get_installed_engine_version(),
+        expected_engine,
+        get_installed_cli_version(),
+        expected_cli,
+    )
 
 
 def main() -> int:
@@ -153,6 +208,9 @@ def main() -> int:
     # dirs, so an already-installed rb-mcp can look "missing". Prepend the
     # common user-level shim locations BEFORE the fast-path check so a previous
     # successful install short-circuits cleanly.
+    configured_pipx_bin = os.environ.get("PIPX_BIN_DIR", "").strip()
+    if configured_pipx_bin:
+        prepend_path(Path(configured_pipx_bin).expanduser())
     prepend_path(Path.home() / ".local" / "bin")
     ub = user_scripts_bin()
     if ub:
@@ -160,19 +218,25 @@ def main() -> int:
     if os.name == "nt":
         prepend_path(Path.home() / "AppData" / "Roaming" / "Python" / "Scripts")
 
-    target_version = read_project_version(engine_path)
-    current_version = get_installed_engine_version()
-    if has("rb-mcp") and not needs_engine_install_or_upgrade(current_version, target_version):
+    target_engine_version = read_project_version(engine_path)
+    target_cli_version = read_project_version(cli_path)
+    current_engine_version = get_installed_engine_version()
+    current_cli_version = get_installed_cli_version()
+    if installation_is_current(
+        current_engine_version, target_engine_version, current_cli_version, target_cli_version
+    ):
         return 0
 
-    if has("rb-mcp"):
+    if has("rb-mcp") or has("rb"):
         log(
-            "[repobrain] rb-mcp is installed but engine version "
-            f"{current_version or 'unknown'} != bundled {target_version or 'unknown'}. "
+            "[repobrain] Existing install is incomplete or stale "
+            f"(engine {current_engine_version or 'missing'} -> "
+            f"{target_engine_version or 'unknown'}, CLI {current_cli_version or 'missing'} -> "
+            f"{target_cli_version or 'unknown'}). "
             "Attempting upgrade..."
         )
     else:
-        log("[repobrain] rb-mcp not found. Attempting auto-install...")
+        log("[repobrain] RepoBrain commands not found. Attempting auto-install...")
 
     if ensure_pipx():
         # After install or ensurepath, ~/.local/bin (POSIX) or %APPDATA%/Python/Scripts (Windows)
@@ -184,8 +248,25 @@ def main() -> int:
         if ub:
             prepend_path(ub)
 
-        if pipx(["install", "--force", engine_dir]) == 0 and has("rb-mcp"):
-            log("[repobrain] Installed/upgraded via pipx.")
+        engine_installed = pipx(["install", "--force", engine_dir]) == 0
+        cli_injected = False
+        if engine_installed:
+            cli_injected = (
+                pipx(
+                    [
+                        "inject",
+                        "--force",
+                        "--include-apps",
+                        ENGINE_PACKAGE,
+                        cli_dir,
+                    ]
+                )
+                == 0
+            )
+        if engine_installed and cli_injected and installed_bundle_is_current(
+            target_engine_version, target_cli_version
+        ):
+            log("[repobrain] Installed/upgraded CLI and engine via pipx.")
             log("[repobrain] Next: run /repobrain:rb-setup, then /repobrain:rb-refresh.")
             log("[repobrain] If the MCP tool is not connected in this session, restart Claude Code once.")
             return 0
@@ -197,7 +278,7 @@ def main() -> int:
         ub = user_scripts_bin()
         if ub:
             prepend_path(ub)
-        if has("rb-mcp"):
+        if installed_bundle_is_current(target_engine_version, target_cli_version):
             log(f"[repobrain] Installed via pip --user. To persist on future shells, add this dir to PATH: {ub}")
             log("[repobrain] Next: run /repobrain:rb-setup, then /repobrain:rb-refresh.")
             log("[repobrain] If the MCP tool is not connected in this session, restart Claude Code once.")
@@ -211,6 +292,7 @@ def main() -> int:
     log("    Linux:   python3 -m pip install --user pipx && python3 -m pipx ensurepath")
     log("    Windows: python -m pip install --user pipx && python -m pipx ensurepath")
     log(f"    pipx install --force \"{engine_dir}\"")
+    log(f"    pipx inject --force --include-apps {ENGINE_PACKAGE} \"{cli_dir}\"")
     log("")
     log("  Option B (no pipx):")
     log(f"    python -m pip install --user --upgrade \"{engine_dir}\" \"{cli_dir}\"")

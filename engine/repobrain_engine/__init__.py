@@ -8,7 +8,7 @@ Public API:
 
 from repobrain_engine.config import Settings
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = [
     "Settings",

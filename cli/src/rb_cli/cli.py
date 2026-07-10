@@ -494,18 +494,19 @@ def doctor_cmd(
     openai_keys = ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL")
     missing = [key for key in openai_keys if not env_values.get(key)]
     host_runner = env_values.get("RB_HOST_RUNNER", "").strip().lower()
-    openai_ready = env_exists and not missing
-    codex_ready = env_exists and host_runner == "codex"
+    openai_ready = not missing
+    codex_ready = host_runner == "codex"
+    config_source = ".env" if env_exists else "process env"
     if openai_ready:
         key = _mask_secret(env_values.get("OPENAI_API_KEY", ""))
         _doctor_print(
-            "✓ .env config: "
+            f"✓ {config_source} config: "
             f"OPENAI_BASE_URL={env_values['OPENAI_BASE_URL']}; "
             f"OPENAI_API_KEY={key}; "
             f"OPENAI_MODEL={env_values['OPENAI_MODEL']}"
         )
     elif codex_ready:
-        _doctor_print("✓ .env config: RB_HOST_RUNNER=codex")
+        _doctor_print(f"✓ {config_source} config: RB_HOST_RUNNER=codex")
     else:
         reason = ".env missing" if not env_exists else f"missing {', '.join(missing)}"
         _doctor_print(f"✗ .env config: {reason}; run rb-setup")

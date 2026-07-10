@@ -162,7 +162,7 @@
 
 **方案 A —— Claude Code / Codex CLI 插件安装**
 ```bash
-# Claude Code（首次会话由 SessionStart hook 自动安装 Python 引擎 CLI）
+# Claude Code（首次会话由 SessionStart hook 自动安装 rb CLI + Python 引擎）
 /plugin marketplace add study8677/repobrain
 /plugin install repobrain@repobrain
 /repobrain:rb-setup            # 交互式：选 LLM 提供商、贴 API key，自动写 .env
@@ -171,13 +171,14 @@
 
 # Codex CLI（需手动先装引擎；Codex 暂不支持自动 hook）
 pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
+pipx inject --force --include-apps repobrain-engine "git+https://github.com/study8677/repobrain.git#subdirectory=cli"
 codex plugin marketplace add study8677/repobrain
 /rb-setup                        # Codex 内同样的命令，无 repobrain: 前缀
 /rb-refresh
 /rb-ask "这个项目是怎么工作的？"
 ```
 
-Codex CLI 通过 `codex plugin marketplace add` 注册插件后，会自动从插件的 `commands/` 目录发现斜杠命令，因此同样四个命令在 Codex 内不带 `repobrain:` 前缀（`/rb-setup`、`/rb-refresh`、`/rb-ask`、`/rb-init`）。也可以继续用裸 CLI（`rb-refresh --workspace .`、`rb-ask "..." --workspace .`）。如果 Codex 版本支持 MCP 并希望工具式集成，再单独注册 `rb-mcp --workspace <project>`。
+Codex CLI 通过 `codex plugin marketplace add` 注册插件后，会自动从插件的 `commands/` 目录发现斜杠命令，因此同样四个命令在 Codex 内不带 `repobrain:` 前缀（`/rb-setup`、`/rb-refresh`、`/rb-ask`、`/rb-init`）。也可以继续用裸 CLI（`rb-refresh --workspace .`、`rb-ask "..." --workspace .`）；安装或配置异常时运行 `rb doctor --workspace .`。如果 Codex 版本支持 MCP 并希望工具式集成，再单独注册 `rb-mcp --workspace <project>`。
 
 安装并 setup 后，两个平台均提供 `rb-ask <问题>`、`rb-refresh`、`rb-init <名字>` 斜杠命令。MCP 仍可选，可通过 `rb-mcp` 暴露 `ask_project` + `refresh_project`；示例配置见 [docs/examples/repobrain.mcp.json](docs/examples/repobrain.mcp.json)。详见 [INSTALL.md](INSTALL.md)。
 

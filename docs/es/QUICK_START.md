@@ -127,6 +127,7 @@ pytest engine/tests/test_hub_pipeline.py -v
 ```bash
 # Verifica que el CLI del engine esté instalado
 rb-ask --help
+rb doctor --workspace .
 
 # Verifica la configuración OpenAI-compatible
 echo $OPENAI_BASE_URL

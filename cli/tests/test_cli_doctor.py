@@ -127,6 +127,24 @@ def test_doctor_missing_env_is_blocking(tmp_path: Path, monkeypatch) -> None:
     assert "⚠ Provider reachability:" in result.output
 
 
+def test_doctor_accepts_process_env_without_dotenv(tmp_path: Path, monkeypatch) -> None:
+    """Process-level provider configuration is valid without a workspace .env."""
+    _write_knowledge(tmp_path)
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://api.example.test/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-1234567890")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-test")
+    monkeypatch.delenv("RB_HOST_RUNNER", raising=False)
+
+    with patch("rb_cli.cli.shutil.which", return_value="/usr/local/bin/rb-ask"):
+        with patch("rb_cli.cli.subprocess.run", side_effect=_git_run_with_lag(0)):
+            with _mock_provider_ok():
+                result = runner.invoke(app, ["doctor", "--workspace", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "✓ process env config:" in result.output
+    assert "OPENAI_API_KEY=sk-t...7890" in result.output
+
+
 def test_doctor_engine_not_installed_is_blocking(tmp_path: Path, monkeypatch) -> None:
     """Doctor reports a blocking failure when no engine path is available."""
     _write_env(tmp_path)

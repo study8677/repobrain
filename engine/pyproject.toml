@@ -1,6 +1,6 @@
 [project]
 name = "repobrain-engine"
-version = "0.3.0"
+version = "0.3.1"
 description = "Repository knowledge engine with grounded Q&A and optional MCP server"
 requires-python = ">=3.10"
 dependencies = [

@@ -150,7 +150,7 @@ Crea un **nuevo** proyecto desde la plantilla RepoBrain. Dos modos: `quick` (and
 
 **Opción A — Instalación de una línea como plugin de Claude Code / Codex CLI (recomendado)**
 ```bash
-# Claude Code (auto-instala el motor Python en la primera sesión vía SessionStart hook)
+# Claude Code (auto-instala juntos el CLI rb y el motor Python vía SessionStart)
 /plugin marketplace add study8677/repobrain
 /plugin install repobrain@repobrain
 /repobrain:rb-setup            # interactivo: elige proveedor LLM, pega API key, escribe .env
@@ -159,13 +159,14 @@ Crea un **nuevo** proyecto desde la plantilla RepoBrain. Dos modos: `quick` (and
 
 # Codex CLI (instala el motor manualmente primero; los hooks de Codex aún no son soportados)
 pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
+pipx inject --force --include-apps repobrain-engine "git+https://github.com/study8677/repobrain.git#subdirectory=cli"
 codex plugin marketplace add study8677/repobrain
 /rb-setup                        # mismos comandos en Codex, sin el prefijo repobrain:
 /rb-refresh
 /rb-ask "¿Cómo funciona este proyecto?"
 ```
 
-Codex CLI auto-descubre los comandos slash desde el directorio `commands/` del plugin, así que los mismos cuatro comandos están disponibles sin el prefijo `repobrain:` (`/rb-setup`, `/rb-refresh`, `/rb-ask`, `/rb-init`). También puedes seguir usando el CLI directo (`rb-refresh --workspace .`, `rb-ask "..." --workspace .`).
+Codex CLI auto-descubre los comandos slash desde el directorio `commands/` del plugin, así que los mismos cuatro comandos están disponibles sin el prefijo `repobrain:` (`/rb-setup`, `/rb-refresh`, `/rb-ask`, `/rb-init`). También puedes seguir usando el CLI directo (`rb-refresh --workspace .`, `rb-ask "..." --workspace .`) y diagnosticar la instalación con `rb doctor --workspace .`.
 
 Si la sesión actual de Claude Code dice que la herramienta MCP de RepoBrain no está conectada, reinicia Claude Code una vez y vuelve a ejecutar `/repobrain:rb-refresh`. Es un problema de carga de sesión, no de API key. Consulta [troubleshooting](docs/en/TROUBLESHOOTING.md).
 

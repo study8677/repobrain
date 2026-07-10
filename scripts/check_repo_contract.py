@@ -3,10 +3,26 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+ENGINE_RELEASE_PATHS = (
+    "engine/repobrain_engine",
+    "engine/pyproject.toml",
+    "engine/install.sh",
+    "engine/install.bat",
+    "hooks",
+    "commands",
+    "skills",
+    ".claude-plugin",
+    ".codex-plugin",
+)
+CLI_RELEASE_PATHS = (
+    "cli/src",
+    "cli/pyproject.toml",
+)
 
 
 def fail(message: str) -> None:
@@ -33,6 +49,78 @@ def require_absent(path: str, pattern: str) -> None:
         fail(f"{path} still matches legacy pattern {pattern!r}")
 
 
+def project_version(text: str, source: str) -> tuple[int, int, int]:
+    """Parse the numeric project version declared in a pyproject payload."""
+    match = re.search(r'^version = "(\d+)\.(\d+)\.(\d+)"$', text, re.MULTILINE)
+    if not match:
+        fail(f"{source} must declare a numeric x.y.z project version")
+    return tuple(int(part) for part in match.groups())
+
+
+def git_output(*args: str) -> str | None:
+    """Run a read-only git query, returning ``None`` outside a usable checkout."""
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def tagged_file(tag: str, path: str) -> str | None:
+    """Read a file from a reachable release tag."""
+    return git_output("show", f"{tag}:{path}")
+
+
+def changed_since_tag(tag: str, paths: tuple[str, ...]) -> list[str]:
+    """List tracked runtime files changed since ``tag``, including worktree edits."""
+    output = git_output("diff", "--name-only", tag, "--", *paths)
+    return output.splitlines() if output else []
+
+
+def check_release_versions() -> None:
+    """Require a version bump whenever runtime surfaces change after a tag."""
+    tag = git_output("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
+    if not tag:
+        print("Release version check skipped: no reachable v* tag.")
+        return
+
+    tagged_engine_text = tagged_file(tag, "engine/pyproject.toml")
+    tagged_cli_text = tagged_file(tag, "cli/pyproject.toml")
+    if tagged_engine_text is None or tagged_cli_text is None:
+        fail(f"release tag {tag} is missing engine or CLI version metadata")
+
+    current_engine = project_version(
+        read_text("engine/pyproject.toml"), "engine/pyproject.toml"
+    )
+    current_cli = project_version(read_text("cli/pyproject.toml"), "cli/pyproject.toml")
+    tagged_engine = project_version(
+        tagged_engine_text, f"{tag}:engine/pyproject.toml"
+    )
+    tagged_cli = project_version(tagged_cli_text, f"{tag}:cli/pyproject.toml")
+
+    engine_changes = changed_since_tag(tag, ENGINE_RELEASE_PATHS)
+    if engine_changes and current_engine <= tagged_engine:
+        fail(
+            f"engine/plugin runtime changed since {tag} without a version bump: "
+            + ", ".join(engine_changes[:8])
+        )
+
+    cli_changes = changed_since_tag(tag, CLI_RELEASE_PATHS)
+    if cli_changes and current_cli <= tagged_cli:
+        fail(
+            f"CLI runtime changed since {tag} without a version bump: "
+            + ", ".join(cli_changes[:8])
+        )
+
+
 def check_plugin_versions() -> None:
     claude_plugin = read_json(".claude-plugin/plugin.json")
     claude_marketplace = read_json(".claude-plugin/marketplace.json")
@@ -57,6 +145,23 @@ def check_plugin_versions() -> None:
     }
     if len(set(versions.values())) != 1:
         fail(f"plugin versions are not aligned: {versions}")
+
+    cli_pyproject = read_text("cli/pyproject.toml")
+    cli_init = read_text("cli/src/rb_cli/__init__.py")
+    cli_version_match = re.search(
+        r'^version = "([^"]+)"$', cli_pyproject, re.MULTILINE
+    )
+    cli_init_match = re.search(
+        r'^__version__ = "([^"]+)"$', cli_init, re.MULTILINE
+    )
+    if not cli_version_match or not cli_init_match:
+        fail("CLI version must be declared in pyproject.toml and __init__.py")
+    if cli_version_match.group(1) != cli_init_match.group(1):
+        fail(
+            "CLI versions are not aligned: "
+            f"pyproject={cli_version_match.group(1)}, "
+            f"__init__={cli_init_match.group(1)}"
+        )
 
 
 def check_python_contract() -> None:
@@ -172,6 +277,7 @@ def check_productization_contract() -> None:
 
     require_contains("engine/.env.example", "RB_RETRIEVAL_MODE=compact")
     require_contains("engine/.env.example", "RB_ALLOW_MCP=false")
+    require_contains("hooks/hooks.json", '"timeout": 900')
 
 
 def check_workflows() -> None:
@@ -180,6 +286,11 @@ def check_workflows() -> None:
     combined = test_workflow + "\n" + hygiene_workflow
     require_contains(".github/workflows/test.yml", "actions/checkout@v5")
     require_contains(".github/workflows/test.yml", "actions/setup-python@v6")
+    require_contains(".github/workflows/repo-hygiene.yml", "fetch-depth: 0")
+    require_contains(
+        ".github/workflows/test.yml", "python scripts/check_clean_install.py"
+    )
+    require_contains(".github/workflows/test.yml", "rb doctor --help")
     require_contains(
         ".github/workflows/test.yml",
         'python-version: ["3.10", "3.11", "3.12"]',
@@ -206,6 +317,7 @@ def check_governance_assets() -> None:
 
 def main() -> None:
     check_plugin_versions()
+    check_release_versions()
     check_python_contract()
     check_llm_configuration_docs()
     check_positioning_contract()
