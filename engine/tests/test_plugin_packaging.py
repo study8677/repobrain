@@ -130,6 +130,7 @@ def test_legacy_unprefixed_mcp_tool_names_do_not_reappear() -> None:
         "venv",
         ".venv",
         ".tmp-venv",
+        ".work",
         "repobrain_workspace_template_venv",
         # Generated / local-only dirs that are never part of shipped source:
         # the knowledge base, IDE & agent state, eval artifacts, build output.

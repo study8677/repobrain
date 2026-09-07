@@ -736,7 +736,7 @@ async def _refresh_pipeline_into_generation(
                         "  ✓ Wrote deterministic git insights (host-runner mode).",
                         file=sys.stderr,
                     )
-                    refresh_status.stages["git_insights"] = "partial"
+                    refresh_status.stages["git_insights"] = "success"
                 except Exception as exc:
                     print(f"  ⚠ Git insights fallback failed: {exc}", file=sys.stderr)
                     _mark_stage_failure(

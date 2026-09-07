@@ -163,6 +163,49 @@ async def test_refresh_scan_only_can_be_enabled_from_env_file(
 
 
 @pytest.mark.asyncio
+async def test_generic_host_runner_full_refresh_promotes_generation(
+    tmp_path: Path,
+    monkeypatch,
+    commit_workspace,
+) -> None:
+    """A successful deterministic git stage must not block promotion."""
+    runner = tmp_path.parent / f"{tmp_path.name}-generic-runner"
+    runner.write_text(
+        "#!/bin/sh\n"
+        "cat >/dev/null\n"
+        "printf '# Generated\\n\\nHost runner output.\\n'\n",
+        encoding="utf-8",
+    )
+    runner.chmod(0o755)
+
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("OPENAI_BASE_URL", "")
+    monkeypatch.setenv("GOOGLE_API_KEY", "")
+    monkeypatch.setenv("RB_REFRESH_SCAN_ONLY", "0")
+    monkeypatch.setenv("RB_HOST_RUNNER", "generic")
+    monkeypatch.setenv("RB_HOST_COMMAND", str(runner))
+    monkeypatch.setenv("RB_HOST_OUTPUT_MODE", "stdout")
+
+    (tmp_path / "main.py").write_text("value = 1\n", encoding="utf-8")
+    commit_workspace(tmp_path)
+
+    from repobrain_engine.config import reset_settings
+    from repobrain_engine.hub.refresh_pipeline import refresh_pipeline
+    from repobrain_engine.hub.storage import active_generation_root
+
+    reset_settings()
+    status = await refresh_pipeline(tmp_path, quick=False)
+
+    generation_root = active_generation_root(tmp_path)
+    assert status.stages["git_insights"] == "success"
+    assert status.overall_status == "success"
+    assert status.exit_code == 0
+    assert generation_root is not None
+    assert (generation_root / "modules" / "_git_insights.md").exists()
+
+
+@pytest.mark.asyncio
 async def test_ask_pipeline_returns_answer(tmp_path: Path, monkeypatch) -> None:
     """ask_pipeline returns an answer string."""
     monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
