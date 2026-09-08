@@ -16,9 +16,13 @@ from entering RepoBrain's corpus. Third-party repositories are shallow clones.
 - Both answer agents may inspect source files for verification, with no command
   count or context-budget limit beyond the native tools' own limits.
 - A product must actually be invoked; a plain model-only answer is invalid.
-- Compare final evidence correctness, total end-to-end wall time, and Trae
-  token usage. Report monetary cost only when the runtime emits an amount.
+- Compare blind-judge semantic correctness, evidence-mention recall, total
+  end-to-end wall time, and Trae token usage. Report monetary cost only when
+  the runtime emits an amount.
 - Use a shared requested model and record any observed server-side reroute.
+- Anonymize and deterministically shuffle paired answers before judging them
+  against a clean pinned source checkout. Keep judge time/tokens separate from
+  product runtime cost.
 
 This track models normal IDE use. It does not isolate pure retrieval quality.
 
@@ -76,6 +80,8 @@ This pilot does not claim that controlled-model result.
 
 - Expected-file recall
 - Expected-symbol recall
+- Blind-judge correctness, factuality, completeness, citation validity, and
+  unsupported claims
 - Citation validity: cited file and line exist at the pinned SHA
 - Unsupported-claim rate
 - Wall time

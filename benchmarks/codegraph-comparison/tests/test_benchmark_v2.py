@@ -21,6 +21,7 @@ from run_benchmark_v2 import (  # noqa: E402
     enforce_codegraph_protocol,
     is_codegraph_command,
     parse_trae_metrics,
+    score,
 )
 
 
@@ -155,6 +156,43 @@ def test_missing_trae_metrics_are_explicitly_unavailable() -> None:
     assert metrics["cost"]["status"] == "unavailable"
     assert metrics["cost"]["amount"] is None
     assert metrics["model"]["routes"] == ["requested -> served"]
+
+
+def test_evidence_score_requires_existing_full_relative_source_path(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "src" / "flask" / "app.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("def dispatch_request(): pass\n", encoding="utf-8")
+    question = {
+        "expected_files": ["src/flask/app.py"],
+        "expected_symbols": ["dispatch_request"],
+    }
+
+    basename_only = score(
+        "app.py dispatch_request", ["app.py"], question, tmp_path
+    )
+    full_path = score(
+        "dispatch_request", ["src/flask/app.py:1"], question, tmp_path
+    )
+    missing = score(
+        "dispatch_request", ["src/flask/missing.py"], question, tmp_path
+    )
+
+    assert basename_only["files"]["src/flask/app.py"] is False
+    assert full_path["files"]["src/flask/app.py"] is True
+    assert missing["files"]["src/flask/app.py"] is False
+    assert full_path["metric"] == "evidence_mention_recall"
+
+
+def test_evidence_score_uses_identifier_boundaries(tmp_path: Path) -> None:
+    question = {"expected_files": [], "expected_symbols": ["run", "Exec"]}
+
+    score_info = score(
+        "runtime execute ExecQuery; `run()` is called", [], question, tmp_path
+    )
+
+    assert score_info["symbols"] == {"run": True, "Exec": False}
 
 
 def test_track_isolates_artifact_paths() -> None:

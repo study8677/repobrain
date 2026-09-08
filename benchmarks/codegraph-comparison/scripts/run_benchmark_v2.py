@@ -63,12 +63,47 @@ def parse_json_payload(text: str) -> dict:
         return json.loads(stripped[start : end + 1])
 
 
-def score(answer: str, question: dict) -> dict:
+def _normalized_source_path(source: object, workspace: Path) -> str | None:
+    if not isinstance(source, str):
+        return None
+    value = source.strip().strip("`")
+    value = re.sub(r"(?::\d+)(?::\d+)?$", "", value)
+    path = Path(value)
+    if path.is_absolute():
+        return None
+    normalized = Path(os.path.normpath(value))
+    if normalized == Path(".") or ".." in normalized.parts:
+        return None
+    candidate = workspace / normalized
+    if not candidate.is_file():
+        return None
+    return normalized.as_posix()
+
+
+def _mentions_identifier(text: str, identifier: str) -> bool:
+    boundary = r"[A-Za-z0-9_$]"
+    return re.search(
+        rf"(?<!{boundary}){re.escape(identifier)}(?!{boundary})", text
+    ) is not None
+
+
+def score(
+    answer: str, sources: list[object], question: dict, workspace: Path
+) -> dict:
+    cited_paths = {
+        normalized
+        for source in sources
+        if (normalized := _normalized_source_path(source, workspace)) is not None
+    }
     files = {
-        item: item in answer or Path(item).name in answer
+        item: (workspace / item).is_file() and Path(item).as_posix() in cited_paths
         for item in question["expected_files"]
     }
-    symbols = {item: item in answer for item in question["expected_symbols"]}
+    symbol_text = "\n".join([answer, *map(str, sources)])
+    symbols = {
+        item: _mentions_identifier(symbol_text, item)
+        for item in question["expected_symbols"]
+    }
     found = sum(files.values()) + sum(symbols.values())
     total = len(files) + len(symbols)
     return {
@@ -77,6 +112,7 @@ def score(answer: str, question: dict) -> dict:
         "found": found,
         "total": total,
         "recall": found / total if total else 1.0,
+        "metric": "evidence_mention_recall",
     }
 
 
@@ -110,10 +146,10 @@ def result_payload(
     payload: dict,
     *,
     source_access: bool,
+    workspace: Path,
 ) -> dict:
     answer = str(payload.get("answer") or "")
     sources = payload.get("sources") or []
-    combined = "\n".join([answer, *map(str, sources)])
     result = {
         "status": "success" if completed.returncode == 0 and answer else "failed",
         "returncode": completed.returncode,
@@ -121,7 +157,7 @@ def result_payload(
         "answer": answer,
         "sources": sources,
         "limitations": payload.get("limitations") or [],
-        "score": score(combined, question),
+        "score": score(answer, list(sources), question, workspace),
         "source_access": source_access,
     }
     result.update(
@@ -370,7 +406,8 @@ def run_repobrain(
         except (json.JSONDecodeError, TypeError):
             payload = {"limitations": ["RepoBrain returned invalid JSON"]}
     result = result_payload(
-        completed, seconds, question, payload, source_access=source_access
+        completed, seconds, question, payload,
+        source_access=source_access, workspace=workspace,
     )
     if events_path.is_file():
         result.update(
@@ -449,7 +486,7 @@ def run_codegraph(
         [
             "trae-cli", "exec", "-m", model,
             "--cd", str(control_workspace),
-            "--sandbox", "workspace-write",
+            "--sandbox", "read-only",
             "--skip-git-repo-check", "--ephemeral", "--json",
             "--shell-tool-timeout", "120s",
             "--output-schema", str(schema_path),
@@ -471,7 +508,8 @@ def run_codegraph(
         except json.JSONDecodeError:
             payload = {"limitations": ["Trae returned invalid JSON"]}
     result = result_payload(
-        completed, seconds, question, payload, source_access=source_access
+        completed, seconds, question, payload,
+        source_access=source_access, workspace=indexed_workspace,
     )
     result.update(parse_trae_metrics(event_text, model))
     return enforce_codegraph_protocol(
@@ -479,7 +517,7 @@ def run_codegraph(
     )
 
 
-def failed_result(question: dict, exc: Exception) -> dict:
+def failed_result(question: dict, workspace: Path, exc: Exception) -> dict:
     result = {
         "status": "failed",
         "returncode": 1,
@@ -487,7 +525,7 @@ def failed_result(question: dict, exc: Exception) -> dict:
         "answer": "",
         "sources": [],
         "limitations": [f"{type(exc).__name__}: {exc}"],
-        "score": score("", question),
+        "score": score("", [], question, workspace),
     }
     result.update(
         unavailable_metrics(
@@ -714,7 +752,7 @@ def main() -> int:
                 try:
                     result = future.result()
                 except Exception as exc:
-                    result = failed_result(item["question"], exc)
+                    result = failed_result(item["question"], item["workspace"], exc)
                 result.update(
                     {
                         "schema_version": 2,

@@ -6,7 +6,7 @@
   "tools": {
     "repobrain": {
       "repository": "https://github.com/study8677/repobrain.git",
-      "revision": "5ed6d06ded999ec4e689af97f1a9625520f00547",
+      "revision": "2f8419a1f520c375ad91550395217376cd725d40",
       "version": "engine 0.3.2 / cli 2.0.2",
       "refresh_mode": "public_full"
     },

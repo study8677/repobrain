@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repobrain.dev/schemas/codegraph-comparison-semantic-judge-v2.json",
+  "title": "RepoBrain CodeGraph semantic blind judge report v2",
+  "type": "object",
+  "required": [
+    "schema_version", "input", "track", "seed", "judge_model",
+    "groups", "product_summary", "product_runtime_metrics", "judge_metrics"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "input": {"type": "string"},
+    "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "track": {"const": "unrestricted_native"},
+    "seed": {"type": "integer"},
+    "judge_model": {"type": "string", "minLength": 1},
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["repository", "question_id", "status", "mapping", "verdicts"],
+        "properties": {
+          "repository": {"type": "string"},
+          "question_id": {"type": "string"},
+          "status": {"enum": ["success", "failed"]},
+          "mapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["candidate_id", "product", "repeat"],
+              "properties": {
+                "candidate_id": {"type": "string"},
+                "product": {"enum": ["repobrain", "codegraph"]},
+                "repeat": {"type": "integer", "minimum": 1},
+                "artifact": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "verdicts": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/verdict"}
+          },
+          "judge_metrics": {"type": "object"},
+          "error": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "product_summary": {"type": "object"},
+    "product_runtime_metrics": {"type": "object"},
+    "judge_metrics": {"type": "object"}
+  },
+  "$defs": {
+    "verdict": {
+      "type": "object",
+      "required": [
+        "candidate_id", "verdict", "factuality", "completeness",
+        "citation_validity", "unsupported_claims", "reason"
+      ],
+      "properties": {
+        "candidate_id": {"type": "string"},
+        "verdict": {"enum": ["correct", "partially_correct", "incorrect"]},
+        "factuality": {"enum": ["accurate", "minor_errors", "major_errors"]},
+        "completeness": {"enum": ["complete", "partial", "incomplete"]},
+        "citation_validity": {"enum": ["valid", "partially_valid", "invalid", "no_citations"]},
+        "unsupported_claims": {"type": "array", "items": {"type": "string"}},
+        "reason": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

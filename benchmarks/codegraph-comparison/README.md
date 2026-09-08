@@ -37,12 +37,20 @@ benchmarks/codegraph-comparison/.work/v2/tools/repobrain-venv/bin/python \
   benchmarks/codegraph-comparison/scripts/render_benchmark_v2_report.py \
   benchmarks/codegraph-comparison/results/runs/flask-unrestricted-smoke/unrestricted_native/results.json \
   benchmarks/codegraph-comparison/results/runs/flask-unrestricted-smoke/unrestricted_native/report.md
+
+benchmarks/codegraph-comparison/.work/v2/tools/repobrain-venv/bin/python \
+  benchmarks/codegraph-comparison/scripts/judge_benchmark_v2.py \
+  benchmarks/codegraph-comparison/results/runs/flask-unrestricted-smoke/unrestricted_native/results.json \
+  --resume
 ```
 
 For a formal main-track run, prepare the four non-stress repositories and use
-`--repeat 3 --workers 1`. Run Grafana under a different run id. Compare final
-evidence correctness, total wall time, and Trae token usage. Monetary cost is
-reported only when Trae emits it; otherwise it remains explicitly unavailable.
+`--repeat 3 --workers 1`. Run Grafana under a different run id. The runner's
+automatic score is evidence-mention recall, not semantic correctness. Use the
+blind judge output for final correctness, factuality, completeness, citation
+validity, and unsupported claims. Compare that result with total wall time and
+Trae token usage. Monetary cost is reported only when Trae emits it; otherwise
+it remains explicitly unavailable. Judge time/tokens are reported separately.
 For `source_free`, a generated corpus manifest records that source files are
 absent from the query directory; this is auditable isolation, not an
 OS/container security boundary.
@@ -55,6 +63,7 @@ The v2 entrypoints are:
 - `scripts/prepare_corpora.py`: public index builds and source-free publication
 - `scripts/run_benchmark_v2.py`: repeated fair-E2E runner
 - `scripts/render_benchmark_v2_report.py`: multi-repository report
+- `scripts/judge_benchmark_v2.py`: source-grounded, anonymized semantic judge
 
 ## Legacy pilot
 
