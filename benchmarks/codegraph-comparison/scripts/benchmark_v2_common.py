@@ -172,3 +172,48 @@ def atomic_write_json(path: Path, payload: dict) -> None:
         encoding="utf-8",
     )
     temporary.replace(path)
+
+
+def normalize_string_list(value: object) -> list[str]:
+    """Normalize a model-produced scalar or list into non-empty strings."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value else []
+    if isinstance(value, list):
+        return [str(item) for item in value if item is not None and str(item)]
+    return [str(value)]
+
+
+def normalize_answer_payload(payload: dict) -> dict:
+    """Normalize loosely typed model JSON to the benchmark answer contract."""
+    answer = payload.get("answer")
+    return {
+        **payload,
+        "answer": (
+            answer
+            if isinstance(answer, str)
+            else "" if answer is None
+            else str(answer)
+        ),
+        "sources": normalize_string_list(payload.get("sources")),
+        "limitations": normalize_string_list(payload.get("limitations")),
+    }
+
+
+def normalize_answer_text(text: str) -> tuple[dict, bool]:
+    """Return a JSON answer object, preserving non-JSON output without inference."""
+    stripped = text.strip()
+    try:
+        payload = json.loads(stripped)
+    except (json.JSONDecodeError, TypeError):
+        payload = None
+    if isinstance(payload, dict):
+        return normalize_answer_payload(payload), False
+    return {
+        "answer": text,
+        "sources": [],
+        "limitations": [
+            "Normalized plain-text Trae output; no sources were inferred."
+        ],
+    }, True

@@ -24,6 +24,8 @@ from benchmark_v2_common import (
     atomic_write_json,
     load_manifest,
     load_questions,
+    normalize_answer_payload,
+    normalize_answer_text,
     question_files,
     repository_corpus_paths,
     resolve_path,
@@ -63,21 +65,12 @@ def parse_json_payload(text: str) -> dict:
         return json.loads(stripped[start : end + 1])
 
 
-def _normalized_source_path(source: object, workspace: Path) -> str | None:
+def _source_mentions_expected_path(source: object, expected_path: str) -> bool:
     if not isinstance(source, str):
-        return None
+        return False
     value = source.strip().strip("`")
-    value = re.sub(r"(?::\d+)(?::\d+)?$", "", value)
-    path = Path(value)
-    if path.is_absolute():
-        return None
-    normalized = Path(os.path.normpath(value))
-    if normalized == Path(".") or ".." in normalized.parts:
-        return None
-    candidate = workspace / normalized
-    if not candidate.is_file():
-        return None
-    return normalized.as_posix()
+    suffix = rf"(?:$|:\d+(?::\d+)?(?:$|[\s(])|[\s(])"
+    return re.match(rf"^(?:\./)?{re.escape(expected_path)}{suffix}", value) is not None
 
 
 def _mentions_identifier(text: str, identifier: str) -> bool:
@@ -90,15 +83,19 @@ def _mentions_identifier(text: str, identifier: str) -> bool:
 def score(
     answer: str, sources: list[object], question: dict, workspace: Path
 ) -> dict:
-    cited_paths = {
-        normalized
-        for source in sources
-        if (normalized := _normalized_source_path(source, workspace)) is not None
-    }
-    files = {
-        item: (workspace / item).is_file() and Path(item).as_posix() in cited_paths
-        for item in question["expected_files"]
-    }
+    files = {}
+    for item in question["expected_files"]:
+        expected = Path(item)
+        safe_relative_path = (
+            not expected.is_absolute()
+            and expected != Path(".")
+            and ".." not in expected.parts
+        )
+        files[item] = (
+            safe_relative_path
+            and (workspace / expected).is_file()
+            and any(_source_mentions_expected_path(source, item) for source in sources)
+        )
     symbol_text = "\n".join([answer, *map(str, sources)])
     symbols = {
         item: _mentions_identifier(symbol_text, item)
@@ -148,16 +145,17 @@ def result_payload(
     source_access: bool,
     workspace: Path,
 ) -> dict:
-    answer = str(payload.get("answer") or "")
-    sources = payload.get("sources") or []
+    payload = normalize_answer_payload(payload)
+    answer = payload["answer"]
+    sources = payload["sources"]
     result = {
         "status": "success" if completed.returncode == 0 and answer else "failed",
         "returncode": completed.returncode,
         "seconds": seconds,
         "answer": answer,
         "sources": sources,
-        "limitations": payload.get("limitations") or [],
-        "score": score(answer, list(sources), question, workspace),
+        "limitations": payload["limitations"],
+        "score": score(answer, sources, question, workspace),
         "source_access": source_access,
     }
     result.update(
@@ -369,6 +367,8 @@ def run_repobrain(
     command_tokens = shlex.split(base_command)
     if "--json" not in command_tokens:
         command_tokens.append("--json")
+    if "--output-schema" not in command_tokens:
+        command_tokens.extend(["--output-schema", "{schema_file}"])
     capture_wrapper = Path(__file__).with_name("capture_trae_jsonl.py")
     captured_command = shlex.join(
         [
@@ -503,10 +503,9 @@ def run_codegraph(
     )
     payload = {}
     if completed.returncode == 0 and answer_path.is_file():
-        try:
-            payload = parse_json_payload(answer_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            payload = {"limitations": ["Trae returned invalid JSON"]}
+        payload, _ = normalize_answer_text(
+            answer_path.read_text(encoding="utf-8", errors="replace")
+        )
     result = result_payload(
         completed, seconds, question, payload,
         source_access=source_access, workspace=indexed_workspace,
@@ -531,6 +530,89 @@ def failed_result(question: dict, workspace: Path, exc: Exception) -> dict:
         unavailable_metrics(
             "The benchmark job failed before metrics were captured."
         )
+    )
+    return result
+
+
+def missing_prerequisite_result(
+    question: dict,
+    workspace: Path,
+    marker: str,
+    build_log: Path,
+) -> dict:
+    """Return an auditable non-attempt when a product index is unavailable."""
+    reason = (
+        f"Missing prerequisite {marker} corpus in {workspace}. "
+        f"Build log: {build_log}"
+    )
+    result = {
+        "status": "unavailable",
+        "returncode": None,
+        "seconds": None,
+        "answer": "",
+        "sources": [],
+        "limitations": [reason],
+        "score": score("", [], question, workspace),
+    }
+    result.update(unavailable_metrics(reason))
+    return result
+
+
+def validate_product_prerequisite(
+    product: str,
+    workspace: Path,
+    expected_revision: str,
+) -> tuple[bool, str]:
+    """Validate that a product has a complete, queryable pinned index."""
+    if product == "codegraph":
+        index = workspace / ".codegraph"
+        if not index.is_dir():
+            return False, f"missing .codegraph directory in {workspace}"
+        if not any(index.iterdir()):
+            return False, f"empty .codegraph corpus in {workspace}"
+        return True, ""
+
+    root = workspace / ".repobrain"
+    current_path = root / "current.json"
+    if not current_path.is_file():
+        return False, f"missing .repobrain/current.json in {workspace}"
+    try:
+        current = json.loads(current_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        return False, f"invalid .repobrain/current.json in {workspace}: {exc}"
+    if not isinstance(current, dict):
+        return False, f"invalid .repobrain/current.json object in {workspace}"
+    observed_head = current.get("head_sha")
+    if observed_head != expected_revision:
+        return False, (
+            "RepoBrain current head mismatch in "
+            f"{workspace}: expected {expected_revision}, observed {observed_head}"
+        )
+    generation = current.get("generation")
+    if (
+        not isinstance(generation, str)
+        or not generation
+        or Path(generation).name != generation
+    ):
+        return False, f"invalid RepoBrain generation pointer in {current_path}"
+    generation_root = root / "generations" / generation
+    if not generation_root.is_dir():
+        return False, f"missing RepoBrain generation directory: {generation_root}"
+    return True, ""
+
+
+def add_run_metadata(result: dict, item: dict, args: argparse.Namespace) -> dict:
+    result.update(
+        {
+            "schema_version": 2,
+            "run_id": args.run_id,
+            "track": args.track,
+            "source_access": args.track == "unrestricted_native",
+            "repository": item["repository"],
+            "repeat": item["repeat"],
+            "product": item["product"],
+            "question_id": item["question"]["id"],
+        }
     )
     return result
 
@@ -706,13 +788,28 @@ def main() -> int:
         previous = json.loads(item["result_path"].read_text(encoding="utf-8"))
         if previous.get("status") != "success":
             runnable.append(item)
+    available_runnable = []
     for item in runnable:
         workspace = item["workspace"]
         marker = ".repobrain" if item["product"] == "repobrain" else ".codegraph"
-        if not (workspace / marker).is_dir():
-            raise FileNotFoundError(
-                f"missing {marker} corpus for {item['repository']}: {workspace}"
+        repository_config = manifest["repositories"][item["repository"]]
+        prerequisite_ok, prerequisite_reason = validate_product_prerequisite(
+            item["product"], workspace, repository_config["revision"]
+        )
+        if not prerequisite_ok:
+            build_log = (
+                work_root / "build-logs" / item["repository"]
+                / f"{item['product']}.stderr"
             )
+            result = missing_prerequisite_result(
+                item["question"], workspace,
+                f"{marker} ({prerequisite_reason})", build_log,
+            )
+            add_run_metadata(result, item, args)
+            atomic_write_json(item["result_path"], result)
+            continue
+        available_runnable.append(item)
+    runnable = available_runnable
     if any(item["product"] == "repobrain" for item in runnable) and not rb_ask.is_file():
         raise FileNotFoundError(f"missing RepoBrain runner: {rb_ask}")
     if any(item["product"] == "codegraph" for item in runnable) and not codegraph_bin.is_file():
@@ -753,18 +850,7 @@ def main() -> int:
                     result = future.result()
                 except Exception as exc:
                     result = failed_result(item["question"], item["workspace"], exc)
-                result.update(
-                    {
-                        "schema_version": 2,
-                        "run_id": args.run_id,
-                        "track": args.track,
-                        "source_access": args.track == "unrestricted_native",
-                        "repository": item["repository"],
-                        "repeat": item["repeat"],
-                        "product": item["product"],
-                        "question_id": item["question"]["id"],
-                    }
-                )
+                add_run_metadata(result, item, args)
                 atomic_write_json(item["result_path"], result)
                 score_info = result["score"]
                 print(

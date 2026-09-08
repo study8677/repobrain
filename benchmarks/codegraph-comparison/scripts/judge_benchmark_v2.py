@@ -8,14 +8,13 @@ import hashlib
 import json
 import random
 import subprocess
-import tempfile
 import time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
 from benchmark_v2_common import BENCH_ROOT, WORK_ROOT, question_files, resolve_path
-from run_benchmark_v2 import parse_trae_metrics
+from run_benchmark_v2 import parse_json_payload, parse_trae_metrics
 
 
 VERDICTS = {"correct", "partially_correct", "incorrect"}
@@ -56,8 +55,6 @@ def select_groups(results: dict, repositories: list[str] | None, limit: int | No
     for record in results.get("records", []):
         if requested and record["repository"] not in requested:
             continue
-        if record.get("result", {}).get("status") != "success":
-            continue
         grouped[(record["repository"], record["question_id"])].append(record)
     selected = []
     counts: Counter[str] = Counter()
@@ -93,13 +90,45 @@ def anonymize(records: list[dict], repository: str, question_id: str, seed: int)
     return candidates, mapping
 
 
-def validate_candidate_balance(records: list[dict]) -> None:
+def validate_plan_slots(records: list[dict], repeat_count: int) -> None:
     repeats: dict[int, set[str]] = defaultdict(set)
     for record in records:
         repeats[record["repeat"]].add(record["product"])
-    incomplete = sorted(repeat for repeat, products in repeats.items() if products != {"repobrain", "codegraph"})
+    incomplete = [
+        repeat for repeat in range(1, repeat_count + 1)
+        if repeats[repeat] != {"repobrain", "codegraph"}
+    ]
     if incomplete:
-        raise ValueError(f"missing paired successful candidates for repeats: {incomplete}")
+        raise ValueError(f"missing planned product slots for repeats: {incomplete}")
+
+
+def partition_records(records: list[dict]) -> tuple[list[dict], list[dict]]:
+    successful, failures = [], []
+    for record in records:
+        result = record.get("result") or {}
+        if result.get("status") == "success":
+            successful.append(record)
+            continue
+        limitations = result.get("limitations") or []
+        reason_parts = [str(item) for item in limitations if item]
+        if result.get("error"):
+            reason_parts.append(str(result["error"]))
+        if result.get("returncode") is not None:
+            reason_parts.append(f"returncode={result['returncode']}")
+        failures.append({
+            "product": record["product"],
+            "repeat": record["repeat"],
+            "artifact": record.get("artifact", ""),
+            "runtime_status": result.get("status", "unavailable"),
+            "reason": "; ".join(reason_parts) or "No successful answer was available.",
+            "automatic_penalty": {
+                "verdict": "incorrect",
+                "factuality": "major_errors",
+                "completeness": "incomplete",
+                "citation_validity": "invalid",
+            },
+        })
+    return successful, failures
 
 
 def judge_schema(candidate_ids: list[str]) -> dict:
@@ -145,19 +174,76 @@ def validate_verdicts(payload: dict, candidate_ids: list[str]) -> list[dict]:
     return verdicts
 
 
-def prompt_for(question: dict, candidates: list[dict]) -> str:
-    return f"""You are an independent semantic judge for a repository benchmark.
-Inspect the repository source in the current read-only workspace to establish ground truth.
-Judge every anonymized candidate independently. Do not rank candidates, infer their producer,
-or reward verbosity. Check factual correctness, whether the question is fully answered, whether
-each cited file/line/symbol exists and supports the claim, and list concrete unsupported claims.
-Use no benchmark product tools; source inspection is the ground truth.
+def ground_truth_schema() -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "facts": {
+                "type": "array", "minItems": 5, "maxItems": 12,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "relationship": {"type": "string"},
+                        "citations": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                    },
+                    "required": ["relationship", "citations"],
+                    "additionalProperties": False,
+                },
+            },
+            "common_errors": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["facts", "common_errors"], "additionalProperties": False,
+    }
+
+
+def validate_ground_truth(payload: dict) -> dict:
+    facts = payload.get("facts")
+    errors = payload.get("common_errors")
+    if not isinstance(facts, list) or not 5 <= len(facts) <= 12:
+        raise ValueError("ground truth must contain 5-12 facts")
+    if not isinstance(errors, list):
+        raise ValueError("ground truth common_errors must be an array")
+    for fact in facts:
+        if not isinstance(fact, dict) or not str(fact.get("relationship", "")).strip():
+            raise ValueError("each ground-truth fact needs a relationship")
+        citations = fact.get("citations")
+        if not isinstance(citations, list) or not citations or not all(isinstance(item, str) and item.strip() for item in citations):
+            raise ValueError("each ground-truth fact needs valid citations")
+    return payload
+
+
+def ground_truth_prompt(question: dict) -> str:
+    return f"""Establish concise ground truth for one repository benchmark question.
+Inspect the current read-only repository source. Return 5-12 atomic relationship facts that
+directly answer the question. Every fact must cite a valid repository-relative file and line or
+symbol. Also list plausible common errors that an answer could make. Do not assess candidates.
 
 Question:
 {question['prompt']}
 
+Return ONLY a JSON object with this shape, with no Markdown or commentary:
+{{"facts":[{{"relationship":"...","citations":["path/to/file:line"]}}],
+"common_errors":["..."]}}
+"""
+
+
+def grading_prompt(question: dict, ground_truth: dict, candidates: list[dict]) -> str:
+    return f"""You are an independent semantic grader. You MUST NOT call tools, inspect files,
+run commands, or seek additional evidence. Use only the supplied ground truth. Judge every
+anonymized candidate independently; do not rank them, infer their producer, or reward verbosity.
+Check factual correctness, completeness, citation support, and concrete unsupported claims.
+
+Question:
+{question['prompt']}
+
+Ground truth extracted separately from the pinned source:
+{json.dumps(ground_truth, ensure_ascii=False, indent=2)}
+
 Candidates (order is deterministically randomized):
 {json.dumps(candidates, ensure_ascii=False, indent=2)}
+
+Return ONLY a JSON object with a `verdicts` array matching the supplied schema.
+Do not add Markdown, prose before the JSON, or code fences.
 """
 
 
@@ -182,29 +268,68 @@ def clean_workspace(repository: str, results: dict) -> Path:
     return workspace
 
 
-def run_judge(workspace: Path, question: dict, candidates: list[dict], model: str, timeout: float, artifact_dir: Path) -> tuple[list[dict], dict]:
+def run_trae_stage(workspace: Path, prompt: str, schema: dict, model: str, timeout: float, artifact_dir: Path) -> tuple[dict, dict]:
     artifact_dir.mkdir(parents=True, exist_ok=True)
     answer_path = artifact_dir / "answer.json"
     events_path = artifact_dir / "events.jsonl"
-    with tempfile.TemporaryDirectory(prefix="semantic-judge-schema-") as directory:
-        schema_path = Path(directory) / "schema.json"
-        schema_path.write_text(json.dumps(judge_schema([item["candidate_id"] for item in candidates])), encoding="utf-8")
-        started = time.monotonic()
-        completed = subprocess.run([
-            "trae-cli", "exec", "-m", model, "--cd", str(workspace),
-            "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "--json",
-            "--shell-tool-timeout", "120s", "--output-schema", str(schema_path),
-            "-o", str(answer_path), prompt_for(question, candidates),
-        ], text=True, capture_output=True, timeout=timeout, check=False)
-        seconds = time.monotonic() - started
+    schema_path = artifact_dir / "schema.json"
+    schema_path.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
+    started = time.monotonic()
+    completed = subprocess.run([
+        "trae-cli", "exec", "-m", model, "--cd", str(workspace),
+        "--sandbox", "read-only", "--skip-git-repo-check", "--ephemeral", "--json",
+        "--shell-tool-timeout", "120s", "--output-schema", str(schema_path),
+        "-o", str(answer_path), prompt,
+    ], text=True, capture_output=True, timeout=timeout, check=False)
+    seconds = time.monotonic() - started
     event_text = f"{completed.stdout}\n{completed.stderr}"
     events_path.write_text(event_text, encoding="utf-8")
     if completed.returncode != 0 or not answer_path.is_file():
         raise RuntimeError(f"judge failed with return code {completed.returncode}")
-    payload = json.loads(answer_path.read_text(encoding="utf-8"))
-    verdicts = validate_verdicts(payload, [item["candidate_id"] for item in candidates])
+    payload = parse_json_payload(answer_path.read_text(encoding="utf-8"))
     metrics = {"seconds": seconds, **parse_trae_metrics(event_text, model)}
-    return verdicts, metrics
+    atomic_write(artifact_dir / "metrics.json", metrics)
+    return payload, metrics
+
+
+def ground_truth_fingerprint(workspace: Path, question: dict, model: str) -> str:
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=workspace, text=True,
+        capture_output=True, check=True,
+    ).stdout.strip()
+    material = json.dumps(
+        {"head": head, "question": question["prompt"], "model": model},
+        ensure_ascii=False, sort_keys=True,
+    )
+    return hashlib.sha256(material.encode()).hexdigest()
+
+
+def extract_ground_truth(workspace: Path, question: dict, model: str, timeout: float, artifact_dir: Path) -> tuple[dict, dict, bool]:
+    cache_path = artifact_dir / "cache.json"
+    fingerprint = ground_truth_fingerprint(workspace, question, model)
+    if cache_path.is_file():
+        cached = json.loads(cache_path.read_text(encoding="utf-8"))
+        if cached.get("fingerprint") == fingerprint:
+            truth = validate_ground_truth(cached["ground_truth"])
+            return truth, cached["metrics"], True
+    payload, metrics = run_trae_stage(
+        workspace, ground_truth_prompt(question), ground_truth_schema(),
+        model, timeout, artifact_dir,
+    )
+    truth = validate_ground_truth(payload)
+    atomic_write(cache_path, {
+        "fingerprint": fingerprint, "ground_truth": truth, "metrics": metrics,
+    })
+    return truth, metrics, False
+
+
+def grade_candidates(workspace: Path, question: dict, ground_truth: dict, candidates: list[dict], model: str, timeout: float, artifact_dir: Path) -> tuple[list[dict], dict]:
+    candidate_ids = [item["candidate_id"] for item in candidates]
+    payload, metrics = run_trae_stage(
+        workspace, grading_prompt(question, ground_truth, candidates),
+        judge_schema(candidate_ids), model, timeout, artifact_dir,
+    )
+    return validate_verdicts(payload, candidate_ids), metrics
 
 
 def product_summary(groups: list[dict]) -> dict:
@@ -215,12 +340,22 @@ def product_summary(groups: list[dict]) -> dict:
         mappings = {item["candidate_id"]: item for item in group["mapping"]}
         for verdict in group["verdicts"]:
             product = mappings[verdict["candidate_id"]]["product"]
-            bucket = summary.setdefault(product, {"answers": 0, "verdicts": Counter(), "factuality": Counter(), "completeness": Counter(), "citation_validity": Counter(), "weighted_accuracy": 0.0})
+            bucket = summary.setdefault(product, {"answers": 0, "judge_candidates": 0, "runtime_failures": 0, "verdicts": Counter(), "factuality": Counter(), "completeness": Counter(), "citation_validity": Counter(), "weighted_accuracy": 0.0})
             bucket["answers"] += 1
+            bucket["judge_candidates"] += 1
             for dimension in ("verdicts", "factuality", "completeness", "citation_validity"):
                 field = "verdict" if dimension == "verdicts" else dimension
                 bucket[dimension][verdict[field]] += 1
             bucket["weighted_accuracy"] += {"correct": 1.0, "partially_correct": 0.5, "incorrect": 0.0}[verdict["verdict"]]
+        for failure in group.get("runtime_failures", []):
+            product = failure["product"]
+            bucket = summary.setdefault(product, {"answers": 0, "judge_candidates": 0, "runtime_failures": 0, "verdicts": Counter(), "factuality": Counter(), "completeness": Counter(), "citation_validity": Counter(), "weighted_accuracy": 0.0})
+            bucket["answers"] += 1
+            bucket["runtime_failures"] += 1
+            penalty = failure["automatic_penalty"]
+            for dimension in ("verdicts", "factuality", "completeness", "citation_validity"):
+                field = "verdict" if dimension == "verdicts" else dimension
+                bucket[dimension][penalty[field]] += 1
     for bucket in summary.values():
         bucket["weighted_accuracy"] = bucket["weighted_accuracy"] / bucket["answers"] if bucket["answers"] else 0.0
         for key in ("verdicts", "factuality", "completeness", "citation_validity"):
@@ -231,19 +366,22 @@ def product_summary(groups: list[dict]) -> dict:
 def runtime_metrics(records: list[dict]) -> dict:
     output = {}
     for product in sorted({item["product"] for item in records}):
-        successful = [item["result"] for item in records if item["product"] == product and item.get("result", {}).get("status") == "success"]
-        amounts = [item.get("cost", {}).get("amount") for item in successful if item.get("cost", {}).get("status") == "available"]
-        tokens = [item.get("usage", {}).get("total_tokens") for item in successful if item.get("usage", {}).get("status") == "available"]
+        runs = [item.get("result") or {} for item in records if item["product"] == product]
+        successful = [item for item in runs if item.get("status") == "success"]
+        amounts = [item.get("cost", {}).get("amount") for item in runs if item.get("cost", {}).get("status") == "available"]
+        tokens = [item.get("usage", {}).get("total_tokens") for item in runs if item.get("usage", {}).get("status") == "available"]
         output[product] = {
-            "successful_runs": len(successful), "seconds": sum(item.get("seconds", 0) for item in successful),
+            "planned_runs": len(runs), "successful_runs": len(successful),
+            "runtime_failures": len(runs) - len(successful),
+            "seconds": sum((item.get("seconds") or 0) for item in runs),
             "usage": {"available_runs": len(tokens), "total_tokens": sum(tokens)},
             "cost": {"available_runs": len(amounts), "currency": "USD", "amount": sum(amounts) if amounts else None},
         }
     return output
 
 
-def aggregate_judge_metrics(groups: list[dict]) -> dict:
-    successful = [item["judge_metrics"] for item in groups if item.get("status") == "success"]
+def aggregate_stage_metrics(groups: list[dict], field: str) -> dict:
+    successful = [item[field] for item in groups if item.get("status") == "success" and field in item]
     amounts = [item.get("cost", {}).get("amount") for item in successful if item.get("cost", {}).get("status") == "available"]
     tokens = [item.get("usage", {}).get("total_tokens") for item in successful if item.get("usage", {}).get("status") == "available"]
     return {"calls": len(successful), "seconds": sum(item.get("seconds", 0) for item in successful), "usage": {"available_calls": len(tokens), "total_tokens": sum(tokens)}, "cost": {"available_calls": len(amounts), "currency": "USD", "amount": sum(amounts) if amounts else None}}
@@ -258,10 +396,27 @@ def report_payload(args: argparse.Namespace, results: dict, groups: list[dict]) 
         "input_sha256": hashlib.sha256(args.input.read_bytes()).hexdigest(),
         "track": results["track"], "seed": args.seed,
         "judge_model": args.model, "groups": groups,
+        "runtime_failure_penalty": {
+            "policy": "Every non-success product run remains in the accuracy denominator and is automatically scored incorrect/major_errors/incomplete/invalid.",
+            "verdict": "incorrect", "factuality": "major_errors",
+            "completeness": "incomplete", "citation_validity": "invalid",
+        },
+        "evaluation_counts": {
+            "judge_candidates": sum(item.get("judge_candidates", 0) for item in groups),
+            "runtime_failure_penalties": sum(len(item.get("runtime_failures", [])) for item in groups),
+        },
         "product_summary": product_summary(groups),
         "product_runtime_metrics": runtime_metrics(selected_records),
-        "judge_metrics": aggregate_judge_metrics(groups),
+        "ground_truth_metrics": aggregate_stage_metrics(groups, "ground_truth_metrics"),
+        "grading_metrics": aggregate_stage_metrics(groups, "grading_metrics"),
     }
+
+
+def reusable_group(item: dict) -> bool:
+    return item.get("status") == "success" and (
+        item.get("evaluation_mode") == "automatic_failures_only"
+        or ("ground_truth_metrics" in item and "grading_metrics" in item)
+    )
 
 
 def main() -> int:
@@ -271,7 +426,8 @@ def main() -> int:
     parser.add_argument("--repository", action="append")
     parser.add_argument("--limit", type=int, help="maximum questions per repository")
     parser.add_argument("--resume", action="store_true")
-    parser.add_argument("--timeout", type=float, default=600)
+    parser.add_argument("--ground-truth-timeout", type=float, default=600)
+    parser.add_argument("--grading-timeout", type=float, default=300)
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     args = parser.parse_args()
@@ -285,21 +441,43 @@ def main() -> int:
     if args.resume and output.is_file():
         previous = json.loads(output.read_text(encoding="utf-8"))
         expected_digest = hashlib.sha256(args.input.read_bytes()).hexdigest()
-        if previous.get("input_sha256") != expected_digest or previous.get("seed") != args.seed or previous.get("judge_model") != args.model:
-            parser.error("--resume output does not match input, seed, or judge model")
-        prior = {(item["repository"], item["question_id"]): item for item in previous.get("groups", []) if item.get("status") == "success"}
+        if previous.get("input_sha256") != expected_digest or previous.get("seed") != args.seed or previous.get("judge_model") != args.model or "runtime_failure_penalty" not in previous:
+            parser.error("--resume output does not match input, seed, judge model, or current penalty policy")
+        prior = {
+            (item["repository"], item["question_id"]): item
+            for item in previous.get("groups", [])
+            if reusable_group(item)
+        }
     groups = []
     for (repository, question_id), records in selected:
         if (repository, question_id) in prior:
             groups.append(prior[(repository, question_id)])
             continue
-        candidates, mapping = anonymize(records, repository, question_id, args.seed)
-        group = {"repository": repository, "question_id": question_id, "status": "failed", "mapping": mapping, "verdicts": []}
+        successful_records, runtime_failures = partition_records(records)
+        candidates, mapping = anonymize(successful_records, repository, question_id, args.seed)
+        group = {"repository": repository, "question_id": question_id, "status": "failed", "judge_candidates": len(candidates), "mapping": mapping, "verdicts": [], "runtime_failures": runtime_failures}
         try:
-            validate_candidate_balance(records)
-            workspace = clean_workspace(repository, results)
-            verdicts, metrics = run_judge(workspace, questions[question_id], candidates, args.model, args.timeout, output.parent / "semantic-judge-artifacts" / repository / question_id)
-            group.update({"status": "success", "verdicts": verdicts, "judge_metrics": metrics})
+            validate_plan_slots(records, int(results.get("repeat_count") or 1))
+            if candidates:
+                workspace = clean_workspace(repository, results)
+                artifact_dir = output.parent / "semantic-judge-artifacts" / repository / question_id
+                truth, truth_metrics, cache_hit = extract_ground_truth(
+                    workspace, questions[question_id], args.model,
+                    args.ground_truth_timeout, artifact_dir / "ground-truth",
+                )
+                verdicts, grading_metrics = grade_candidates(
+                    workspace, questions[question_id], truth, candidates,
+                    args.model, args.grading_timeout, artifact_dir / "grading",
+                )
+                group.update({
+                    "status": "success", "verdicts": verdicts,
+                    "ground_truth": truth, "ground_truth_cache_hit": cache_hit,
+                    "ground_truth_metrics": truth_metrics,
+                    "grading_metrics": grading_metrics,
+                    "evaluation_mode": "two_stage_blind_judge_with_automatic_failures",
+                })
+            else:
+                group.update({"status": "success", "evaluation_mode": "automatic_failures_only"})
         except Exception as exc:
             group["error"] = f"{type(exc).__name__}: {exc}"
         groups.append(group)

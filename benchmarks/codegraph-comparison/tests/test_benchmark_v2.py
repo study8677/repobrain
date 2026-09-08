@@ -12,7 +12,12 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from benchmark_v2_common import artifact_dir, load_manifest  # noqa: E402
+from benchmark_v2_common import (  # noqa: E402
+    artifact_dir,
+    load_manifest,
+    normalize_answer_payload,
+    normalize_answer_text,
+)
 from render_benchmark_v2_report import summarize  # noqa: E402
 from run_benchmark_v2 import (  # noqa: E402
     audit_codegraph_events,
@@ -20,9 +25,14 @@ from run_benchmark_v2 import (  # noqa: E402
     codegraph_prompt,
     enforce_codegraph_protocol,
     is_codegraph_command,
+    missing_prerequisite_result,
     parse_trae_metrics,
+    result_payload,
+    run_codegraph,
     score,
+    validate_product_prerequisite,
 )
+import run_benchmark_v2 as benchmark_runner  # noqa: E402
 
 
 def _result() -> dict:
@@ -158,6 +168,175 @@ def test_missing_trae_metrics_are_explicitly_unavailable() -> None:
     assert metrics["model"]["routes"] == ["requested -> served"]
 
 
+def test_missing_product_corpus_is_an_auditable_unavailable_result(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "flask-repobrain"
+    build_log = tmp_path / "build-logs" / "flask" / "repobrain.stderr"
+    question = {
+        "expected_files": ["src/flask/app.py"],
+        "expected_symbols": ["Flask"],
+    }
+
+    result = missing_prerequisite_result(
+        question, workspace, ".repobrain", build_log
+    )
+
+    assert result["status"] == "unavailable"
+    assert result["score"]["found"] == 0
+    assert result["score"]["total"] == 2
+    assert result["usage"]["status"] == "unavailable"
+    assert result["cost"]["status"] == "unavailable"
+    assert ".repobrain" in result["limitations"][0]
+    assert str(build_log) in result["limitations"][0]
+
+
+def test_repobrain_aborted_staging_without_current_is_not_ready(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    (workspace / ".repobrain" / "generations" / "staging").mkdir(parents=True)
+
+    ready, reason = validate_product_prerequisite(
+        "repobrain", workspace, "expected-head"
+    )
+
+    assert ready is False
+    assert "current.json" in reason
+
+
+def test_repobrain_current_wrong_head_is_not_ready(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    root = workspace / ".repobrain"
+    (root / "generations" / "generation-1").mkdir(parents=True)
+    (root / "current.json").write_text(
+        json.dumps({"generation": "generation-1", "head_sha": "wrong-head"}),
+        encoding="utf-8",
+    )
+
+    ready, reason = validate_product_prerequisite(
+        "repobrain", workspace, "expected-head"
+    )
+
+    assert ready is False
+    assert "head mismatch" in reason
+
+
+def test_repobrain_missing_current_generation_is_not_ready(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    root = workspace / ".repobrain"
+    root.mkdir(parents=True)
+    (root / "current.json").write_text(
+        json.dumps({
+            "generation": "missing-generation",
+            "head_sha": "expected-head",
+        }),
+        encoding="utf-8",
+    )
+
+    ready, reason = validate_product_prerequisite(
+        "repobrain", workspace, "expected-head"
+    )
+
+    assert ready is False
+    assert "generation directory" in reason
+
+
+def test_main_continues_other_product_when_one_corpus_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    work_root = tmp_path / "work"
+    results_root = tmp_path / "results"
+    rb_workspace = work_root / "worktrees" / "demo-repobrain"
+    rb_workspace.mkdir(parents=True)
+    rb_root = rb_workspace / ".repobrain"
+    (rb_root / "generations" / "generation-1").mkdir(parents=True)
+    (rb_root / "current.json").write_text(
+        json.dumps({"generation": "generation-1", "head_sha": "demo-head"}),
+        encoding="utf-8",
+    )
+    (work_root / "worktrees" / "demo-codegraph").mkdir(parents=True)
+    rb_ask = work_root / "tools" / "repobrain-venv" / "bin" / "rb-ask"
+    rb_ask.parent.mkdir(parents=True)
+    rb_ask.write_text("runner", encoding="utf-8")
+    questions = tmp_path / "questions.json"
+    questions.write_text(
+        json.dumps({
+            "questions": [{
+                "id": "demo-question",
+                "repository": "demo",
+                "prompt": "Explain demo.",
+                "expected_files": [],
+                "expected_symbols": ["Demo"],
+            }]
+        }),
+        encoding="utf-8",
+    )
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps({
+            "schema_version": 2,
+            "artifacts": {"work_root": str(work_root)},
+            "question_files": [str(questions)],
+            "tools": {"answer_model": {"requested_model": "test"}},
+            "repositories": {
+                "demo": {
+                    "enabled": True,
+                    "revision": "demo-head",
+                    "tracks": ["unrestricted_native"],
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    def fake_repobrain(question, workspace, *_args, **_kwargs):
+        return {
+            "status": "success",
+            "returncode": 0,
+            "seconds": 1.0,
+            "answer": "Demo",
+            "sources": [],
+            "limitations": [],
+            "score": benchmark_runner.score("Demo", [], question, workspace),
+            "usage": {"status": "unavailable"},
+            "cost": {"status": "unavailable", "amount": None},
+        }
+
+    monkeypatch.setattr(benchmark_runner, "RESULTS_ROOT", results_root)
+    monkeypatch.setattr(
+        benchmark_runner,
+        "artifact_dir",
+        lambda run_id, repository, repeat, product, track: (
+            results_root / run_id / track / repository
+            / f"repeat-{repeat:03d}" / product
+        ),
+    )
+    monkeypatch.setattr(benchmark_runner, "run_repobrain", fake_repobrain)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_benchmark_v2.py",
+            "--manifest", str(manifest),
+            "--run-id", "missing-demo",
+            "--track", "unrestricted_native",
+        ],
+    )
+
+    assert benchmark_runner.main() == 0
+    payload = json.loads(
+        (results_root / "missing-demo" / "unrestricted_native" / "results.json")
+        .read_text(encoding="utf-8")
+    )
+    statuses = {
+        record["product"]: record["result"]["status"]
+        for record in payload["records"]
+    }
+    assert statuses == {"repobrain": "success", "codegraph": "unavailable"}
+
+
 def test_evidence_score_requires_existing_full_relative_source_path(
     tmp_path: Path,
 ) -> None:
@@ -193,6 +372,21 @@ def test_evidence_score_uses_identifier_boundaries(tmp_path: Path) -> None:
     )
 
     assert score_info["symbols"] == {"run": True, "Exec": False}
+
+
+def test_evidence_score_handles_long_source_annotations(tmp_path: Path) -> None:
+    source = tmp_path / "scrape" / "scrape.go"
+    source.parent.mkdir(parents=True)
+    source.write_text("package scrape\n", encoding="utf-8")
+    question = {
+        "expected_files": ["scrape/scrape.go"],
+        "expected_symbols": [],
+    }
+    annotation = "scrape/scrape.go (newScrapePool:137, " + "detail " * 1000 + ")"
+
+    score_info = score("", [annotation, "x" * 10_000], question, tmp_path)
+
+    assert score_info["files"] == {"scrape/scrape.go": True}
 
 
 def test_track_isolates_artifact_paths() -> None:
@@ -272,6 +466,137 @@ def test_capture_wrapper_preserves_jsonl(tmp_path: Path) -> None:
     assert completed.returncode == 0
     assert line in completed.stdout
     assert line in events.read_text(encoding="utf-8")
+
+
+def test_plain_text_answer_normalization_does_not_infer_sources() -> None:
+    payload, normalized = normalize_answer_text("# Markdown answer\n\nsrc/app.py")
+
+    assert normalized is True
+    assert payload["answer"] == "# Markdown answer\n\nsrc/app.py"
+    assert payload["sources"] == []
+    assert payload["limitations"] == [
+        "Normalized plain-text Trae output; no sources were inferred."
+    ]
+
+
+def test_json_answer_payload_normalizes_scalar_and_list_fields() -> None:
+    payload = normalize_answer_payload({
+        "answer": 42,
+        "sources": "src/app.py",
+        "limitations": ["first", None, 7],
+    })
+
+    assert payload["answer"] == "42"
+    assert payload["sources"] == ["src/app.py"]
+    assert payload["limitations"] == ["first", "7"]
+
+
+def test_result_payload_does_not_expand_string_fields(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "app.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("Demo = 1\n", encoding="utf-8")
+    completed = subprocess.CompletedProcess([], 0, "", "")
+
+    result = result_payload(
+        completed,
+        1.0,
+        {
+            "expected_files": ["src/app.py"],
+            "expected_symbols": ["42"],
+        },
+        {
+            "answer": 42,
+            "sources": "src/app.py",
+            "limitations": "single limitation",
+        },
+        source_access=True,
+        workspace=tmp_path,
+    )
+
+    assert result["answer"] == "42"
+    assert result["sources"] == ["src/app.py"]
+    assert result["limitations"] == ["single limitation"]
+    assert result["score"]["found"] == 2
+
+
+def test_capture_wrapper_normalizes_plain_text_output_file(tmp_path: Path) -> None:
+    events = tmp_path / "events.jsonl"
+    answer = tmp_path / "answer.json"
+    wrapper = SCRIPTS / "capture_trae_jsonl.py"
+    script = (
+        "from pathlib import Path; import sys; "
+        "Path(sys.argv[1]).write_text('# Markdown answer')"
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(wrapper),
+            "--events", str(events),
+            "--",
+            sys.executable, "-c", script, str(answer),
+            "--output-last-message", str(answer),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(answer.read_text(encoding="utf-8"))
+    assert payload["answer"] == "# Markdown answer"
+    assert payload["sources"] == []
+    assert "no sources were inferred" in payload["limitations"][0]
+
+
+def test_codegraph_runner_normalizes_plain_text_answer(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    workspace = tmp_path / "workspace"
+    output_dir = tmp_path / "output"
+    workspace.mkdir()
+    (workspace / ".codegraph").mkdir()
+    schema = tmp_path / "schema.json"
+    schema.write_text("{}", encoding="utf-8")
+    codegraph = tmp_path / "codegraph"
+    codegraph.write_text("runner", encoding="utf-8")
+
+    def fake_run(command, **_kwargs):
+        answer_path = Path(command[command.index("-o") + 1])
+        answer_path.write_text("# Markdown answer", encoding="utf-8")
+        event = json.dumps({
+            "type": "item.completed",
+            "item": {
+                "type": "command_execution",
+                "command": f"{codegraph} query -p {workspace} demo",
+            },
+        }, separators=(",", ":"))
+        return 1.0, subprocess.CompletedProcess(command, 0, event, "")
+
+    monkeypatch.setattr(benchmark_runner, "run_command", fake_run)
+    result = run_codegraph(
+        {
+            "id": "demo",
+            "prompt": "Explain demo.",
+            "expected_files": [],
+            "expected_symbols": [],
+        },
+        workspace,
+        workspace,
+        output_dir,
+        schema,
+        codegraph,
+        "test-model",
+        10,
+        "unrestricted_native",
+        True,
+    )
+
+    assert result["status"] == "success"
+    assert result["answer"] == "# Markdown answer"
+    assert result["sources"] == []
+    assert "no sources were inferred" in result["limitations"][0]
 
 
 def test_report_summary_tracks_total_time_usage_and_cost_coverage() -> None:

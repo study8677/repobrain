@@ -1,0 +1,10 @@
+{
+  "facts": [
+    {"relationship": "Entry calls dispatcher.", "citations": ["src/app.py:entry"]},
+    {"relationship": "Dispatcher runs preprocessing.", "citations": ["src/app.py:dispatch"]},
+    {"relationship": "Preprocessing may short circuit.", "citations": ["src/app.py:preprocess"]},
+    {"relationship": "Dispatcher invokes the selected handler.", "citations": ["src/app.py:handler"]},
+    {"relationship": "The handler result is finalized.", "citations": ["src/app.py:finalize"]}
+  ],
+  "common_errors": ["Reversing preprocessing and dispatch order."]
+}

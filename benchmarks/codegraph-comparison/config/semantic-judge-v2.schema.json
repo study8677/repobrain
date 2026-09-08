@@ -5,7 +5,9 @@
   "type": "object",
   "required": [
     "schema_version", "input", "track", "seed", "judge_model",
-    "groups", "product_summary", "product_runtime_metrics", "judge_metrics"
+    "groups", "runtime_failure_penalty", "evaluation_counts",
+    "product_summary", "product_runtime_metrics", "ground_truth_metrics",
+    "grading_metrics"
   ],
   "properties": {
     "schema_version": {"const": 2},
@@ -18,11 +20,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["repository", "question_id", "status", "mapping", "verdicts"],
+        "required": ["repository", "question_id", "status", "judge_candidates", "mapping", "verdicts", "runtime_failures"],
         "properties": {
           "repository": {"type": "string"},
           "question_id": {"type": "string"},
           "status": {"enum": ["success", "failed"]},
+          "judge_candidates": {"type": "integer", "minimum": 0},
           "mapping": {
             "type": "array",
             "items": {
@@ -41,15 +44,43 @@
             "type": "array",
             "items": {"$ref": "#/$defs/verdict"}
           },
-          "judge_metrics": {"type": "object"},
+          "runtime_failures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["product", "repeat", "runtime_status", "reason", "automatic_penalty"],
+              "properties": {
+                "product": {"enum": ["repobrain", "codegraph"]},
+                "repeat": {"type": "integer", "minimum": 1},
+                "runtime_status": {"type": "string"},
+                "reason": {"type": "string"},
+                "automatic_penalty": {"type": "object"}
+              },
+              "additionalProperties": true
+            }
+          },
+          "ground_truth": {"type": "object"},
+          "ground_truth_cache_hit": {"type": "boolean"},
+          "ground_truth_metrics": {"type": "object"},
+          "grading_metrics": {"type": "object"},
           "error": {"type": "string"}
         },
         "additionalProperties": true
       }
     },
+    "runtime_failure_penalty": {"type": "object"},
+    "evaluation_counts": {
+      "type": "object",
+      "required": ["judge_candidates", "runtime_failure_penalties"],
+      "properties": {
+        "judge_candidates": {"type": "integer", "minimum": 0},
+        "runtime_failure_penalties": {"type": "integer", "minimum": 0}
+      }
+    },
     "product_summary": {"type": "object"},
     "product_runtime_metrics": {"type": "object"},
-    "judge_metrics": {"type": "object"}
+    "ground_truth_metrics": {"type": "object"},
+    "grading_metrics": {"type": "object"}
   },
   "$defs": {
     "verdict": {
