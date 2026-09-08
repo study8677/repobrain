@@ -191,18 +191,80 @@ async def test_generic_host_runner_full_refresh_promotes_generation(
     commit_workspace(tmp_path)
 
     from repobrain_engine.config import reset_settings
-    from repobrain_engine.hub.refresh_pipeline import refresh_pipeline
+    import repobrain_engine.hub.refresh_pipeline as refresh_mod
     from repobrain_engine.hub.storage import active_generation_root
 
     reset_settings()
-    status = await refresh_pipeline(tmp_path, quick=False)
+    async def fail_map_agent(*_args, **_kwargs):
+        raise RuntimeError("map agent unavailable")
+
+    monkeypatch.setattr(refresh_mod, "_generate_map_md", fail_map_agent)
+    status = await refresh_mod.refresh_pipeline(tmp_path, quick=False)
 
     generation_root = active_generation_root(tmp_path)
     assert status.stages["git_insights"] == "success"
+    assert status.stages["module_registry"] == "success"
     assert status.overall_status == "success"
     assert status.exit_code == 0
+    assert status.warnings == [
+        "Map Agent failed: map agent unavailable",
+        "Deterministic map fallback used.",
+    ]
     assert generation_root is not None
+    assert (generation_root / "map.md").is_file()
     assert (generation_root / "modules" / "_git_insights.md").exists()
+
+
+@pytest.mark.asyncio
+async def test_failed_map_fallback_prevents_full_refresh_promotion(
+    tmp_path: Path,
+    monkeypatch,
+    commit_workspace,
+) -> None:
+    """A missing map remains a hard failure when its fallback also fails."""
+    runner = tmp_path.parent / f"{tmp_path.name}-generic-runner"
+    runner.write_text(
+        "#!/bin/sh\n"
+        "cat >/dev/null\n"
+        "printf '# Generated\\n\\nHost runner output.\\n'\n",
+        encoding="utf-8",
+    )
+    runner.chmod(0o755)
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("OPENAI_BASE_URL", "")
+    monkeypatch.setenv("GOOGLE_API_KEY", "")
+    monkeypatch.setenv("RB_REFRESH_SCAN_ONLY", "0")
+    monkeypatch.setenv("RB_HOST_RUNNER", "generic")
+    monkeypatch.setenv("RB_HOST_COMMAND", str(runner))
+    monkeypatch.setenv("RB_HOST_OUTPUT_MODE", "stdout")
+    (tmp_path / "main.py").write_text("value = 1\n", encoding="utf-8")
+    commit_workspace(tmp_path)
+
+    from repobrain_engine.config import reset_settings
+    import repobrain_engine.hub.refresh_pipeline as refresh_mod
+    from repobrain_engine.hub.storage import active_generation_root
+
+    async def fail_map_agent(*_args, **_kwargs):
+        raise RuntimeError("map agent unavailable")
+
+    def fail_fallback(*_args, **_kwargs):
+        raise OSError("map fallback write source unavailable")
+
+    reset_settings()
+    monkeypatch.setattr(refresh_mod, "_generate_map_md", fail_map_agent)
+    monkeypatch.setattr(refresh_mod, "_build_fallback_map_md", fail_fallback)
+
+    status = await refresh_mod.refresh_pipeline(tmp_path, quick=False)
+
+    assert status.stages["module_registry"] == "failed"
+    assert status.overall_status == "failed"
+    assert status.exit_code == 1
+    assert any(
+        "deterministic map fallback failed" in item.reason
+        for item in status.failures
+    )
+    assert active_generation_root(tmp_path) is None
 
 
 @pytest.mark.asyncio

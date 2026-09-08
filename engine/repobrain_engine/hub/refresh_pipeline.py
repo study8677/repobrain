@@ -794,28 +794,51 @@ async def _refresh_pipeline_into_generation(
                 pass  # Legacy registry is best-effort
         except Exception as exc:
             print(f"  ⚠ Map Agent failed: {exc}. Using fallback.", file=sys.stderr)
-            # Fallback: build map.md from file listing
-            fallback_map = _build_fallback_map_md(workspace)
-            (rb_dir / "map.md").write_text(fallback_map, encoding="utf-8")
-            # Also try legacy registry
+            agent_error = f"Map Agent failed: {exc}"
             try:
-                registry_entries = _build_module_registry_entries(workspace, refresh_status)
-                (rb_dir / "module_registry.json").write_text(
-                    json.dumps([entry.model_dump(mode="json") for entry in registry_entries], ensure_ascii=False, indent=2),
-                    encoding="utf-8",
+                # A deterministic map is a complete routing artifact. Keep the
+                # agent error as an auditable warning without degrading the
+                # refresh status or preventing generation promotion.
+                fallback_map = _build_fallback_map_md(workspace)
+                (rb_dir / "map.md").write_text(fallback_map, encoding="utf-8")
+            except Exception as fallback_exc:
+                _mark_stage_failure(
+                    refresh_status,
+                    stage="module_registry",
+                    reason=(
+                        f"{agent_error}; deterministic map fallback failed: "
+                        f"{fallback_exc}"
+                    ),
+                    partial=False,
                 )
-                (rb_dir / "module_registry.md").write_text(
-                    _render_module_registry_markdown(registry_entries),
-                    encoding="utf-8",
+            else:
+                refresh_status.stages["module_registry"] = "success"
+                refresh_status.warnings.extend(
+                    [agent_error, "Deterministic map fallback used."]
                 )
-            except Exception:
-                pass
-            _mark_stage_failure(
-                refresh_status,
-                stage="module_registry",
-                reason=str(exc),
-                partial=True,
-            )
+                print("  ✓ deterministic map.md fallback generated", file=sys.stderr)
+                # Also try legacy registry
+                try:
+                    registry_entries = _build_module_registry_entries(
+                        workspace, refresh_status
+                    )
+                    (rb_dir / "module_registry.json").write_text(
+                        json.dumps(
+                            [
+                                entry.model_dump(mode="json")
+                                for entry in registry_entries
+                            ],
+                            ensure_ascii=False,
+                            indent=2,
+                        ),
+                        encoding="utf-8",
+                    )
+                    (rb_dir / "module_registry.md").write_text(
+                        _render_module_registry_markdown(registry_entries),
+                        encoding="utf-8",
+                    )
+                except Exception:
+                    pass
     else:
         if refresh_scan_only:
             print("[8/8] Scan-only mode: map generation skipped.", file=sys.stderr)

@@ -286,6 +286,7 @@ class RefreshStatus(BaseModel):
         stages: Stage-level statuses.
         modules: Module-level statuses keyed by module id.
         failures: Collected partial and hard failures.
+        warnings: Non-fatal degraded-path diagnostics retained for auditing.
     """
 
     refresh_run_id: str = Field(description="Stable identifier for the refresh run.")
@@ -305,6 +306,10 @@ class RefreshStatus(BaseModel):
     failures: list[FailureRecord] = Field(
         default_factory=list,
         description="Collected failures for the refresh run.",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal degraded-path diagnostics for the refresh run.",
     )
     head_sha: str | None = Field(
         default=None,
