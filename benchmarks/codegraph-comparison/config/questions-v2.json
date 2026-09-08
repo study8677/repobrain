@@ -1,0 +1,416 @@
+{
+  "$schema": "questions-v2.schema.json",
+  "schema_version": 2,
+  "manifest": "manifest-latest-v2.json",
+  "questions": [
+    {
+      "id": "flask-request-dispatch",
+      "repository": "flask",
+      "category": "cross_file_path",
+      "corpus": "full",
+      "prompt": "How does Flask take a WSGI request through request preprocessing, endpoint dispatch, and response finalization? Cite the defining file and symbols for each stage.",
+      "expected_files": [
+        "src/flask/app.py"
+      ],
+      "expected_symbols": [
+        "wsgi_app",
+        "full_dispatch_request",
+        "preprocess_request",
+        "dispatch_request",
+        "finalize_request"
+      ]
+    },
+    {
+      "id": "flask-context-lifecycle",
+      "repository": "flask",
+      "category": "lifecycle",
+      "corpus": "full",
+      "prompt": "How do Flask's application and request contexts enter and leave their lifetimes, and which context class owns each push and pop operation? Cite file paths and symbols.",
+      "expected_files": [
+        "src/flask/ctx.py"
+      ],
+      "expected_symbols": [
+        "AppContext",
+        "RequestContext",
+        "push",
+        "pop"
+      ]
+    },
+    {
+      "id": "flask-session-cookie",
+      "repository": "flask",
+      "category": "state_persistence",
+      "corpus": "full",
+      "prompt": "How does Flask load a signed cookie into a session and save the session back to the response? Cite the concrete session interface, methods, and file.",
+      "expected_files": [
+        "src/flask/sessions.py"
+      ],
+      "expected_symbols": [
+        "SecureCookieSessionInterface",
+        "open_session",
+        "save_session"
+      ]
+    },
+    {
+      "id": "flask-blueprint-registration",
+      "repository": "flask",
+      "category": "registration_flow",
+      "corpus": "full",
+      "prompt": "How is a Flask Blueprint registered on an application and how do its deferred routes become application URL rules? Cite file paths and symbols.",
+      "expected_files": [
+        "src/flask/sansio/blueprints.py"
+      ],
+      "expected_symbols": [
+        "Blueprint",
+        "BlueprintSetupState",
+        "register",
+        "add_url_rule"
+      ]
+    },
+    {
+      "id": "flask-cli-app-loading",
+      "repository": "flask",
+      "category": "configuration_flow",
+      "corpus": "full",
+      "prompt": "How does the Flask CLI create its command context and locate or load the target Flask application? Cite the responsible classes, methods, and file.",
+      "expected_files": [
+        "src/flask/cli.py"
+      ],
+      "expected_symbols": [
+        "FlaskGroup",
+        "make_context",
+        "ScriptInfo",
+        "load_app"
+      ]
+    },
+    {
+      "id": "ripgrep-main-dispatch",
+      "repository": "ripgrep",
+      "category": "command_dispatch",
+      "corpus": "full",
+      "prompt": "How does ripgrep's executable entry point dispatch parsed arguments into sequential or parallel search execution? Cite file paths and symbols.",
+      "expected_files": [
+        "crates/core/main.rs"
+      ],
+      "expected_symbols": [
+        "main",
+        "run",
+        "search",
+        "search_parallel"
+      ]
+    },
+    {
+      "id": "ripgrep-argument-normalization",
+      "repository": "ripgrep",
+      "category": "configuration_flow",
+      "corpus": "full",
+      "prompt": "How are raw command-line flags parsed into LowArgs and then normalized into HiArgs before execution? Cite file paths and symbols.",
+      "expected_files": [
+        "crates/core/flags/parse.rs",
+        "crates/core/flags/lowargs.rs",
+        "crates/core/flags/hiargs.rs"
+      ],
+      "expected_symbols": [
+        "parse",
+        "parse_low",
+        "LowArgs",
+        "HiArgs",
+        "from_low_args"
+      ]
+    },
+    {
+      "id": "ripgrep-search-worker",
+      "repository": "ripgrep",
+      "category": "dependency_mapping",
+      "corpus": "full",
+      "prompt": "How does ripgrep turn normalized arguments into a matcher, searcher, printer, and executable search worker? Cite the construction methods, types, and files.",
+      "expected_files": [
+        "crates/core/flags/hiargs.rs",
+        "crates/core/search.rs"
+      ],
+      "expected_symbols": [
+        "matcher",
+        "searcher",
+        "printer",
+        "search_worker",
+        "SearchWorkerBuilder",
+        "PatternMatcher"
+      ]
+    },
+    {
+      "id": "ripgrep-ignore-walk",
+      "repository": "ripgrep",
+      "category": "filtering_flow",
+      "corpus": "full",
+      "prompt": "How does ripgrep build a parallel filesystem walk and apply gitignore matching, including parent-directory rules, while traversing entries? Cite file paths and symbols.",
+      "expected_files": [
+        "crates/ignore/src/walk.rs",
+        "crates/ignore/src/gitignore.rs"
+      ],
+      "expected_symbols": [
+        "WalkBuilder",
+        "build_parallel",
+        "GitignoreBuilder",
+        "matched_path_or_any_parents"
+      ]
+    },
+    {
+      "id": "ripgrep-match-print",
+      "repository": "ripgrep",
+      "category": "cross_crate_path",
+      "corpus": "full",
+      "prompt": "How is a Rust-regex matcher constructed and connected to the standard printer sink that formats matched results? Cite the key builders, sink callback, and files.",
+      "expected_files": [
+        "crates/regex/src/matcher.rs",
+        "crates/printer/src/standard.rs"
+      ],
+      "expected_symbols": [
+        "RegexMatcherBuilder",
+        "StandardBuilder",
+        "sink",
+        "matched"
+      ]
+    },
+    {
+      "id": "vite-dev-server-creation",
+      "repository": "vite",
+      "category": "startup_flow",
+      "corpus": "full",
+      "prompt": "How does Vite create a development server from user configuration, resolve that configuration, and assemble the active plugins? Cite file paths and symbols.",
+      "expected_files": [
+        "packages/vite/src/node/server/index.ts",
+        "packages/vite/src/node/config.ts",
+        "packages/vite/src/node/plugins/index.ts"
+      ],
+      "expected_symbols": [
+        "createServer",
+        "_createServer",
+        "resolveConfig",
+        "resolvePlugins"
+      ]
+    },
+    {
+      "id": "vite-transform-request",
+      "repository": "vite",
+      "category": "plugin_pipeline",
+      "corpus": "full",
+      "prompt": "How does a Vite development-server module request progress from transformRequest through loading and plugin resolution or transformation? Cite file paths and symbols.",
+      "expected_files": [
+        "packages/vite/src/node/server/transformRequest.ts",
+        "packages/vite/src/node/server/pluginContainer.ts"
+      ],
+      "expected_symbols": [
+        "transformRequest",
+        "loadAndTransform",
+        "EnvironmentPluginContainer",
+        "resolveId",
+        "load",
+        "transform"
+      ]
+    },
+    {
+      "id": "vite-hmr-propagation",
+      "repository": "vite",
+      "category": "state_reconciliation",
+      "corpus": "full",
+      "prompt": "How does Vite handle a changed file, invalidate module-graph state, and propagate HMR updates to affected modules? Cite file paths and symbols.",
+      "expected_files": [
+        "packages/vite/src/node/server/hmr.ts",
+        "packages/vite/src/node/server/moduleGraph.ts"
+      ],
+      "expected_symbols": [
+        "handleHMRUpdate",
+        "updateModules",
+        "propagateUpdate",
+        "EnvironmentModuleGraph",
+        "onFileChange",
+        "invalidateModule"
+      ]
+    },
+    {
+      "id": "vite-build-orchestration",
+      "repository": "vite",
+      "category": "build_pipeline",
+      "corpus": "full",
+      "prompt": "How does Vite create a builder, resolve build plugins, and execute a build environment? Cite the responsible file and symbols.",
+      "expected_files": [
+        "packages/vite/src/node/build.ts"
+      ],
+      "expected_symbols": [
+        "build",
+        "createBuilder",
+        "resolveBuildPlugins",
+        "buildEnvironment"
+      ]
+    },
+    {
+      "id": "vite-plugin-ordering",
+      "repository": "vite",
+      "category": "algorithm_dispatch",
+      "corpus": "full",
+      "prompt": "How does Vite sort user plugins and expose hook-specific ordered plugin lists for execution? Cite file paths and symbols.",
+      "expected_files": [
+        "packages/vite/src/node/config.ts",
+        "packages/vite/src/node/plugins/index.ts"
+      ],
+      "expected_symbols": [
+        "sortUserPlugins",
+        "resolvePlugins",
+        "createPluginHookUtils",
+        "getSortedPluginsByHook"
+      ]
+    },
+    {
+      "id": "prometheus-promql-execution",
+      "repository": "prometheus",
+      "category": "query_execution",
+      "corpus": "full",
+      "prompt": "How does Prometheus parse an instant PromQL query and carry it through query creation, execution, and expression evaluation? Cite file paths and symbols.",
+      "expected_files": [
+        "promql/parser/parse.go",
+        "promql/engine.go"
+      ],
+      "expected_symbols": [
+        "ParseExpr",
+        "NewInstantQuery",
+        "Exec",
+        "exec",
+        "Eval"
+      ]
+    },
+    {
+      "id": "prometheus-scrape-lifecycle",
+      "repository": "prometheus",
+      "category": "runtime_lifecycle",
+      "corpus": "full",
+      "prompt": "How does Prometheus apply scrape configuration, reconcile target sets into scrape pools, and run each scrape loop? Cite file paths and symbols.",
+      "expected_files": [
+        "scrape/manager.go",
+        "scrape/scrape.go"
+      ],
+      "expected_symbols": [
+        "Manager",
+        "ApplyConfig",
+        "updateTsets",
+        "scrapePool",
+        "Sync",
+        "scrapeLoop",
+        "run"
+      ]
+    },
+    {
+      "id": "prometheus-tsdb-append",
+      "repository": "prometheus",
+      "category": "state_persistence",
+      "corpus": "full",
+      "prompt": "How does a Prometheus TSDB append request obtain a Head appender, add samples, write commit records, and commit or roll back? Cite file paths and symbols.",
+      "expected_files": [
+        "tsdb/head_append.go"
+      ],
+      "expected_symbols": [
+        "Head",
+        "Appender",
+        "headAppender",
+        "Append",
+        "log",
+        "Commit",
+        "Rollback"
+      ]
+    },
+    {
+      "id": "prometheus-remote-write-queue",
+      "repository": "prometheus",
+      "category": "queue_processing",
+      "corpus": "full",
+      "prompt": "How does Prometheus remote write enqueue samples, shard the queue, form batches, and retry sending write requests? Cite file paths and symbols.",
+      "expected_files": [
+        "storage/remote/queue_manager.go"
+      ],
+      "expected_symbols": [
+        "QueueManager",
+        "Append",
+        "updateShardsLoop",
+        "runShard",
+        "sendSamplesWithBackoff",
+        "sendWriteRequestWithBackoff"
+      ]
+    },
+    {
+      "id": "prometheus-rule-evaluation",
+      "repository": "prometheus",
+      "category": "scheduler_flow",
+      "corpus": "full",
+      "prompt": "How does Prometheus load and schedule rule groups, evaluate a group, and choose sequential or concurrent rule batches? Cite file paths and symbols.",
+      "expected_files": [
+        "rules/manager.go",
+        "rules/group.go"
+      ],
+      "expected_symbols": [
+        "Manager",
+        "Update",
+        "LoadGroups",
+        "Group",
+        "run",
+        "Eval",
+        "SplitGroupIntoBatches"
+      ]
+    },
+    {
+      "id": "grafana-http-server-startup",
+      "repository": "grafana",
+      "category": "stress_startup_flow",
+      "corpus": "full",
+      "prompt": "How does Grafana construct and run its HTTP server, attach middleware and routes, and begin serving listeners? Cite file paths and symbols.",
+      "expected_files": [
+        "pkg/api/http_server.go"
+      ],
+      "expected_symbols": [
+        "HTTPServer",
+        "ProvideHTTPServer",
+        "Run",
+        "applyRoutes",
+        "addMiddlewaresAndStaticRoutes",
+        "getListeners"
+      ]
+    },
+    {
+      "id": "grafana-alert-scheduler",
+      "repository": "grafana",
+      "category": "stress_scheduler_flow",
+      "corpus": "full",
+      "prompt": "How does Grafana's alert scheduler run periodic ticks, select rules ready to execute, and dispatch evaluation jobs? Cite file paths and symbols.",
+      "expected_files": [
+        "pkg/services/ngalert/schedule/schedule.go"
+      ],
+      "expected_symbols": [
+        "NewScheduler",
+        "Run",
+        "schedulePeriodic",
+        "processTick",
+        "runJobFn",
+        "runSequences"
+      ]
+    },
+    {
+      "id": "grafana-dashboard-loading",
+      "repository": "grafana",
+      "category": "stress_frontend_flow",
+      "corpus": "full",
+      "prompt": "How does Grafana's dashboard scene page select a state manager, load a dashboard, fetch its data, and turn it into a scene? Cite file paths and symbols.",
+      "expected_files": [
+        "public/app/features/dashboard-scene/pages/DashboardScenePage.tsx",
+        "public/app/features/dashboard-scene/pages/DashboardScenePageStateManager.ts",
+        "public/app/features/dashboard/services/DashboardLoaderSrv.ts"
+      ],
+      "expected_symbols": [
+        "DashboardScenePage",
+        "getDashboardScenePageStateManager",
+        "DashboardScenePageStateManager",
+        "loadDashboard",
+        "loadScene",
+        "fetchDashboard",
+        "DashboardLoaderSrv"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "corpus": "verl-query-four-file",
+  "questions": [
+    {
+      "id": "verl-runtime-runner-selection",
+      "prompt": "How does the PPO entry point configure Ray and select between the V1 and legacy task runners? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/main_ppo.py", "verl/trainer/main_ppo_v0.py"],
+      "expected_symbols": ["main", "run_ppo", "TaskRunnerV1", "TaskRunner"]
+    },
+    {
+      "id": "verl-v1-runner-lifecycle",
+      "prompt": "What does TaskRunnerV1 initialize and execute, and how does its lifecycle differ from the legacy TaskRunner path? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/main_ppo.py", "verl/trainer/main_ppo_v0.py"],
+      "expected_symbols": ["TaskRunnerV1", "init_agent_loop_manager", "run", "TaskRunner"]
+    },
+    {
+      "id": "verl-response-mask-advantage",
+      "prompt": "How is the PPO response mask derived and then used during advantage computation? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/ray_trainer.py"],
+      "expected_symbols": ["compute_response_mask", "compute_advantage", "fit"]
+    },
+    {
+      "id": "verl-kl-penalty-flow",
+      "prompt": "How is the KL penalty computed, applied to token rewards, and fed back into the KL controller during PPO training? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/ray_trainer.py", "verl/trainer/ppo/core_algos.py"],
+      "expected_symbols": ["apply_kl_penalty", "kl_penalty", "AdaptiveKLController", "fit"]
+    },
+    {
+      "id": "verl-validation-pipeline",
+      "prompt": "Trace the validation pipeline from generation through reward aggregation and merged validation results. Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/ray_trainer.py"],
+      "expected_symbols": ["_validate", "_val_metrics_update", "_merge_validation_results", "fit"]
+    },
+    {
+      "id": "verl-checkpoint-lifecycle",
+      "prompt": "How does RayPPOTrainer load, save, and trigger checkpoints during training? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/ray_trainer.py"],
+      "expected_symbols": ["_load_checkpoint", "_save_checkpoint", "fit"]
+    },
+    {
+      "id": "verl-worker-initialization",
+      "prompt": "How does RayPPOTrainer initialize colocated worker groups for actor, critic, reference, reward, and teacher roles? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/main_ppo_v0.py", "verl/trainer/ppo/ray_trainer.py"],
+      "expected_symbols": ["role_worker_mapping", "ResourcePoolManager", "init_workers", "RayPPOTrainer"]
+    },
+    {
+      "id": "verl-logprob-value-flow",
+      "prompt": "When and why does the training loop compute old policy log probabilities, reference log probabilities, and critic values? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/ray_trainer.py"],
+      "expected_symbols": ["_compute_old_log_prob", "_compute_ref_log_prob", "_compute_values", "fit"]
+    },
+    {
+      "id": "verl-actor-critic-update-order",
+      "prompt": "In what order are critic and actor updates executed, and what conditions control the actor update? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/ray_trainer.py"],
+      "expected_symbols": ["_update_critic", "_update_actor", "fit"]
+    },
+    {
+      "id": "verl-advantage-registry",
+      "prompt": "How are advantage estimators registered and looked up, including duplicate and unknown estimator handling? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/core_algos.py"],
+      "expected_symbols": ["ADV_ESTIMATOR_REGISTRY", "AdvantageEstimator", "register_adv_est", "get_adv_estimator_fn"]
+    },
+    {
+      "id": "verl-policy-loss-registry",
+      "prompt": "How are policy loss implementations registered and selected, and which function implements the default vanilla PPO loss? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/core_algos.py"],
+      "expected_symbols": ["POLICY_LOSS_REGISTRY", "register_policy_loss", "get_policy_loss_fn", "compute_policy_loss_vanilla"]
+    },
+    {
+      "id": "verl-kl-controller-selection",
+      "prompt": "How does VERL choose between adaptive and fixed KL controllers, and how does each controller update its coefficient? Cite file paths and symbols.",
+      "expected_files": ["verl/trainer/ppo/core_algos.py"],
+      "expected_symbols": ["AdaptiveKLController", "FixedKLController", "get_kl_controller", "update"]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repobrain.dev/schemas/codegraph-comparison-corpus-manifest-v1.json",
+  "title": "Source-free benchmark corpus provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "provenance_schema", "created_at", "benchmark_id", "repository", "product", "source_free"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "provenance_schema": {"const": "config/corpus-manifest-v1.schema.json"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "benchmark_id": {"type": "string", "minLength": 1},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "url", "revision", "release", "primary_language", "corpus", "tracked_tree_sha256"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "format": "uri"},
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "release": {"type": "string", "minLength": 1},
+        "primary_language": {"type": "string", "minLength": 1},
+        "corpus": {"type": "object"},
+        "tracked_tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "pin", "build_status", "build_seconds"],
+      "properties": {
+        "name": {"enum": ["repobrain", "codegraph"]},
+        "pin": {"type": "string", "minLength": 1},
+        "build_status": {"const": "success"},
+        "build_seconds": {"type": "number", "minimum": 0}
+      }
+    },
+    "active_generation": {"type": "object"},
+    "source_free": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verified", "hard_filesystem_isolation", "allowed_top_level_entries", "note"],
+      "properties": {
+        "verified": {"const": true},
+        "hard_filesystem_isolation": {"type": "boolean"},
+        "allowed_top_level_entries": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "note": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

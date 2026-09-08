@@ -1,0 +1,42 @@
+{
+  "created_at": "2026-08-26",
+  "machine": {
+    "os": "macOS 26.5.1 (25F80)",
+    "architecture": "arm64",
+    "cpu": "Apple M5",
+    "logical_cpus": 10,
+    "memory_bytes": 17179869184
+  },
+  "tools": {
+    "repobrain": {
+      "repository": "https://github.com/study8677/repobrain",
+      "revision": "b0ebc36b611305dcbdda7343fc8e0136fa7f2686",
+      "version": "engine 0.3.2 / cli 2.0.2",
+      "index_mode": "RB_REFRESH_SCAN_ONLY=1"
+    },
+    "codegraph": {
+      "repository": "https://github.com/colbymchenry/codegraph",
+      "release": "1.5.0",
+      "npm_git_head": "ea72e1b190921232aa7bd02e96bef5bbe4fe0ab6"
+    }
+  },
+  "repositories": {
+    "verl": {
+      "repository": "https://github.com/verl-project/verl",
+      "revision": "8f8b122195ecf43475679fb6ee0204ee33f387c5",
+      "primary_language": "Python"
+    },
+    "excalidraw": {
+      "repository": "https://github.com/excalidraw/excalidraw",
+      "revision": "4a6f4e7a32ce3d3360d4d209d14105acc144d8c7",
+      "primary_language": "TypeScript"
+    },
+    "openclaw": {
+      "repository": "https://github.com/openclaw/openclaw",
+      "revision": "1e6844b71aa2299c082d23cf66dce38ff00b2211",
+      "primary_language": "TypeScript",
+      "status": "environmentally_blocked_for_codegraph",
+      "reason": "Corporate endpoint policy terminated Node processes operating on the OpenClaw checkout."
+    }
+  }
+}

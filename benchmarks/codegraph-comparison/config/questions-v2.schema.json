@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repobrain.dev/schemas/codegraph-comparison-questions-v2.json",
+  "title": "RepoBrain CodeGraph comparison questions v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest", "questions"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": 2},
+    "manifest": {"type": "string", "minLength": 1},
+    "questions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/question"}
+    }
+  },
+  "$defs": {
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "category", "corpus", "prompt", "expected_files", "expected_symbols"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "repository": {"type": "string", "minLength": 1},
+        "category": {"type": "string", "minLength": 1},
+        "corpus": {"enum": ["full", "focused"]},
+        "title_zh": {"type": "string", "minLength": 1},
+        "prompt": {"type": "string", "minLength": 1},
+        "expected_files": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "expected_symbols": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

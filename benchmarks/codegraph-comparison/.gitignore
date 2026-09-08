@@ -1,0 +1,6 @@
+.work/
+results/raw/
+results/runs/
+__pycache__/
+.DS_Store
+fair-e2e-context-bundle.tar.gz

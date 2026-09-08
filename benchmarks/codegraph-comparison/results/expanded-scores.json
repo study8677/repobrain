@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "scope": "four-file focused VERL ceiling corpus",
+  "summary": {
+    "questions": 15,
+    "expected_files_total": 23,
+    "expected_symbols_total": 57,
+    "repobrain": {
+      "files_found": 23,
+      "symbols_found": 57,
+      "atom_recall": 1.0,
+      "grounded_answers_passed": 15,
+      "successful_query_seconds": 1601.646,
+      "mean_query_seconds": 106.7764,
+      "median_query_seconds": 99.1,
+      "transient_failures": 2
+    },
+    "codegraph": {
+      "files_found": 23,
+      "symbols_found": 57,
+      "atom_recall": 1.0,
+      "grounded_answers_passed": 15,
+      "query_commands": 51,
+      "timed_questions": 12,
+      "timed_query_seconds": 8.734,
+      "mean_timed_query_seconds": 0.7278,
+      "median_timed_query_seconds": 0.5295,
+      "transient_failures": 0
+    }
+  },
+  "questions": [
+    {"id": "verl-ppo-entry", "files": 3, "symbols": 4, "repobrain_seconds": 73.494, "codegraph_commands": 3, "codegraph_seconds": null},
+    {"id": "verl-advantage-dispatch", "files": 2, "symbols": 3, "repobrain_seconds": 161.729, "codegraph_commands": 2, "codegraph_seconds": null},
+    {"id": "verl-worker-resources", "files": 2, "symbols": 5, "repobrain_seconds": 78.133, "codegraph_commands": 4, "codegraph_seconds": null},
+    {"id": "verl-runtime-runner-selection", "files": 2, "symbols": 4, "repobrain_seconds": 114.94, "codegraph_commands": 3, "codegraph_seconds": 0.519},
+    {"id": "verl-v1-runner-lifecycle", "files": 2, "symbols": 4, "repobrain_seconds": 114.56, "codegraph_commands": 1, "codegraph_seconds": 0.497},
+    {"id": "verl-response-mask-advantage", "files": 1, "symbols": 3, "repobrain_seconds": 120.17, "codegraph_commands": 5, "codegraph_seconds": 1.068},
+    {"id": "verl-kl-penalty-flow", "files": 2, "symbols": 4, "repobrain_seconds": 99.1, "codegraph_commands": 4, "codegraph_seconds": 0.54},
+    {"id": "verl-validation-pipeline", "files": 1, "symbols": 4, "repobrain_seconds": 100.7, "codegraph_commands": 7, "codegraph_seconds": 1.34},
+    {"id": "verl-checkpoint-lifecycle", "files": 1, "symbols": 3, "repobrain_seconds": 83.42, "codegraph_commands": 3, "codegraph_seconds": 0.62},
+    {"id": "verl-worker-initialization", "files": 2, "symbols": 4, "repobrain_seconds": 76.5, "codegraph_commands": 6, "codegraph_seconds": 1.51},
+    {"id": "verl-logprob-value-flow", "files": 1, "symbols": 4, "repobrain_seconds": 91.92, "codegraph_commands": 5, "codegraph_seconds": 1.39},
+    {"id": "verl-actor-critic-update-order", "files": 1, "symbols": 3, "repobrain_seconds": 86.72, "codegraph_commands": 3, "codegraph_seconds": 0.38},
+    {"id": "verl-advantage-registry", "files": 1, "symbols": 4, "repobrain_seconds": 172.58, "codegraph_commands": 2, "codegraph_seconds": 0.33},
+    {"id": "verl-policy-loss-registry", "files": 1, "symbols": 4, "repobrain_seconds": 71.3, "codegraph_commands": 2, "codegraph_seconds": 0.37},
+    {"id": "verl-kl-controller-selection", "files": 1, "symbols": 4, "repobrain_seconds": 156.38, "codegraph_commands": 1, "codegraph_seconds": 0.17}
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "track": "unmodified-native",
+  "ceiling_results": "ceiling-pilot.json",
+  "scores": [
+    {
+      "question_id": "verl-ppo-entry",
+      "tool": "repobrain",
+      "status": "unavailable",
+      "reason": "generic host-runner refresh records git_insights as partial and does not promote a queryable generation"
+    },
+    {
+      "question_id": "verl-ppo-entry",
+      "tool": "codegraph",
+      "status": "scored",
+      "expected_files_found": 1,
+      "expected_files_total": 3,
+      "expected_file_recall": 0.3333333333333333,
+      "expected_symbols_found": 4,
+      "expected_symbols_total": 4,
+      "expected_symbol_recall": 1.0,
+      "output_bytes": 25250
+    },
+    {
+      "question_id": "verl-advantage-dispatch",
+      "tool": "repobrain",
+      "status": "unavailable",
+      "reason": "generic host-runner refresh records git_insights as partial and does not promote a queryable generation"
+    },
+    {
+      "question_id": "verl-advantage-dispatch",
+      "tool": "codegraph",
+      "status": "scored",
+      "expected_files_found": 2,
+      "expected_files_total": 2,
+      "expected_file_recall": 1.0,
+      "expected_symbols_found": 3,
+      "expected_symbols_total": 3,
+      "expected_symbol_recall": 1.0,
+      "output_bytes": 25265
+    },
+    {
+      "question_id": "verl-worker-resources",
+      "tool": "repobrain",
+      "status": "unavailable",
+      "reason": "generic host-runner refresh records git_insights as partial and does not promote a queryable generation"
+    },
+    {
+      "question_id": "verl-worker-resources",
+      "tool": "codegraph",
+      "status": "scored",
+      "expected_files_found": 1,
+      "expected_files_total": 2,
+      "expected_file_recall": 0.5,
+      "expected_symbols_found": 5,
+      "expected_symbols_total": 5,
+      "expected_symbol_recall": 1.0,
+      "output_bytes": 21673
+    },
+    {
+      "question_id": "excalidraw-render",
+      "tool": "repobrain",
+      "status": "unavailable",
+      "reason": "generic host-runner refresh records git_insights as partial and does not promote a queryable generation"
+    },
+    {
+      "question_id": "excalidraw-render",
+      "tool": "codegraph",
+      "status": "scored",
+      "expected_files_found": 0,
+      "expected_files_total": 2,
+      "expected_file_recall": 0.0,
+      "expected_symbols_found": 0,
+      "expected_symbols_total": 2,
+      "expected_symbol_recall": 0.0,
+      "output_bytes": 25244
+    },
+    {
+      "question_id": "excalidraw-collaboration",
+      "tool": "repobrain",
+      "status": "unavailable",
+      "reason": "generic host-runner refresh records git_insights as partial and does not promote a queryable generation"
+    },
+    {
+      "question_id": "excalidraw-collaboration",
+      "tool": "codegraph",
+      "status": "scored",
+      "expected_files_found": 1,
+      "expected_files_total": 1,
+      "expected_file_recall": 1.0,
+      "expected_symbols_found": 0,
+      "expected_symbols_total": 2,
+      "expected_symbol_recall": 0.0,
+      "output_bytes": 24441
+    },
+    {
+      "question_id": "excalidraw-export",
+      "tool": "repobrain",
+      "status": "unavailable",
+      "reason": "generic host-runner refresh records git_insights as partial and does not promote a queryable generation"
+    },
+    {
+      "question_id": "excalidraw-export",
+      "tool": "codegraph",
+      "status": "scored",
+      "expected_files_found": 0,
+      "expected_files_total": 3,
+      "expected_file_recall": 0.0,
+      "expected_symbols_found": 0,
+      "expected_symbols_total": 3,
+      "expected_symbol_recall": 0.0,
+      "output_bytes": 25233
+    }
+  ]
+}

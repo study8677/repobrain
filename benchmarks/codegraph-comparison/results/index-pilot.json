@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-08-26",
+  "repetitions": 1,
+  "warning": "Pilot measurements only. Raw node and edge counts use different schemas and must not be compared directly.",
+  "repositories": {
+    "verl": {
+      "tracked_files": 1213,
+      "supported_source_files": 767,
+      "repobrain": {
+        "status": "success",
+        "wall_seconds": 9.24,
+        "user_seconds": 2.03,
+        "sys_seconds": 0.63,
+        "max_rss_bytes": 86982656,
+        "index_size_kib": 7536,
+        "scanned_files": 1150,
+        "semantic_files": 298,
+        "semantic_source_coverage": 0.3885,
+        "semantic_edges": 3729,
+        "timed_out": false
+      },
+      "codegraph": {
+        "status": "success",
+        "wall_seconds": 5.4,
+        "user_seconds": 8.79,
+        "sys_seconds": 3.11,
+        "max_rss_bytes": 649723904,
+        "index_size_kib": 42204,
+        "indexed_files": 767,
+        "supported_source_coverage": 1.0,
+        "nodes": 13817,
+        "edges": 34228,
+        "index_state": "complete",
+        "pending_refs": 0
+      }
+    },
+    "excalidraw": {
+      "tracked_files": 1269,
+      "supported_source_files": 677,
+      "repobrain": {
+        "status": "success",
+        "wall_seconds": 14.44,
+        "user_seconds": 4.88,
+        "sys_seconds": 0.75,
+        "max_rss_bytes": 146489344,
+        "index_size_kib": 5384,
+        "scanned_files": 1249,
+        "semantic_files": 264,
+        "semantic_source_coverage": 0.39,
+        "semantic_edges": 3259,
+        "timed_out": false
+      },
+      "codegraph": {
+        "status": "success",
+        "wall_seconds": 3.02,
+        "user_seconds": 6.13,
+        "sys_seconds": 1.6,
+        "max_rss_bytes": 1132052480,
+        "index_size_kib": 48924,
+        "indexed_files": 681,
+        "supported_source_coverage_note": "681 indexed files versus 677 files counted by the benchmark extension filter; CodeGraph includes additional supported/config file kinds.",
+        "nodes": 11165,
+        "edges": 48590,
+        "index_state": "complete",
+        "pending_refs": 0
+      }
+    },
+    "openclaw": {
+      "tracked_files": 33871,
+      "supported_source_files": 28470,
+      "repobrain": {
+        "status": "partial_success",
+        "wall_seconds": 410.14,
+        "user_seconds": 139.73,
+        "sys_seconds": 17.31,
+        "max_rss_bytes": 2392604672,
+        "index_size_kib": 617676,
+        "scanned_files": 5000,
+        "semantic_files": 165,
+        "semantic_source_coverage": 0.0058,
+        "semantic_edges": 2182,
+        "timed_out": true,
+        "limit_reason": "max_files_reached"
+      },
+      "codegraph": {
+        "status": "excluded",
+        "reason": "Corporate endpoint policy killed Node processes operating on the OpenClaw checkout.",
+        "signal": "SIGKILL"
+      }
+    }
+  }
+}

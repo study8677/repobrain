@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "scope": "four-file focused VERL corpus",
+  "corpus_commit": "9b89ba0ccb19e530af392c730d44261262f11890",
+  "repobrain": {
+    "mode": "ceiling",
+    "waiver": {
+      "git_insights": "partial"
+    },
+    "build_wall_seconds": 365.66,
+    "build_max_rss_bytes": 107544576,
+    "index_size_kib": 300,
+    "source_available_during_queries": false,
+    "questions": 3,
+    "query_commands": 3,
+    "query_wall_seconds": [
+      73.494,
+      161.729,
+      78.133
+    ],
+    "expected_files_found": 7,
+    "expected_files_total": 7,
+    "expected_symbols_found": 12,
+    "expected_symbols_total": 12
+  },
+  "codegraph": {
+    "mode": "native",
+    "file_count": 4,
+    "node_count": 178,
+    "edge_count": 331,
+    "index_size_bytes": 897024,
+    "questions": 3,
+    "query_commands": 9,
+    "query_wall_seconds": null,
+    "expected_files_found": 7,
+    "expected_files_total": 7,
+    "expected_symbols_found": 12,
+    "expected_symbols_total": 12
+  }
+}

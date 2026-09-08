@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "questions": [
+    {
+      "id": "verl-ppo-entry",
+      "repository": "verl",
+      "category": "cross_file_path",
+      "prompt": "Where is the main PPO training entry point, and how does the legacy path reach RayPPOTrainer? Cite file paths and symbols.",
+      "expected_files": [
+        "verl/trainer/main_ppo.py",
+        "verl/trainer/main_ppo_v0.py",
+        "verl/trainer/ppo/ray_trainer.py"
+      ],
+      "expected_symbols": [
+        "main",
+        "run_ppo",
+        "TaskRunner",
+        "RayPPOTrainer"
+      ]
+    },
+    {
+      "id": "verl-advantage-dispatch",
+      "repository": "verl",
+      "category": "algorithm_dispatch",
+      "prompt": "How does PPO advantage computation dispatch between GAE and GRPO, and where are the underlying algorithms implemented? Cite file paths and symbols.",
+      "expected_files": [
+        "verl/trainer/ppo/ray_trainer.py",
+        "verl/trainer/ppo/core_algos.py"
+      ],
+      "expected_symbols": [
+        "compute_advantage",
+        "compute_gae_advantage_return",
+        "compute_grpo_outcome_advantage"
+      ]
+    },
+    {
+      "id": "verl-worker-resources",
+      "repository": "verl",
+      "category": "dependency_mapping",
+      "prompt": "How does the legacy PPO task runner map roles to Ray worker classes and resource pools before constructing RayPPOTrainer? Cite file paths and symbols.",
+      "expected_files": [
+        "verl/trainer/main_ppo_v0.py",
+        "verl/trainer/ppo/ray_trainer.py"
+      ],
+      "expected_symbols": [
+        "BaseTaskRunner",
+        "TaskRunner",
+        "ResourcePoolManager",
+        "role_worker_mapping",
+        "RayPPOTrainer"
+      ]
+    },
+    {
+      "id": "excalidraw-render",
+      "repository": "excalidraw",
+      "category": "cross_file_path",
+      "prompt": "How are Excalidraw scene elements rendered onto the static canvas, from the React canvas component to the renderer? Cite file paths and symbols.",
+      "expected_files": [
+        "packages/excalidraw/components/canvases/StaticCanvas.tsx",
+        "packages/excalidraw/renderer/staticScene.ts"
+      ],
+      "expected_symbols": [
+        "StaticCanvas",
+        "renderStaticScene"
+      ]
+    },
+    {
+      "id": "excalidraw-collaboration",
+      "repository": "excalidraw",
+      "category": "state_reconciliation",
+      "prompt": "How does Excalidraw receive, reconcile, and apply remote collaboration scene updates? Cite file paths and symbols.",
+      "expected_files": [
+        "excalidraw-app/collab/Collab.tsx"
+      ],
+      "expected_symbols": [
+        "_reconcileElements",
+        "handleRemoteSceneUpdate"
+      ]
+    },
+    {
+      "id": "excalidraw-export",
+      "repository": "excalidraw",
+      "category": "cross_file_path",
+      "prompt": "How do Excalidraw's public export APIs reach canvas and SVG rendering, and which tests cover them? Cite file paths and symbols.",
+      "expected_files": [
+        "packages/excalidraw/index.tsx",
+        "packages/excalidraw/scene/export.ts",
+        "packages/excalidraw/tests/scene/export.test.ts"
+      ],
+      "expected_symbols": [
+        "exportToCanvas",
+        "exportToSvg",
+        "renderStaticScene"
+      ]
+    }
+  ]
+}
