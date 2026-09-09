@@ -52,7 +52,7 @@
 
 **与其给 Claude Code / Codex 一个仓库 `grep` 让它自己找，不如给它一个仓库版本的 ChatGPT。**
 
-**与 Codex CLI 和 Claude Code 在三个真实 Python 仓库（`fastapi`、`requests`、`sqlmodel`）上做了 36 道题的三方对决——RepoBrain 事实题 99%、审计题 97%，事实题速度比 Codex 快 2.1×。** [查看对比](#三方对决repobrain-vs-codex-cli-vs-claude-code2026-05-09)
+**四仓库主榜：加权语义正确率 95.83%，计分查询速度约为 CodeGraph + Trae 的 4.04 倍。** [查看结果](#repobrain-vs-codegraph--trae2026-09-09)
 
 ### 🧠 最快上手 —— 让你的 AI 帮你装（无需 API key）
 
@@ -544,33 +544,22 @@ Retrieval graph 写盘前会脱敏常见 secret，但 `full` 模式仍可能保�
 
 ---
 
-## 三方对决：RepoBrain vs Codex CLI vs Claude Code（2026-05-09）
+## RepoBrain vs CodeGraph + Trae（2026-09-09）
 
-在三个真实 Python 仓库（`fastapi/fastapi`、`psf/requests`、`fastapi/sqlmodel`）上对三个工具问**同样的 36 道题**，按难度分三档。三家都用 `gpt-5.5` + 高推理强度；Codex 和 Claude 拥有完整源码读权限。评分由 Codex 担任，4 轴 0-3 规则，所有声明都对源码核验。
+Flask、ripgrep、Vite、Prometheus · 每个产品 20 题 × 3 次重复 · 相同源码访问权限与模型路由（`Seed-2.1-Turbo → seed-code-pro`）。
 
-| 题型 | RepoBrain | Codex CLI | Claude Code |
-|:---|:---:|:---:|:---:|
-| 15 道事实查找 | **179/180 (99%)** | 179/180 (99%) | 178/180 (99%) |
-| 12 道综合题（项目/架构 tour） | 116/144 (81%) | **144/144 (100%)** | 136/144 (94%) |
-| 9 道审计/安全 | **105/108 (97%)** | 104/108 (96%) | 98/108 (91%) |
+| 主榜指标 | RepoBrain | CodeGraph + Trae |
+|:---|---:|---:|
+| 加权语义正确率 | **95.83%** | 84.17% |
+| 成功查询次数 | **60/60** | 53/60 |
+| 计分查询耗时 | **5,106.67 s** | 20,621.14 s |
+| 查询 Token | **22,326,315** | 86,027,974 |
+| 冷构建耗时 | 7,420.63 s | **9.58 s** |
+| 冷构建 + 计分查询 | **12,527.30 s** | 20,630.72 s |
 
-**事实题 + 审计题合计 24 题：RepoBrain 284/288，Codex 283/288，Claude 276/288。** RepoBrain **微弱反超**——而且**每道题都比 Codex 跑得更快**。
+失败计为错误；冷构建分别包含完整 AI 知识生成与静态代码图索引，并非同类工作负载。结果仅适用于本次锁定实验。
 
-**延迟**（同一代理下每题平均墙钟）：
-
-| 题型 | RepoBrain | Codex | Claude |
-|:---|:---:|:---:|:---:|
-| 事实 | **56s** | 119s | 42s |
-| 审计 | 160s | 177s | **100s** |
-
-RepoBrain 在事实题上**比 Codex 快 2.1x**，在审计题上跟 Codex 速度持平，但正确率持平或略胜。Claude 在审计上最快但正确率落后 7 个百分点。
-
-**仓库里两个引擎修复带来的提升**（本分支已提交）：
-
-1. `_ask_with_agent_md` 现在把项目级文档（`conventions.md`、`module_registry.md`、`map.md`、`structure.md`）注入答案 prompt——杜绝了"module knowledge 不包含项目约定"那种假性拒答。
-2. structured-facts 路径的 AnswerAgent / Reader 都绑上了 `search_code` / `read_file` / `list_directory` / `read_file_metadata` / `search_by_type` 等运行时工具——LLM 现在能直接 grep+读源码，不再靠 paraphrase。
-
-完整报告（数据、方法、每题分数、注意事项）：[`artifacts/benchmark-2026-05-09/REPORT.md`](artifacts/benchmark-2026-05-09/REPORT.md)。
+[完整结果与评测方法](benchmarks/codegraph-comparison/results/latest-v2-full-report.zh-CN.md)
 
 ---
 

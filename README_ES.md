@@ -53,7 +53,7 @@ El motor es el núcleo: `rb-refresh` despliega un clúster multi-agente que lee 
 
 **En vez de darle a Claude Code / Codex un `grep` del repositorio para que busque por su cuenta, dale un ChatGPT para tu repositorio.**
 
-**Comparado de tú a tú con Codex CLI y Claude Code en 36 preguntas sobre 3 bases de código Python reales (`fastapi`, `requests`, `sqlmodel`) — RepoBrain 99% en búsquedas factuales, 97% en auditoría/seguridad, 2.1× más rápido que Codex en factuales.** [Ver comparativa abajo.](#comparativa-directa-repobrain-vs-codex-cli-vs-claude-code-2026-05-09)
+**Resultados principales en cuatro repositorios: 95.83% de precisión semántica ponderada y consultas puntuadas 4.04× más rápidas que CodeGraph + Trae.** [Ver resultados.](#repobrain-vs-codegraph--trae-2026-09-09)
 
 ```
 Enfoque tradicional:                    Enfoque RepoBrain:
@@ -469,49 +469,22 @@ escribir a disco, pero `full` aún puede conservar fragmentos de código. Ver
 
 ---
 
-## Comparativa directa: RepoBrain vs Codex CLI vs Claude Code (2026-05-09)
+## RepoBrain vs CodeGraph + Trae (2026-09-09)
 
-Benchmark asimétrico sobre tres bases de código Python reales — `fastapi/fastapi`,
-`psf/requests`, `fastapi/sqlmodel` — preguntando a cada herramienta **las mismas
-36 preguntas** en tres bandas de dificultad. Las tres usaron `gpt-5.5` con alto
-nivel de razonamiento; Codex y Claude tuvieron acceso de lectura al workspace.
-Codex actuó como evaluador (rúbrica de 4 ejes, 0-3 cada uno; todas las
-afirmaciones verificadas contra el código fuente real).
+Flask, ripgrep, Vite y Prometheus · 20 preguntas × 3 repeticiones por producto · mismo acceso al código y ruta de modelo (`Seed-2.1-Turbo → seed-code-pro`).
 
-| Tipo de pregunta | RepoBrain | Codex CLI | Claude Code |
-|:---|:---:|:---:|:---:|
-| 15 búsquedas factuales | **179/180 (99%)** | 179/180 (99%) | 178/180 (99%) |
-| 12 síntesis (tour del proyecto / arquitectura) | 116/144 (81%) | **144/144 (100%)** | 136/144 (94%) |
-| 9 auditoría / seguridad | **105/108 (97%)** | 104/108 (96%) | 98/108 (91%) |
+| Métrica principal | RepoBrain | CodeGraph + Trae |
+|:---|---:|---:|
+| Precisión semántica ponderada | **95.83%** | 84.17% |
+| Consultas completadas | **60/60** | 53/60 |
+| Tiempo de consultas puntuadas | **5,106.67 s** | 20,621.14 s |
+| Tokens de consulta | **22,326,315** | 86,027,974 |
+| Tiempo de construcción en frío | 7,420.63 s | **9.58 s** |
+| Construcción en frío + consultas puntuadas | **12,527.30 s** | 20,630.72 s |
 
-**Factuales + auditoría combinadas (24 celdas): RepoBrain 284/288, Codex
-283/288, Claude 276/288.** RepoBrain supera ligeramente a ambas — y es más
-rápido que Codex en cada pregunta individual.
+Los fallos cuentan como respuestas incorrectas. La construcción en frío compara generación completa de conocimiento con IA e indexación estática del grafo de código, no cargas equivalentes. Los resultados solo se aplican a este experimento con versiones fijadas.
 
-**Latencia** (segundos por pregunta de promedio, mismo proxy):
-
-| Tipo de pregunta | RepoBrain | Codex | Claude |
-|:---|:---:|:---:|:---:|
-| Factual | **56s** | 119s | 42s |
-| Auditoría | 160s | 177s | **100s** |
-
-RepoBrain es **2.1× más rápido que Codex en factuales** y empata con Codex en
-auditoría, manteniendo o superando su precisión. Claude es el más rápido en
-auditoría pero pierde 7 puntos de precisión.
-
-**Dos arreglos del motor que produjeron el cambio** (commits en esta rama):
-
-1. `_ask_with_agent_md` ahora inyecta los documentos a nivel de proyecto
-   (`conventions.md`, `module_registry.md`, `map.md`, `structure.md`) en sus
-   prompts de respuesta — elimina los rechazos del tipo "module knowledge does
-   not include project-wide conventions".
-2. Los agentes de respuesta del path structured-facts ahora reciben
-   `search_code`, `read_file`, `list_directory`, `read_file_metadata`,
-   `search_by_type` enlazados en runtime — el LLM puede ahora hacer grep y
-   leer el código real en lugar de parafrasear el KG.
-
-Reporte completo (datos, metodología, tablas por celda, advertencias):
-[`artifacts/benchmark-2026-05-09/REPORT.md`](artifacts/benchmark-2026-05-09/REPORT.md).
+[Resultados completos y metodología](benchmarks/codegraph-comparison/results/latest-v2-full-report.md)
 
 ---
 
