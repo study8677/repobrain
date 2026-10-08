@@ -1,43 +1,36 @@
 ---
-description: Rebuild the repobrain project knowledge base after significant changes. / 在重要改动后重建 repobrain 项目知识库。
+description: Automatically build, update, or resume the project knowledge base. / 自动构建、更新或续跑项目知识库。
 allowed-tools: ["Bash"]
 ---
 
-Run the RepoBrain CLI for the current workspace.
-
-通过 RepoBrain CLI 刷新当前工作区知识库。
-
-Use Bash:
+Run the RepoBrain CLI in the current project directory:
 
 ```bash
-rb-refresh --workspace "$PWD"
+rb-refresh
 ```
 
-使用 Bash：
+`--workspace` defaults to the current directory. The engine automatically selects
+first construction, a matching interrupted task, an incremental update, or an
+already-current result. It requires a clean Git worktree and uses committed code.
+If $ARGUMENTS contains `--full`, run `rb-refresh --full` to force a new complete
+rebuild. Forward unsupported arguments to the CLI so removed or misspelled
+options are rejected; do not translate them to a different refresh mode.
 
-```bash
-rb-refresh --workspace "$PWD"
-```
+在当前项目目录运行 `rb-refresh` 即可；`--workspace` 默认当前目录。引擎自动选择
+首次构建、匹配的中断续跑、增量更新或已是最新。要求 Git 工作区干净，只处理已提交
+代码。$ARGUMENTS 包含 `--full` 时运行 `rb-refresh --full`，强制新建完整重建任务。
+其他参数交给 CLI 检查，禁止将不支持的参数悄悄转换成其他刷新方式。
 
-If $ARGUMENTS contains `quick`, add `--quick`. Quick mode compares only committed
-changes, requires a clean worktree, and lets RepoBrain's ImpactPlanner plus an
-independent Verifier update only affected Agent groups. It never falls back to
-a full refresh. If $ARGUMENTS contains `failed-only`, add `--failed-only` to
-resume the failed/pending groups for the same target commit.
+If `rb-refresh` is not found, explain that the engine CLI is missing and suggest:
 
-如果 $ARGUMENTS 包含 `quick`，追加 `--quick`。quick 只比较已提交变更，要求工作区
-干净，由 RepoBrain ImpactPlanner 与独立 Verifier 只更新受影响 Agent 分组，且绝不
-自动降级为全量刷新。如果 $ARGUMENTS 包含 `failed-only`，追加 `--failed-only`，
-续跑同一目标提交中失败或待处理的分组。
-
-If `rb-refresh` is not found, tell the user the engine CLI is not installed and suggest:
-
-如果找不到 `rb-refresh`，说明 engine CLI 尚未安装，建议用户运行：
+如果找不到命令，提示安装 engine CLI：
 
 ```bash
 pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
 ```
 
-Report progress concisely; full refresh can take several minutes.
+Report whether this run builds, resumes, updates, skips, or fails. Full builds
+can take several minutes. Never treat a failed result as a successful refresh.
 
-简洁汇报进度；完整 refresh 可能需要几分钟。
+简洁说明此次是构建、续跑、更新、跳过还是失败。完整构建可能需要几分钟，失败时
+不能声称知识库已经更新。

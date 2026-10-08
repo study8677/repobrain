@@ -42,12 +42,12 @@ def test_run_hub_refresh_console_script_found() -> None:
     with patch("shutil.which", side_effect=fake_which) as mock_which:
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
-            code = _run_hub(Path("/tmp/project"), "refresh", "--quick")
+            code = _run_hub(Path("/tmp/project"), "refresh", "--full")
 
     assert code == 0
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == "/usr/local/bin/rb-refresh"
-    assert "--quick" in cmd
+    assert "--full" in cmd
     assert "--workspace" in cmd
     assert mock_which.call_args_list == [call("rb-refresh")]
 
@@ -94,3 +94,21 @@ def test_help_lists_supported_commands_only() -> None:
     assert "report" in result.output
     assert "log-decision" in result.output
     assert "start-engine" not in result.output
+
+
+@pytest.mark.parametrize('arguments, expected', [([], ('refresh',)), (['--full'], ('refresh', '--full'))])
+def test_refresh_command_forwards_only_full(arguments, expected, monkeypatch, tmp_path):
+    from rb_cli import cli
+    calls = []
+    monkeypatch.setattr(cli, '_run_hub', lambda workspace, *args: calls.append((workspace, args)) or 0)
+    result = runner.invoke(cli.app, ['refresh', '--workspace', str(tmp_path), *arguments])
+    assert result.exit_code == 0
+    assert calls == [(tmp_path.resolve(), expected)]
+
+
+@pytest.mark.parametrize('old_flag', ['--quick', '--failed-only'])
+def test_refresh_command_rejects_removed_flags(old_flag, monkeypatch):
+    from rb_cli import cli
+    monkeypatch.setattr(cli, '_run_hub', lambda *args: pytest.fail('Must not run refresh'))
+    result = runner.invoke(cli.app, ['refresh', old_flag])
+    assert result.exit_code == 2

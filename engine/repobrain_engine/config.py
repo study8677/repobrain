@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     )
 
     # Backward-compatible reminder toggle for rb-ask. Ask is read-only and
-    # never invokes refresh; committed drift is handled manually via --quick.
+    # never invokes refresh; committed drift is handled manually via rb-refresh.
     RB_ASK_AUTO_REFRESH: str = Field(
         default="stale",
         description="Deprecated auto-refresh setting, now used only as a "
@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     RB_IMPACT_MAX_ROUNDS: int = Field(
         default=3,
         ge=1,
-        description="Maximum independent Planner/Verifier rounds for quick refresh.",
+        description="Maximum independent Planner/Verifier rounds for incremental refresh.",
     )
 
     # Memory Configuration

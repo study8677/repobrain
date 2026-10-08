@@ -19,8 +19,12 @@ pip install -e ./cli -e './engine[dev]'
 
 ### 2. 构建知识库
 ```bash
-rb-refresh --workspace .
+rb-refresh
+# 仅在需要强制全部重建时运行：
+rb-refresh --full
 ```
+
+每次运行 `rb-refresh`，系统自动构建、增量更新、续跑匹配的中断任务或跳过已是最新的知识库。`--workspace` 指项目目录，默认当前目录；刷新要求 Git 工作区干净。
 
 该命令会扫描项目、构建 `.repobrain/`，并为后续路由式问答准备代码库知识库。
 

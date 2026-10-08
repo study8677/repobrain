@@ -19,8 +19,12 @@ pip install -e ./cli -e './engine[dev]'
 
 ### 2. Build the Knowledge Base
 ```bash
-rb-refresh --workspace .
+rb-refresh
+# Force a new complete rebuild only when intended:
+rb-refresh --full
 ```
+
+`rb-refresh` automatically builds, updates, resumes a matching interrupted task, or skips an already-current base. `--workspace` is the project folder and defaults to the current directory. A clean Git worktree is required.
 
 This command scans the project, builds `.repobrain/`, and prepares the
 repository knowledge base for routed project Q&A.
@@ -109,7 +113,7 @@ rb-refresh --workspace .
 └── .repobrain/                # Generated knowledge base in target repos
 ```
 
-See [Project Structure](../README.md#project-structure) for details.
+See the [documentation overview](README.md) for project structure.
 
 ## 🧪 Running Tests
 

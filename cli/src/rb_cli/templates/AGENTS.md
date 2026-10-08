@@ -43,19 +43,20 @@ with no API key, a local host runner (`RB_HOST_RUNNER` in `.env`) that drives a
 CLI you are already logged into (Codex / Trae / Claude / …).
 
 `rb-ask` is read-only. It warns when committed code is newer than the active
-knowledge generation but never refreshes automatically. Build the first
-generation explicitly with:
+knowledge generation but never refreshes automatically. Run the same command
+for the first build, later committed changes, and an interrupted refresh:
 
 ```bash
-rb-refresh --workspace .
+rb-refresh
 ```
 
-After later commits, run the committed-diff impact loop manually. It requires a
-clean worktree and updates only Agent groups that RepoBrain's planner and
-verifier prove are affected:
+The engine automatically builds, resumes a matching task, incrementally updates
+only affected Agent groups, or skips an already-current knowledge base. It
+requires a clean Git worktree. `--workspace` defaults to the current directory.
+Only when a complete rebuild is intended, use:
 
 ```bash
-rb-refresh --workspace . --quick
+rb-refresh --full
 ```
 
 Direct file reads, `grep`, or `rg` are allowed **only** for:

@@ -4,14 +4,11 @@
 
 # RepoBrain（仓库大脑）
 
-### 跨 IDE 的代码库知识引擎，面向带源码证据的 repository Q&A。
+把代码整理成知识库，让 AI 基于源码回答问题。
 
 <sub>原名 <b>Antigravity Workspace Template</b> —— 同一个项目，全新的名字。</sub>
 
-`rb-refresh` 构建可移植知识层；`rb-ask` 将问题路由到正确模块上下文并返回源码证据。
-插件、CLI 与 MCP 都只是围绕这条主流程的交付渠道。
-
-语言: [English](README.md) | **中文** | [Español](README_ES.md)
+[English](README.md) · **中文** · [Español](README_ES.md)
 
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
@@ -19,48 +16,20 @@
 [![DeepWiki](https://img.shields.io/badge/DeepWiki-Docs-blue?style=for-the-badge&logo=gitbook&logoColor=white)](https://deepwiki.com/study8677/repobrain)
 [![NLPM](https://img.shields.io/badge/NLPM-audited-7C3AED?style=for-the-badge)](https://github.com/xiaolai/nlpm-for-claude)
 
-<br/>
-
-<img src="https://img.shields.io/badge/Cursor-✓-000000?style=flat-square" alt="Cursor"/>
-<img src="https://img.shields.io/badge/Claude_Code-✓-D97757?style=flat-square" alt="Claude Code"/>
-<img src="https://img.shields.io/badge/Windsurf-✓-06B6D4?style=flat-square" alt="Windsurf"/>
-<img src="https://img.shields.io/badge/Gemini_CLI-✓-4285F4?style=flat-square" alt="Gemini CLI"/>
-<img src="https://img.shields.io/badge/VS_Code_+_Copilot-✓-007ACC?style=flat-square" alt="VS Code"/>
-<img src="https://img.shields.io/badge/Codex-✓-412991?style=flat-square" alt="Codex"/>
-<img src="https://img.shields.io/badge/Cline-✓-FF6B6B?style=flat-square" alt="Cline"/>
-<img src="https://img.shields.io/badge/Aider-✓-8B5CF6?style=flat-square" alt="Aider"/>
-
-<br/><br/>
-
 <img src="docs/assets/demo.gif" alt="rb-ask 演示 — 向代码库提问,答案带文件路径和行号" width="800"/>
 
 </div>
 
-<br/>
+RepoBrain 帮你理解陌生项目、定位功能实现，并获得带源码引用的回答。
+项目知识保存在 `.repobrain/`，可以在支持的 IDE 和 Agent 之间共享。
 
-<div align="center">
-<img src="docs/assets/before_after.svg" alt="Before vs After RepoBrain" width="800"/>
-</div>
-
-<br/>
-
-## 为什么选择 RepoBrain？
+## 项目理念
 
 > AI Agent 的能力上限 = **它能读到的上下文质量。**
 
 引擎是核心：`rb-refresh` 部署多智能体集群自主阅读代码——每个模块分配专属 Agent 生成知识文档。`rb-ask` 将问题路由到对应 Agent，答案有据可查，带文件路径和行号。
 
 **与其给 Claude Code / Codex 一个仓库 `grep` 让它自己找，不如给它一个仓库版本的 ChatGPT。**
-
-**四仓库主榜：加权语义正确率 95.83%，计分查询速度约为 CodeGraph + Trae 的 4.04 倍。** [查看结果](#repobrain-vs-codegraph--trae2026-09-09)
-
-### 🧠 最快上手 —— 让你的 AI 帮你装（无需 API key）
-
-已经在用登录好的 AI IDE（Trae / Cursor / Claude Code / Codex）？不用碰 pip，也不用 API key ——**把下面这一句话贴给你的 AI 助手**，剩下的它全包（探测你已登录的 CLI、配好零-key 后端、初始化项目、自测）：
-
-> 阅读 https://github.com/study8677/repobrain/blob/main/AI_INSTALL.md 并照着它在这个项目里装好 RepoBrain。
-
-之后直接问你的 AI 关于代码库的任何问题即可。
 
 ```
 传统做法：                           RepoBrain 做法：
@@ -78,498 +47,89 @@
 
 架构是**文件 + 实时问答引擎**，而非插件。跨 IDE、跨 LLM、零平台锁定。
 
----
-
-## 斜杠命令
-
-同一套四个斜杠命令同时支持 **Claude Code** 和 **Codex CLI**。Claude 使用 `/repobrain:<name>` 命名空间；Codex 自动发现 `commands/` 目录并暴露裸 `/<name>` 形式。两边一套流程，无需切换思路。
-
-| Claude Code | Codex CLI | 用途 |
-|---|---|---|
-| `/repobrain:rb-setup` | `/rb-setup` | 首次配置 —— 选择 LLM 提供商，写入 `.env` |
-| `/repobrain:rb-refresh [quick]` | `/rb-refresh [quick]` | 构建 / 增量刷新项目知识库 |
-| `/repobrain:rb-ask <问题>` | `/rb-ask <问题>` | 当前代码库的路由问答 |
-| `/repobrain:rb-init <名字>` | `/rb-init <名字>` | 基于本模板创建新的多智能体仓库 |
-
-典型首次会话：**rb-setup → rb-refresh → rb-ask**。详细说明见下。
-
-### `rb-setup` —— 首次配置
-
-每个项目跑**一次**，在安装插件后立即执行。交互式向导会**先探测你本机已登录的无头 CLI**（Codex / Trae / Claude / Gemini），并把**免 API key 的本地 host-runner** 作为最省事的首选项——不用贴 key，RepoBrain 直接驱动你现有的 CLI 登录，`rb-ask` 和 `rb-refresh` 都能用。如果你更想用托管模型，向导同样提供 API-key 提供商（OpenAI / DeepSeek / Groq / 阿里灵积 / NVIDIA NIM / Ollama 本地 / 任意 OpenAI 兼容端点）。两种方式都会在项目根目录写入 `.env`——本地 CLI 写 `RB_HOST_RUNNER` + `RB_HOST_COMMAND`，提供商写 `OPENAI_BASE_URL` / `OPENAI_API_KEY` / `OPENAI_MODEL`——并把 `.env` 加入 `.gitignore`。如果已经有可用的 `.env` 可跳过。
-
-```
-# Claude Code
-/repobrain:rb-setup
-
-# Codex CLI
-/rb-setup
-```
-
-### `rb-refresh` —— 构建 / 刷新知识库
-
-部署多智能体集群阅读代码：每个模块由专属 Agent 生成知识文档，并建立 generation
-快照、稳定分组和依赖基线。首次必须运行一次完整 refresh。之后传 `quick` 时只比较
-上次成功 generation 到当前 HEAD 的**已提交变更**：RepoBrain 先用依赖图缩小候选，
-再由 ImpactPlanner 与独立 Verifier 判断真正受影响的 Agent 分组，只执行获批分组。
-quick 要求 Git 工作区干净，不会自动降级成全量刷新；传 `failed-only` 可续跑同一目标
-提交中失败或待处理的分组。
-
-```
-# Claude Code
-/repobrain:rb-refresh
-/repobrain:rb-refresh quick
-
-# Codex CLI
-/rb-refresh
-/rb-refresh quick
-```
-
-耗时：小仓库几分钟，大仓库更久。需要先完成 `rb-setup`。两种后端都能用：API key / OpenAI 兼容 provider 跑完整 LLM refresh；**本地 host-runner**（Codex / Trae / Claude / …）则通过你已登录的 CLI 跑无工具阶段（module 文档、`map.md`），并把工具/handoff 阶段（conventions、git insights）自动降级为确定性产物——全程无需 API key。只有当你想要"仅结构索引、无 LLM 叙述"的极速模式时，才加 `RB_REFRESH_SCAN_ONLY=1`。
-
-`rb-ask` 只读取当前 active generation。发现新 commit 时会提醒运行
-`rb-refresh --quick`，但不会在问答过程中自动修改知识库。
-
-### `rb-ask` —— 路由问答
-
-**插件存在的主要原因**。把问题路由到合适的 ModuleAgent（必要时也调 GitAgent），返回有据可查的答案，附带文件路径和行号。**优先使用它**而非手动 grep / 读文件 —— 更快也更准。适合的问题形态：「X 在哪里定义/处理？」、「Y 为什么这样设计？」、「认证流程是怎样的？」、「哪些地方依赖模块 Z？」。
-
-```
-# Claude Code
-/repobrain:rb-ask "认证逻辑是怎么实现的？"
-
-# Codex CLI
-/rb-ask "认证逻辑是怎么实现的？"
-```
-
-需要已有知识库 —— 如果出现"无索引"或空答复，先跑 `rb-refresh`。
-
-**让别的 AI / 脚本来调用？** 加 `--json`，拿到稳定可解析的信封，而不是给人看的富文本——这是让任意能跑 shell 命令的 agent 调用 RepoBrain 的最轻量方式，**无需 MCP 服务**：
-
-```bash
-rb-ask "认证逻辑是怎么实现的？" --workspace . --json
-# → {"answer": "...", "sources": [...], "limitations": [...], "workspace": "...", "question": "..."}
-```
-
-出错时 `--json` 会保持 stdout 为空，把 `{"error": "..."}` 写到 stderr 并返回非零退出码，调用方无需正则去扒文本。它跑的是同一套引擎，所以既支持 API-key 提供商，也支持免 API key 的本地 host-runner。详见 [让别的 AI 调用 RepoBrain（CLI，免 MCP）](#让别的-ai-调用-repobraincli免-mcp)。
-
-### `rb-init` —— 新仓库脚手架
-
-基于 RepoBrain 模板创建**新**项目。两种模式：`quick`（快速脚手架、干净副本）和 `full`（在 quick 基础上加运行时 profile、`.env`、mission 文件、沙箱配置、可选 `git init`）。用于**开新仓库** —— 在已有项目上跑 `rb-refresh` 之前**不需要**先执行它。
-
-```
-# Claude Code
-/repobrain:rb-init my-agent
-/repobrain:rb-init my-agent full
-
-# Codex CLI
-/rb-init my-agent
-/rb-init my-agent full
-```
-
-> 插件还附带 `agent-repo-init` skill（与 `rb-init` 共用同一份后端——Codex / Claude 也能按描述匹配触发）以及可选的 `rb-mcp` MCP 服务（`ask_project` + `refresh_project`）用于工具式集成。
-
----
+完整的产品主张与设计原则见[项目理念文档](docs/zh/PHILOSOPHY.md)。
 
 ## 快速开始
 
-**方案 A —— Claude Code / Codex CLI 插件安装**
+把下面这句话交给能够在你项目里执行命令的 AI 助手：
+
+> 阅读 [AI_INSTALL.md](https://github.com/study8677/repobrain/blob/main/AI_INSTALL.md)，照着它在当前项目里安装 RepoBrain。
+
+安装指南会完成工具安装、模型配置、知识库构建和一次问答检查。本机已登录的
+Trae 等命令行工具可以作为后端，无需额外 API key；也支持 OpenAI 兼容 API。
+需要 Python 3.10+、至少有一次提交的 Git 仓库，以及刷新时干净的工作区。
+
+各平台安装和手动配置见 [安装指南](INSTALL.md)与[快速开始文档](docs/zh/QUICK_START.md)。
+在现有项目里建立知识库，不需要先运行 `rb init` 或 `rb-init`。
+
+## 日常使用
+
+安装并配置好后，在项目目录中运行：
+
 ```bash
-# Claude Code（首次会话由 SessionStart hook 自动安装 rb CLI + Python 引擎）
-/plugin marketplace add study8677/repobrain
-/plugin install repobrain@repobrain
-/repobrain:rb-setup            # 交互式：用已登录的本地 CLI（Codex/Trae/Claude，免 key）或贴 API key，自动写 .env
-/repobrain:rb-refresh          # 直接运行 rb-refresh；首次 refresh 会自动创建 .repobrain/
-/repobrain:rb-ask "这个项目是怎么工作的？"  # 直接运行 rb-ask
-
-# Codex CLI（需手动先装引擎；Codex 暂不支持自动 hook）
-pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
-pipx inject --force --include-apps repobrain-engine "git+https://github.com/study8677/repobrain.git#subdirectory=cli"
-codex plugin marketplace add study8677/repobrain
-/rb-setup                        # Codex 内同样的命令，无 repobrain: 前缀
-/rb-refresh
-/rb-ask "这个项目是怎么工作的？"
-```
-
-Codex CLI 通过 `codex plugin marketplace add` 注册插件后，会自动从插件的 `commands/` 目录发现斜杠命令，因此同样四个命令在 Codex 内不带 `repobrain:` 前缀（`/rb-setup`、`/rb-refresh`、`/rb-ask`、`/rb-init`）。也可以继续用裸 CLI（`rb-refresh --workspace .`、`rb-ask "..." --workspace .`）；安装或配置异常时运行 `rb doctor --workspace .`。如果 Codex 版本支持 MCP 并希望工具式集成，再单独注册 `rb-mcp --workspace <project>`。
-
-安装并 setup 后，两个平台均提供 `rb-ask <问题>`、`rb-refresh`、`rb-init <名字>` 斜杠命令。MCP 仍可选，可通过 `rb-mcp` 暴露 `ask_project` + `refresh_project`；示例配置见 [docs/examples/repobrain.mcp.json](docs/examples/repobrain.mcp.json)。详见 [INSTALL.md](INSTALL.md)。
-
-**方案 B —— 手动安装：通过 pip 安装引擎 + CLI**
-```bash
-# 1. 安装引擎 + CLI
-pip install "git+https://github.com/study8677/repobrain.git#subdirectory=cli"
-pip install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
-
-# 2. 配置 .env（任意 OpenAI 兼容 API）
-cd my-project
-cat > .env <<EOF
-OPENAI_BASE_URL=https://your-endpoint/v1
-OPENAI_API_KEY=your-key
-OPENAI_MODEL=your-model
-RB_ASK_TIMEOUT_SECONDS=120
-EOF
-
-# 3. 构建知识库（ModuleAgent 自主学习每个模块）
-rb-refresh --workspace .
-
-# 4. 提问
+rb-refresh
 rb-ask "这个项目的认证逻辑是怎么实现的？"
-
-# 5.（可选）注册为 Claude Code 的 MCP 服务器
-claude mcp add repobrain rb-mcp -- --workspace $(pwd)
 ```
 
-**方案 C —— 仅注入上下文文件（任意 IDE，无需 LLM）**
-```bash
-pip install git+https://github.com/study8677/repobrain.git#subdirectory=cli
-rb init my-project && cd my-project
-# IDE 入口文件会引导到 AGENTS.md；动态项目上下文在 .repobrain/
-```
+`rb-refresh` 会自动选择首次构建、提交后的增量更新或匹配任务的中断续跑。
+知识库已是最新时直接跳过，不调用模型。上次失败了，再运行同一个命令即可继续。
 
----
-
-## 功能一览
-
-```
-  rb init             将上下文文件注入任意项目（--force 可覆盖已有文件）
-       │
-       ▼
-  .repobrain/       共享知识库 —— 所有 IDE 从这里读取
-       │
-       ├──► rb-refresh     动态多智能体自主学习 → 生成模块知识文档 + 结构图
-       ├──► rb-ask         Router → ModuleAgent 路由问答，实时代码证据
-       └──► rb-mcp         可选 MCP 服务端 → IDE 工具集成
-```
-
-**动态多智能体集群** —— `rb-refresh` 时，引擎使用**智能功能分组**：基于 import 关系、目录共位、文件名前缀将文件聚类。源码直接预加载进 agent 上下文（无需工具调用），构建产物自动过滤。每个 sub-agent 分析约 30K tokens 的聚焦代码，只需 1 次 LLM 调用，输出**全面的 Markdown 知识文档**（`agents/*.md`）。大模块由多个 sub-agent 并行分析——每个输出独立 agent.md（不合并、不压缩）。**Map Agent** 读取所有 agent 文档生成 `map.md` 路由索引。`rb-ask` 时，Router 读取 `map.md` 选择相关模块，将 agent 文档喂给 answer agent。**完全语言无关** —— 模块检测使用纯目录结构，代码分析完全由 LLM 完成。支持任何编程语言。
-
-**GitAgent** —— 专门分析 git 历史的 Agent，了解「谁改了什么、为什么改」。
-
-**NLPM 审计反馈** —— 本仓库受益于 [xiaolai](https://github.com/xiaolai) 的 [NLPM](https://github.com/xiaolai/nlpm-for-claude)，它是面向 Claude Code 插件、skills 和 agent 定义的自然语言编程 linter。它的审计帮助发现了 skill frontmatter 和依赖版本卫生方面的真实改进点。
-
----
-
-## CLI 命令
-
-| 命令 | 功能 | 需要 LLM？ |
-|:-----|:-----|:----------:|
-| `rb init <dir>` | 注入认知架构模板 | 否 |
-| `rb init <dir> --force` | 重新注入，覆盖已有文件 | 否 |
-| `rb refresh --workspace <dir>` | CLI 便捷包装，调用知识库 refresh 流程 | 是 |
-| `rb ask "问题" --workspace <dir>` | CLI 便捷包装，调用路由式项目问答流程 | 是，或本地 Codex host runner |
-| `rb-refresh` | 多智能体自主学习代码库，生成模块知识文档 + `conventions.md` + `structure.md` | 是 |
-| `rb-ask "问题"` | Router → ModuleAgent/GitAgent 路由问答 | 是，或本地 Codex host runner |
-| `rb-mcp --workspace <dir>` | **启动 MCP 服务器** —— 向 Claude Code 暴露 `ask_project` + `refresh_project` 工具 | 是 |
-| `rb report "内容"` | 记录发现到 `.repobrain/memory/` | 否 |
-| `rb log-decision "决策" "原因"` | 记录架构决策 | 否 |
-
-`rb ask` / `rb refresh` 需要同时安装 `cli/` 和 `engine/`。`rb-ask` / `rb-refresh` 是只安装 engine 也可用的入口。
-
----
-
-## 两个包，一套工作流
-
-```
-repobrain/
-├── cli/                     # rb CLI — 轻量，pip 可安装
-│   └── templates/           # .cursorrules, CLAUDE.md, .repobrain/, ...
-└── engine/                  # 多智能体引擎 + 知识中枢
-    └── repobrain_engine/
-        ├── _cli_entry.py    # rb-ask / rb-refresh 入口
-        ├── config.py        # Pydantic 配置
-        ├── hub/             # ★ 核心：多智能体集群
-        │   ├── agents.py    #   Refresh swarm (ScanAnalyst → ArchitectureReviewer → ConventionWriter) + Ask swarm (Router / ModuleAgent / GitAgent)
-        │   ├── contracts.py #   Pydantic 模型：claims、证据、刷新状态
-        │   ├── ask_pipeline.py    # agent.md 路由问答
-        │   ├── refresh_pipeline.py # LLM 驱动刷新 → agents/*.md + map.md
-        │   ├── ask_tools.py #   代码探索工具
-        │   ├── scanner.py   #   多语言项目扫描
-        │   ├── module_grouping.py # 智能功能分组
-        │   ├── incremental.py #   增量刷新（--quick）
-        │   ├── host_runner.py #   本地 CLI 后端（无 API key）
-        │   ├── storage.py   #   知识库存储（current.json）
-        │   ├── mcp_server.py#   MCP 服务端 (rb-mcp)
-        │   └── language_adapters/ # 多语言适配器
-        ├── mcp_client.py    # MCP 消费端（连接外部工具）
-        ├── memory.py        # 持久交互记忆
-        ├── tools/           # MCP 查询工具 + 扩展工具
-        ├── skills/          # 技能加载器
-        └── sandbox/         # 代码执行（local / microsandbox）
-```
-
-**CLI**（`pip install .../cli`）—— 零 LLM 依赖。注入模板，离线记录报告和决策。
-
-**Engine**（`pip install .../engine`）—— 代码库知识运行时。驱动 `rb-ask`、`rb-refresh`、`rb-mcp`。使用 `rb-setup` 写入的 OpenAI-compatible endpoint（OpenAI、DeepSeek、Groq、DashScope、NVIDIA NIM、Ollama 或自定义端点）。实验性本地模式可设置 `RB_HOST_RUNNER=codex`，让 `rb-ask` 使用用户本机 `codex login`，不走 API key；这个能力只面向个人本地使用，不作为托管产品后端承诺。
-
-**新增 skill 封装更新：**
-- `engine/repobrain_engine/skills/graph-retrieval/` —— 面向结构与调用路径推理的图谱检索工具。
-- `engine/repobrain_engine/skills/knowledge-layer/` —— 面向项目语义上下文整合的知识层工具。
+只有需要重新生成全部知识时，才运行：
 
 ```bash
-# 安装两者获取完整体验
-pip install "git+https://...#subdirectory=cli"
-pip install "git+https://...#subdirectory=engine"
+rb-refresh --full
 ```
 
----
+`rb-ask` 使用已有知识库回答，附带源码证据。代码有新提交时会提醒刷新，
+但提问过程中不会更新知识库。
+
+可以这样提问：
+
+- 这个接口在哪里实现，哪些地方调用了它？
+- 数据从页面到后端经过了哪些步骤？
+- 修改这个函数，会影响哪些模块？
 
 ## 工作原理
 
-### 1. `rb init` — 注入上下文文件
-
-```bash
-rb init my-project
-# 已经初始化过？用 --force 覆盖：
-rb init my-project --force
+```text
+源码 → rb-refresh → .repobrain/ 知识库 → rb-ask → 带代码引用的回答
 ```
 
-创建 `AGENTS.md`（权威行为规则）、IDE 引导文件（`.cursorrules`、`CLAUDE.md`、`.windsurfrules`、`.clinerules`、`.github/copilot-instructions.md`）以及 `.repobrain/` 动态上下文文件。
+RepoBrain 把相关代码分组、生成模块知识，并为问题选择相关上下文。
+知识保存在项目里，支持的 IDE 可以共享同一份内容。更新先写入临时版本，
+完整成功后才生效；失败时继续保留原有可用知识库。
 
-### 2. `rb-refresh` — 多智能体自主学习
+首次构建会调用配置好的模型，可能需要数分钟，大仓库更久。
+刷新前需要提交修改，或用 `git stash` 暂时收起修改。IDE 规则文件和新项目模板属于可选功能，
+详见[完整用法](docs/zh/USAGE.md)。
 
-```bash
-rb-refresh --workspace my-project
-```
+## 支持方式
 
-**8 步流程：**
-1. 扫描代码库（语言、框架、结构）
-2. 多 Agent 管道生成 `conventions.md`
-3. 生成 `structure.md` —— 语言无关的文件树（含行数统计）
-4. 构建知识图谱（`knowledge_graph.json` + mermaid）
-5. 写入文档/数据/媒体索引
-6. **LLM 全量代码分析** —— 基于 import 图 + 目录 + 前缀分组，代码预加载进 context（每组约 30K tokens），自动过滤构建产物。每个 sub-agent 读取完整源码，输出**全面的 Markdown 知识文档**（`agents/*.md`）。大模块生成多个 agent 文档（每组一个，不合并）。全局 API 并发控制防止限流。**完全语言无关** —— 支持任何编程语言。
-7. **RefreshGitAgent** 分析 git 历史，生成 `_git_insights.md`
-8. **Map Agent** 读取所有 agent 文档 → 生成 `map.md`（模块路由索引，含描述和关键词）
+| 使用方式 | 环境 | 如何接入 |
+|:---------|:-----|:---------|
+| 原生插件 | Claude Code、Codex CLI | 用斜杠命令完成配置、刷新和提问。 |
+| 兼容 IDE | Cursor、Windsurf、Gemini CLI、VS Code + Copilot、Cline、Aider、DeepSeek Harness | 共享上下文文件、CLI 或 MCP 客户端。 |
+| 其他 Agent 和脚本 | 能执行命令或调用 MCP 的环境 | CLI/JSON 输出，或可选的 `rb-mcp`。 |
 
-### 3. `rb-ask` — Router 路由问答
+平台命令差异、JSON 输出和 MCP 注册步骤见[完整用法](docs/zh/USAGE.md)与[安装指南](INSTALL.md)。
 
-```bash
-rb-ask "这个项目的认证逻辑是怎么实现的？"
-```
+## 评测
 
-Ask 管道采用**语义路径**：Router 读取 `map.md` → 选择模块 → 读取 `agents/*.md` → LLM 回答并引用代码。多个 agent 文档由并行 LLM 读取，然后由 Synthesizer 合并答案。
+项目在 Flask、ripgrep、Vite、Prometheus 上进行过固定源码访问权限和模型路由的
+RepoBrain / CodeGraph + Trae 对比。[完整报告](benchmarks/codegraph-comparison/results/latest-v2-full-report.zh-CN.md)
+包含正确率、查询耗时、Token 和首次建库成本。结果只适用于这组实验；
+AI 知识生成和静态代码图索引是不同的工作负载。
 
-若 agent 文档尚未生成，则回退到传统的 Router → ModuleAgent/GitAgent swarm 路径。
+## 详细文档
 
----
+- [安装与故障排查](INSTALL.md)
+- [完整命令、JSON 和可选集成](docs/zh/USAGE.md)
+- [知识生成与问答架构](docs/zh/SWARM_PROTOCOL.md)
+- [外部 MCP 工具](docs/zh/MCP_INTEGRATION.md) · [沙盒配置](docs/zh/SANDBOX.md)
+- [版本变更](CHANGELOG.md)
+- 文档首页：[中文](docs/zh/README.md) · [English](docs/en/README.md) · [Español](docs/es/README.md)
 
-## IDE 兼容性
-
-架构编码在**文件**中 —— 任何能读项目文件的 Agent 都能受益：
-
-| IDE | 配置文件 |
-|:----|:---------|
-| Cursor | `.cursorrules` |
-| Claude Code | `CLAUDE.md` |
-| Windsurf | `.windsurfrules` |
-| VS Code + Copilot | `.github/copilot-instructions.md` |
-| Gemini CLI / Codex / DeepSeek Harness | `AGENTS.md` |
-| Cline | `.clinerules` |
-| Google Antigravity | `.repobrain/rules.md` |
-
-均由 `rb init` 生成：`AGENTS.md` 是唯一行为规则源，IDE 专属文件是轻量引导层，`.repobrain/` 保存共享的动态项目上下文。
-
----
-
-## 让别的 AI 调用 RepoBrain（CLI，免 MCP）
-
-让别的 LLM / agent 用上 RepoBrain，最轻的方式就是 CLI —— 没有常驻进程，没有协议握手。任何能跑一条 shell 命令的 agent 都可以直接调：
-
-```bash
-rb-ask "<问题>" --workspace /path/to/project --json
-```
-
-然后读回一个稳定的 JSON 对象：
-
-```json
-{
-  "answer": "认证逻辑在 engine/hub/auth.py …",
-  "sources": ["engine/hub/auth.py:12", "engine/hub/auth.py:44"],
-  "limitations": ["host-runner 单轮模式"],
-  "workspace": "/path/to/project",
-  "question": "<问题>"
-}
-```
-
-- **成功** → 上面这个信封打到 stdout，退出码 `0`。
-- **失败** → stdout 保持为空；`{"error": "..."}` 写到 stderr，退出码非零 —— 调用方可直接分支处理，无需扒文本。
-
-**agent 怎么自动发现它：** `rb init` 会往项目里放 `AGENTS.md`（Claude Code 再加 `CLAUDE.md`），告诉任意 agent 遇到代码库问题优先用 `rb-ask` 而不是手动 grep / 读文件。Cursor、Windsurf、Codex、Gemini CLI 这些都会读这些文件，所以项目初始化后它们会自己去调 `rb-ask`。
-
-**零 API key：** `rb-ask` 跑的是同一套引擎，因此同样支持免 API key 的本地 host-runner。在项目 `.env` 里写下面几行（或跑 `rb-setup`），调用方的 AI 就会驱动你本机已登录的 CLI，全程不经手 key：
-
-```bash
-RB_HOST_RUNNER=generic
-RB_HOST_COMMAND=trae-cli exec --cd {workspace} --sandbox read-only --skip-git-repo-check --ephemeral -o {output_file}
-RB_HOST_OUTPUT_MODE=file
-```
-
-只要调用方能执行 shell 命令，就优先用这条 CLI 路径；只有面对**只认 MCP 协议**的客户端时，才用下面的 `rb-mcp`。
-
----
-
-## 进阶功能
-
-<details>
-<summary><b>MCP 服务器 — 给 Claude Code 一个代码库专属 ChatGPT</b></summary>
-
-Claude Code 不再需要读数百个文档文件——它可以直接调用 `ask_project` 工具，背后是动态多智能体集群：Router 将问题路由到对应 ModuleAgent，返回带文件路径和行号的精准答案。
-
-**配置步骤：**
-
-```bash
-# 安装引擎
-pip install "git+https://github.com/study8677/repobrain.git#subdirectory=engine"
-
-# 先刷新知识库（ModuleAgent 自主学习每个模块）
-rb-refresh --workspace /path/to/project
-
-# 注册为 Claude Code 的 MCP 服务器
-claude mcp add repobrain rb-mcp -- --workspace /path/to/project
-```
-
-**向 Claude Code 暴露的工具：**
-
-| 工具 | 功能 |
-|:-----|:-----|
-| `ask_project(question)` | Router → ModuleAgent/GitAgent 回答代码库问题。返回文件路径 + 行号。 |
-| `refresh_project(quick?)` | 重大改动后重建知识库。ModuleAgent 重新学习代码。 |
-
-</details>
-
-<details>
-<summary><b>动态多智能体集群</b> — 模块级自学习 + 智能路由</summary>
-
-引擎的核心是**按代码模块动态创建的 Agent 集群**：
-
-```
- rb-refresh：                                rb-ask：
-
- 对每个模块：                                Router（读 map.md）
- ┌ 按 import 图分组文件                        └── 读 agents/*.md → LLM 回答
- ├ 每组预加载约 30K tokens
- ├ 自动过滤构建产物
- ├ Sub-agent → Markdown agent 文档
- ├ agents/{module}.md（或 /group_N.md）
- └ Map Agent → map.md
-```
-
-**核心创新：**
-- **LLM 即分析器**：不使用 AST 解析或正则 —— 源码直接喂给 LLM 分析。开箱即用支持任何编程语言。
-- **智能分组**：基于 import 关系、目录共位、文件名前缀分组。构建产物自动过滤。字符硬限（800K）防止上下文溢出。
-- **零信息损失**：大模块生成多个 `agent.md`（每组一个）—— 不合并、不压缩。`rb-ask` 时多个 agent 文档由并行 LLM 读取，然后 Synthesizer 合并答案。
-- **全局 API 并发控制**：`RB_API_CONCURRENCY` 限制所有模块的同时 LLM 调用数，防止限流。
-- **语言无关模块检测**：纯目录结构 —— 不需要 `__init__.py` 或任何语言特定标记。
-
-```bash
-# 模块 Agent 自主学习代码库
-rb-refresh
-
-# 仅扫描上次刷新后变更的文件
-rb-refresh --quick
-
-# Router 智能路由到对应模块 Agent
-rb-ask "这个项目用了什么测试模式？"
-
-# 记录发现和决策（无需 LLM）
-rb report "认证模块需要重构"
-rb log-decision "使用 PostgreSQL" "团队有丰富经验"
-```
-
-使用 `rb-setup` 选择并写入的 OpenAI-compatible endpoint。基于 OpenAI Agent SDK + LiteLLM。
-</details>
-
-<details>
-<summary><b>MCP 集成</b> — 连接外部工具（GitHub、数据库、文件系统）</summary>
-
-```json
-// mcp_servers.json
-{
-  "servers": [
-    {
-      "name": "github",
-      "transport": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "enabled": true
-    }
-  ]
-}
-```
-
-设置 `MCP_ENABLED=true` 让配置的 server 对 engine 可见；只有希望 `rb-ask`
-自动连接外部 server 且信任这些 server 时，才设置 `RB_ALLOW_MCP=true`。
-Stdio MCP server 会继承进程环境变量和配置中的 `env` 值，因此应把它们视为拥有本地权限的代码。
-详见 [MCP 文档](docs/zh/MCP_INTEGRATION.md)。
-</details>
-
-<details>
-<summary><b>MCP 集成（消费端）</b> — 让 Agent 调用外部工具</summary>
-
-`MCPClientManager` 让你的 Agent 能连接外部 MCP 服务器（GitHub、数据库等），自动发现并注册工具。
-
-```json
-// mcp_servers.json
-{
-  "servers": [
-    {
-      "name": "github",
-      "transport": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "enabled": true
-    }
-  ]
-}
-```
-
-设置 `MCP_ENABLED=true` 让配置的 server 对 engine 可见；只有希望 `rb-ask`
-自动连接外部 server 且信任这些 server 时，才设置 `RB_ALLOW_MCP=true`。
-Stdio MCP server 会继承进程环境变量和配置中的 `env` 值，因此应把它们视为拥有本地权限的代码。
-</details>
-
-<details>
-<summary><b>沙盒执行</b> — 可配置的代码执行环境</summary>
-
-| 变量 | 默认值 | 选项 |
-|:-----|:------|:-----|
-| `SANDBOX_TYPE` | `local` | `local` · `microsandbox` |
-| `SANDBOX_TIMEOUT_SEC` | `30` | 秒 |
-| `RB_RETRIEVAL_MODE` | `compact` | `off` · `compact` · `full` |
-
-默认 sandbox 只面向可信本地 workspace，不是执行不可信代码的隔离边界。
-Retrieval graph 写盘前会脱敏常见 secret，但 `full` 模式仍可能保留源码片段。
-详见 [沙盒文档](docs/zh/SANDBOX.md)。
-</details>
-
----
-
-## RepoBrain vs CodeGraph + Trae（2026-09-09）
-
-Flask、ripgrep、Vite、Prometheus · 每个产品 20 题 × 3 次重复 · 相同源码访问权限与模型路由（`Seed-2.1-Turbo → seed-code-pro`）。
-
-| 主榜指标 | RepoBrain | CodeGraph + Trae |
-|:---|---:|---:|
-| 加权语义正确率 | **95.83%** | 84.17% |
-| 成功查询次数 | **60/60** | 53/60 |
-| 计分查询耗时 | **5,106.67 s** | 20,621.14 s |
-| 查询 Token | **22,326,315** | 86,027,974 |
-| 冷构建耗时 | 7,420.63 s | **9.58 s** |
-| 冷构建 + 计分查询 | **12,527.30 s** | 20,630.72 s |
-
-失败计为错误；冷构建分别包含完整 AI 知识生成与静态代码图索引，并非同类工作负载。结果仅适用于本次锁定实验。
-
-[完整结果与评测方法](benchmarks/codegraph-comparison/results/latest-v2-full-report.zh-CN.md)
-
----
-
-## 文档
-
-| | |
-|:--|:--|
-| 🇬🇧 English | **[`docs/en/`](docs/en/)** |
-| 🇨🇳 中文 | **[`docs/zh/`](docs/zh/)** |
-| 🇪🇸 Español | **[`docs/es/`](docs/es/)** |
+**NLPM 审计反馈** —— 本仓库受益于 [xiaolai](https://github.com/xiaolai) 的 [NLPM](https://github.com/xiaolai/nlpm-for-claude)，它是面向 Claude Code 插件、skills 和 agent 定义的自然语言编程 linter。它的审计帮助发现了 skill frontmatter 和依赖版本卫生方面的真实改进点。
 
 ---
 

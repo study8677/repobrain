@@ -53,6 +53,13 @@ Codex auto-discovers slash commands from the plugin's `commands/` directory (no 
 /rb-init my-new-project
 ```
 
+For routine refreshes from the project directory, run `rb-refresh` every time.
+It automatically builds, resumes a matching interrupted task, incrementally
+updates, or skips an already-current base. Use `rb-refresh --full` only for a
+new complete rebuild. `--workspace` means the project folder and defaults to the
+current directory. Refresh requires clean, committed Git state. Removed refresh
+options are rejected; see [CHANGELOG.md](CHANGELOG.md) for the breaking change.
+
 You can also keep using the raw CLI directly: `rb-refresh --workspace <project>` and `rb-ask "question" --workspace <project>`.
 If your Codex build supports MCP and you want tool-style integration, register
 `rb-mcp --workspace <project>` separately in your Codex MCP configuration.
@@ -158,7 +165,7 @@ Same four commands ship to both hosts. Claude Code namespaces them as `/repobrai
 | Claude Code | Codex CLI | What it does |
 |---|---|---|
 | `/repobrain:rb-setup` | `/rb-setup` | **First-time setup** — interactive `.env` writer (logged-in local CLI = no key, or an API-key provider + model) |
-| `/repobrain:rb-refresh [quick]` | `/rb-refresh [quick]` | Full baseline, or manually update only Agent groups judged affected by committed changes |
+| `/repobrain:rb-refresh [--full]` | `/rb-refresh [--full]` | Automatically build, resume, or update affected Agent groups; --full forces rebuilding |
 | `/repobrain:rb-ask <question>` | `/rb-ask <question>` | Routed Q&A on the current codebase |
 | `/repobrain:rb-init <name>` | `/rb-init <name>` | Scaffold a new multi-agent repo from this template |
 
@@ -169,7 +176,7 @@ The plugin also bundles the `agent-repo-init` skill (description-matched in eith
 If you manually register `rb-mcp`, the `repobrain` MCP server exposes:
 
 - `ask_project(question)` — routed Q&A with file paths and line numbers
-- `refresh_project(quick=False)` — build a full generation baseline; `quick=True` manually runs the committed-diff ImpactPlanner/Verifier loop
+- `refresh_project(full=False)` — automatically build, resume, update, or skip; `full=True` forces a new complete rebuild
 
 Example configs:
 

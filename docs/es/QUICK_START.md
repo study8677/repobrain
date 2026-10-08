@@ -19,8 +19,12 @@ pip install -e ./cli -e './engine[dev]'
 
 ### 2. Construir la Base de Conocimiento
 ```bash
-rb-refresh --workspace .
+rb-refresh
+# Solo para forzar una reconstrucción completa:
+rb-refresh --full
 ```
+
+`rb-refresh` crea, actualiza, reanuda una tarea interrumpida coincidente o termina si la base ya está actualizada. `--workspace` es la carpeta del proyecto y por defecto usa el directorio actual. Se requiere un árbol Git limpio.
 
 Este comando escanea el proyecto, construye `.repobrain/` y prepara la base
 de conocimiento del repositorio para preguntas enrutadas sobre el codebase.
@@ -109,7 +113,7 @@ rb-refresh --workspace .
 └── .repobrain/                # Base de conocimiento generada en repos destino
 ```
 
-Consulta [Estructura del Proyecto](../README.md#project-structure) para detalles.
+Consulta el [índice de documentación](README.md) para la estructura del proyecto.
 
 ## 🧪 Ejecutar Pruebas
 

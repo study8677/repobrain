@@ -7,6 +7,7 @@
 
 ### 入门
 - **[快速开始](QUICK_START.md)** — 安装、本地开发、运行示例
+- **[使用参考](USAGE.md)** — 命令、脚本调用、可选规则文件和 MCP 服务端接入
 - **[项目理念](PHILOSOPHY.md)** — 核心理念与 Artifact-First 协议
 
 ### 核心特性
@@ -60,7 +61,7 @@
 │   │   ├── refresh_pipeline.py  #   知识生成管道
 │   │   ├── ask_pipeline.py      #   问答管道
 │   │   ├── agents.py            #   Refresh/Ask Swarm agents
-│   │   ├── incremental.py       #   增量刷新（--quick）
+│   │   ├── incremental.py       #   自动增量刷新
 │   │   ├── host_runner.py       #   本地 CLI 后端（无 API key）
 │   │   ├── mcp_server.py        #   rb-mcp 服务端
 │   │   ├── storage.py           #   知识库存储（current.json）

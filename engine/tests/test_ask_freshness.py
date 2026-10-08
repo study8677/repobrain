@@ -47,7 +47,7 @@ def test_ask_stale_workspace_reports_commit_lag(
     notices = _build_workspace_health_notices(tmp_path)
 
     assert notices == [
-        "⚠ Knowledge base is 3 commit(s) behind HEAD -- consider running rb-refresh --quick."
+        "⚠ Knowledge base is 3 commit(s) behind HEAD -- consider running rb-refresh."
     ]
 
 
@@ -131,7 +131,7 @@ async def test_ask_host_runner_prepends_workspace_health_notice(
     answer = await ask_mod.ask_pipeline(tmp_path, "What changed?")
 
     assert answer.startswith(
-        "⚠ Knowledge base is 1 commit(s) behind HEAD -- consider running rb-refresh --quick.\n"
+        "⚠ Knowledge base is 1 commit(s) behind HEAD -- consider running rb-refresh.\n"
     )
     assert answer.endswith("host answer")
 
@@ -236,8 +236,8 @@ async def test_refresh_reminder_never_invokes_refresh_pipeline(
 
     calls: list[tuple[Path, bool]] = []
 
-    async def _fake_refresh(workspace, quick: bool = False, **kwargs):
-        calls.append((workspace, quick))
+    async def _fake_refresh(workspace, *, full: bool = False, **kwargs):
+        calls.append((workspace, full))
 
     monkeypatch.setattr(refresh_mod, "refresh_pipeline", _fake_refresh)
 
@@ -256,7 +256,7 @@ async def test_refresh_reminder_does_not_touch_refresh_failures(
     import repobrain_engine.hub.refresh_pipeline as refresh_mod
     from repobrain_engine.hub import ask_pipeline as ask_mod
 
-    async def _boom(workspace, quick: bool = False, **kwargs):
+    async def _boom(workspace, *, full: bool = False, **kwargs):
         raise RuntimeError("refresh exploded")
 
     monkeypatch.setattr(refresh_mod, "refresh_pipeline", _boom)
@@ -276,7 +276,7 @@ async def test_refresh_reminder_has_no_reentrancy_state(
 
     called = False
 
-    async def _fake_refresh(workspace, quick: bool = False, **kwargs):
+    async def _fake_refresh(workspace, *, full: bool = False, **kwargs):
         nonlocal called
         called = True
 

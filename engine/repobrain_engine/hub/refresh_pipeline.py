@@ -32,7 +32,7 @@ from repobrain_engine.hub.contracts import (
     ModuleRegistryEntry,
     RefreshStatus,
 )
-from repobrain_engine.hub.storage import knowledge_root
+from repobrain_engine.hub.storage import atomic_write_text, knowledge_root
 
 logger = logging.getLogger(__name__)
 
@@ -233,763 +233,365 @@ async def _run_with_retry(
 
 async def _refresh_pipeline_into_generation(
     workspace: Path,
-    quick: bool = False,
-    failed_only: bool = False,
+    *,
+    resume: bool = False,
 ) -> RefreshStatus:
-    """Scan project and update .repobrain/conventions.md.
+    """Build a full generation, resuming only validated completed artifacts.
 
-    Args:
-        workspace: Project root directory.
-        quick: If True, only scan files changed since last refresh.
-        failed_only: If True, only re-run modules that failed or were
-            partial in the previous refresh.
-
-    Returns:
-        Structured refresh status, including stage and module health.
+    Generation identity and configuration matching are enforced by the public
+    entrypoint. This worker additionally verifies status and artifacts before
+    reusing any stage or group. Documents are durable before success is recorded.
     """
-    from repobrain_engine.hub.scanner import (
-        build_knowledge_graph,
-        extract_structure,
-        full_scan,
-        quick_scan,
-        render_knowledge_graph_markdown,
-        render_knowledge_graph_mermaid,
-    )
+    from dataclasses import asdict
     from repobrain_engine.config import get_settings
+    from repobrain_engine.hub.scanner import (
+        ScanReport, build_knowledge_graph, extract_structure, full_scan,
+        render_knowledge_graph_markdown, render_knowledge_graph_mermaid,
+    )
 
     settings = get_settings()
     scan_only_raw = os.environ.get("RB_REFRESH_SCAN_ONLY")
-    if scan_only_raw is None:
-        refresh_scan_only = bool(settings.RB_REFRESH_SCAN_ONLY)
-    else:
-        refresh_scan_only = scan_only_raw.strip().lower() in {"1", "true", "yes"}
-    model: "str | object | None" = None
+    refresh_scan_only = (
+        bool(settings.RB_REFRESH_SCAN_ONLY) if scan_only_raw is None
+        else scan_only_raw.strip().lower() in {"1", "true", "yes"}
+    )
+    rb_dir = _ensure_refresh_workspace_initialized(workspace)
+    current_sha = _get_head_sha(workspace)
+    previous_status = _load_previous_refresh_status(rb_dir) if resume else {}
+    if previous_status.get("head_sha") != current_sha:
+        previous_status = {}
+    status = RefreshStatus(
+        refresh_run_id=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"),
+        overall_status="success", head_sha=current_sha,
+        stages=previous_status.get("stages", {}),
+        modules=previous_status.get("modules", {}),
+        groups=previous_status.get("groups", {}),
+        group_head_shas=previous_status.get("group_head_shas", {}),
+        module_head_shas=previous_status.get("module_head_shas", {}),
+    )
 
-    module_docs_changed = False
+    def completed(stage: str, artifacts: tuple[str, ...], *, allow_empty: bool = False) -> bool:
+        old_state = previous_status.get("stages", {}).get(stage)
+        reusable_states = {"success", "skipped"} if refresh_scan_only else {"success"}
+        if old_state not in reusable_states:
+            return False
+        if not all(_refresh_artifact_valid(rb_dir / name, allow_empty=allow_empty) for name in artifacts):
+            return False
+        status.stages[stage] = old_state
+        if stage == "module_registry":
+            status.warnings = list(previous_status.get("warnings", []))
+        print(f"  → Continuing: preserved {stage}.", file=sys.stderr)
+        _write_refresh_status(rb_dir, status)
+        return True
+
+    def finish(stage: str, state: str = "success") -> None:
+        status.stages[stage] = state
+        _write_refresh_status(rb_dir, status)
+
+    model: "str | object | None" = None
     host_runner_mode = False
     if not refresh_scan_only:
-        from agents import set_tracing_disabled
-        from repobrain_engine.hub.agents import create_model
+        from agents import Runner, set_tracing_disabled
+        from repobrain_engine.hub.agents import (
+            create_model, build_refresh_agent, build_single_turn_convention_agent,
+            build_refresh_module_swarm_v2, build_refresh_git_agent,
+        )
         from repobrain_engine.hub.host_runner import is_host_runner_model
-
+        from repobrain_engine.hub.scanner import detect_modules
         set_tracing_disabled(True)
         model = create_model(settings)
-        # When no API key is configured, create_model returns a HostRunnerModel
-        # (local CLI). It can only drive tool-free, single-turn, no-handoff
-        # agents, so tool-using / handoff refresh stages fall back gracefully.
         host_runner_mode = is_host_runner_model(model)
         if host_runner_mode:
-            print(
-                f"[0/3] No API key configured; using local host runner "
-                f"'{settings.RB_HOST_RUNNER}' for LLM stages. Tool-using and "
-                "handoff stages (conventions, git insights) will use "
-                "deterministic fallbacks.",
-                file=sys.stderr,
-            )
+            print(f"Using local host runner '{settings.RB_HOST_RUNNER}' for knowledge generation.", file=sys.stderr)
 
-    rb_dir = _ensure_refresh_workspace_initialized(workspace)
-    sha_file = rb_dir / ".last_refresh_sha"
-    current_sha = _get_head_sha(workspace)
-    previous_status = _load_previous_refresh_status(rb_dir)
-    refresh_status = RefreshStatus(
-        refresh_run_id=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"),
-        overall_status="success",
-        head_sha=current_sha,
-    )
-
-    scan_timeout = os.environ.get("RB_SCAN_TIMEOUT_SECONDS", "0")
-    scan_max_files = os.environ.get("RB_SCAN_MAX_FILES", "unlimited")
-    scan_sample_files = os.environ.get("RB_SCAN_SAMPLE_FILES", "(default)")
-    scan_verbose = os.environ.get("RB_SCAN_VERBOSE", "1")
-    print(
-        (
-            "[1/3] Scan config: "
-            f"timeout={scan_timeout}, "
-            f"max_files={scan_max_files}, "
-            f"sample_files={scan_sample_files}, "
-            f"verbose={scan_verbose}, "
-            f"quick={quick}"
-        ),
-        file=sys.stderr,
-    )
-
-    print("[1/3] Scanning project...", file=sys.stderr)
-
-    used_quick_scan = quick and sha_file.exists()
-    if used_quick_scan:
-        since_sha = sha_file.read_text(encoding="utf-8").strip()
-        report = quick_scan(workspace, since_sha)
-    else:
-        report = full_scan(workspace)
-
-    print("[1/3] Scan stage finished; preparing scan report...", file=sys.stderr)
-
-    scan_report_path = rb_dir / "scan_report.json"
-    scan_payload = _build_scan_payload(report)
-    print("[1/3] Scan payload built; writing scan_report.json...", file=sys.stderr)
-    scan_report_path.write_text(
-        json.dumps(scan_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    refresh_status.stages["scan"] = "success"
-
-    print(
-        (
-            "[1/3] Scan summary: "
-            f"files={report.file_count}, "
-            f"walked={getattr(report, 'walked_file_count', 0)}, "
-            f"elapsed={getattr(report, 'scan_elapsed_seconds', 0.0):.2f}s, "
-            f"timed_out={getattr(report, 'timed_out', False)}, "
-            f"reason={getattr(report, 'scan_stopped_reason', '') or 'completed'}"
-        ),
-        file=sys.stderr,
-    )
-    samples = getattr(report, "scanned_file_samples", [])
-    if samples:
-        print("[1/3] Retrieved file samples:", file=sys.stderr)
-        for rel in samples[:20]:
-            print(f"  - {rel}", file=sys.stderr)
-    print(f"[1/3] Scan report: {scan_report_path}", file=sys.stderr)
-
-    conventions_content = ""
-    quick_changed_files = list(getattr(report, "changed_files", []) or [])
-    quick_has_no_changes = used_quick_scan and not quick_changed_files
-
-    if quick_has_no_changes:
-        print("[2/3] Quick mode: no changed files; preserving conventions.md.", file=sys.stderr)
-        refresh_status.stages["conventions"] = "skipped"
-    elif not refresh_scan_only:
-        from repobrain_engine.hub.agents import (
-            build_refresh_agent,
-            build_single_turn_convention_agent,
-        )
-
-        prompt = _format_scan_report(report)
-
-        # The default conventions swarm uses agent handoffs, which a host
-        # runner cannot drive. In host-runner mode, collapse it into a single
-        # tool-free, single-turn agent instead.
-        if host_runner_mode:
-            agent = build_single_turn_convention_agent(model)
-        else:
-            agent = build_refresh_agent(model or "")
+    report = None
+    if completed("scan", ("scan_report.json",)):
         try:
-            from agents import Runner
-        except ImportError:
-            raise ImportError(
-                "OpenAI Agent SDK not found. Install: pip install repobrain-engine"
-            ) from None
-
-        print("[2/3] Analyzing with multi-agent swarm...", file=sys.stderr)
-
-        # Conventions is a 3-hop handoff swarm (ScanAnalyst → ArchitectureReviewer
-        # → ConventionWriter), so it needs ~3x a single call. Default is generous
-        # enough for slow reasoning models; fast models finish well under it.
-        refresh_timeout = float(os.environ.get("RB_REFRESH_AGENT_TIMEOUT_SECONDS", "300"))
-        try:
-            result = await _run_with_retry(
-                Runner.run, agent, prompt,
-                timeout=refresh_timeout,
-                context="Conventions swarm",
-            )
-            conventions_content = result.final_output
-            refresh_status.stages["conventions"] = "success"
-        except Exception as exc:
-            exc_msg = str(exc) or type(exc).__name__
-            print(f"  ⚠ Conventions swarm failed: {exc_msg}. Using fallback.", file=sys.stderr)
-            conventions_content = _build_fallback_conventions(report)
-            _mark_stage_failure(
-                refresh_status,
-                stage="conventions",
-                reason=str(exc),
-                partial=True,
-            )
-    else:
-        print("[2/3] Scan-only mode enabled; skipping LLM analysis.", file=sys.stderr)
-        conventions_content = _build_fallback_conventions(report)
-        refresh_status.stages["conventions"] = "skipped"
-
-    if quick_has_no_changes:
-        print("[3/8] Quick mode: keeping existing conventions.md.", file=sys.stderr)
-    else:
-        print("[3/8] Writing conventions.md...", file=sys.stderr)
-        (rb_dir / "conventions.md").write_text(conventions_content, encoding="utf-8")
-
-    # In quick mode the ScanReport only contains changed files, so
-    # rebuilding structure / knowledge-graph / non-code indexes from it
-    # would overwrite the full artifacts with near-empty content.
-    # Skip these stages and keep the previous full-refresh output.
-    if not quick:
-        print("[4/8] Generating structure.md...", file=sys.stderr)
-        structure_content = extract_structure(workspace)
-        (rb_dir / "structure.md").write_text(structure_content, encoding="utf-8")
-        refresh_status.stages["structure"] = "success"
-
-        print("[5/8] Building knowledge graph artifacts...", file=sys.stderr)
-        graph = build_knowledge_graph(workspace, report)
-        (rb_dir / "knowledge_graph.json").write_text(
-            json.dumps(graph, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        _export_normalized_graph_store(rb_dir, graph)
-        (rb_dir / "knowledge_graph.md").write_text(
-            render_knowledge_graph_markdown(graph),
-            encoding="utf-8",
-        )
-        (rb_dir / "knowledge_graph.mmd").write_text(
-            render_knowledge_graph_mermaid(graph),
-            encoding="utf-8",
-        )
-        refresh_status.stages["knowledge_graph"] = "success"
-
-        print("[6/8] Writing document/data/media indexes...", file=sys.stderr)
-        doc_index, data_overview, media_manifest = _build_non_code_indexes(report)
-        (rb_dir / "document_index.md").write_text(doc_index, encoding="utf-8")
-        (rb_dir / "data_overview.md").write_text(data_overview, encoding="utf-8")
-        (rb_dir / "media_manifest.md").write_text(media_manifest, encoding="utf-8")
-        refresh_status.stages["indexes"] = "success"
-    else:
-        print("[4-6/8] Quick mode: keeping existing structure/graph/index artifacts.", file=sys.stderr)
-        refresh_status.stages["structure"] = "skipped"
-        refresh_status.stages["knowledge_graph"] = "skipped"
-        refresh_status.stages["indexes"] = "skipped"
-
-    modules_filter: list[str] | None = None
-    if failed_only:
-        status_path = rb_dir / "status.json"
-        if status_path.is_file():
-            try:
-                prev_status_raw = json.loads(status_path.read_text(encoding="utf-8"))
-                prev_modules = prev_status_raw.get("modules", {})
-                modules_filter = [
-                    mod for mod, state in prev_modules.items()
-                    if state in ("failed", "partial")
-                ]
-                if modules_filter:
-                    print(
-                        f"[7/8] Failed-only mode: re-running {len(modules_filter)} "
-                        f"failed/partial modules...",
-                        file=sys.stderr,
-                    )
-                else:
-                    print(
-                        "[7/8] Failed-only mode: no failed/partial modules found. "
-                        "Skipping module agents.",
-                        file=sys.stderr,
-                    )
-            except Exception as exc:
-                print(
-                    f"  ⚠ Failed to load previous status: {exc}. "
-                    "Running all modules.",
-                    file=sys.stderr,
-                )
-        else:
-            print(
-                "[7/8] Failed-only mode: no previous status found. "
-                "Running all modules.",
-                file=sys.stderr,
-            )
-
-    if not refresh_scan_only:
-        from repobrain_engine.hub.agents import (
-            build_refresh_module_swarm_v2,
-            build_refresh_git_agent,
-        )
-        from repobrain_engine.hub.scanner import detect_modules
-
-        try:
-            from agents import Runner
-        except ImportError:
-            raise ImportError(
-                "OpenAI Agent SDK not found. Install: pip install repobrain-engine"
-            ) from None
-
-        module_timeout = float(os.environ.get("RB_MODULE_AGENT_TIMEOUT_SECONDS", "300"))
-
-        # Skip module agents when failed-only mode has no modules to process
-        if modules_filter is not None and not modules_filter:
-            print("[7/8] No failed/partial modules to re-run. Skipping module agents.", file=sys.stderr)
-            refresh_status.stages["module_docs"] = "skipped"
-        elif quick_has_no_changes:
-            print("  → 0 module groups affected", file=sys.stderr)
-            print("[7/8] No module groups to run. Skipping module agents.", file=sys.stderr)
-            refresh_status.stages["module_docs"] = "skipped"
-            _write_refresh_status(rb_dir, refresh_status)
-        else:
-            print("[7/8] Module agents learning codebase...", file=sys.stderr)
-
-            module_entries = build_refresh_module_swarm_v2(
-                model, workspace, modules_filter=modules_filter
-            )
-            expected_modules = detect_modules(workspace)
-            if modules_filter is not None:
-                expected_modules = [m for m in expected_modules if m in modules_filter]
-
-            affected_group_count: int | None = None
-            if used_quick_scan:
-                module_entries, affected_group_count = _filter_module_entries_for_changed_files(
-                    workspace=workspace,
-                    module_entries=module_entries,
-                    changed_files=quick_changed_files,
-                )
-                affected_modules = {mod for mod, _ in module_entries}
-                expected_modules = [m for m in expected_modules if m in affected_modules]
-                if affected_group_count == 0:
-                    print("  → 0 module groups affected", file=sys.stderr)
-
-            module_entries = _filter_completed_groups_for_head(
-                module_entries=module_entries,
-                previous_status=previous_status,
-                current_sha=current_sha,
-                refresh_status=refresh_status,
-            )
-            expected_modules = [m for m in expected_modules if any(e[0] == m for e in module_entries)]
-
-            mod_concurrency = int(os.environ.get("RB_REFRESH_CONCURRENCY", "8"))
-            _mod_sem = asyncio.Semaphore(mod_concurrency)
-            # Global API call semaphore: limits total concurrent LLM calls
-            # across ALL modules and groups to avoid rate-limiting.
-            api_concurrency = int(os.environ.get("RB_API_CONCURRENCY", "5"))
-            _api_sem = asyncio.Semaphore(api_concurrency)
-            status_write_lock = asyncio.Lock()
-            agents_dir = rb_dir / "agents"
-            agents_dir.mkdir(parents=True, exist_ok=True)
-            # Keep legacy modules dir for backward compat (will be removed in Phase 5)
-            modules_dir = rb_dir / "modules"
-            modules_dir.mkdir(parents=True, exist_ok=True)
-
-            async def _run_module(entry: tuple) -> tuple[str, str]:
-                """Run one module's group agents and persist agent.md artifacts.
-
-                For single-group modules: writes ``agents/{module}.md``.
-                For multi-group modules: writes ``agents/{module}/group_N.md``
-                (one per group, no merging).
-
-                Args:
-                    entry: Tuple of module name and group agent entries.
-
-                Returns:
-                    Module identifier and resulting health state.
-                """
-                async with _mod_sem:
-                    mod_name, group_entries = entry
-                    num_groups = len(group_entries)
-                    print(
-                        f"  → RefreshModule_{mod_name} ({num_groups} groups)...",
-                        file=sys.stderr,
-                    )
-
-                    async def _run_sub(
-                        group_name: str,
-                        group,
-                        sagent: object,
-                    ) -> tuple[str, str | None, str | None]:
-                        """Run one group agent and collect its Markdown output.
-
-                        Args:
-                            group_name: Group identifier within the module.
-                            group: Module grouping object with pre-loaded files.
-                            sagent: Agent instance for the group.
-
-                        Returns:
-                            Tuple of group name, Markdown output, and optional
-                            failure reason.
-                        """
-                        try:
-                            async with _api_sem:
-                                res = await _run_with_retry(
-                                    Runner.run,
-                                    sagent,
-                                    "Analyze the pre-loaded source code and produce a comprehensive Markdown knowledge document.",
-                                    max_turns=3,
-                                    timeout=module_timeout,
-                                    context=f"{mod_name}/{group_name}",
-                                )
-                            md_output = str(res.final_output).strip()
-                            if not md_output:
-                                async with status_write_lock:
-                                    _mark_group_completion(
-                                        refresh_status,
-                                        module=mod_name,
-                                        group_name=group_name,
-                                        state="failed",
-                                        head_sha=current_sha,
-                                    )
-                                    _write_refresh_status(rb_dir, refresh_status)
-                                return group_name, None, "empty output"
-                            print(f"    ✓ {mod_name}/{group_name}", file=sys.stderr)
-                            async with status_write_lock:
-                                _mark_group_completion(
-                                    refresh_status,
-                                    module=mod_name,
-                                    group_name=group_name,
-                                    state="success",
-                                    head_sha=current_sha,
-                                )
-                                _write_refresh_status(rb_dir, refresh_status)
-                            return group_name, md_output, None
-                        except Exception as exc:
-                            failure_reason = str(exc)
-                            print(f"    ⚠ {mod_name}/{group_name} failed: {failure_reason}", file=sys.stderr)
-                            # Build a minimal fallback from file listing
-                            fallback = _build_agent_md_fallback(mod_name, group_name, group)
-                            async with status_write_lock:
-                                _mark_group_completion(
-                                    refresh_status,
-                                    module=mod_name,
-                                    group_name=group_name,
-                                    state="partial",
-                                    head_sha=current_sha,
-                                )
-                                _write_refresh_status(rb_dir, refresh_status)
-                            return group_name, fallback, failure_reason
-
-                    sub_results = await asyncio.gather(
-                        *[_run_sub(gn, grp, sa) for gn, grp, sa in group_entries]
-                    )
-
-                    successes: list[tuple[str, str]] = []
-                    for group_name, md_output, failure_reason in sub_results:
-                        if md_output is None:
-                            _mark_module_failure(
-                                refresh_status,
-                                module=mod_name,
-                                group_name=group_name,
-                                reason=failure_reason or "group returned no output",
-                                state="failed",
-                            )
-                            continue
-                        successes.append((group_name, md_output))
-                        if failure_reason:
-                            _mark_module_failure(
-                                refresh_status,
-                                module=mod_name,
-                                group_name=group_name,
-                                reason=failure_reason,
-                                state="partial",
-                            )
-
-                    if not successes:
-                        refresh_status.modules[mod_name] = "failed"
-                        print(f"  ⚠ RefreshModule_{mod_name} produced no output", file=sys.stderr)
-                        return mod_name, "failed"
-
-                    # Write agent.md artifacts
-                    _write_agent_md_artifacts(
-                        agents_dir=agents_dir,
-                        module=mod_name,
-                        group_outputs=successes,
-                    )
-                    module_state = "success"
-                    if any(reason is not None for _, _, reason in sub_results):
-                        module_state = "partial"
-                    refresh_status.modules[mod_name] = module_state
-                    if current_sha:
-                        refresh_status.module_head_shas[mod_name] = current_sha
-                    _write_refresh_status(rb_dir, refresh_status)
-                    print(f"  ✓ RefreshModule_{mod_name} done ({module_state})", file=sys.stderr)
-                    return mod_name, module_state
-
-            if not module_entries:
-                print("[7/8] No module groups to run. Skipping module agents.", file=sys.stderr)
-                refresh_status.stages["module_docs"] = "skipped"
-                _write_refresh_status(rb_dir, refresh_status)
-                module_results = []
-            else:
-                print(
-                    f"  ▶ Running {len(module_entries)} modules "
-                    f"(module_concurrency={mod_concurrency}, api_concurrency={api_concurrency})...",
-                    file=sys.stderr,
-                )
-                module_results = await asyncio.gather(*[_run_module(e) for e in module_entries])
-                module_docs_changed = True
-            seen_modules = {name for name, _ in module_results}
-            for module_name in expected_modules:
-                if module_name in seen_modules:
+            payload = json.loads((rb_dir / "scan_report.json").read_text(encoding="utf-8"))
+            payload["root"] = workspace
+            defaults = asdict(ScanReport(root=workspace))
+            if set(payload) != set(defaults):
+                raise ValueError("incomplete saved scan")
+            for name, value in payload.items():
+                if name == "root":
                     continue
-                refresh_status.modules[module_name] = "failed"
-                _mark_module_failure(
-                    refresh_status,
-                    module=module_name,
-                    group_name=None,
-                    reason="module produced no group agents",
-                    state="failed",
-                )
+                expected = type(defaults[name])
+                if expected is float:
+                    valid = isinstance(value, (int, float)) and not isinstance(value, bool)
+                else:
+                    valid = type(value) is expected
+                if not valid:
+                    raise ValueError(f"invalid saved scan field: {name}")
+            report = ScanReport(**payload)
+        except (OSError, ValueError, TypeError):
+            status.stages.pop("scan", None)
+    if report is None:
+        print("[1/8] Scanning project...", file=sys.stderr)
+        report = full_scan(workspace)
+        scan_payload = asdict(report)
+        scan_payload["root"] = str(report.root)
+        atomic_write_text(rb_dir / "scan_report.json", json.dumps(scan_payload, ensure_ascii=False, indent=2))
+        finish("scan")
 
-            refresh_status.stages["module_docs"] = _aggregate_states(
-                list(refresh_status.modules.values()),
-                skipped_state="skipped",
-            )
-
-        if used_quick_scan and not module_docs_changed:
-            print("[7/8] Quick mode: no module changes; skipping git insights.", file=sys.stderr)
-            refresh_status.stages["git_insights"] = "skipped"
-        else:
-            print("  → RefreshGitAgent analyzing git history...", file=sys.stderr)
-            if host_runner_mode:
-                # The git agent relies on tools (git_log/git_diff/…), which a
-                # host runner cannot invoke. Write the pre-extracted git data
-                # deterministically instead of driving a tool-using agent.
-                try:
-                    _write_host_runner_git_insights(workspace)
-                    print(
-                        "  ✓ Wrote deterministic git insights (host-runner mode).",
-                        file=sys.stderr,
-                    )
-                    refresh_status.stages["git_insights"] = "success"
-                except Exception as exc:
-                    print(f"  ⚠ Git insights fallback failed: {exc}", file=sys.stderr)
-                    _mark_stage_failure(
-                        refresh_status,
-                        stage="git_insights",
-                        reason=str(exc),
-                        partial=True,
-                    )
-            else:
-                try:
-                    git_agent = build_refresh_git_agent(model, workspace)
-                    await _run_with_retry(
-                        Runner.run,
-                        git_agent,
-                        "Analyze the project's git history and write your git insights document.",
-                        max_turns=25,
-                        timeout=module_timeout,
-                        context="Git agent",
-                    )
-                    refresh_status.stages["git_insights"] = "success"
-                except Exception as exc:
-                    print(f"  ⚠ RefreshGitAgent failed: {exc}", file=sys.stderr)
-                    _mark_stage_failure(
-                        refresh_status,
-                        stage="git_insights",
-                        reason=str(exc),
-                        partial=True,
-                    )
-    else:
-        print("[7/8] Scan-only mode: module agents skipped.", file=sys.stderr)
-        refresh_status.stages["module_docs"] = "skipped"
-        refresh_status.stages["git_insights"] = "skipped"
-
-    # -- Step 8: Generate map.md via Map Agent --
-    if not refresh_scan_only and (not used_quick_scan or module_docs_changed):
-        print("[8/8] Generating map.md via Map Agent...", file=sys.stderr)
-        try:
-            map_content = await _generate_map_md(workspace, model or "")
-            (rb_dir / "map.md").write_text(map_content, encoding="utf-8")
-            print("  ✓ map.md generated", file=sys.stderr)
-            refresh_status.stages["module_registry"] = "success"
-
-            # Also generate legacy module_registry for backward compat
-            try:
-                registry_entries = _build_module_registry_entries(workspace, refresh_status)
-                (rb_dir / "module_registry.json").write_text(
-                    json.dumps([entry.model_dump(mode="json") for entry in registry_entries], ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-                (rb_dir / "module_registry.md").write_text(
-                    _render_module_registry_markdown(registry_entries),
-                    encoding="utf-8",
-                )
-            except Exception:
-                pass  # Legacy registry is best-effort
-        except Exception as exc:
-            print(f"  ⚠ Map Agent failed: {exc}. Using fallback.", file=sys.stderr)
-            agent_error = f"Map Agent failed: {exc}"
-            try:
-                # A deterministic map is a complete routing artifact. Keep the
-                # agent error as an auditable warning without degrading the
-                # refresh status or preventing generation promotion.
-                fallback_map = _build_fallback_map_md(workspace)
-                (rb_dir / "map.md").write_text(fallback_map, encoding="utf-8")
-            except Exception as fallback_exc:
-                _mark_stage_failure(
-                    refresh_status,
-                    stage="module_registry",
-                    reason=(
-                        f"{agent_error}; deterministic map fallback failed: "
-                        f"{fallback_exc}"
-                    ),
-                    partial=False,
-                )
-            else:
-                refresh_status.stages["module_registry"] = "success"
-                refresh_status.warnings.extend(
-                    [agent_error, "Deterministic map fallback used."]
-                )
-                print("  ✓ deterministic map.md fallback generated", file=sys.stderr)
-                # Also try legacy registry
-                try:
-                    registry_entries = _build_module_registry_entries(
-                        workspace, refresh_status
-                    )
-                    (rb_dir / "module_registry.json").write_text(
-                        json.dumps(
-                            [
-                                entry.model_dump(mode="json")
-                                for entry in registry_entries
-                            ],
-                            ensure_ascii=False,
-                            indent=2,
-                        ),
-                        encoding="utf-8",
-                    )
-                    (rb_dir / "module_registry.md").write_text(
-                        _render_module_registry_markdown(registry_entries),
-                        encoding="utf-8",
-                    )
-                except Exception:
-                    pass
-    else:
+    if not completed("conventions", ("conventions.md",)):
+        print("[2/8] Analyzing project conventions...", file=sys.stderr)
         if refresh_scan_only:
-            print("[8/8] Scan-only mode: map generation skipped.", file=sys.stderr)
+            content = _build_fallback_conventions(report)
+            state = "skipped"
         else:
-            print("[8/8] Quick mode: no module groups changed; keeping existing map.md.", file=sys.stderr)
-        refresh_status.stages["module_registry"] = "skipped"
+            agent = (build_single_turn_convention_agent(model) if host_runner_mode
+                     else build_refresh_agent(model or ""))
+            try:
+                result = await _run_with_retry(
+                    Runner.run, agent, _format_scan_report(report),
+                    timeout=float(os.environ.get("RB_REFRESH_AGENT_TIMEOUT_SECONDS", "300")),
+                    context="Conventions swarm",
+                )
+                content = str(result.final_output).strip()
+                if not content:
+                    raise ValueError("empty conventions output")
+                state = "success"
+            except Exception as exc:
+                content = _build_fallback_conventions(report)
+                state = "partial"
+                _mark_stage_failure(status, "conventions", str(exc) or type(exc).__name__, partial=True)
+        atomic_write_text(rb_dir / "conventions.md", content)
+        finish("conventions", state)
+
+    if not completed("structure", ("structure.md",)):
+        print("[3/8] Generating structure.md...", file=sys.stderr)
+        atomic_write_text(rb_dir / "structure.md", extract_structure(workspace))
+        finish("structure")
+
+    graph_artifacts = ("knowledge_graph.json", "knowledge_graph.md", "knowledge_graph.mmd",
+                       "graph/nodes.jsonl", "graph/edges.jsonl")
+    if not completed("knowledge_graph", graph_artifacts, allow_empty=True):
+        print("[4/8] Building knowledge graph artifacts...", file=sys.stderr)
+        graph = build_knowledge_graph(workspace, report)
+        atomic_write_text(rb_dir / "knowledge_graph.json", json.dumps(graph, ensure_ascii=False, indent=2))
+        _export_normalized_graph_store(rb_dir, graph)
+        atomic_write_text(rb_dir / "knowledge_graph.md", render_knowledge_graph_markdown(graph))
+        atomic_write_text(rb_dir / "knowledge_graph.mmd", render_knowledge_graph_mermaid(graph))
+        finish("knowledge_graph")
+
+    if not completed("indexes", ("document_index.md", "data_overview.md", "media_manifest.md")):
+        print("[5/8] Writing document/data/media indexes...", file=sys.stderr)
+        for name, content in zip(("document_index.md", "data_overview.md", "media_manifest.md"),
+                                 _build_non_code_indexes(report)):
+            atomic_write_text(rb_dir / name, content)
+        finish("indexes")
+
+    if refresh_scan_only:
+        finish("module_docs", "skipped")
+        finish("git_insights", "skipped")
+        finish("module_registry", "skipped")
+    else:
+        print("[6/8] Module agents learning codebase...", file=sys.stderr)
+        entries = build_refresh_module_swarm_v2(model, workspace)
+        all_group_counts = {module: len(groups) for module, groups in entries}
+        expected_groups = {module: [name for name, _, _ in groups] for module, groups in entries}
+        module_entries = _filter_completed_groups_for_head(
+            module_entries=entries, previous_status=previous_status,
+            current_sha=current_sha, refresh_status=status, agents_dir=rb_dir / "agents",
+        )
+        _write_refresh_status(rb_dir, status)
+        module_timeout = float(os.environ.get("RB_MODULE_AGENT_TIMEOUT_SECONDS", "300"))
+        module_sem = asyncio.Semaphore(max(1, int(os.environ.get("RB_REFRESH_CONCURRENCY", "8"))))
+        api_sem = asyncio.Semaphore(max(1, int(os.environ.get("RB_API_CONCURRENCY", "5"))))
+        write_lock = asyncio.Lock()
+
+        async def run_module(entry: tuple) -> None:
+            async with module_sem:
+                module, groups = entry
+
+                async def run_group(group_name: str, group, agent) -> None:
+                    state, reason, content = "success", None, None
+                    try:
+                        async with api_sem:
+                            result = await _run_with_retry(
+                                Runner.run, agent,
+                                "Analyze the pre-loaded source code and produce a comprehensive Markdown knowledge document.",
+                                max_turns=3, timeout=module_timeout, context=f"{module}/{group_name}",
+                            )
+                        content = str(result.final_output).strip()
+                        if not content:
+                            state, reason = "failed", "empty output"
+                    except Exception as exc:
+                        state, reason = "partial", str(exc) or type(exc).__name__
+                        content = _build_agent_md_fallback(module, group_name, group)
+                    async with write_lock:
+                        if content:
+                            path = _agent_md_path(rb_dir / "agents", module, group_name, all_group_counts[module])
+                            try:
+                                atomic_write_text(path, content)
+                            except OSError as exc:
+                                state, reason = "failed", f"knowledge document could not be saved: {exc}"
+                        # Persisting success only after the artifact removes the
+                        # old crash window between status and Markdown writes.
+                        _mark_group_completion(status, module=module, group_name=group_name,
+                                               state=state, head_sha=current_sha)
+                        if reason:
+                            _mark_module_failure(status, module, group_name, reason, state)
+                        _write_refresh_status(rb_dir, status)
+
+                results = await asyncio.gather(*(run_group(*group) for group in groups), return_exceptions=True)
+                for result in results:
+                    if isinstance(result, BaseException):
+                        raise result
+                status.modules[module] = _aggregate_states([
+                    status.groups[_group_key(module, name)]
+                    for name in expected_groups[module]
+                ])
+                if current_sha:
+                    status.module_head_shas[module] = current_sha
+                _write_refresh_status(rb_dir, status)
+
+        results = await asyncio.gather(*(run_module(entry) for entry in module_entries), return_exceptions=True)
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result
+        for module in detect_modules(workspace):
+            if module not in status.modules:
+                _mark_module_failure(status, module, None, "module produced no group agents", "failed")
+        finish("module_docs", _aggregate_states(list(status.modules.values()), skipped_state="skipped"))
+
+        if not completed("git_insights", ("modules/_git_insights.md",)):
+            print("[7/8] Analyzing git history...", file=sys.stderr)
+            try:
+                if host_runner_mode:
+                    _write_host_runner_git_insights(workspace)
+                else:
+                    await _run_with_retry(
+                        Runner.run, build_refresh_git_agent(model, workspace),
+                        "Analyze the project's git history and write your git insights document.",
+                        max_turns=25, timeout=module_timeout, context="Git agent",
+                    )
+                if not _refresh_artifact_valid(rb_dir / "modules/_git_insights.md"):
+                    raise ValueError("git insights agent did not save its knowledge document")
+                finish("git_insights")
+            except Exception as exc:
+                _mark_stage_failure(status, "git_insights", str(exc) or type(exc).__name__, partial=True)
+                _write_refresh_status(rb_dir, status)
+
+        if not completed("module_registry", ("map.md", "module_registry.json", "module_registry.md")):
+            print("[8/8] Generating module map...", file=sys.stderr)
+            try:
+                try:
+                    content = await _generate_map_md(workspace, model or "")
+                    if not content.strip():
+                        raise ValueError("empty map output")
+                except Exception as exc:
+                    agent_error = f"Map Agent failed: {exc}"
+                    try:
+                        content = _build_fallback_map_md(workspace)
+                    except Exception as fallback_exc:
+                        raise RuntimeError(f"{agent_error}; deterministic map fallback failed: {fallback_exc}") from fallback_exc
+                    status.warnings.extend([agent_error, "Deterministic map fallback used."])
+                atomic_write_text(rb_dir / "map.md", content)
+                registry_entries = _build_module_registry_entries(workspace, status)
+                atomic_write_text(rb_dir / "module_registry.json", json.dumps(
+                    [entry.model_dump(mode="json") for entry in registry_entries], ensure_ascii=False, indent=2))
+                atomic_write_text(rb_dir / "module_registry.md", _render_module_registry_markdown(registry_entries))
+                finish("module_registry")
+            except Exception as exc:
+                _mark_stage_failure(status, "module_registry", str(exc), partial=False)
+                _write_refresh_status(rb_dir, status)
 
     if current_sha:
-        sha_file.write_text(current_sha, encoding="utf-8")
-
-    refresh_status.overall_status = _aggregate_states(
-        list(refresh_status.stages.values()) + list(refresh_status.modules.values()),
-        skipped_state="success",
-    )
-    _write_refresh_status(rb_dir, refresh_status)
-
-    _print_artifact_status(
-        rb_dir / "conventions.md",
-        refresh_status.stages.get("conventions", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "structure.md",
-        refresh_status.stages.get("structure", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "knowledge_graph.json",
-        refresh_status.stages.get("knowledge_graph", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "knowledge_graph.md",
-        refresh_status.stages.get("knowledge_graph", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "knowledge_graph.mmd",
-        refresh_status.stages.get("knowledge_graph", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "document_index.md",
-        refresh_status.stages.get("indexes", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "data_overview.md",
-        refresh_status.stages.get("indexes", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "media_manifest.md",
-        refresh_status.stages.get("indexes", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "module_registry.json",
-        refresh_status.stages.get("module_registry", "success"),
-    )
-    _print_artifact_status(
-        rb_dir / "module_registry.md",
-        refresh_status.stages.get("module_registry", "success"),
-    )
-    agents_out_dir = rb_dir / "agents"
-    if agents_out_dir.exists():
-        agent_md_count = len(list(agents_out_dir.glob("*.md")))
-        agent_dir_count = len([d for d in agents_out_dir.iterdir() if d.is_dir()])
-        status_label = "Preserved" if refresh_status.stages.get("module_docs") == "skipped" else "Updated"
-        print(f"{status_label} {agents_out_dir} ({agent_md_count} agent docs, {agent_dir_count} multi-group modules)")
-    modules_dir = rb_dir / "modules"
-    if modules_dir.exists():
-        mod_count = len(list(modules_dir.glob("*.md")))
-        facts_count = len(list(modules_dir.glob("*.facts.json")))
-        if refresh_status.stages.get("module_registry") == "skipped":
-            print(f"Preserved {modules_dir} ({mod_count} module docs, {facts_count} facts files)")
-        else:
-            print(f"Updated {modules_dir} ({mod_count} module docs, {facts_count} facts files)")
-    print(
-        f"Refresh status: {refresh_status.overall_status} "
-        f"(exit code {refresh_status.exit_code})",
-    )
-    return refresh_status
+        atomic_write_text(rb_dir / ".last_refresh_sha", current_sha)
+    status.overall_status = _aggregate_states(list(status.stages.values()) + list(status.modules.values()))
+    _write_refresh_status(rb_dir, status)
+    print(f"Refresh status: {status.overall_status} (exit code {status.exit_code})")
+    return status
 
 
 async def _refresh_pipeline_generation_entry(
     workspace: Path,
-    quick: bool = False,
-    failed_only: bool = False,
+    *,
+    full: bool = False,
 ) -> RefreshStatus:
-    """Refresh knowledge through an atomically promoted generation.
-
-    Full refresh builds the committed baseline.  Quick refresh delegates to
-    RepoBrain's bounded ImpactPlanner/ImpactVerifier loop and never falls back
-    to a full rebuild.
-    """
+    """Choose full, recovery, incremental, or no-op under the workspace lock."""
     from repobrain_engine.hub.incremental import (
+        _resume_failed_generation,
         ensure_clean_worktree,
         get_head_sha,
         incremental_refresh,
         initialize_full_generation_metadata,
     )
+    from repobrain_engine.hub.refresh_lifecycle import (
+        ensure_publishable,
+        find_recovery,
+        generation_config,
+        load_baseline,
+        save_recovery,
+    )
     from repobrain_engine.hub.storage import (
+        atomic_write_json,
         create_generation,
         new_generation_id,
         promote_generation,
-        remove_generation,
+        read_current_pointer,
         use_knowledge_root,
     )
 
     workspace = workspace.expanduser().resolve()
     ensure_clean_worktree(workspace)
-    if quick:
-        return await incremental_refresh(
-            workspace,
-            failed_only=failed_only,
-        )
-
     head_sha = get_head_sha(workspace)
-    generation = new_generation_id(head_sha)
-    generation_root = create_generation(
-        workspace,
-        generation,
-        clone_active=False,
+    config = generation_config()
+    active = read_current_pointer(workspace)
+    baseline_generation = str(active["generation"]) if active else None
+    recovery = None if full else find_recovery(
+        workspace, target_head=head_sha,
+        baseline_generation=baseline_generation, config=config,
     )
-    try:
-        with use_knowledge_root(generation_root):
-            status = await _refresh_pipeline_into_generation(
-                workspace,
-                quick=False,
-                failed_only=failed_only,
-            )
-            if status.overall_status != "success":
-                remove_generation(generation_root)
-                return status
-            snapshot = initialize_full_generation_metadata(
-                workspace,
-                generation_root,
-                head_sha,
-                status,
-            )
-        if get_head_sha(workspace) != head_sha:
-            raise RuntimeError("HEAD changed during full refresh; no generation was promoted.")
-        promote_generation(
-            workspace,
-            generation=generation,
-            head_sha=head_sha,
-            merkle_root=str(snapshot.get("merkle_root", "")),
-        )
-        return status
-    except Exception:
-        remove_generation(generation_root)
-        raise
+    if recovery is not None:
+        generation_root, mode = recovery
+        print(f"Continuing previous {mode} refresh / 继续上次更新", file=sys.stderr)
+        if mode == "incremental":
+            return await _resume_failed_generation(workspace, generation_root=generation_root, model=None)
+    else:
+        if not full:
+            pointer, snapshot = load_baseline(workspace, config)
+            if pointer is not None and snapshot is not None:
+                if pointer["head_sha"] == head_sha:
+                    print("Knowledge base is already up to date / 知识库已是最新", file=sys.stderr)
+                    return RefreshStatus(
+                        refresh_run_id=new_generation_id(head_sha), overall_status="success",
+                        head_sha=head_sha, target_head=head_sha,
+                        baseline_generation=baseline_generation, mode="noop",
+                    )
+                if not config["scan_only"]:
+                    print("Incremental refresh / 增量更新", file=sys.stderr)
+                    return await incremental_refresh(workspace, config=config)
+        print("Full rebuild / 全部重建" if full else "Building knowledge base / 构建完整知识库", file=sys.stderr)
+        generation_root = create_generation(workspace, new_generation_id(head_sha), clone_active=False)
+        save_recovery(generation_root, mode="full", target_head=head_sha,
+                      baseline_generation=baseline_generation, config=config)
+
+    # Keep all candidate progress on failure/interruption. Readers continue to
+    # resolve the prior active generation until the entire candidate succeeds.
+    with use_knowledge_root(generation_root):
+        status = await _refresh_pipeline_into_generation(workspace, resume=recovery is not None)
+        status.mode = "full"
+        status.resumed = recovery is not None
+        status.baseline_generation = baseline_generation
+        status.target_head = head_sha
+        atomic_write_json(generation_root / "status.json", status.model_dump(mode="json"))
+        if status.overall_status != "success":
+            return status
+        snapshot = initialize_full_generation_metadata(workspace, generation_root, head_sha, status)
+        atomic_write_json(generation_root / "refresh_config.json", config)
+    ensure_publishable(workspace, generation_root, head_sha)
+    promote_generation(workspace, generation=generation_root.name, head_sha=head_sha,
+                       merkle_root=str(snapshot.get("merkle_root", "")))
+    (generation_root / "resume.json").unlink(missing_ok=True)
+    return status
 
 
 async def refresh_pipeline(
     workspace: Path,
-    quick: bool = False,
-    failed_only: bool = False,
+    *,
+    full: bool = False,
 ) -> RefreshStatus:
     """Serialize and execute a generation-backed refresh."""
     from repobrain_engine.hub.storage import refresh_lock
@@ -997,8 +599,7 @@ async def refresh_pipeline(
     with refresh_lock(workspace):
         return await _refresh_pipeline_generation_entry(
             workspace,
-            quick=quick,
-            failed_only=failed_only,
+            full=full,
         )
 
 
@@ -1139,10 +740,7 @@ def _write_refresh_status(rb_dir: Path, status: RefreshStatus) -> None:
         status: Refresh status document to serialize.
     """
     status_path = rb_dir / "status.json"
-    status_path.write_text(
-        json.dumps(status.model_dump(mode="json"), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    atomic_write_text(status_path, json.dumps(status.model_dump(mode="json"), ensure_ascii=False, indent=2))
 
 
 def _load_previous_refresh_status(rb_dir: Path) -> dict[str, object]:
@@ -1152,7 +750,38 @@ def _load_previous_refresh_status(rb_dir: Path) -> dict[str, object]:
         payload = json.loads(status_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, TypeError):
         return {}
-    return payload if isinstance(payload, dict) else {}
+    if not isinstance(payload, dict):
+        return {}
+    try:
+        return RefreshStatus.model_validate(payload).model_dump(mode="json")
+    except ValueError:
+        return {}
+
+
+def _refresh_artifact_valid(path: Path, *, allow_empty: bool = False) -> bool:
+    """Require readable, structurally valid artifacts before reusing progress."""
+    try:
+        content = path.read_text(encoding="utf-8")
+        if not content.strip() and not (allow_empty and path.suffix == ".jsonl"):
+            return False
+        if AGENT_MD_FALLBACK_SENTINEL in content:
+            return False
+        if path.suffix == ".json":
+            payload = json.loads(content)
+            required_type = list if path.name == "module_registry.json" else dict
+            return isinstance(payload, required_type)
+        if path.suffix == ".jsonl":
+            return all(isinstance(json.loads(line), dict) for line in content.splitlines() if line.strip())
+        return True
+    except (OSError, UnicodeError, ValueError):
+        return False
+
+
+def _agent_md_path(agents_dir: Path, module: str, group_name: str, group_count: int) -> Path:
+    """Keep document layout stable when only some groups need to resume."""
+    from repobrain_engine.hub.incremental import _artifact_path
+
+    return agents_dir.parent / _artifact_path(module, group_name, group_count)
 
 
 def _group_key(module: str, group_name: str) -> str:
@@ -1176,23 +805,6 @@ def _mark_group_completion(
         status.group_head_shas[key] = head_sha
 
 
-def _previous_module_success_at_head(
-    previous_status: dict[str, object],
-    module: str,
-    current_sha: str | None,
-) -> bool:
-    """Return whether a module already succeeded at the current HEAD."""
-    if not current_sha:
-        return False
-    modules = previous_status.get("modules")
-    if not isinstance(modules, dict) or modules.get(module) != "success":
-        return False
-    module_head_shas = previous_status.get("module_head_shas")
-    if isinstance(module_head_shas, dict):
-        return module_head_shas.get(module) == current_sha
-    return previous_status.get("head_sha") == current_sha
-
-
 def _previous_group_success_at_head(
     previous_status: dict[str, object],
     module: str,
@@ -1211,7 +823,7 @@ def _previous_group_success_at_head(
         if isinstance(group_head_shas, dict):
             return group_head_shas.get(key) == current_sha
         return previous_status.get("head_sha") == current_sha
-    return _previous_module_success_at_head(previous_status, module, current_sha)
+    return False
 
 
 def _filter_completed_groups_for_head(
@@ -1220,8 +832,9 @@ def _filter_completed_groups_for_head(
     previous_status: dict[str, object],
     current_sha: str | None,
     refresh_status: RefreshStatus,
+    agents_dir: Path,
 ) -> list:
-    """Remove groups already completed successfully at the same HEAD."""
+    """Remove groups with successful status and durable documents at this HEAD."""
     if not current_sha or not previous_status:
         return module_entries
 
@@ -1235,7 +848,7 @@ def _filter_completed_groups_for_head(
                 module,
                 group_name,
                 current_sha,
-            ):
+            ) and _refresh_artifact_valid(_agent_md_path(agents_dir, module, group_name, len(group_entries))):
                 skipped_groups += 1
                 _mark_group_completion(
                     refresh_status,
@@ -1252,56 +865,6 @@ def _filter_completed_groups_for_head(
             refresh_status.modules[module] = "success"
             refresh_status.module_head_shas[module] = current_sha
     return filtered_entries
-
-
-def _filter_module_entries_for_changed_files(
-    *,
-    workspace: Path,
-    module_entries: list,
-    changed_files: list[str],
-) -> tuple[list, int]:
-    """Keep only module groups affected by quick-scan changed files."""
-    changed = {path.replace("\\", "/").strip() for path in changed_files if path.strip()}
-    if not changed:
-        return [], 0
-
-    filtered_entries: list = []
-    affected_count = 0
-    for module, group_entries in module_entries:
-        module_path_prefix = _module_path_prefix(workspace, module)
-        module_has_unmatched_change = any(
-            module_path_prefix
-            and (rel == module_path_prefix or rel.startswith(f"{module_path_prefix}/"))
-            for rel in changed
-        )
-        kept_groups: list = []
-        matched_any_group = False
-        for group_name, group, agent in group_entries:
-            group_files = {
-                getattr(source_file, "rel_path", "").replace("\\", "/")
-                for source_file in getattr(group, "files", [])
-            }
-            if group_files & changed:
-                matched_any_group = True
-                kept_groups.append((group_name, group, agent))
-        if module_has_unmatched_change and not matched_any_group:
-            kept_groups = list(group_entries)
-        if kept_groups:
-            affected_count += len(kept_groups)
-            filtered_entries.append((module, kept_groups))
-    return filtered_entries, affected_count
-
-
-def _module_path_prefix(workspace: Path, module: str) -> str | None:
-    """Resolve a module id to a workspace-relative path prefix."""
-    try:
-        from repobrain_engine.hub.scanner import resolve_module_path
-
-        module_path = resolve_module_path(workspace, module)
-        rel_path = module_path.relative_to(workspace).as_posix()
-    except Exception:
-        return module if module else None
-    return "" if rel_path == "." else rel_path
 
 
 def _extract_json_payload(output: object) -> dict[str, object]:
@@ -1738,37 +1301,6 @@ def _dedupe_evidence(evidence: list[EvidenceSpan]) -> list[EvidenceSpan]:
     return result
 
 
-def _write_agent_md_artifacts(
-    agents_dir: Path,
-    module: str,
-    group_outputs: list[tuple[str, str]],
-) -> None:
-    """Write agent.md Markdown artifacts for a module.
-
-    For single-group modules: writes ``agents/{module}.md``.
-    For multi-group modules: writes ``agents/{module}/group_name.md``
-    (one per group, no merging — each is a standalone knowledge document).
-
-    Args:
-        agents_dir: The ``.repobrain/agents`` directory.
-        module: Module identifier.
-        group_outputs: List of ``(group_name, markdown_content)`` tuples.
-    """
-    if len(group_outputs) == 1:
-        # Single group → single file
-        _group_name, md_content = group_outputs[0]
-        out_path = agents_dir / f"{module}.md"
-        out_path.write_text(md_content, encoding="utf-8")
-    else:
-        # Multiple groups → directory with one file per group
-        mod_dir = agents_dir / module
-        mod_dir.mkdir(parents=True, exist_ok=True)
-        for group_name, md_content in group_outputs:
-            safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", group_name)
-            out_path = mod_dir / f"{safe_name}.md"
-            out_path.write_text(md_content, encoding="utf-8")
-
-
 def _write_host_runner_git_insights(workspace: Path) -> Path:
     """Write a deterministic git insights doc for host-runner mode.
 
@@ -1796,7 +1328,7 @@ def _write_host_runner_git_insights(workspace: Path) -> Path:
         "pre-extracted git data; no LLM narration was applied._\n\n"
         f"{git_data.strip()}\n"
     )
-    doc_path.write_text(content, encoding="utf-8")
+    atomic_write_text(doc_path, content)
     return doc_path
 
 
@@ -2211,48 +1743,6 @@ def _build_non_code_indexes(report) -> tuple[str, str, str]:
         _render("Data Overview", data),
         _render("Media Manifest", media),
     )
-
-
-def _compute_affected_modules(
-    report,
-    module_ids: list[str],
-) -> set[str] | None:
-    """Determine which modules were touched by changed files in a quick scan.
-
-    Returns ``None`` if the impact cannot be determined (e.g. no file
-    metadata), in which case the caller should run all modules.
-
-    Args:
-        report: ScanReport from quick_scan.
-        module_ids: List of known module identifiers.
-
-    Returns:
-        Set of affected module identifiers, or None.
-    """
-    metadata = getattr(report, "file_metadata", None)
-    samples = getattr(report, "scanned_file_samples", None)
-    changed_paths = list(metadata.keys()) if metadata else (samples or [])
-    if not changed_paths:
-        return None
-
-    affected: set[str] = set()
-    for rel_path in changed_paths:
-        parts = rel_path.replace("\\", "/").split("/")
-        if not parts:
-            continue
-        # Match against module IDs — check both simple ("cli") and
-        # two-level ("engine_hub") patterns.
-        top = parts[0]
-        for mid in module_ids:
-            if mid == top:
-                affected.add(mid)
-            elif mid.startswith(f"{top}_") and len(parts) > 1:
-                # Two-level: "engine_hub" matches "engine/repobrain_engine/hub/..."
-                # Heuristic: if any path component matches the suffix, it's affected.
-                suffix = mid.split("_", 1)[1]
-                if suffix in parts:
-                    affected.add(mid)
-    return affected
 
 
 def _build_scan_payload(report) -> dict[str, object]:

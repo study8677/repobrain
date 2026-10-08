@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 from repobrain_engine.hub.contracts import ChangeRecord, RefreshStatus
-from repobrain_engine.hub.storage import knowledge_root
+from repobrain_engine.hub.storage import knowledge_root, atomic_write_json, atomic_write_text
 
 
 class IncrementalExecutionError(RuntimeError):
@@ -53,27 +53,33 @@ async def execute_affected_groups(
     except (OSError, ValueError, TypeError):
         execution = {}
     group_states = execution.setdefault("group_states", {})
+    if not isinstance(group_states, dict):
+        group_states = execution["group_states"] = {}
     write_lock = asyncio.Lock()
 
-    async def persist(group_id: str, state: str, reason: str = "") -> None:
+    async def persist(group_id: str, state: str, reason: str = "", digest: str | None = None) -> None:
         async with write_lock:
-            group_states[group_id] = {"state": state, "reason": reason}
-            execution_path.write_text(
-                json.dumps(execution, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
+            group_states[group_id] = {"state": state, "reason": reason, "digest": digest}
+            atomic_write_json(execution_path, execution)
 
     async def run_one(group_id: str) -> None:
         previous = group_states.get(group_id, {})
-        if isinstance(previous, dict) and previous.get("state") == "success":
-            status.groups[group_id] = "success"
-            return
         entry = groups.get(group_id)
         # A removed group is handled by orphan cleanup and needs no model call.
         if not isinstance(entry, dict):
             status.groups[group_id] = "success"
             await persist(group_id, "success")
             return
+        out_path = knowledge_root(workspace) / str(entry["artifact_path"])
+        if isinstance(previous, dict) and previous.get("state") == "success":
+            try:
+                saved = out_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError):
+                saved = ""
+            digest = hashlib.sha256(saved.encode()).hexdigest()
+            if saved.strip() and digest == previous.get("digest"):
+                status.groups[group_id] = "success"
+                return
         runtime = entries.get(group_id)
         if runtime is None:
             await persist(group_id, "failed", "group is not executable at target HEAD")
@@ -81,10 +87,14 @@ async def execute_affected_groups(
         _module, _group, agent = runtime
         try:
             async with semaphore:
-                result = await Runner.run(
+                from repobrain_engine.hub.refresh_pipeline import _run_with_retry
+                result = await _run_with_retry(
+                    Runner.run,
                     agent,
                     "Analyze the pre-loaded source code and produce a comprehensive Markdown knowledge document.",
                     max_turns=3,
+                    timeout=float(os.environ.get("RB_MODULE_AGENT_TIMEOUT_SECONDS", "300")),
+                    context=group_id,
                 )
         except Exception as exc:
             await persist(group_id, "failed", str(exc))
@@ -93,13 +103,14 @@ async def execute_affected_groups(
         if not content:
             await persist(group_id, "failed", "empty knowledge output")
             raise IncrementalExecutionError(f"Affected group returned empty knowledge: {group_id}")
-        out_path = knowledge_root(workspace) / str(entry["artifact_path"])
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(content, encoding="utf-8")
+        atomic_write_text(out_path, content)
         status.groups[group_id] = "success"
-        await persist(group_id, "success")
+        await persist(group_id, "success", digest=hashlib.sha256(content.encode()).hexdigest())
 
-    await asyncio.gather(*(run_one(group_id) for group_id in affected_group_ids))
+    results = await asyncio.gather(*(run_one(group_id) for group_id in affected_group_ids), return_exceptions=True)
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
     _remove_orphan_agent_docs(knowledge_root(workspace), snapshot)
 
 
@@ -113,7 +124,7 @@ def _remove_orphan_agent_docs(root: Path, snapshot: Mapping[str, object]) -> Non
         if isinstance(entry, dict) and entry.get("artifact_path")
     }
     for path in sorted(agents_dir.rglob("*.md")):
-        if path.resolve() not in valid:
+        if path.name != "_git_insights.md" and path.resolve() not in valid:
             path.unlink()
     for directory in sorted((path for path in agents_dir.rglob("*") if path.is_dir()), reverse=True):
         try:
@@ -175,13 +186,53 @@ def update_related_artifacts(
         render_knowledge_graph_markdown,
         render_knowledge_graph_mermaid,
     )
-    from repobrain_engine.hub.refresh_pipeline import _build_non_code_indexes
+    from repobrain_engine.hub.refresh_pipeline import (
+        _build_non_code_indexes, _export_normalized_graph_store, _write_host_runner_git_insights,
+    )
+    from repobrain_engine.hub.refresh_lifecycle import read_json_object
     from repobrain_engine.hub.scanner import extract_structure, full_scan
 
     selected = set(artifacts)
     root = knowledge_root(workspace)
+    paths = {
+        "agent_docs": ("map.md", "map_entries.json"),
+        "map": ("map.md", "map_entries.json"),
+        "knowledge_graph": ("knowledge_graph.json", "knowledge_graph.md", "knowledge_graph.mmd", "graph/nodes.jsonl", "graph/edges.jsonl"),
+        "structure": ("structure.md",),
+        "indexes": ("document_index.md", "data_overview.md", "media_manifest.md"),
+        "conventions": ("conventions.md", "convention_entries.json"),
+        "git_insights": ("modules/_git_insights.md",),
+    }
+    progress_path = root / "artifact_progress.json"
+    progress = read_json_object(progress_path) or {}
+    completed = progress.get("completed", {})
+    if not isinstance(completed, dict):
+        completed = {}
+
+    def artifact_digest(name: str) -> str | None:
+        try:
+            content = (root / name).read_bytes()
+            if not content and not name.endswith(".jsonl"):
+                return None
+            return hashlib.sha256(content).hexdigest()
+        except OSError:
+            return None
+
+    for artifact in list(selected):
+        expected = completed.get(artifact)
+        current = {name: artifact_digest(name) for name in paths.get(artifact, ())}
+        if current and all(value is not None for value in current.values()) and current == expected:
+            selected.remove(artifact)
+
+    def checkpoint(*names: str) -> None:
+        for artifact in names:
+            if artifact in selected:
+                completed[artifact] = {name: artifact_digest(name) for name in paths[artifact]}
+        atomic_write_json(progress_path, {"completed": completed})
+
     if "map" in selected or "agent_docs" in selected:
         render_incremental_map(root, snapshot)
+        checkpoint("map", "agent_docs")
     report = None
     if selected & {"knowledge_graph", "indexes"}:
         report = full_scan(workspace)
@@ -203,15 +254,23 @@ def update_related_artifacts(
         )
         (root / "knowledge_graph.md").write_text(render_knowledge_graph_markdown(graph), encoding="utf-8")
         (root / "knowledge_graph.mmd").write_text(render_knowledge_graph_mermaid(graph), encoding="utf-8")
+        _export_normalized_graph_store(root, graph)
+        checkpoint("knowledge_graph")
     if "structure" in selected:
         (root / "structure.md").write_text(extract_structure(workspace), encoding="utf-8")
+        checkpoint("structure")
     if "indexes" in selected and report is not None:
         docs, data, media = _build_non_code_indexes(report)
         (root / "document_index.md").write_text(docs, encoding="utf-8")
         (root / "data_overview.md").write_text(data, encoding="utf-8")
         (root / "media_manifest.md").write_text(media, encoding="utf-8")
+        checkpoint("indexes")
     if "conventions" in selected:
         _append_convention_change_entry(root, changes)
+        checkpoint("conventions")
+    if "git_insights" in selected:
+        _write_host_runner_git_insights(workspace)
+        checkpoint("git_insights")
 
 
 def _patch_knowledge_graph(

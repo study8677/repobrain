@@ -192,15 +192,19 @@ Ask pipeline 实现了上下文感知的回退机制：
    export OPENAI_MODEL=your-model
    ```
 
-### 增量刷新（`--quick`）
+### 自动刷新
 
 对于已提交的干净工作树：
 
 ```bash
-rb-refresh --quick
+rb-refresh
 ```
 
-这会触发增量刷新：
+首次构建、提交改动后、上次更新中断后，都运行同一个命令。RepoBrain 自动选择
+构建、匹配任务续跑、受影响分组增量更新或已是最新。只有明确要重新生成全部知识时
+才运行 `rb-refresh --full`。`--workspace` 默认当前目录；刷新要求 Git 工作区干净。
+
+进入增量更新时：
 - **ImpactPlanner** 分析 git diff 确定受影响的模块
 - **ImpactVerifier** 验证影响分析
 - 只刷新受影响的 agent-group
@@ -234,7 +238,7 @@ git add .
 git commit -m "Update auth logic"
 
 # 快速增量刷新（仅受影响的模块）
-rb-refresh --quick
+rb-refresh
 
 # 验证更新
 rb-ask "auth 模块有什么变化？"
@@ -250,7 +254,7 @@ rb-ask "数据库连接在哪里？"
 rb report
 
 # 强制完全刷新（非增量）
-rb-refresh  # 不使用 --quick
+rb-refresh --full
 ```
 
 ## 🐛 故障排查
@@ -272,7 +276,7 @@ cat .env | grep OPENAI
 rb report
 
 # 强制完全刷新（非增量）
-rb-refresh  # 不使用 --quick
+rb-refresh --full
 
 # 检查生成日志
 ls -la .repobrain/
@@ -298,7 +302,7 @@ MCP server 实现：`engine/repobrain_engine/hub/mcp_server.py`
 ## 🚀 性能建议
 
 ### 加快刷新速度
-- 使用 `--quick` 进行增量更新（提交后的干净工作树）
+- 提交后运行 `rb-refresh`，系统自动选择增量更新
 - 扫描排除项已内置（venv、node_modules、.git 等 — 参见 `engine/repobrain_engine/hub/_constants.py` 中的 `SKIP_DIRS`）
 - 使用更快的模型（例如 GPT-4o-mini 或 Claude 3.5 Haiku）
 

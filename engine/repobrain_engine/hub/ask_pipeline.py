@@ -271,7 +271,7 @@ async def _maybe_auto_refresh(workspace: Path, settings) -> None:
     if reason is None:
         return
     print(
-        f"[refresh-needed] {reason}; run `rb-refresh --quick` manually. "
+        f"[refresh-needed] {reason}; run `rb-refresh` manually. "
         "RB_ASK_AUTO_REFRESH is reminder-only and no longer runs refresh.",
         file=sys.stderr,
     )
@@ -556,7 +556,7 @@ def _build_workspace_health_notices(workspace: Path) -> list[str]:
         notices.append(
             "⚠ Knowledge base is "
             f"{behind_count} commit(s) behind HEAD -- consider running "
-            "rb-refresh --quick."
+            "rb-refresh."
         )
 
     degraded_modules = _load_degraded_status_modules(workspace)
@@ -834,7 +834,7 @@ def _prepend_degradation_banner(
     banner = (
         f"> ⚠ Incomplete knowledge for module(s): {mods}. These were not fully "
         "analyzed in the last refresh, so the answer may be unreliable for them — "
-        "run `rb-refresh --failed-only` to fix.\n\n"
+        "run `rb-refresh` to fix.\n\n"
     )
     return banner + answer
 

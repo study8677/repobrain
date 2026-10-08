@@ -35,7 +35,7 @@ código y expone la misma capa mediante plugins, CLI y MCP.
 - **Evidencia estructurada**: claims JSON + verificación de fuente (ruta de archivo + rango de líneas)
 - **Soporte multi-lenguaje**: Python, TypeScript/JavaScript, Go, Rust, Java, Kotlin, Swift, C/C++, C#
 - **Host-runner**: backend CLI local (RB_HOST_RUNNER), sin necesidad de API key
-- **Refresh incremental**: `rb-refresh --quick` solo actualiza agent-groups afectados
+- **Refresh incremental**: `rb-refresh` solo actualiza agent-groups afectados
 - **Arquitectura de agentes**:
   - Refresh Swarm: ScanAnalyst → ArchitectureReviewer → ConventionWriter
   - Ask Swarm: Router + ModuleAgent dinámico + GitAgent

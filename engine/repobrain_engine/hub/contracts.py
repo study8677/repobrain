@@ -334,6 +334,8 @@ class RefreshStatus(BaseModel):
     unaffected_groups: list[str] = Field(default_factory=list)
     unresolved_groups: list[str] = Field(default_factory=list)
     impact_plan_path: str | None = None
+    mode: Literal["full", "incremental", "noop"] | None = None
+    resumed: bool = False
 
     @property
     def exit_code(self) -> int:

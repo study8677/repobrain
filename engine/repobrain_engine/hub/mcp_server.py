@@ -32,6 +32,28 @@ from pathlib import Path
 from mcp.server.fastmcp import Context, FastMCP
 
 
+class RepoBrainMCP(FastMCP):
+    """Reject removed refresh arguments instead of silently ignoring them."""
+
+    async def list_tools(self):
+        tools = await super().list_tools()
+        for tool in tools:
+            if tool.name == "refresh_project":
+                tool.inputSchema["additionalProperties"] = False
+        return tools
+
+    async def call_tool(self, name: str, arguments: dict):
+        if name == "refresh_project":
+            unexpected = set(arguments) - {"full"}
+            if unexpected:
+                raise ValueError(
+                    "Unsupported refresh argument(s): "
+                    + ", ".join(sorted(unexpected))
+                    + ". Use full=true to force a complete rebuild."
+                )
+        return await super().call_tool(name, arguments)
+
+
 _SECRET_PATTERNS = (
     (
         re.compile(r"(?i)\b([A-Z0-9_]*API_KEY)\s*=\s*([^\s,;]+)"),
@@ -238,12 +260,12 @@ def serve(workspace: Path) -> None:
     _active_workspace = workspace
     _log_mcp_event(f"starting rb-mcp workspace={workspace}")
 
-    mcp = FastMCP(
+    mcp = RepoBrainMCP(
         "RepoBrain Knowledge Hub",
         instructions=(
             "Use ask_project to answer any question about the codebase — "
             "where code lives, why decisions were made, how things work. "
-            "Use refresh_project to rebuild the project knowledge base after "
+            "Use refresh_project to automatically update the project knowledge base after "
             "significant changes. Prefer ask_project over manual file search."
         ),
     )
@@ -274,15 +296,15 @@ def serve(workspace: Path) -> None:
             return _format_tool_error("ask_project", exc)
 
     @mcp.tool()
-    async def refresh_project(quick: bool = False, ctx: Context = None) -> str:
-        """Rebuild the project knowledge base (.repobrain/conventions.md and structure.md).
+    async def refresh_project(full: bool = False, ctx: Context = None) -> str:
+        """Automatically build, update or resume the project knowledge base.
 
         Run this after significant code changes to keep the knowledge base
-        up to date. Use quick=True to let RepoBrain judge and update only
-        Agent groups affected by committed changes since the active generation.
+        up to date. RepoBrain chooses the necessary work and continues matching
+        unfinished tasks automatically. Use full=True to force a new full build.
 
         Args:
-            quick: If True, run the bounded ImpactPlanner/ImpactVerifier loop.
+            full: If True, start a complete rebuild instead of automatic updating.
 
         Returns:
             Confirmation message with updated file paths.
@@ -292,17 +314,17 @@ def serve(workspace: Path) -> None:
         from repobrain_engine.hub.pipeline import refresh_pipeline
 
         try:
-            status = await refresh_pipeline(_active_workspace, quick=quick)
-            if status.overall_status == "unresolved":
-                return (
-                    "Knowledge base was not changed: incremental impact remains unresolved.\n"
-                    f"Plan: {status.impact_plan_path or '(not written)'}"
-                )
+            status = await refresh_pipeline(_active_workspace, full=full)
+            from repobrain_engine.hub.refresh_result import format_refresh_result
+
+            summary = format_refresh_result(status)
+            if status.overall_status != "success" or status.mode == "noop":
+                return summary
             from repobrain_engine.hub.storage import knowledge_root
 
             rb_dir = knowledge_root(_active_workspace)
             return (
-                f"Knowledge base updated:\n"
+                f"{summary}\n"
                 f"  {rb_dir / 'conventions.md'}\n"
                 f"  {rb_dir / 'structure.md'}"
             )

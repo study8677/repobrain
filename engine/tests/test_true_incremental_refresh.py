@@ -60,6 +60,11 @@ def _install_baseline(workspace: Path, head: str) -> dict[str, object]:
         artifact = root / entry["artifact_path"]
         artifact.parent.mkdir(parents=True, exist_ok=True)
         artifact.write_text(f"# {entry['group_name']}\n", encoding="utf-8")
+    (root / "map.md").write_text("# Module Map\n", encoding="utf-8")
+    (root / "status.json").write_text(json.dumps({
+        "refresh_run_id": "baseline", "overall_status": "success", "head_sha": head,
+        "stages": {"module_docs": "success"},
+    }), encoding="utf-8")
     promote_generation(
         workspace,
         generation=generation,
@@ -363,7 +368,7 @@ async def test_semantic_noop_can_promote_with_zero_group_execution(
 
 
 @pytest.mark.asyncio
-async def test_failed_only_resumes_unpromoted_generation(
+async def test_auto_refresh_resumes_unpromoted_generation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -409,8 +414,11 @@ async def test_failed_only_resumes_unpromoted_generation(
         await incremental_refresh(tmp_path, model=object())
     old_pointer = read_current_pointer(tmp_path)
 
-    status = await incremental_refresh(tmp_path, model=object(), failed_only=True)
+    from repobrain_engine.hub.refresh_pipeline import refresh_pipeline
+    monkeypatch.setattr("repobrain_engine.hub.agents.create_model", lambda settings: object())
+    status = await refresh_pipeline(tmp_path)
 
     assert status.overall_status == "success"
+    assert status.resumed is True
     assert attempts == 2
     assert read_current_pointer(tmp_path) != old_pointer

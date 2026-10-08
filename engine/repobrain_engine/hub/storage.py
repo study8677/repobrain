@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import tempfile
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
@@ -26,6 +27,25 @@ _knowledge_root_override: ContextVar[Path | None] = ContextVar(
     "repobrain_knowledge_root_override",
     default=None,
 )
+
+
+def atomic_write_text(path: Path, content: str) -> None:
+    """Persist an artifact completely before exposing its completion marker."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def atomic_write_json(path: Path, payload: object) -> None:
+    """Atomically save a JSON checkpoint or artifact."""
+    atomic_write_text(path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
 def control_root(workspace: Path) -> Path:

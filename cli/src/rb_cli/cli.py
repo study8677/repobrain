@@ -487,24 +487,17 @@ def ask_cmd(
 @app.command("refresh")
 def refresh_cmd(
     workspace: str = typer.Option(".", "--workspace", "-w", help="Project directory."),
-    quick: bool = typer.Option(
+    full: bool = typer.Option(
         False,
-        "--quick",
-        help="Judge committed diff impact and update only affected Agent groups.",
-    ),
-    failed_only: bool = typer.Option(
-        False,
-        "--failed-only",
-        help="Resume failed/pending groups for the current target commit.",
+        "--full",
+        help="Force a new complete rebuild instead of automatic updating.",
     ),
 ) -> None:
-    """Refresh project context in .repobrain/ (requires LLM)."""
+    """Automatically build, update or resume project knowledge in .repobrain/."""
     workspace_path = Path(workspace).resolve()
     args: list[str] = ["refresh"]
-    if quick:
-        args.append("--quick")
-    if failed_only:
-        args.append("--failed-only")
+    if full:
+        args.append("--full")
     code = _run_hub(workspace_path, *args)
     raise typer.Exit(code=code)
 

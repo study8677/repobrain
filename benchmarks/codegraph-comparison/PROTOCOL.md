@@ -91,7 +91,7 @@ This pilot does not claim that controlled-model result.
 
 ### Incremental
 
-- Explicit update time: `rb-refresh --quick` versus `codegraph sync`
+- Explicit update time: `rb-refresh` with an existing complete baseline versus `codegraph sync`
 - Time until changed facts are queryable
 - Stale-fact rate
 - Incremental result versus clean rebuild

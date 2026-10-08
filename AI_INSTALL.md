@@ -1,14 +1,22 @@
 # AI_INSTALL — paste this to your AI assistant
 
 **For humans:** You are using an AI IDE (Trae / Cursor / Claude Code / Codex / Windsurf / Cline)
-and it is already logged in. You do **not** need an API key. Copy this whole file to your
+and it is already logged in. A logged-in headless CLI can serve as the backend
+without an API key; otherwise configure an OpenAI-compatible provider. Copy this file to your
 AI assistant and say: *"Install RepoBrain in this project by following AI_INSTALL.md."*
 Then just answer any question it asks. When it finishes, ask it anything about your codebase.
 
 **面向用户：** 你正在用某个 AI IDE（Trae / Cursor / Claude Code / Codex / Windsurf / Cline），
-而且已经登录。你**不需要 API key**。把这个文件整段贴给你的 AI 助手，对它说：
+而且已经登录。本机可用且已登录的命令行工具可以作为后端，无需 API key；否则需要
+配置 OpenAI 兼容提供商。把这个文件贴给你的 AI 助手，对它说：
 *"照着 AI_INSTALL.md 在这个项目里装好 RepoBrain。"* 然后回答它问你的问题即可。
 装完后，直接问它任何关于你代码库的问题。
+
+**Para usuarios:** Una CLI con sesión iniciada puede servir de backend sin API key;
+si no está disponible, configura un proveedor compatible con OpenAI. Comparte este
+archivo con tu asistente y dile: *"Instala RepoBrain en este proyecto siguiendo
+AI_INSTALL.md y explícame el resultado en español."* Las instrucciones técnicas
+de abajo están en inglés y chino; el asistente debe responder en tu idioma.
 
 ---
 
@@ -110,11 +118,16 @@ Check in this order and use the **first** one that is available and logged in:
    ```
 
 4. **Fallback — no local CLI found.** Only if none of the above is available, tell the user a
-   zero-key backend needs a logged-in Trae/Codex/Claude, and offer to run `rb-setup` so they can
-   paste an API key instead. Do not fabricate a key.
+   zero-key backend needs a logged-in Trae/Codex/Claude. Offer to configure an
+   OpenAI-compatible provider in `.env` using `engine/.env.example` as reference.
+   In an installed native plugin, `/rb-setup` or `/repobrain:rb-setup` can guide
+   this configuration; `rb-setup` is not a standalone shell executable.
+   Do not fabricate a key.
 
    **回退——没探测到本地 CLI。** 只有在以上都不可用时，告诉用户零-key 需要一个已登录的
-   Trae/Codex/Claude，并提议运行 `rb-setup` 让他贴 API key。不要编造 key。
+   Trae/Codex/Claude，可以参考 `engine/.env.example` 配置 `.env` 中的 OpenAI 兼容
+   提供商。已安装原生插件时，可用 `/rb-setup` 或 `/repobrain:rb-setup` 引导配置；
+   `rb-setup` 不是独立的 shell 命令。不要编造 key。
 
 Write `.env` to the **project root** and make sure it is git-ignored:
 
@@ -124,13 +137,14 @@ Write `.env` to the **project root** and make sure it is git-ignored:
 grep -qxF '.env' .gitignore 2>/dev/null || echo '.env' >> .gitignore
 ```
 
-### Step 4 — Initialize the project / 初始化项目
+### Step 4 — Optional IDE context files / 可选的 IDE 规则文件
 
-Drop the RepoBrain convention files (`AGENTS.md`, `CLAUDE.md`, `.trae/rules/…`, `.cursorrules`, …)
-so any AI IDE — including you — automatically knows to call `rb-ask`:
+If the user wants IDE rule files that guide future assistants to `rb-ask`,
+inject them with the command below. This is optional: refresh creates the
+knowledge directory itself. Preserve existing rules; do not use `--force`.
 
-放入 RepoBrain 约定文件（`AGENTS.md` / `CLAUDE.md` / `.trae/rules/…` / `.cursorrules` 等），
-让任何 AI IDE（包括你自己）以后都自动调用 `rb-ask`：
+如果用户需要引导后续助手调用 `rb-ask` 的 IDE 规则文件，可以执行下面的命令。
+这一步是可选的：刷新会自行创建知识库目录。保留已有规则，不使用 `--force`。
 
 ```bash
 rb init .
@@ -138,13 +152,24 @@ rb init .
 
 ### Step 5 — Smoke test / 冒烟自测
 
-Ask RepoBrain one question. The first call auto-builds the knowledge base (no separate
-`rb-refresh` needed), then answers. Show the answer to the user:
+Before refreshing, verify that the project is a Git repository with at least one
+commit and a clean worktree. Setup or optional IDE files may have introduced
+changes. If the tree is dirty, list the affected files and explain that they
+must be committed or stashed before continuing. Do not automatically commit,
+stash, or discard the user's changes.
 
-问 RepoBrain 一个问题。首次调用会自动建库（无需单独 `rb-refresh`）再回答。把答案展示给用户：
+刷新前确认项目是至少有一次提交的 Git 仓库，且工作区干净。配置和可选的 IDE 文件
+可能产生修改。若工作区不干净，列出相关文件，说明需要先提交或用 `git stash`
+收起修改再继续。不要自动提交、stash 或丢弃用户的修改。
+
+Build the knowledge base first, then ask one question and show the answer.
+`rb-ask` does not build or update knowledge during a question.
+
+先构建知识库，再提问并展示答案。`rb-ask` 不会在问答过程中构建或更新知识库。
 
 ```bash
-rb-ask "What does this project do? / 这个项目是做什么的?" --workspace .
+rb-refresh
+rb-ask "What does this project do? / 这个项目是做什么的?"
 ```
 
 For programmatic use, `--json` returns `{answer, sources, limitations, workspace, question}`.
@@ -153,18 +178,23 @@ For programmatic use, `--json` returns `{answer, sources, limitations, workspace
 
 ### Step 6 — Report / 汇报
 
-Tell the user, in their language:
+Report the backend actually configured and whether refresh and ask passed.
+Use the example below only when a zero-key host runner was configured. If
+verification is still blocked, state the remaining issue rather than claiming success.
 
-用用户的语言告诉他：
+用用户的语言说明实际配置的后端，以及刷新和问答是否通过。下面的示例只适用于
+已配置零-key 本地后端的情况。若验证仍受阻，说明剩余问题，不声称安装验收成功。
 
 > ✅ RepoBrain is installed and configured for **zero-API-key** mode (driving your logged-in
 > `<runner>`). From now on, just ask me anything about this codebase — I will use RepoBrain to
-> answer, grounded in real code with file paths and line numbers. The knowledge base refreshes
-> itself automatically; run `rb-refresh --workspace .` only to force a full rebuild.
+> answer, grounded in real code with file paths and line numbers. Run `rb-refresh` after
+> committing code changes or to continue a failed task; it selects the update mode automatically.
+> Use `rb-refresh --full` only to regenerate all knowledge. Ask does not trigger refresh.
 >
 > ✅ RepoBrain 已装好并配置为**零 API key**模式（驱动你已登录的 `<runner>`）。以后直接问我
 > 关于这个代码库的任何问题即可——我会用 RepoBrain 基于真实源码作答，带文件路径和行号。
-> 知识库会自动刷新；只有强制全量重建时才需手动跑 `rb-refresh --workspace .`。
+> 代码提交后或上次更新失败后，运行 `rb-refresh`，系统会自动选择更新方式。
+> 只有需要重新生成全部知识时才使用 `rb-refresh --full`。提问不会触发刷新。
 
 ---
 

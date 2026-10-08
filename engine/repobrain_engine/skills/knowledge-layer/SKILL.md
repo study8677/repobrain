@@ -10,8 +10,14 @@ Provide a high-level deployment wrapper over RepoBrain core, with graph-first
 knowledge injection and all-file support (code, docs, data, media metadata).
 
 ## Inputs
-- `refresh_filesystem(workspace=".", quick=False)`
+- `refresh_filesystem(workspace=".", full=False)`
 - `ask_filesystem(question, workspace=".")`
+
+Refresh automatically chooses a first complete build, matching interrupted-task
+resume, committed-diff update, or no-op. `full=True` always starts a new complete
+build. The workspace defaults to the current directory and must be a clean Git
+worktree. Ask stays read-only and only suggests `rb-refresh` when knowledge is
+stale. Both refresh surfaces report failures without replacing usable knowledge.
 
 ## Outputs
 - Refresh writes graph-first artifacts under `.repobrain/`:

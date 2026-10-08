@@ -107,7 +107,13 @@ async def test_refresh_pipeline_creates_conventions(
 
     # Create a mock agents module with Runner.run as AsyncMock
     mock_agents_module = MagicMock()
-    mock_agents_module.Runner.run = AsyncMock(return_value=mock_result)
+    async def mock_run(agent, *args, **kwargs):
+        from repobrain_engine.hub.storage import knowledge_root
+        path = knowledge_root(tmp_path) / "modules/_git_insights.md"
+        path.write_text("# Git Insights\n", encoding="utf-8")
+        return mock_result
+
+    mock_agents_module.Runner.run = AsyncMock(side_effect=mock_run)
     mock_agents_module.Agent = MagicMock()
     mock_agents_module.set_tracing_disabled = MagicMock()
 
@@ -116,7 +122,7 @@ async def test_refresh_pipeline_creates_conventions(
         import repobrain_engine.hub.pipeline as pipeline_mod
         importlib.reload(pipeline_mod)
 
-        await pipeline_mod.refresh_pipeline(tmp_path, quick=False)
+        await pipeline_mod.refresh_pipeline(tmp_path)
 
     from repobrain_engine.hub.storage import knowledge_root
 
@@ -154,7 +160,7 @@ async def test_refresh_scan_only_can_be_enabled_from_env_file(
 
     reset_settings()
 
-    status = await refresh_pipeline(tmp_path, quick=False)
+    status = await refresh_pipeline(tmp_path)
 
     assert status.stages["conventions"] == "skipped"
     from repobrain_engine.hub.storage import knowledge_root
@@ -199,7 +205,7 @@ async def test_generic_host_runner_full_refresh_promotes_generation(
         raise RuntimeError("map agent unavailable")
 
     monkeypatch.setattr(refresh_mod, "_generate_map_md", fail_map_agent)
-    status = await refresh_mod.refresh_pipeline(tmp_path, quick=False)
+    status = await refresh_mod.refresh_pipeline(tmp_path)
 
     generation_root = active_generation_root(tmp_path)
     assert status.stages["git_insights"] == "success"
@@ -255,7 +261,7 @@ async def test_failed_map_fallback_prevents_full_refresh_promotion(
     monkeypatch.setattr(refresh_mod, "_generate_map_md", fail_map_agent)
     monkeypatch.setattr(refresh_mod, "_build_fallback_map_md", fail_fallback)
 
-    status = await refresh_mod.refresh_pipeline(tmp_path, quick=False)
+    status = await refresh_mod.refresh_pipeline(tmp_path)
 
     assert status.stages["module_registry"] == "failed"
     assert status.overall_status == "failed"

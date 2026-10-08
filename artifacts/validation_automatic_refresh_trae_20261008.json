@@ -1,0 +1,195 @@
+{
+  "runner": "trae-cli",
+  "repository": "/Users/bytedance/.codex/worktrees/auto-knowledge-refresh/repobrain",
+  "evidence": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99",
+  "passed": true,
+  "steps": [
+    {
+      "phase": "01-initial",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/ordinary-slfnurzz",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 101.596,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/01-initial.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/01-initial.stderr.txt",
+      "trae_calls": 4,
+      "stages": {
+        "conventions": 1,
+        "module": 2,
+        "map": 1
+      }
+    },
+    {
+      "phase": "02-noop",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/ordinary-slfnurzz",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 0.5,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/02-noop.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/02-noop.stderr.txt",
+      "trae_calls": 0,
+      "stages": {}
+    },
+    {
+      "phase": "03-incremental",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/ordinary-slfnurzz",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 121.029,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/03-incremental.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/03-incremental.stderr.txt",
+      "trae_calls": 5,
+      "stages": {
+        "planner": 2,
+        "verifier": 2,
+        "module": 1
+      }
+    },
+    {
+      "phase": "04-force-full",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/ordinary-slfnurzz",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh",
+        "--full"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 150.221,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/04-force-full.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/04-force-full.stderr.txt",
+      "trae_calls": 4,
+      "stages": {
+        "conventions": 1,
+        "module": 2,
+        "map": 1
+      }
+    },
+    {
+      "phase": "05-full-failure",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/recovery-zuerdb7d",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh"
+      ],
+      "returncode": 2,
+      "elapsed_seconds": 76.253,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/05-full-failure.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/05-full-failure.stderr.txt",
+      "trae_calls": 3,
+      "stages": {
+        "conventions": 1,
+        "module": 2,
+        "map": 1
+      }
+    },
+    {
+      "phase": "06-full-resume",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/recovery-zuerdb7d",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 35.163,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/06-full-resume.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/06-full-resume.stderr.txt",
+      "trae_calls": 1,
+      "stages": {
+        "module": 1
+      }
+    },
+    {
+      "phase": "07-incremental-failure",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/recovery-zuerdb7d",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh"
+      ],
+      "returncode": 1,
+      "elapsed_seconds": 98.559,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/07-incremental-failure.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/07-incremental-failure.stderr.txt",
+      "trae_calls": 3,
+      "stages": {
+        "planner": 1,
+        "verifier": 1,
+        "module": 2
+      }
+    },
+    {
+      "phase": "08-incremental-resume",
+      "workspace": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/recovery-zuerdb7d",
+      "command": [
+        "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+        "-m",
+        "repobrain_engine",
+        "refresh"
+      ],
+      "returncode": 0,
+      "elapsed_seconds": 39.483,
+      "stdout": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/08-incremental-resume.stdout.txt",
+      "stderr": "/private/tmp/repobrain-auto-refresh-trae-validation/20261008T071501Z-d7fb0f99/08-incremental-resume.stderr.txt",
+      "trae_calls": 1,
+      "stages": {
+        "module": 1
+      }
+    }
+  ],
+  "started_at": "2026-10-08T07:15:01.964194+00:00",
+  "finished_at": "2026-10-08T07:25:33.573506+00:00",
+  "trae_version": "traecli 0.201.1-alpha.9(internal edition)",
+  "automated_tests": {
+    "passed": 396,
+    "command": "PYTHONPATH=engine:cli/src <venv-python> -m pytest engine/tests cli/tests -q"
+  },
+  "checks": {
+    "repository_contract": "passed",
+    "openspec_strict": "passed",
+    "diff_whitespace": "passed"
+  },
+  "base_commit": "ed8a5d040b87848f37b004857a2f9678e50398fc",
+  "branch": "codex/auto-knowledge-refresh",
+  "runtime_file_hashes": {
+    "cli/src/rb_cli/__init__.py": "4880c0f6535fd21524d7ee49923fc307f0077e43e91120fb4ac029a0cfca6337",
+    "cli/src/rb_cli/cli.py": "3a38d33dbf06388d833b2ab368344093d25c36724874b7232842ccd036e4cb83",
+    "cli/src/rb_cli/templates/AGENTS.md": "88abb8d64603df51bba84a5c188508c731d54566a25502b0fa0780b2602ff324",
+    "engine/repobrain_engine/__init__.py": "d740b97011712c523fce0697ab8af1f1044fec54c7b69dea312ea0d517d9abf6",
+    "engine/repobrain_engine/_cli_entry.py": "fdc00c451391f52c02c9ef3d2e5e4300a2f630c7459ad20617da57c87dd83549",
+    "engine/repobrain_engine/config.py": "c7b1774ef6f9c5f94fa7742a309f4050d2970d6b018ef8aa751a5b809efbbdfd",
+    "engine/repobrain_engine/hub/ask_pipeline.py": "412f42e8f35e605f2c84c747e8e8727cdae975ce9b5307bfcfbf26807d9fe05e",
+    "engine/repobrain_engine/hub/contracts.py": "f222ef50d6c2ba4c5b3500173efb5cdc265667dfa33f5106f1587c1329957435",
+    "engine/repobrain_engine/hub/incremental.py": "294d3a6ba40ecc4dfd7d8780a426d0956a039f1aa38fe67e5bce259124253827",
+    "engine/repobrain_engine/hub/incremental_artifacts.py": "a09fa0723aaf50ed7526b7ff8ad7c9c6bcf9d251d72dd59ba65f4103b591365c",
+    "engine/repobrain_engine/hub/mcp_server.py": "ded0987f6a4c39efd180f08ad558350d2601198959957953573a8475b904e3e4",
+    "engine/repobrain_engine/hub/refresh_lifecycle.py": "8365f23636a988d530b9c9542d19d6747f3a1262e425017a4e59d7358a5e6bda",
+    "engine/repobrain_engine/hub/refresh_pipeline.py": "d78cdeea35d9b98b438f670b22432133dfb5357c93c0af2cb6aabcee2d7b480e",
+    "engine/repobrain_engine/hub/refresh_result.py": "0d1f623324d7cdf54feaf5719789f92ea81e6470a93178e1c86d74258bbb734f",
+    "engine/repobrain_engine/hub/storage.py": "96e5a8a342827b36fcabd83749c3b67ef3e6c299dfd6bd041eab85758cb8ae0b",
+    "engine/repobrain_engine/skills/knowledge-layer/SKILL.md": "8314db5595e86117e34c6caac5c88f2ae53d066ab099ff7515e2d52b8eadfa23",
+    "engine/repobrain_engine/skills/knowledge-layer/tools.py": "cd20f7f0be7c59457c7aab40c3606e55877c2b3cf1fc6d4378be04d19a0686c9",
+    "scripts/validate_refresh_trae.py": "2a98b97cfed30618e63e6a70eca90b2c456f1ba60d5123ddc8c04b004d619181"
+  }
+}

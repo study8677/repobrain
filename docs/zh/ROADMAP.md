@@ -34,7 +34,7 @@ RepoBrain 正收敛为一个可移植的 repository knowledge engine：把 works
 - **结构化证据**：JSON claims + 源码验证（文件路径 + 行范围）
 - **多语言支持**：Python、TypeScript/JavaScript、Go、Rust、Java、Kotlin、Swift、C/C++、C#
 - **Host-runner**：本地 CLI 后端（RB_HOST_RUNNER），无需 API key 即可运行
-- **增量刷新**：`rb-refresh --quick` 只刷新受影响的 agent-group
+- **增量刷新**：`rb-refresh` 只刷新受影响的 agent-group
 - **Agent 架构**：
   - Refresh Swarm: ScanAnalyst → ArchitectureReviewer → ConventionWriter
   - Ask Swarm: Router + 动态 ModuleAgent + GitAgent

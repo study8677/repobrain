@@ -192,15 +192,21 @@ Esto asegura que la funcionalidad ask permanezca disponible incluso si la base d
    export OPENAI_MODEL=tu-modelo
    ```
 
-### Actualización Incremental (`--quick`)
+### Actualización Automática
 
 Para árboles de trabajo limpios con cambios confirmados:
 
 ```bash
-rb-refresh --quick
+rb-refresh
 ```
 
-Esto activa la actualización incremental:
+Usa el mismo comando para la primera construcción, nuevos commits y una tarea
+interrumpida. RepoBrain construye, reanuda una tarea coincidente, actualiza los
+grupos afectados o termina si la base ya está actualizada. `rb-refresh --full`
+inicia una reconstrucción completa nueva. `--workspace` usa el directorio actual
+por defecto; se requiere un árbol Git limpio.
+
+En una actualización incremental:
 - **ImpactPlanner** analiza git diff para determinar módulos afectados
 - **ImpactVerifier** verifica el análisis de impacto
 - Solo se actualizan los agent-groups afectados
@@ -234,7 +240,7 @@ git add .
 git commit -m "Actualizar lógica de auth"
 
 # Actualización incremental rápida (solo módulos afectados)
-rb-refresh --quick
+rb-refresh
 
 # Verificar actualizaciones
 rb-ask "¿Qué cambió en el módulo auth?"
@@ -250,7 +256,7 @@ rb-ask "¿Dónde está la conexión de base de datos?"
 rb report
 
 # Forzar actualización completa (no incremental)
-rb-refresh  # sin --quick
+rb-refresh --full
 ```
 
 ## 🐛 Solución de Problemas
@@ -272,7 +278,7 @@ cat .env | grep OPENAI
 rb report
 
 # Forzar actualización completa (no incremental)
-rb-refresh  # sin --quick
+rb-refresh --full
 
 # Verificar logs de generación
 ls -la .repobrain/
@@ -298,7 +304,7 @@ Implementación del servidor MCP: `engine/repobrain_engine/hub/mcp_server.py`
 ## 🚀 Consejos de Rendimiento
 
 ### Acelerar Actualización
-- Usar `--quick` para actualizaciones incrementales (árbol de trabajo limpio después de commit)
+- Ejecutar `rb-refresh` después de commits; selecciona actualización incremental automáticamente
 - Las exclusiones de escaneo están incorporadas (venv, node_modules, .git, etc. — ver `SKIP_DIRS` en `engine/repobrain_engine/hub/_constants.py`)
 - Usar modelos más rápidos (ej., GPT-4o-mini o Claude 3.5 Haiku)
 

@@ -29,15 +29,14 @@ from repobrain_engine.hub.contracts import (
 )
 from repobrain_engine.hub.storage import (
     active_generation_root,
-    control_root,
     create_generation,
     knowledge_root,
     new_generation_id,
     promote_generation,
     read_current_pointer,
-    remove_generation,
     use_knowledge_root,
     write_run_record,
+    atomic_write_json,
 )
 
 
@@ -64,7 +63,7 @@ class DirtyWorktreeError(IncrementalRefreshError):
 
 
 class MissingBaselineError(IncrementalRefreshError):
-    """Raised when quick refresh has no generation snapshot to compare."""
+    """Raised when incremental refresh has no generation snapshot to compare."""
 
 
 def _run_git(workspace: Path, args: list[str], *, text: bool = True) -> subprocess.CompletedProcess:
@@ -299,7 +298,7 @@ def build_workspace_snapshot(
     *,
     previous: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    """Build the committed-source snapshot used by later quick refreshes."""
+    """Build the committed-source snapshot used by later incremental refreshes."""
     inventory = _group_inventory(workspace, previous)
     groups = dict(inventory["groups"])
     # Git blob ids cover every committed file (including docs/config/data) and
@@ -362,7 +361,7 @@ def _committed_blob_hashes(workspace: Path, head_sha: str) -> dict[str, str]:
 def save_snapshot(root: Path, snapshot: Mapping[str, object]) -> Path:
     """Persist a snapshot in a generation."""
     path = root / "snapshot.json"
-    path.write_text(json.dumps(dict(snapshot), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, dict(snapshot))
     return path
 
 
@@ -500,34 +499,11 @@ def _status_for_unresolved(
         head_sha=head_sha,
         target_head=head_sha,
         baseline_generation=baseline_generation,
+        mode="incremental",
     )
     status.stages["impact_plan"] = "unresolved"
     status.failures.append(FailureRecord(stage="impact_plan", reason=reason))
     return status
-
-
-def _find_resumable_generation(
-    workspace: Path,
-    *,
-    target_head: str,
-    baseline_generation: str,
-) -> Path | None:
-    generations = control_root(workspace) / "generations"
-    if not generations.is_dir():
-        return None
-    for candidate in sorted((path for path in generations.iterdir() if path.is_dir()), reverse=True):
-        resume_path = candidate / "resume.json"
-        try:
-            payload = json.loads(resume_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, TypeError):
-            continue
-        if (
-            isinstance(payload, dict)
-            and payload.get("target_head") == target_head
-            and payload.get("baseline_generation") == baseline_generation
-        ):
-            return candidate
-    return None
 
 
 async def _resume_failed_generation(
@@ -541,6 +517,7 @@ async def _resume_failed_generation(
     snapshot = _load_snapshot_from_root(generation_root)
     if snapshot is None:
         raise IncrementalRefreshError("Resumable generation is missing snapshot.json.")
+    from repobrain_engine.hub.refresh_lifecycle import ensure_publishable, read_json_object
     try:
         status = RefreshStatus.model_validate_json((generation_root / "status.json").read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
@@ -559,6 +536,10 @@ async def _resume_failed_generation(
         from repobrain_engine.hub.agents import create_model
 
         model = create_model(get_settings())
+    status.mode = "incremental"
+    status.resumed = True
+    status.failures = []
+    status.warnings = []
     with use_knowledge_root(generation_root):
         await execute_affected_groups(
             workspace,
@@ -577,13 +558,10 @@ async def _resume_failed_generation(
                 "artifacts": "success" if plan.artifacts else "skipped",
             }
         )
-        (generation_root / "status.json").write_text(
-            json.dumps(status.model_dump(mode="json"), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-    if get_head_sha(workspace) != plan.target_head:
-        remove_generation(generation_root)
-        raise IncrementalRefreshError("HEAD changed while resuming incremental refresh.")
+        atomic_write_json(generation_root / "status.json", status.model_dump(mode="json"))
+        recovery = read_json_object(generation_root / "resume.json")
+        atomic_write_json(generation_root / "refresh_config.json", recovery["config"])
+    ensure_publishable(workspace, generation_root, plan.target_head)
     promote_generation(
         workspace,
         generation=generation_root.name,
@@ -598,7 +576,7 @@ async def incremental_refresh(
     workspace: Path,
     *,
     model: object | None = None,
-    failed_only: bool = False,
+    config: dict[str, object] | None = None,
 ) -> RefreshStatus:
     """Run the committed-diff impact loop and atomically promote on success."""
     workspace = workspace.expanduser().resolve()
@@ -611,7 +589,7 @@ async def incremental_refresh(
         status = _status_for_unresolved(
             run_id=run_id,
             head_sha=target_head,
-            reason="No generation baseline exists. Run `rb-refresh` once before `--quick`.",
+            reason="No generation baseline exists. Run `rb-refresh` to build it.",
         )
         status.impact_plan_path = str(
             write_run_record(workspace, run_id, status.model_dump(mode="json"))
@@ -620,18 +598,6 @@ async def incremental_refresh(
 
     baseline_head = str(baseline.get("head_sha", ""))
     baseline_generation = str(pointer.get("generation", ""))
-    if failed_only:
-        resumable = _find_resumable_generation(
-            workspace,
-            target_head=target_head,
-            baseline_generation=baseline_generation,
-        )
-        if resumable is not None:
-            return await _resume_failed_generation(
-                workspace,
-                generation_root=resumable,
-                model=model,
-            )
     if baseline_head == target_head:
         return RefreshStatus(
             refresh_run_id=run_id,
@@ -639,6 +605,7 @@ async def incremental_refresh(
             head_sha=target_head,
             target_head=target_head,
             baseline_generation=baseline_generation,
+            mode="noop",
             stages={"diff": "skipped", "impact_plan": "skipped", "module_docs": "skipped"},
         )
 
@@ -686,35 +653,25 @@ async def incremental_refresh(
         affected_groups=plan.affected_group_ids,
         unaffected_groups=plan.unaffected_group_ids,
         impact_plan_path=str(plan_path),
+        mode="incremental",
     )
     try:
         with use_knowledge_root(generation_root):
             # The cloned active generation may contain the prior run's
             # execution journal. A new target commit always starts a fresh
-            # journal; only --failed-only reuses one in-place.
+            # journal; recovery reuses one in-place.
             (generation_root / "execution.json").unlink(missing_ok=True)
             save_snapshot(generation_root, target)
             (generation_root / "impact_plan.json").write_text(
                 plan.model_dump_json(indent=2) + "\n",
                 encoding="utf-8",
             )
-            (generation_root / "resume.json").write_text(
-                json.dumps(
-                    {
-                        "run_id": run_id,
-                        "baseline_generation": baseline_generation,
-                        "target_head": target_head,
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-            (generation_root / "status.json").write_text(
-                json.dumps(status.model_dump(mode="json"), ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            from repobrain_engine.hub.refresh_lifecycle import generation_config, save_recovery, ensure_publishable
+            config = config if config is not None else generation_config()
+            save_recovery(generation_root, mode="incremental", target_head=target_head,
+                          baseline_generation=baseline_generation, config=config)
+            (generation_root / "artifact_progress.json").unlink(missing_ok=True)
+            atomic_write_json(generation_root / "status.json", status.model_dump(mode="json"))
             await execute_affected_groups(
                 workspace,
                 target,
@@ -731,13 +688,10 @@ async def incremental_refresh(
                     "artifacts": "success" if plan.artifacts else "skipped",
                 }
             )
-            (generation_root / "status.json").write_text(
-                json.dumps(status.model_dump(mode="json"), ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+            atomic_write_json(generation_root / "status.json", status.model_dump(mode="json"))
+            atomic_write_json(generation_root / "refresh_config.json", config)
         # A commit arriving during refresh invalidates the whole candidate.
-        if get_head_sha(workspace) != target_head:
-            raise IncrementalRefreshError("HEAD changed during refresh; run `rb-refresh --quick` again.")
+        ensure_publishable(workspace, generation_root, target_head)
         promote_generation(
             workspace,
             generation=generation,
@@ -747,7 +701,7 @@ async def incremental_refresh(
         (generation_root / "resume.json").unlink(missing_ok=True)
         return status
     except Exception:
-        # Keep staging + execution.json for --failed-only. It is never visible
+        # Keep staging + execution.json for automatic recovery. It is never visible
         # because current.json still points at the prior generation.
         raise
 
@@ -762,10 +716,17 @@ def initialize_full_generation_metadata(
     snapshot = build_workspace_snapshot(workspace, head_sha)
     save_snapshot(generation_root, snapshot)
     render_incremental_map(generation_root, snapshot)
-    status.baseline_generation = generation_root.name
+    # Routing depends on the final documents and final module health. A full
+    # recovery may have replaced fallback documents after the map stage had
+    # finished, so finalize the derived registry without another model call.
+    if status.stages.get("module_docs") != "skipped":
+        from repobrain_engine.hub.refresh_pipeline import (
+            _build_module_registry_entries, _render_module_registry_markdown,
+        )
+        entries = _build_module_registry_entries(workspace, status)
+        atomic_write_json(generation_root / "module_registry.json", [entry.model_dump(mode="json") for entry in entries])
+        from repobrain_engine.hub.storage import atomic_write_text
+        atomic_write_text(generation_root / "module_registry.md", _render_module_registry_markdown(entries))
     status.target_head = head_sha
-    (generation_root / "status.json").write_text(
-        json.dumps(status.model_dump(mode="json"), ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    atomic_write_json(generation_root / "status.json", status.model_dump(mode="json"))
     return snapshot

@@ -7,6 +7,7 @@ knowledge engine for grounded codebase Q&A.
 
 ### Getting Started
 - **[Quick Start Guide](QUICK_START.md)** — Installation, local development, and first steps
+- **[Usage Reference](USAGE.md)** — Commands, automation, optional context files, and MCP server setup
 - **[Project Philosophy](PHILOSOPHY.md)** — Product thesis and support boundaries
 
 ### Core Features

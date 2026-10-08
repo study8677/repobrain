@@ -105,7 +105,7 @@ def _emit_ask_json(workspace: Path, question: str, answer_text: str) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
-def _run_refresh_pipeline(workspace: Path, *, quick: bool, failed_only: bool):
+def _run_refresh_pipeline(workspace: Path, *, full: bool):
     """Run the refresh pipeline for CLI entry points."""
     import asyncio
     from repobrain_engine.hub.pipeline import refresh_pipeline
@@ -113,8 +113,7 @@ def _run_refresh_pipeline(workspace: Path, *, quick: bool, failed_only: bool):
     return asyncio.run(
         refresh_pipeline(
             workspace=workspace,
-            quick=quick,
-            failed_only=failed_only,
+            full=full,
         )
     )
 
@@ -249,14 +248,9 @@ def refresh_main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument("--workspace", default=".", help="Project root (default: cwd)")
     parser.add_argument(
-        "--quick",
+        "--full",
         action="store_true",
-        help="Judge committed diff impact and update only affected Agent groups",
-    )
-    parser.add_argument(
-        "--failed-only",
-        action="store_true",
-        help="Resume failed/pending groups for the current target commit",
+        help="Force a new complete knowledge-base rebuild (default: update automatically)",
     )
     args = _parse_args(parser, argv)
 
@@ -266,9 +260,11 @@ def refresh_main(argv: Sequence[str] | None = None) -> None:
     try:
         status = _run_refresh_pipeline(
             workspace=workspace,
-            quick=args.quick,
-            failed_only=args.failed_only,
+            full=args.full,
         )
+        from repobrain_engine.hub.refresh_result import format_refresh_result
+
+        print(format_refresh_result(status))
         if getattr(status, "exit_code", 0) != 0:
             sys.exit(int(status.exit_code))
     except KeyboardInterrupt:

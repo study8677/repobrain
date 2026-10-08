@@ -51,9 +51,9 @@ def test_hub_main_dispatches_refresh(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda argv=None: calls.append(list(argv or [])),
     )
 
-    _cli_entry.hub_main(["refresh", "--quick"])
+    _cli_entry.hub_main(["refresh", "--full"])
 
-    assert calls == [["--quick"]]
+    assert calls == [["--full"]]
 
 
 def test_engine_main_rejects_unknown_subcommand() -> None:
@@ -110,7 +110,7 @@ def test_refresh_main_debug_mode_prints_traceback(
         lambda: "/tmp/rb-mcp.log",
     )
 
-    def fail_refresh(workspace, *, quick: bool, failed_only: bool):
+    def fail_refresh(workspace, *, full: bool):
         raise RuntimeError("refresh failed")
 
     monkeypatch.setattr(_cli_entry, "_run_refresh_pipeline", fail_refresh)
@@ -264,3 +264,50 @@ def test_ask_main_json_value_error_is_json(
     assert captured.out == ""
     error = json.loads(captured.err)
     assert error["error"] == "No LLM configured"
+
+
+@pytest.mark.parametrize('arguments, full', [([], False), (['--full'], True)])
+def test_refresh_main_selects_automatic_or_full(arguments, full, monkeypatch, capsys):
+    from pathlib import Path
+    from types import SimpleNamespace
+    from repobrain_engine import _cli_entry
+
+    calls = []
+    def fake_refresh(workspace, *, full):
+        calls.append((workspace, full))
+        return SimpleNamespace(
+            overall_status='success', mode='noop', resumed=False, exit_code=0,
+        )
+    monkeypatch.setattr(_cli_entry, '_run_refresh_pipeline', fake_refresh)
+    _cli_entry.refresh_main(arguments)
+    assert calls == [(Path.cwd().resolve(), full)]
+    assert 'already up to date' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('old_flag', ['--quick', '--failed-only'])
+def test_refresh_main_rejects_removed_flags(old_flag, monkeypatch):
+    from repobrain_engine import _cli_entry
+    monkeypatch.setattr(
+        _cli_entry, '_run_refresh_pipeline',
+        lambda *args, **kwargs: pytest.fail('Removed options must not start refresh'),
+    )
+    with pytest.raises(SystemExit) as error:
+        _cli_entry.refresh_main([old_flag])
+    assert error.value.code == 2
+
+
+@pytest.mark.parametrize('state,code', [('partial', 2), ('unresolved', 2), ('failed', 1)])
+def test_refresh_main_propagates_non_success(state, code, monkeypatch, capsys):
+    from types import SimpleNamespace
+    from repobrain_engine import _cli_entry
+    monkeypatch.setattr(
+        _cli_entry, '_run_refresh_pipeline',
+        lambda *args, **kwargs: SimpleNamespace(
+            overall_status=state, mode='incremental', resumed=False,
+            exit_code=code, failures=[], impact_plan_path=None,
+        ),
+    )
+    with pytest.raises(SystemExit) as error:
+        _cli_entry.refresh_main([])
+    assert error.value.code == code
+    assert 'Knowledge base updated' not in capsys.readouterr().out

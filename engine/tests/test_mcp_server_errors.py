@@ -143,3 +143,52 @@ async def test_rb_mcp_exposes_project_tools(tmp_path: Path, monkeypatch) -> None
 
     names = {tool.name for tool in result.tools}
     assert {"ask_project", "refresh_project"} <= names
+
+
+@pytest.mark.asyncio
+async def test_refresh_tool_schema_and_removed_arguments(tmp_path, monkeypatch):
+    from repobrain_engine.hub import mcp_server
+    captured = []
+    monkeypatch.setenv('CLAUDE_PLUGIN_DATA_DIR', str(tmp_path / 'logs'))
+    monkeypatch.setattr(mcp_server.RepoBrainMCP, 'run', lambda self, **kwargs: captured.append(self))
+    mcp_server.serve(tmp_path)
+    server = captured[0]
+    tools = await server.list_tools()
+    refresh = next(tool for tool in tools if tool.name == 'refresh_project')
+    assert set(refresh.inputSchema['properties']) == {'full'}
+    assert refresh.inputSchema['additionalProperties'] is False
+    for old_argument in ('quick', 'failed_only'):
+        with pytest.raises(ValueError, match='Unsupported refresh argument'):
+            await server.call_tool('refresh_project', {old_argument: True})
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('state,mode,resumed,expected', [
+    ('success', 'full', False, 'Full build completed'),
+    ('success', 'incremental', False, 'Incremental update completed'),
+    ('success', 'incremental', True, 'Continuation of the previous refresh completed'),
+    ('success', 'noop', False, 'already up to date'),
+    ('partial', 'full', False, 'incomplete'),
+    ('unresolved', 'incremental', False, 'remains unresolved'),
+    ('failed', 'full', True, 'refresh failed'),
+])
+async def test_refresh_tool_reports_actual_result(state, mode, resumed, expected, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from repobrain_engine.hub import mcp_server, pipeline
+    captured = []
+    calls = []
+    monkeypatch.setenv('CLAUDE_PLUGIN_DATA_DIR', str(tmp_path / 'logs'))
+    monkeypatch.setattr(mcp_server.RepoBrainMCP, 'run', lambda self, **kwargs: captured.append(self))
+    async def fake_refresh(workspace, *, full=False):
+        calls.append((workspace, full))
+        return SimpleNamespace(overall_status=state, mode=mode, resumed=resumed,
+                               failures=[], impact_plan_path=None)
+    monkeypatch.setattr(pipeline, 'refresh_pipeline', fake_refresh)
+    mcp_server.serve(tmp_path)
+    result = await captured[0]._tool_manager.get_tool('refresh_project').fn(full=True)
+    assert calls == [(tmp_path, True)]
+    assert expected in result
+    if state != 'success' or mode == 'noop':
+        assert 'conventions.md' not in result
+    if state != 'success':
+        assert 'Knowledge base updated' not in result

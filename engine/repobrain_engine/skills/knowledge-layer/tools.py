@@ -42,12 +42,12 @@ def _resolve_workspace(workspace: str | None = None) -> Path:
     return candidate
 
 
-def refresh_filesystem(workspace: str = ".", quick: bool = False) -> str:
+def refresh_filesystem(workspace: str = ".", full: bool = False) -> str:
     """Refresh graph-first knowledge artifacts for all file types.
 
     Args:
         workspace: Project root directory.
-        quick: If True, incremental refresh from last git checkpoint.
+        full: If True, force a new complete rebuild instead of automatic updating.
 
     Returns:
         Status summary with generated artifact paths.
@@ -55,15 +55,15 @@ def refresh_filesystem(workspace: str = ".", quick: bool = False) -> str:
     from repobrain_engine.hub.pipeline import refresh_pipeline
 
     ws = _resolve_workspace(workspace)
-    status = asyncio.run(refresh_pipeline(ws, quick=quick))
-    if getattr(status, "overall_status", None) == "unresolved":
-        return (
-            "Knowledge-layer refresh unresolved; active generation was preserved.\n"
-            f"Plan: {status.impact_plan_path or '(not written)'}"
-        )
+    status = asyncio.run(refresh_pipeline(ws, full=full))
+    from repobrain_engine.hub.refresh_result import format_refresh_result
+
+    summary = format_refresh_result(status)
+    if status.overall_status != "success" or status.mode == "noop":
+        return summary
     rb_dir = knowledge_root(ws)
     return (
-        "Knowledge-layer refresh completed:\n"
+        f"{summary}\n"
         f"- {rb_dir / 'knowledge_graph.json'}\n"
         f"- {rb_dir / 'knowledge_graph.md'}\n"
         f"- {rb_dir / 'document_index.md'}\n"

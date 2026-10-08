@@ -8,6 +8,7 @@ de archivos.
 
 ### Comenzando
 - **[Guía de Inicio Rápido](QUICK_START.md)** — Instalación, desarrollo local y primeros pasos
+- **[Referencia de Uso](USAGE.md)** — Comandos, automatización, instrucciones opcionales y servidor MCP
 - **[Filosofía del Proyecto](PHILOSOPHY.md)** — Conceptos centrales y protocolo Artifact-First
 
 ### Características Principales
@@ -63,7 +64,7 @@ Llama cualquier API compatible con OpenAI mediante la herramienta integrada `cal
 │   │   ├── refresh_pipeline.py  #   Pipeline de generación de conocimiento
 │   │   ├── ask_pipeline.py      #   Pipeline de preguntas y respuestas
 │   │   ├── agents.py            #   Refresh/Ask Swarm agents
-│   │   ├── incremental.py       #   Actualización incremental (--quick)
+│   │   ├── incremental.py       #   Actualización incremental automática
 │   │   ├── host_runner.py       #   Backend CLI local (sin API key)
 │   │   ├── mcp_server.py        #   Servidor rb-mcp
 │   │   ├── storage.py           #   Almacenamiento de base de conocimiento (current.json)

@@ -433,7 +433,7 @@ def test_realistic_go_refresh_pipeline_emits_semantic_diagnostics(
     monkeypatch.setenv("RB_REFRESH_SCAN_ONLY", "1")
     commit_workspace(tmp_path)
 
-    status = asyncio.run(refresh_pipeline(tmp_path, quick=False))
+    status = asyncio.run(refresh_pipeline(tmp_path))
     from repobrain_engine.hub.storage import knowledge_root
 
     graph = json.loads((knowledge_root(tmp_path) / "knowledge_graph.json").read_text(encoding="utf-8"))
@@ -472,7 +472,7 @@ def test_mixed_language_refresh_pipeline_normalizes_nested_go_modules(
     monkeypatch.setenv("RB_REFRESH_SCAN_ONLY", "1")
     commit_workspace(tmp_path)
 
-    status = asyncio.run(refresh_pipeline(tmp_path, quick=False))
+    status = asyncio.run(refresh_pipeline(tmp_path))
     from repobrain_engine.hub.storage import knowledge_root
 
     graph = json.loads((knowledge_root(tmp_path) / "knowledge_graph.json").read_text(encoding="utf-8"))

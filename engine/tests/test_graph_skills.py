@@ -130,7 +130,10 @@ def test_refresh_filesystem_reports_generated_artifacts(
     """refresh_filesystem should delegate to refresh_pipeline and report outputs."""
     module = _load_skill_tools_module("knowledge-layer")
 
-    async def fake_refresh_pipeline(workspace: Path, quick: bool = False) -> None:
+    async def fake_refresh_pipeline(workspace: Path, *, full: bool = False):
+        from types import SimpleNamespace
+
+        assert full is True
         rb_dir = workspace / ".repobrain"
         rb_dir.mkdir(parents=True, exist_ok=True)
         for name in (
@@ -141,15 +144,16 @@ def test_refresh_filesystem_reports_generated_artifacts(
             "media_manifest.md",
         ):
             (rb_dir / name).write_text(name, encoding="utf-8")
+        return SimpleNamespace(overall_status="success", mode="full", resumed=False)
 
     import repobrain_engine.hub.pipeline as pipeline_mod
 
     monkeypatch.setattr(pipeline_mod, "refresh_pipeline", fake_refresh_pipeline)
     monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
 
-    result = module.refresh_filesystem(workspace=str(tmp_path), quick=True)
+    result = module.refresh_filesystem(workspace=str(tmp_path), full=True)
 
-    assert "Knowledge-layer refresh completed" in result
+    assert "Full build completed" in result
     assert "knowledge_graph.json" in result
     assert (tmp_path / ".repobrain" / "knowledge_graph.json").exists()
 
@@ -210,3 +214,27 @@ def test_knowledge_layer_rejects_workspace_outside_root(
         assert "workspace must be inside" in str(exc)
     else:
         raise AssertionError("Expected ValueError for out-of-workspace path.")
+
+
+def test_refresh_filesystem_rejects_removed_arguments():
+    import pytest
+    module = _load_skill_tools_module('knowledge-layer')
+    for old_argument in ('quick', 'failed_only'):
+        with pytest.raises(TypeError, match='unexpected keyword argument'):
+            module.refresh_filesystem(**{old_argument: True})
+
+
+def test_refresh_filesystem_does_not_claim_failed_work_completed(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from repobrain_engine.hub import pipeline
+    module = _load_skill_tools_module('knowledge-layer')
+    monkeypatch.setenv('WORKSPACE_PATH', str(tmp_path))
+    for state in ('partial', 'unresolved', 'failed'):
+        async def fake_refresh(workspace, *, full=False):
+            return SimpleNamespace(overall_status=state, mode='incremental', resumed=False,
+                                   failures=[], impact_plan_path=None)
+        monkeypatch.setattr(pipeline, 'refresh_pipeline', fake_refresh)
+        result = module.refresh_filesystem(workspace=str(tmp_path))
+        assert 'Knowledge base updated' not in result
+        assert 'knowledge_graph.json' not in result
+        assert 'rb-refresh' in result

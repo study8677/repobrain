@@ -192,15 +192,21 @@ This ensures ask functionality remains available even if knowledge base is parti
    export OPENAI_MODEL=your-model
    ```
 
-### Incremental Refresh (`--quick`)
+### Automatic Refresh
 
 For clean worktrees with committed changes:
 
 ```bash
-rb-refresh --quick
+rb-refresh
 ```
 
-This triggers incremental refresh:
+Run the same command for the first build, later commits, and an interrupted
+refresh. RepoBrain automatically builds, resumes a matching task, incrementally
+updates affected groups, or skips when knowledge is already current. To start a
+new complete rebuild, run `rb-refresh --full`. `--workspace` defaults to the
+current directory; refresh requires a clean Git worktree.
+
+For incremental updates:
 - **ImpactPlanner** analyzes git diff to determine affected modules
 - **ImpactVerifier** verifies impact analysis
 - Only affected agent-groups are refreshed
@@ -233,8 +239,8 @@ rb-ask "How does authentication work?"
 git add .
 git commit -m "Update auth logic"
 
-# Quick incremental refresh (only affected modules)
-rb-refresh --quick
+# Automatically update affected modules
+rb-refresh
 
 # Verify updates
 rb-ask "What changed in the auth module?"
@@ -250,7 +256,7 @@ rb-ask "Where is the database connection?"
 rb report
 
 # Force full refresh (non-incremental)
-rb-refresh  # without --quick
+rb-refresh --full
 ```
 
 ## 🐛 Troubleshooting
@@ -272,7 +278,7 @@ cat .env | grep OPENAI
 rb report
 
 # Force full refresh (non-incremental)
-rb-refresh  # without --quick
+rb-refresh --full
 
 # Check generation logs
 ls -la .repobrain/
@@ -298,7 +304,7 @@ MCP server implementation: `engine/repobrain_engine/hub/mcp_server.py`
 ## 🚀 Performance Tips
 
 ### Speed Up Refresh
-- Use `--quick` for incremental updates (clean worktree after commit)
+- Run `rb-refresh` after commits; it selects incremental updates automatically
 - Scan exclusions are built-in (venv, node_modules, .git, etc. — see `SKIP_DIRS` in `engine/repobrain_engine/hub/_constants.py`)
 - Use faster models (e.g., GPT-4o-mini or Claude 3.5 Haiku)
 
