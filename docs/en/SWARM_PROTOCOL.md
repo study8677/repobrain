@@ -138,10 +138,12 @@ Handles questions about:
 - **Pipeline:** `engine/repobrain_engine/hub/ask_pipeline.py`
 - **Knowledge:** Reads from generation directory pointed to by `.repobrain/current.json`
 
-### Host-Runner Mode (No Multi-Agent Routing)
+### Host-Runner Mode (Model-Selected Knowledge)
 
 When `RB_HOST_RUNNER` is set (`codex` or `generic`), Ask uses `_ask_with_host_runner` exclusively:
-- **Single local CLI invocation** with project context and question
+- When agent knowledge documents exist, a local CLI routing call reads the question and module map and selects document labels by meaning across languages.
+- A subsequent local CLI invocation answers with the selected knowledge and project context. Routing reuses the configured host runner, model, command, and timeout.
+- No keyword scoring or arbitrary first-document fallback is used. If routing fails or selects no documents, the answer call receives project context and a notice to inspect source files directly.
 - Does **not** build Router/ModuleAgent/GitAgent or perform multi-agent handoffs
 - Returns direct answer from the local host CLI (no swarm orchestration)
 
@@ -154,7 +156,7 @@ The ask pipeline implements a context-sensitive fallback mechanism:
 **When `RB_HOST_RUNNER` is set** (codex or generic):
 - Uses `_ask_with_host_runner` exclusively
 - Does not build Router/ModuleAgent/GitAgent
-- Single local CLI invocation with no multi-agent routing
+- Model-based document selection followed by a local CLI answer, with no Router/Worker swarm handoffs. If no knowledge documents exist, the selection call is skipped.
 
 **Standard API-based ask flow:**
 1. **`_ask_with_structured_facts`** (when `.repobrain/map.md` and `agents/*.md` exist):

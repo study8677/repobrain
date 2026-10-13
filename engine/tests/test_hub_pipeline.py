@@ -334,6 +334,11 @@ async def test_ask_pipeline_uses_codex_host_runner_without_model_config(
         assert "FastAPI agent says" in kwargs["context"]
         return "host runner answer"
 
+    monkeypatch.setattr(
+        "repobrain_engine.hub.host_runner.run_host_text_generation",
+        lambda **kwargs: '{"answer":"API knowledge is relevant", "sources":["api.md"], "limitations":[]}',
+    )
+
     def _unexpected_create_model(*args, **kwargs):
         raise AssertionError("create_model should not be called in host mode")
 
