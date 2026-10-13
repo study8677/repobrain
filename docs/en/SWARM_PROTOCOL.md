@@ -164,6 +164,18 @@ The ask pipeline implements a context-sensitive fallback mechanism:
 
 This ensures ask functionality remains available even if knowledge base is partially generated or uses older formats.
 
+For cross-module questions in the `map.md` / `agents/*.md` path, Reader Agents
+run in parallel and a Synthesizer combines their findings. If a reader fails
+after retries or returns empty output, usable findings from other readers are
+retained and the answer names the missing modules in a **Partial answer** notice.
+A reader that explicitly answers `(not relevant)` is not counted as a failure.
+If synthesis fails or returns empty output, all usable reader answers are
+returned in routing/document order with their module labels and original code
+references, plus a notice that the findings have not been reconciled. This
+fallback makes no additional model call. If no reader produces usable findings,
+the existing legacy fallback chain still applies. Retry the question to recover
+missing answers; this is separate from incomplete knowledge that needs refresh.
+
 ## 🔧 Configuration & Extension
 
 ### Using Different LLM Backends

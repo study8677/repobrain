@@ -164,6 +164,18 @@ El pipeline de ask implementa un mecanismo de fallback sensible al contexto:
 
 Esto asegura que la funcionalidad ask permanezca disponible incluso si la base de conocimiento está parcialmente generada o usa formatos antiguos.
 
+Para preguntas entre módulos en la ruta `map.md` / `agents/*.md`, los Reader
+Agents trabajan en paralelo y un Synthesizer combina sus hallazgos. Si un lector
+falla tras los reintentos o devuelve una salida vacía, se conservan los resultados
+útiles y un aviso **Partial answer** identifica los módulos sin respuesta.
+La respuesta explícita `(not relevant)` no cuenta como un fallo. Si la síntesis
+falla o devuelve una salida vacía, se devuelven todas las respuestas útiles en
+orden de enrutamiento y documento, con sus módulos y referencias originales,
+indicando que los hallazgos no se han conciliado. Este fallback no realiza otra
+llamada al modelo. Si ningún lector aporta resultados útiles, se mantiene la
+cadena de fallback existente. Repite la pregunta para recuperar las respuestas
+faltantes; esto es distinto de una base de conocimiento que necesita refrescarse.
+
 ## 🔧 Configuración y Extensión
 
 ### Usando Diferentes Backends LLM

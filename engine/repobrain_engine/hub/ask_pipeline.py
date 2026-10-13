@@ -839,6 +839,18 @@ def _prepend_degradation_banner(
     return banner + answer
 
 
+def _prepend_reader_failure_banner(answer: str, failed_modules: list[str]) -> str:
+    """Keep ask-time coverage gaps visible even if synthesis omits them."""
+    if not failed_modules:
+        return answer
+    banner = (
+        "> ⚠ Partial answer: could not obtain findings for module(s): "
+        f"{', '.join(failed_modules)}. The answer may not cover these modules; "
+        "retry the question.\n\n"
+    )
+    return banner + answer
+
+
 async def _ask_with_agent_md(workspace: Path, question: str) -> str | None:
     """Answer a question by routing through map.md → agent.md files.
 
@@ -1115,6 +1127,9 @@ Knowledge:
                         stream_enabled=False,
                         progress_label=None,
                     )
+                if not answer.strip():
+                    logger.warning("ask: reader for module %s returned empty output", mod_name)
+                    return mod_name, None
                 return mod_name, answer
             except Exception as exc:
                 logger.warning("ask: reader for module %s failed: %s", mod_name, exc)
@@ -1123,6 +1138,9 @@ Knowledge:
         partial_answers = await asyncio.gather(
             *[_answer_from_doc(name, knowledge) for name, knowledge in module_knowledge]
         )
+
+        # A failed reader is missing evidence, not a finding of irrelevance.
+        failed_modules = [name for name, ans in partial_answers if ans is None]
 
         # Filter out failures and irrelevant answers (exact-match only — answers
         # that mention "(not relevant)" inside a longer reply should not be
@@ -1138,12 +1156,21 @@ Knowledge:
 
         if len(valid_answers) == 1:
             print("[4/4] Answer synthesized.", file=sys.stderr)
-            return _prepend_degradation_banner(valid_answers[0][1], degraded_modules)
+            answer = _prepend_reader_failure_banner(valid_answers[0][1], failed_modules)
+            return _prepend_degradation_banner(answer, degraded_modules)
 
         # Synthesize multiple answers
         synth_parts = "\n\n---\n\n".join(
             f"**From {name}:**\n{ans}" for name, ans in valid_answers
         )
+        coverage_section = ""
+        if failed_modules:
+            coverage_section = (
+                "\n\nNo usable reader response was obtained for these modules: "
+                f"{', '.join(failed_modules)}. Their evidence is missing, not "
+                "irrelevant. Do not infer their behavior or claim complete "
+                "coverage of the question."
+            )
         synth_prompt = f"""\
 Synthesize these partial answers into one coherent response.
 Keep all specific references (file paths, function names, line numbers).
@@ -1152,6 +1179,7 @@ any per-module answer, prefer it.
 
 Question: {question}
 {project_section}
+{coverage_section}
 
 Partial answers:
 {synth_parts}
@@ -1170,12 +1198,21 @@ Partial answers:
                 stream_enabled=settings.STREAM_ENABLED,
                 progress_label="Synthesizing answers from multiple modules...",
             )
+            if not answer.strip():
+                raise ValueError("empty synthesis output")
             print("[4/4] Answer synthesized from multiple modules.", file=sys.stderr)
-            return _prepend_degradation_banner(answer, degraded_modules)
         except Exception as exc:
             logger.warning("ask: multi-module synthesis failed: %s", exc)
-            # Return the first valid answer as fallback
-            return _prepend_degradation_banner(valid_answers[0][1], degraded_modules)
+            # Preserve every successful reader's findings and citations without
+            # another model call. Keep attribution; the findings may conflict.
+            answer = (
+                "> ⚠ Answer synthesis failed; showing individual module findings "
+                "below. These findings have not been reconciled.\n\n"
+                + synth_parts
+            )
+            print("[4/4] Returning individual module findings.", file=sys.stderr)
+        answer = _prepend_reader_failure_banner(answer, failed_modules)
+        return _prepend_degradation_banner(answer, degraded_modules)
 
 
 async def _ask_with_legacy_facts(workspace: Path, question: str) -> str | None:
