@@ -2,7 +2,8 @@
 
 The control directory remains ``<workspace>/.repobrain``.  Knowledge artifacts
 live in immutable-ish generation directories below it and readers resolve the
-active generation through ``current.json``.  A refresh writes a complete
+last refreshed generation through ``current.json``. Ask pins the compatible
+generation for its current commit. A refresh writes a complete
 candidate generation first and promotes it with one atomic pointer replace.
 """
 from __future__ import annotations
@@ -111,18 +112,28 @@ def create_generation(
     generation: str,
     *,
     clone_active: bool,
+    source_generation: str | None = None,
 ) -> Path:
     """Create a candidate generation, optionally copying the active one."""
-    if Path(generation).name != generation:
+    if generation in {"", ".", ".."} or Path(generation).name != generation:
         raise ValueError(f"Invalid generation id: {generation!r}")
     root = control_root(workspace)
     target = root / GENERATIONS_DIRNAME / generation
     if target.exists():
         raise FileExistsError(f"Generation already exists: {target}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    active = active_generation_root(workspace) if clone_active else None
+    if source_generation is not None:
+        if source_generation in {"", ".", ".."} or Path(source_generation).name != source_generation:
+            raise ValueError(f"Invalid source generation id: {source_generation!r}")
+        active = root / GENERATIONS_DIRNAME / source_generation
+        if not active.is_dir():
+            raise FileNotFoundError(f"Missing source generation: {active}")
+    else:
+        active = active_generation_root(workspace) if clone_active else None
     if active is not None:
         shutil.copytree(active, target)
+        # A candidate must never inherit its parent's publication receipt.
+        (target / "published.json").unlink(missing_ok=True)
     else:
         target.mkdir(parents=True)
     return target
@@ -160,6 +171,7 @@ def promote_generation(
     pointer = root / CURRENT_FILENAME
     tmp = root / f".{CURRENT_FILENAME}.{os.getpid()}.tmp"
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(generation_root / "published.json", payload)
     os.replace(tmp, pointer)
     # Compatibility/diagnostic marker only.  Incremental truth comes from the
     # active generation pointer and its snapshot.

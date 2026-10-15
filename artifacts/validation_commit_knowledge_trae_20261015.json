@@ -1,0 +1,1282 @@
+{
+  "passed": true,
+  "scope": "在独立的真实 Git 小仓库中，通过本机已登录的 trae-cli 跑真实 refresh/ask。不是大仓压力测试。没有切换用户项目分支或重建其知识库。",
+  "runner": {
+    "executable": "/Users/bytedance/.local/bin/trae-cli",
+    "version": "traecli 0.201.1-alpha.9(internal edition)",
+    "requested_model": "Seed-2.1-Turbo",
+    "actual_models": [
+      "seed-code-pro"
+    ],
+    "config_modified": false
+  },
+  "result": {
+    "completed_model_calls": 11,
+    "generation_model_calls": 6,
+    "ask_model_calls": 5,
+    "main_checks": 24,
+    "audit_checks": 26,
+    "summed_step_seconds": 455.32
+  },
+  "acceptance": {
+    "runner": "local trae-cli",
+    "passed": true,
+    "evidence": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b",
+    "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+    "steps": [
+      {
+        "phase": "01-build-alpha",
+        "operation": "refresh",
+        "returncode": 0,
+        "elapsed_seconds": 168.623,
+        "trae_calls": 3,
+        "head": "bd16e74ba0144a79692240bd3f4d815bc90bada2",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "refresh",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "02-build-beta",
+        "operation": "refresh",
+        "returncode": 0,
+        "elapsed_seconds": 145.116,
+        "trae_calls": 3,
+        "head": "8bbc29b87b8e8c9a3663e73bbc375388c4a7be6f",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "refresh",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "03-ask-alpha",
+        "operation": "ask",
+        "returncode": 0,
+        "elapsed_seconds": 26.403,
+        "trae_calls": 1,
+        "head": "bd16e74ba0144a79692240bd3f4d815bc90bada2",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "ask",
+          "请读取当前 checkout/pricing.py，说明当前分支标识、运费以及 subtotal=100 时 quote_total 的值。answer 中按 branch=<实际字符串>; fee=<数值>; total=<数值> 列出结论。sources 请使用实际文件的 checkout/pricing.py:行号 格式。只读，不要刷新知识库。",
+          "--json",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "04-ask-beta",
+        "operation": "ask",
+        "returncode": 0,
+        "elapsed_seconds": 20.29,
+        "trae_calls": 1,
+        "head": "8bbc29b87b8e8c9a3663e73bbc375388c4a7be6f",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "ask",
+          "请读取当前 checkout/pricing.py，说明当前分支标识、运费以及 subtotal=100 时 quote_total 的值。answer 中按 branch=<实际字符串>; fee=<数值>; total=<数值> 列出结论。sources 请使用实际文件的 checkout/pricing.py:行号 格式。只读，不要刷新知识库。",
+          "--json",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "05-ask-alpha-again",
+        "operation": "ask",
+        "returncode": 0,
+        "elapsed_seconds": 30.58,
+        "trae_calls": 1,
+        "head": "bd16e74ba0144a79692240bd3f4d815bc90bada2",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "ask",
+          "请读取当前 checkout/pricing.py，说明当前分支标识、运费以及 subtotal=100 时 quote_total 的值。answer 中按 branch=<实际字符串>; fee=<数值>; total=<数值> 列出结论。sources 请使用实际文件的 checkout/pricing.py:行号 格式。只读，不要刷新知识库。",
+          "--json",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "06-reuse-alpha",
+        "operation": "refresh",
+        "returncode": 0,
+        "elapsed_seconds": 0.442,
+        "trae_calls": 0,
+        "head": "bd16e74ba0144a79692240bd3f4d815bc90bada2",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "refresh",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "07-reuse-beta",
+        "operation": "refresh",
+        "returncode": 0,
+        "elapsed_seconds": 0.247,
+        "trae_calls": 0,
+        "head": "8bbc29b87b8e8c9a3663e73bbc375388c4a7be6f",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "refresh",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "08-ask-dirty",
+        "operation": "ask",
+        "returncode": 0,
+        "elapsed_seconds": 27.24,
+        "trae_calls": 1,
+        "head": "bd16e74ba0144a79692240bd3f4d815bc90bada2",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "ask",
+          "请核对当前 checkout 目录的真实文件：分支标识、运费、loyalty_discount 与 coupon_discount 各是多少，subtotal=100 的 quote_total 是多少，obsolete.py 现在是否存在？必须读取新文件以及相关源码后再回答。answer 按 branch=<字符串>; fee=<数值>; loyalty=<数值>; coupon=<数值>; total=<数值>; obsolete_exists=<true或false> 列出结果；sources 使用当前存在文件的 相对路径:行号。只读，不要提交、刷新或修改文件。",
+          "--json",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "09-dirty-refresh-refused",
+        "operation": "refresh",
+        "returncode": 1,
+        "elapsed_seconds": 3.761,
+        "trae_calls": 0,
+        "head": "bd16e74ba0144a79692240bd3f4d815bc90bada2",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "refresh",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "10-ask-ancestor",
+        "operation": "ask",
+        "returncode": 0,
+        "elapsed_seconds": 31.894,
+        "trae_calls": 1,
+        "head": "76c53bbf96a2de5fe8efa23d1a1512187faff940",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "ask",
+          "请核对当前 checkout 目录的真实文件：分支标识、运费、loyalty_discount 与 coupon_discount 各是多少，subtotal=100 的 quote_total 是多少，obsolete.py 现在是否存在？必须读取新文件以及相关源码后再回答。answer 按 branch=<字符串>; fee=<数值>; loyalty=<数值>; coupon=<数值>; total=<数值>; obsolete_exists=<true或false> 列出结果；sources 使用当前存在文件的 相对路径:行号。只读，不要提交、刷新或修改文件。",
+          "--json",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      },
+      {
+        "phase": "11-reject-unrelated",
+        "operation": "ask",
+        "returncode": 1,
+        "elapsed_seconds": 0.724,
+        "trae_calls": 0,
+        "head": "7d441e72f93a2bded82c4b7c99fbe1b7e6bd8839",
+        "command": [
+          "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+          "-m",
+          "repobrain_engine",
+          "ask",
+          "请读取当前 checkout/pricing.py，说明当前分支标识、运费以及 subtotal=100 时 quote_total 的值。answer 中按 branch=<实际字符串>; fee=<数值>; total=<数值> 列出结论。sources 请使用实际文件的 checkout/pricing.py:行号 格式。只读，不要刷新知识库。",
+          "--json",
+          "--workspace",
+          "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+        ]
+      }
+    ],
+    "checks": [
+      {
+        "name": "two distinct published branch generations",
+        "passed": true
+      },
+      {
+        "name": "03-ask-alpha: actual answer values",
+        "passed": true,
+        "expected": {
+          "branch": "ALPHA",
+          "fee": 11,
+          "total": 111
+        },
+        "observed": {
+          "branch": "ALPHA",
+          "fee": "11",
+          "total": "111"
+        }
+      },
+      {
+        "name": "03-ask-alpha: current file citations",
+        "passed": true,
+        "citations": [
+          [
+            "checkout/pricing.py",
+            "1"
+          ],
+          [
+            "checkout/pricing.py",
+            "2"
+          ],
+          [
+            "checkout/pricing.py",
+            "4"
+          ]
+        ]
+      },
+      {
+        "name": "03-ask-alpha: ask preserves last refresh pointer",
+        "passed": true
+      },
+      {
+        "name": "04-ask-beta: actual answer values",
+        "passed": true,
+        "expected": {
+          "branch": "BETA",
+          "fee": 23,
+          "total": 123
+        },
+        "observed": {
+          "branch": "BETA",
+          "fee": "23",
+          "total": "123"
+        }
+      },
+      {
+        "name": "04-ask-beta: current file citations",
+        "passed": true,
+        "citations": [
+          [
+            "checkout/pricing.py",
+            "1"
+          ],
+          [
+            "checkout/pricing.py",
+            "2"
+          ],
+          [
+            "checkout/pricing.py",
+            "4"
+          ]
+        ]
+      },
+      {
+        "name": "04-ask-beta: ask preserves last refresh pointer",
+        "passed": true
+      },
+      {
+        "name": "05-ask-alpha-again: actual answer values",
+        "passed": true,
+        "expected": {
+          "branch": "ALPHA",
+          "fee": 11,
+          "total": 111
+        },
+        "observed": {
+          "branch": "ALPHA",
+          "fee": "11",
+          "total": "111"
+        }
+      },
+      {
+        "name": "05-ask-alpha-again: current file citations",
+        "passed": true,
+        "citations": [
+          [
+            "checkout/pricing.py",
+            "1"
+          ],
+          [
+            "checkout/pricing.py",
+            "2"
+          ],
+          [
+            "checkout/pricing.py",
+            "4"
+          ]
+        ]
+      },
+      {
+        "name": "05-ask-alpha-again: ask preserves last refresh pointer",
+        "passed": true
+      },
+      {
+        "name": "alpha refresh is zero-model reuse",
+        "passed": true
+      },
+      {
+        "name": "beta refresh is zero-model reuse",
+        "passed": true
+      },
+      {
+        "name": "08-ask-dirty: actual answer values",
+        "passed": true,
+        "expected": {
+          "branch": "ALPHA-LOCAL",
+          "fee": 41,
+          "loyalty": 7,
+          "coupon": 9,
+          "total": 125,
+          "obsolete_exists": "false"
+        },
+        "observed": {
+          "branch": "ALPHA-LOCAL",
+          "fee": "41",
+          "loyalty": "7",
+          "coupon": "9",
+          "total": "125",
+          "obsolete_exists": "false"
+        }
+      },
+      {
+        "name": "08-ask-dirty: current file citations",
+        "passed": true,
+        "citations": [
+          [
+            "checkout/pricing.py",
+            "3"
+          ],
+          [
+            "checkout/pricing.py",
+            "4"
+          ],
+          [
+            "checkout/pricing.py",
+            "6"
+          ],
+          [
+            "checkout/loyalty.py",
+            "1"
+          ],
+          [
+            "checkout/coupon.py",
+            "1"
+          ]
+        ]
+      },
+      {
+        "name": "dirty query warns without requiring commit",
+        "passed": true
+      },
+      {
+        "name": "dirty source bytes remain unchanged",
+        "passed": true
+      },
+      {
+        "name": "dirty source status remains unchanged",
+        "passed": true
+      },
+      {
+        "name": "dirty ask preserves knowledge files",
+        "passed": true
+      },
+      {
+        "name": "dirty ask preserves last refresh pointer",
+        "passed": true
+      },
+      {
+        "name": "dirty refresh makes no model call",
+        "passed": true
+      },
+      {
+        "name": "10-ask-ancestor: actual answer values",
+        "passed": true,
+        "expected": {
+          "branch": "ALPHA-LOCAL",
+          "fee": 41,
+          "loyalty": 7,
+          "coupon": 9,
+          "total": 125,
+          "obsolete_exists": "false"
+        },
+        "observed": {
+          "branch": "ALPHA-LOCAL",
+          "fee": "41",
+          "loyalty": "7",
+          "coupon": "9",
+          "total": "125",
+          "obsolete_exists": "false"
+        }
+      },
+      {
+        "name": "10-ask-ancestor: current file citations",
+        "passed": true,
+        "citations": [
+          [
+            "checkout/pricing.py",
+            "3"
+          ],
+          [
+            "checkout/pricing.py",
+            "4"
+          ],
+          [
+            "checkout/pricing.py",
+            "7"
+          ],
+          [
+            "checkout/loyalty.py",
+            "2"
+          ],
+          [
+            "checkout/coupon.py",
+            "2"
+          ]
+        ]
+      },
+      {
+        "name": "new commit uses ancestor without refreshing",
+        "passed": true
+      },
+      {
+        "name": "unrelated branch never reaches Trae",
+        "passed": true
+      }
+    ],
+    "requested_model": "Seed-2.1-Turbo",
+    "requested_reasoning_effort": "medium",
+    "started_at": "2026-10-15T09:09:02.881191+00:00",
+    "commits": {
+      "base": "e0374913eae17f0c231e1e61b2bc2a9231a85b08",
+      "alpha": "bd16e74ba0144a79692240bd3f4d815bc90bada2",
+      "beta": "8bbc29b87b8e8c9a3663e73bbc375388c4a7be6f",
+      "latest": "76c53bbf96a2de5fe8efa23d1a1512187faff940"
+    },
+    "finished_at": "2026-10-15T09:16:39.703997+00:00"
+  },
+  "audit": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "every generation and answer phase invoked real Trae",
+        "passed": true
+      },
+      {
+        "name": "10-ask-ancestor: selected generation appears in real model prompt",
+        "passed": true,
+        "generation": "20261015T090904188727Z-bd16e74ba014"
+      },
+      {
+        "name": "10-ask-ancestor: sibling knowledge absent from real model prompt",
+        "passed": true
+      },
+      {
+        "name": "10-ask-ancestor: source bytes unchanged",
+        "passed": true
+      },
+      {
+        "name": "10-ask-ancestor: full citation ranges match tested source commit",
+        "passed": true
+      },
+      {
+        "name": "04-ask-beta: selected generation appears in real model prompt",
+        "passed": true,
+        "generation": "20261015T091152705593Z-8bbc29b87b8e"
+      },
+      {
+        "name": "04-ask-beta: sibling knowledge absent from real model prompt",
+        "passed": true
+      },
+      {
+        "name": "04-ask-beta: source bytes unchanged",
+        "passed": true
+      },
+      {
+        "name": "04-ask-beta: full citation ranges match tested source commit",
+        "passed": true
+      },
+      {
+        "name": "03-ask-alpha: selected generation appears in real model prompt",
+        "passed": true,
+        "generation": "20261015T090904188727Z-bd16e74ba014"
+      },
+      {
+        "name": "03-ask-alpha: sibling knowledge absent from real model prompt",
+        "passed": true
+      },
+      {
+        "name": "03-ask-alpha: source bytes unchanged",
+        "passed": true
+      },
+      {
+        "name": "03-ask-alpha: full citation ranges match tested source commit",
+        "passed": true
+      },
+      {
+        "name": "08-ask-dirty: selected generation appears in real model prompt",
+        "passed": true,
+        "generation": "20261015T090904188727Z-bd16e74ba014"
+      },
+      {
+        "name": "08-ask-dirty: sibling knowledge absent from real model prompt",
+        "passed": true
+      },
+      {
+        "name": "08-ask-dirty: source bytes unchanged",
+        "passed": true
+      },
+      {
+        "name": "08-ask-dirty: full citation ranges match tested source commit",
+        "passed": true
+      },
+      {
+        "name": "untracked coupon body absent from prompt",
+        "passed": true
+      },
+      {
+        "name": "dirty bytes match the later recorded source commit",
+        "passed": true
+      },
+      {
+        "name": "05-ask-alpha-again: selected generation appears in real model prompt",
+        "passed": true,
+        "generation": "20261015T090904188727Z-bd16e74ba014"
+      },
+      {
+        "name": "05-ask-alpha-again: sibling knowledge absent from real model prompt",
+        "passed": true
+      },
+      {
+        "name": "05-ask-alpha-again: source bytes unchanged",
+        "passed": true
+      },
+      {
+        "name": "05-ask-alpha-again: full citation ranges match tested source commit",
+        "passed": true
+      },
+      {
+        "name": "dirty ask actually read pricing.py with current value",
+        "passed": true,
+        "event_ids": [
+          "item_3"
+        ]
+      },
+      {
+        "name": "dirty ask actually read loyalty.py with current value",
+        "passed": true,
+        "event_ids": [
+          "item_4"
+        ]
+      },
+      {
+        "name": "dirty ask actually read coupon.py with current value",
+        "passed": true,
+        "event_ids": [
+          "item_5"
+        ]
+      }
+    ],
+    "model_reroutes": [
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      },
+      {
+        "from": "Seed-2.1-Turbo",
+        "to": "seed-code-pro"
+      }
+    ],
+    "trae_calls": 11,
+    "usage_events": [
+      {
+        "input_tokens": 97624,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 80296,
+        "output_tokens": 682,
+        "reasoning_output_tokens": 135
+      },
+      {
+        "input_tokens": 279140,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 269360,
+        "output_tokens": 2406,
+        "reasoning_output_tokens": 583
+      },
+      {
+        "input_tokens": 51265,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 42608,
+        "output_tokens": 788,
+        "reasoning_output_tokens": 15
+      },
+      {
+        "input_tokens": 189936,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 183944,
+        "output_tokens": 1825,
+        "reasoning_output_tokens": 193
+      },
+      {
+        "input_tokens": 56535,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 27448,
+        "output_tokens": 188,
+        "reasoning_output_tokens": 11
+      },
+      {
+        "input_tokens": 51309,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 49776,
+        "output_tokens": 1991,
+        "reasoning_output_tokens": 280
+      },
+      {
+        "input_tokens": 57079,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 41584,
+        "output_tokens": 230,
+        "reasoning_output_tokens": 49
+      },
+      {
+        "input_tokens": 65034,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 48752,
+        "output_tokens": 902,
+        "reasoning_output_tokens": 230
+      },
+      {
+        "input_tokens": 85935,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 73128,
+        "output_tokens": 386,
+        "reasoning_output_tokens": 42
+      },
+      {
+        "input_tokens": 51178,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 49776,
+        "output_tokens": 1484,
+        "reasoning_output_tokens": 65
+      },
+      {
+        "input_tokens": 25422,
+        "cache_creation_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 634,
+        "reasoning_output_tokens": 213
+      }
+    ]
+  },
+  "answers": {
+    "03-ask-alpha": {
+      "answer": "branch=ALPHA; fee=11; total=111",
+      "sources": [
+        "checkout/pricing.py:1",
+        "checkout/pricing.py:2",
+        "checkout/pricing.py:4-5"
+      ],
+      "limitations": [
+        "仅基于当前 checkout/pricing.py 的源码读取，未执行代码运行验证；quote_total(100)=100+11=111 为静态推导。"
+      ],
+      "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+      "question": "请读取当前 checkout/pricing.py，说明当前分支标识、运费以及 subtotal=100 时 quote_total 的值。answer 中按 branch=<实际字符串>; fee=<数值>; total=<数值> 列出结论。sources 请使用实际文件的 checkout/pricing.py:行号 格式。只读，不要刷新知识库。"
+    },
+    "04-ask-beta": {
+      "answer": "branch=BETA; fee=23; total=123",
+      "sources": [
+        "checkout/pricing.py:1",
+        "checkout/pricing.py:2",
+        "checkout/pricing.py:4-5"
+      ],
+      "limitations": [
+        "只读分析，未运行实际计算；total=123 由 subtotal(100)+SHIPPING_FEE(23) 推得。"
+      ],
+      "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+      "question": "请读取当前 checkout/pricing.py，说明当前分支标识、运费以及 subtotal=100 时 quote_total 的值。answer 中按 branch=<实际字符串>; fee=<数值>; total=<数值> 列出结论。sources 请使用实际文件的 checkout/pricing.py:行号 格式。只读，不要刷新知识库。"
+    },
+    "05-ask-alpha-again": {
+      "answer": "branch=ALPHA; fee=11; total=111",
+      "sources": [
+        "checkout/pricing.py:1",
+        "checkout/pricing.py:2",
+        "checkout/pricing.py:4-5"
+      ],
+      "limitations": [
+        "仅读取 checkout/pricing.py 后给出结论；subtotal=100 的计算基于 quote_total = subtotal + SHIPPING_FEE = 100 + 11 = 111。"
+      ],
+      "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+      "question": "请读取当前 checkout/pricing.py，说明当前分支标识、运费以及 subtotal=100 时 quote_total 的值。answer 中按 branch=<实际字符串>; fee=<数值>; total=<数值> 列出结论。sources 请使用实际文件的 checkout/pricing.py:行号 格式。只读，不要刷新知识库。"
+    },
+    "08-ask-dirty": {
+      "answer": "⚠ 知识库截至 bd16e74ba014，工作区有未提交修改。修改处以当前源码为准。\nbranch=ALPHA-LOCAL; fee=41; loyalty=7; coupon=9; total=125; obsolete_exists=false",
+      "sources": [
+        "checkout/pricing.py:3",
+        "checkout/pricing.py:4",
+        "checkout/pricing.py:6-7",
+        "checkout/loyalty.py:1-2",
+        "checkout/coupon.py:1-2"
+      ],
+      "limitations": [
+        "Only the current working-tree files were inspected; the git history and RepoBrain knowledge (which referenced legacy.py and obsolete.py) are stale relative to the working tree.",
+        "obsolete_exists was verified via directory listing, which confirms the file is absent from the working tree."
+      ],
+      "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+      "question": "请核对当前 checkout 目录的真实文件：分支标识、运费、loyalty_discount 与 coupon_discount 各是多少，subtotal=100 的 quote_total 是多少，obsolete.py 现在是否存在？必须读取新文件以及相关源码后再回答。answer 按 branch=<字符串>; fee=<数值>; loyalty=<数值>; coupon=<数值>; total=<数值>; obsolete_exists=<true或false> 列出结果；sources 使用当前存在文件的 相对路径:行号。只读，不要提交、刷新或修改文件。"
+    },
+    "10-ask-ancestor": {
+      "answer": "⚠ 知识库截至 bd16e74ba014，之后已有新提交。修改处以当前源码为准。\nbranch=ALPHA-LOCAL; fee=41; loyalty=7; coupon=9; total=125; obsolete_exists=false",
+      "sources": [
+        "checkout/pricing.py:3",
+        "checkout/pricing.py:4",
+        "checkout/pricing.py:7",
+        "checkout/loyalty.py:2",
+        "checkout/coupon.py:2"
+      ],
+      "limitations": [
+        "Quote total computed from source logic: 100 + 41 - 7 - 9 = 125. obsolete.py confirmed absent via directory listing; checkout/ contains only pricing.py, loyalty.py, coupon.py."
+      ],
+      "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+      "question": "请核对当前 checkout 目录的真实文件：分支标识、运费、loyalty_discount 与 coupon_discount 各是多少，subtotal=100 的 quote_total 是多少，obsolete.py 现在是否存在？必须读取新文件以及相关源码后再回答。answer 按 branch=<字符串>; fee=<数值>; loyalty=<数值>; coupon=<数值>; total=<数值>; obsolete_exists=<true或false> 列出结果；sources 使用当前存在文件的 相对路径:行号。只读，不要提交、刷新或修改文件。"
+    }
+  },
+  "dirty_state_before_ask": {
+    "pointer": {
+      "schema_version": 1,
+      "generation": "20261015T091152705593Z-8bbc29b87b8e",
+      "head_sha": "8bbc29b87b8e8c9a3663e73bbc375388c4a7be6f",
+      "merkle_root": "95e64d3e2b750b929e71734cdbc78e780e853264dc3701bff67900b879fff853",
+      "snapshot_path": "snapshot.json",
+      "promoted_at": "2026-10-15T09:15:35.585603+00:00"
+    },
+    "knowledge_hashes": {
+      "20261015T090904188727Z-bd16e74ba014/.last_refresh_sha": "12976c13d7a006718a74b99921955149e59d1688ae8f51725e183323ac8a4619",
+      "20261015T090904188727Z-bd16e74ba014/document_index.md": "d0a8d5968119929cc8b23206242704bc7e890ee4049af4c5b7ba8f5b1ad04375",
+      "20261015T090904188727Z-bd16e74ba014/structure.md": "55dfdb11c3a7611d085190de782ca2cab262e9dd8183534c482f6cf66bd95fed",
+      "20261015T090904188727Z-bd16e74ba014/map.md": "1a9190d52a5b7c7f75324b975620d58261ec1f08c5c90cf76e6f0ac5daeaae39",
+      "20261015T090904188727Z-bd16e74ba014/module_registry.md": "331b380d35bd23bbdb0bc6d1d67f4b57f9789adf0508dd880f71d34228384e59",
+      "20261015T090904188727Z-bd16e74ba014/conventions.md": "4463f454c5c7a6cafe4d6d52af351cd3f6ff137f0fbe979f903c500b0a57d17d",
+      "20261015T090904188727Z-bd16e74ba014/map_entries.json": "e51786780684955b24e0393487075c7b7548bf82e99d222e1e0c75c9a662fd6f",
+      "20261015T090904188727Z-bd16e74ba014/module_registry.json": "117bd9ae34f26c30b6775d02efba1e91e62c026ccff03ba19c97290e42cc112d",
+      "20261015T090904188727Z-bd16e74ba014/snapshot.json": "f3b992e8d2022a4e14549a408c9d1056e1294dd1621f0e716b032a2af33992a8",
+      "20261015T090904188727Z-bd16e74ba014/media_manifest.md": "61dd44bfcd9135e89ddcc7c3cc68f170310a2b70c08c28a36deb6ff7eb1663e3",
+      "20261015T090904188727Z-bd16e74ba014/data_overview.md": "113f9b77bc61192614d160d85d9615045d1b81e7f2e6e72db99ad3de31eb1b72",
+      "20261015T090904188727Z-bd16e74ba014/manifest.json": "0c8f253039ff97f58f6331fda9d8c6491de880530158524dacf1f490abb332e6",
+      "20261015T090904188727Z-bd16e74ba014/knowledge_graph.json": "1d674a2252a96f6166eb1be1263728878f077f6b274dcf05021b6b0a76e427f3",
+      "20261015T090904188727Z-bd16e74ba014/refresh_config.json": "646dad7d425f9563e5fad1a0121b8478a699ecc7aebb1697c9c99e2a4a8f01ac",
+      "20261015T090904188727Z-bd16e74ba014/status.json": "0cd767b26808dc0abe92dca309889f7e01eeb72258cb9182c4c9c1844b152aba",
+      "20261015T090904188727Z-bd16e74ba014/knowledge_graph.md": "c502d95387ffa78c413bccebc2e4b73310ab9834d224ecf525bdf09b73ae59db",
+      "20261015T090904188727Z-bd16e74ba014/scan_report.json": "b1f4cb85d625efbf8df580dab21aa7b70edea2fedef92d8d34437eb01c1bb593",
+      "20261015T090904188727Z-bd16e74ba014/knowledge_graph.mmd": "18981b8ef174ba1d7dce1cad5b849a32745e06049fbdb5cc6b76edf970e2b605",
+      "20261015T091152705593Z-8bbc29b87b8e/.last_refresh_sha": "959732bab89a37f163fea78fb3c523dc67d1c23a41263fc2bc5611718e44d776",
+      "20261015T091152705593Z-8bbc29b87b8e/document_index.md": "d0a8d5968119929cc8b23206242704bc7e890ee4049af4c5b7ba8f5b1ad04375",
+      "20261015T091152705593Z-8bbc29b87b8e/structure.md": "55dfdb11c3a7611d085190de782ca2cab262e9dd8183534c482f6cf66bd95fed",
+      "20261015T091152705593Z-8bbc29b87b8e/map.md": "5a7dd28db56fb70ed7b93b17e4f2ac33585ea6b06b502de7d7bbc39e70e4161b",
+      "20261015T091152705593Z-8bbc29b87b8e/module_registry.md": "331b380d35bd23bbdb0bc6d1d67f4b57f9789adf0508dd880f71d34228384e59",
+      "20261015T091152705593Z-8bbc29b87b8e/conventions.md": "da6e7da40f838840ad9fc59e93d6991bac05ab06ec5f58dbc381d61ce5684b5a",
+      "20261015T091152705593Z-8bbc29b87b8e/map_entries.json": "607bb6793d311b2ac971e025ecc4f27828c33906079d83b95d8070dc69d8e6a5",
+      "20261015T091152705593Z-8bbc29b87b8e/module_registry.json": "117bd9ae34f26c30b6775d02efba1e91e62c026ccff03ba19c97290e42cc112d",
+      "20261015T091152705593Z-8bbc29b87b8e/snapshot.json": "7242a22e8e62fa5c7b9df21c55f91243706c9cd59a8d2605330ae2e66b21f5d9",
+      "20261015T091152705593Z-8bbc29b87b8e/media_manifest.md": "61dd44bfcd9135e89ddcc7c3cc68f170310a2b70c08c28a36deb6ff7eb1663e3",
+      "20261015T091152705593Z-8bbc29b87b8e/data_overview.md": "113f9b77bc61192614d160d85d9615045d1b81e7f2e6e72db99ad3de31eb1b72",
+      "20261015T091152705593Z-8bbc29b87b8e/manifest.json": "e53a7c23c238a85f71c92218a7bee646de8377eeaae48d532c8ebcac8491eaff",
+      "20261015T091152705593Z-8bbc29b87b8e/knowledge_graph.json": "abb1fb85ba5ce4e4d7f625d2424c4be3d9d9996e93ac3e9ba4ff90749392cc33",
+      "20261015T091152705593Z-8bbc29b87b8e/refresh_config.json": "646dad7d425f9563e5fad1a0121b8478a699ecc7aebb1697c9c99e2a4a8f01ac",
+      "20261015T091152705593Z-8bbc29b87b8e/status.json": "f95336ab79b1b282790edbc60dde2b2f1b4ed4c3d9c3b7e91733617885f92b96",
+      "20261015T091152705593Z-8bbc29b87b8e/knowledge_graph.md": "c8cdd73593b395d041ea68fd3455b713c9b98cb5797838ea3609b7a811f89663",
+      "20261015T091152705593Z-8bbc29b87b8e/scan_report.json": "be6ace1b073bc25627221019d08e06b612d1f4a4f97eb15d8ff839e137588bb5",
+      "20261015T091152705593Z-8bbc29b87b8e/knowledge_graph.mmd": "18981b8ef174ba1d7dce1cad5b849a32745e06049fbdb5cc6b76edf970e2b605",
+      "20261015T090904188727Z-bd16e74ba014/graph/edges.jsonl": "28d77b7238f7f4ce01344f5475d3c32d6a222986e93647cbb66a355f00460646",
+      "20261015T090904188727Z-bd16e74ba014/graph/nodes.jsonl": "78ab79eba0c8e2c38e58084a24b819de85285664e812ff6b0fec631fbddcaebf",
+      "20261015T090904188727Z-bd16e74ba014/agents/checkout.md": "8840c5e72bf60612d64638dea0f3564f8f085d71ac9f118c9b1be98ddc3b35e9",
+      "20261015T090904188727Z-bd16e74ba014/modules/_git_insights.md": "fb738939ed11210907967910bea146297088854360fbd8e91b8ba92aa1dd95c0",
+      "20261015T091152705593Z-8bbc29b87b8e/graph/edges.jsonl": "49cd5ba3d3fc7726bb69c8ad1b772f38b01e40cbed805f5881578d4ef84f2b95",
+      "20261015T091152705593Z-8bbc29b87b8e/graph/nodes.jsonl": "de3e2e23f08f88415ecaad9d8fcbdabf6b31f9c4c4c48ce1b2846f0176457d8a",
+      "20261015T091152705593Z-8bbc29b87b8e/agents/checkout.md": "f660be12ea0a6cf190307b2295798da4aa15fdf242f356e07a701fba077ca501",
+      "20261015T091152705593Z-8bbc29b87b8e/modules/_git_insights.md": "829efccdfcbba2189031f2ec3a282fce1f20f01ad9d3e34154ee8886d967e01f"
+    },
+    "source_hashes": {
+      "checkout/coupon.py": "f4463bb898b3d2f1a387bab94b10f7d34063d9cc2a7cc867af9c8bb5bbe885d1",
+      "checkout/pricing.py": "21492273ed32af4b5257bde6f2c268e215e6fc4c0e0d2ca74ffe3b1e8264ed9a",
+      "checkout/loyalty.py": "0f3f1d70d94c1cbca05926abc8a6dda0d998872b15f20f595ed4b597fdb9940c"
+    },
+    "status": "RM checkout/legacy.py -> checkout/loyalty.py\n D checkout/obsolete.py\nMM checkout/pricing.py\n?? checkout/coupon.py"
+  },
+  "previous_attempts": [
+    {
+      "evidence": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-97aa1e5ac4",
+      "passed": false,
+      "reason": "使用用户默认 Trae 模型时，首个生成请求耗时 187 秒，后续请求等待较久；主动停止后使用同一 Trae 的较快模型重跑。",
+      "recorded_calls": 2,
+      "error": null
+    },
+    {
+      "evidence": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-baaf091fc6",
+      "passed": false,
+      "reason": "模型答案和源码检查正确；验收脚本把显式刷新之前的 promoted_at 与提问后的值比较，导致误报。修正比较基准后完整重跑。",
+      "recorded_calls": 10,
+      "error": "AssertionError: dirty source and knowledge remain unchanged"
+    }
+  ],
+  "script": "/Users/bytedance/Documents/github/repobrain/scripts/validate_commit_knowledge_trae.py",
+  "tested_source_sha256": {
+    "scripts/validate_commit_knowledge_trae.py": "82d80919e0397b739aef92ad769c7eeed8a2a66e15ee17991f0979b052bb6359",
+    "engine/repobrain_engine/hub/__init__.py": "fd6ebdda30aa02867d7bd7963ee24cd2f396152b419c28d88d84de0210b9efe3",
+    "engine/repobrain_engine/hub/__main__.py": "1f1bfc82a8cf8fd8370544a91cfd99344a939a7d4ffe97db5338094c98beb623",
+    "engine/repobrain_engine/hub/_constants.py": "87df351b32572ab66614eff5b8a531973b7d84c3ef9b6fb8e8eeffbfcfc80f6b",
+    "engine/repobrain_engine/hub/_merkle.py": "6ec94078757007f51d08eda3bc5490477ea0e289621c46639bdd9d2f1c7fa593",
+    "engine/repobrain_engine/hub/_providers.py": "196984c05c30f8bfb25cb6cc58bb0aa3450883fac9dafc658c2ddda9f8cc61ec",
+    "engine/repobrain_engine/hub/_utils.py": "1a34abc696858beb03cf1661170af41c25842f6da095f55bd93659eee74a27b4",
+    "engine/repobrain_engine/hub/agents.py": "8c4fe871a1617ac651deab49807e68324fb2bfc12f722b676cd117fb7227f5e3",
+    "engine/repobrain_engine/hub/ask_pipeline.py": "69d7e4ea30294cb02f4b8e6ab7c0491e075995c9533ee782d5498ca656a148b1",
+    "engine/repobrain_engine/hub/ask_tools.py": "cf1cd2c9557fb9ec498692458f102248f88967f613cc2c0741f8e18f15ab6fb2",
+    "engine/repobrain_engine/hub/contracts.py": "f222ef50d6c2ba4c5b3500173efb5cdc265667dfa33f5106f1587c1329957435",
+    "engine/repobrain_engine/hub/host_runner.py": "f4f70e0ead68999f0771c2b599ecbe83a7dcafd1a4b6235b20a8df628863cf61",
+    "engine/repobrain_engine/hub/impact.py": "4f11dba3012ec9ab879dab6a557abdbfc7fd657ae4d6f57d3bc9a8a146f5742e",
+    "engine/repobrain_engine/hub/incremental.py": "0812ac0dec3d217e185c87f4780f28c97f843b9a43184999702ddd2c4d52c2f4",
+    "engine/repobrain_engine/hub/incremental_artifacts.py": "a09fa0723aaf50ed7526b7ff8ad7c9c6bcf9d251d72dd59ba65f4103b591365c",
+    "engine/repobrain_engine/hub/knowledge_graph.py": "b7ac72b69e0b125753972538b84a64277f2ee90a43c761a8dce1999436f6bab5",
+    "engine/repobrain_engine/hub/mcp_server.py": "ded0987f6a4c39efd180f08ad558350d2601198959957953573a8475b904e3e4",
+    "engine/repobrain_engine/hub/module_grouping.py": "4f5a65ae9d39504868294085c89c580c634fd90625b1db74ebede6c4756a44f4",
+    "engine/repobrain_engine/hub/pipeline.py": "07b082db2ebd729c686ecd4a460a401822237a612ca0219ad9672beb1b699b4c",
+    "engine/repobrain_engine/hub/refresh_lifecycle.py": "6c522ad7c62de55d94fdd8731f07aa6ebae4a296e8f8318eda75e0c74bae2f59",
+    "engine/repobrain_engine/hub/refresh_pipeline.py": "c7d167c303186f643dbdd2e76804ce6b1c2df2465c038eaf6b79ee19d7ff05d0",
+    "engine/repobrain_engine/hub/refresh_result.py": "0d1f623324d7cdf54feaf5719789f92ea81e6470a93178e1c86d74258bbb734f",
+    "engine/repobrain_engine/hub/retrieval_graph.py": "dbb98bc801f0295ceb03ec05433c57fe5790c58853910d0db423011424d4ecf7",
+    "engine/repobrain_engine/hub/scanner.py": "ecbf6db029e06259c297df71027eb7a7ebd4ef32a0ccd74193aea39ca43cd847",
+    "engine/repobrain_engine/hub/semantic_index.py": "462b797f5e9bef816e498e9d0e04e6b9ba99291b851cf064f545e186fbda4c3e",
+    "engine/repobrain_engine/hub/storage.py": "1be1e4e56bc8088a92876efbc34befbcf1c7e01804aa0e8c915683f690c661e2",
+    "engine/repobrain_engine/hub/structure.py": "997c34ac94a02afa890d009b029a0b56db43ba0fdfc4244c25223a0a6f7894a4",
+    "engine/repobrain_engine/hub/versions.py": "6b27b17bb6ca58876c970d9a35743f2fb88e6a44de2301d653d652af00e65404",
+    "engine/repobrain_engine/hub/working_context.py": "ddd18a11c0f9bbab5c61cc7808017c0def881ec9a2cf0a0f4ae8f08199388d80"
+  },
+  "verification": {
+    "git_diff_check": "passed",
+    "script_py_compile": "passed"
+  },
+  "raw_evidence": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b",
+  "post_sync_validation": {
+    "upstream_base": "ae16bc3",
+    "automatic_tests": {
+      "command": "PYTHONPATH=engine:cli/src .venv/bin/python -m pytest engine/tests cli/tests -q",
+      "passed": 439,
+      "warnings": 1,
+      "elapsed_seconds": 181.24
+    },
+    "repository_contract": "passed",
+    "openspec_strict": "passed",
+    "real_trae": {
+      "runner": "local trae-cli",
+      "passed": true,
+      "evidence": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-merged-trae-b857ba62c0",
+      "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+      "steps": [
+        {
+          "phase": "12-merged-ask-beta",
+          "operation": "ask",
+          "returncode": 0,
+          "elapsed_seconds": 79.896,
+          "trae_calls": 2,
+          "head": "8bbc29b87b8e8c9a3663e73bbc375388c4a7be6f",
+          "command": [
+            "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+            "-m",
+            "repobrain_engine",
+            "ask",
+            "请读取当前 checkout/pricing.py，回答 branch=<当前标识>; fee=<运费>; total=<subtotal=100时的总价>，sources 使用当前文件路径和行号。只读，不要刷新知识库。",
+            "--json",
+            "--workspace",
+            "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+          ]
+        },
+        {
+          "phase": "13-merged-ask-dirty",
+          "operation": "ask",
+          "returncode": 0,
+          "elapsed_seconds": 106.584,
+          "trae_calls": 2,
+          "head": "76c53bbf96a2de5fe8efa23d1a1512187faff940",
+          "command": [
+            "/Users/bytedance/Documents/github/repobrain/.venv/bin/python",
+            "-m",
+            "repobrain_engine",
+            "ask",
+            "请读取当前 checkout 中的 pricing.py、loyalty.py、coupon.py 并核对目录。按 branch=<当前标识>; fee=<运费>; loyalty=<优惠>; coupon=<优惠>; total=<subtotal=100时的总价>; obsolete_exists=<true或false> 回答。sources 必须使用当前存在文件的 相对路径:行号 字符串格式。只读，不要提交、刷新或修改文件。",
+            "--json",
+            "--workspace",
+            "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project"
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "name": "merged beta returns actual values",
+          "passed": true
+        },
+        {
+          "name": "merged beta real dictionary citations match current source",
+          "passed": true
+        },
+        {
+          "name": "13-merged-ask-dirty: actual answer values",
+          "passed": true,
+          "expected": {
+            "branch": "ALPHA-LOCAL",
+            "fee": 47,
+            "loyalty": 7,
+            "coupon": 9,
+            "total": 131,
+            "obsolete_exists": "false"
+          },
+          "observed": {
+            "branch": "ALPHA-LOCAL",
+            "fee": "47",
+            "loyalty": "7",
+            "coupon": "9",
+            "total": "131",
+            "obsolete_exists": "false"
+          }
+        },
+        {
+          "name": "13-merged-ask-dirty: current file citations",
+          "passed": true,
+          "citations": [
+            [
+              "checkout/pricing.py",
+              "3"
+            ],
+            [
+              "checkout/pricing.py",
+              "4"
+            ],
+            [
+              "checkout/pricing.py",
+              "7"
+            ],
+            [
+              "checkout/loyalty.py",
+              "2"
+            ],
+            [
+              "checkout/coupon.py",
+              "2"
+            ]
+          ]
+        },
+        {
+          "name": "merged dirty ask reports drift",
+          "passed": true
+        },
+        {
+          "name": "merged dirty ask preserves all state",
+          "passed": true
+        },
+        {
+          "name": "12-merged-ask-beta: two real router and answer calls",
+          "passed": true
+        },
+        {
+          "name": "12-merged-ask-beta: pinned knowledge in real answer prompt",
+          "passed": true
+        },
+        {
+          "name": "12-merged-ask-beta: sibling knowledge absent",
+          "passed": true
+        },
+        {
+          "name": "12-merged-ask-beta: source bytes preserved",
+          "passed": true
+        },
+        {
+          "name": "12-merged-ask-beta: router sees correct knowledge directory",
+          "passed": true
+        },
+        {
+          "name": "13-merged-ask-dirty: two real router and answer calls",
+          "passed": true
+        },
+        {
+          "name": "13-merged-ask-dirty: router sees correct knowledge directory",
+          "passed": true
+        },
+        {
+          "name": "13-merged-ask-dirty: pinned knowledge in real answer prompt",
+          "passed": true
+        },
+        {
+          "name": "13-merged-ask-dirty: sibling knowledge absent",
+          "passed": true
+        },
+        {
+          "name": "13-merged-ask-dirty: source bytes preserved",
+          "passed": true
+        }
+      ],
+      "requested_model": "Seed-2.1-Turbo",
+      "requested_reasoning_effort": "medium",
+      "started_at": "2026-10-15T12:16:52.989060+00:00",
+      "based_on": "ae16bc3",
+      "additional_capture_root": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/calls",
+      "prior_report": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-merged-trae-c42a7f1a25/report.json",
+      "prior_check_note": "Beta model returned correct values and source locations as dictionaries. Independently validate these real locations below; the previous helper only accepted path:line strings.",
+      "beta_answer": {
+        "answer": "branch=BETA; fee=23; total=123 (subtotal=100 + SHIPPING_FEE=23)",
+        "sources": [
+          "{'file': 'checkout/pricing.py', 'line': 1, 'note': 'BRANCH = \"BETA\"'}",
+          "{'file': 'checkout/pricing.py', 'line': 2, 'note': 'SHIPPING_FEE = 23'}",
+          "{'file': 'checkout/pricing.py', 'lines': '4-5', 'note': 'quote_total returns subtotal + SHIPPING_FEE'}"
+        ],
+        "limitations": [
+          "只读取了当前 checkout/pricing.py 工作区文件，未刷新知识库，未检查其他分支或历史版本。"
+        ],
+        "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+        "question": "请读取当前 checkout/pricing.py，回答 branch=<当前标识>; fee=<运费>; total=<subtotal=100时的总价>，sources 使用当前文件路径和行号。只读，不要刷新知识库。"
+      },
+      "dirty_answer": {
+        "answer": "⚠ 知识库截至 bd16e74ba014，之后已有新提交；工作区有未提交修改。修改处以当前源码为准。\nbranch=ALPHA-LOCAL; fee=47; loyalty=7; coupon=9; total=131; obsolete_exists=false",
+        "sources": [
+          "checkout/pricing.py:3",
+          "checkout/pricing.py:4",
+          "checkout/pricing.py:7",
+          "checkout/loyalty.py:2",
+          "checkout/coupon.py:2"
+        ],
+        "limitations": [
+          "Total computed as subtotal(100) + SHIPPING_FEE(47) - loyalty_discount(7) - coupon_discount(9) = 131, per pricing.py:7. checkout/ directory contains only coupon.py, loyalty.py, pricing.py; obsolete.py is absent."
+        ],
+        "workspace": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+        "question": "请读取当前 checkout 中的 pricing.py、loyalty.py、coupon.py 并核对目录。按 branch=<当前标识>; fee=<运费>; loyalty=<优惠>; coupon=<优惠>; total=<subtotal=100时的总价>; obsolete_exists=<true或false> 回答。sources 必须使用当前存在文件的 相对路径:行号 字符串格式。只读，不要提交、刷新或修改文件。"
+      },
+      "captures": [
+        {
+          "record": {
+            "id": "539873ad183141ad82f43ba2c12f6a0a",
+            "phase": "12-merged-ask-beta",
+            "kind": "ask",
+            "command": [
+              "/Users/bytedance/.local/bin/trae-cli",
+              "exec",
+              "--json",
+              "--ephemeral",
+              "--sandbox",
+              "read-only",
+              "--skip-git-repo-check",
+              "--cd",
+              "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+              "-o",
+              "/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/rb-host-runner-isax349n/generic_host_answer.json",
+              "--model",
+              "Seed-2.1-Turbo",
+              "-c",
+              "model_reasoning_effort=\"medium\"",
+              "--output-schema",
+              "/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/rb-host-runner-isax349n/generic_host_answer.schema.json"
+            ],
+            "prompt_sha256": "cdf14eae8c0814304605668c9c61798ea1d7cae61e9663f13a8b2a95f95a074b",
+            "started_at": "2026-10-15T12:14:53.666652+00:00",
+            "source_hashes_before": {
+              "checkout/obsolete.py": "baee18afbfae984d219d7bfb3d1e1c551733cc9045deb15b370af1ff3616bd03",
+              "checkout/legacy.py": "fd5f9ab627c3cab9d60d5134626efec79f44425bb3360111d14322c93dd51e23",
+              "checkout/pricing.py": "e5cd4429a374c74dfcd9e87a33545cd2bd66d738e1d26b3459a5d7f6ef92b93d"
+            },
+            "answer_sha256": "62bc8c812be7113be1b7d3bbe7366e4ca12faba2f4cbbfc354373a88300b9279",
+            "returncode": 0,
+            "elapsed_seconds": 23.048,
+            "source_hashes_after": {
+              "checkout/obsolete.py": "baee18afbfae984d219d7bfb3d1e1c551733cc9045deb15b370af1ff3616bd03",
+              "checkout/legacy.py": "fd5f9ab627c3cab9d60d5134626efec79f44425bb3360111d14322c93dd51e23",
+              "checkout/pricing.py": "e5cd4429a374c74dfcd9e87a33545cd2bd66d738e1d26b3459a5d7f6ef92b93d"
+            }
+          },
+          "directory": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/calls/539873ad183141ad82f43ba2c12f6a0a"
+        },
+        {
+          "record": {
+            "id": "6d025f5b9a7f4250b51cb7fee1839712",
+            "phase": "12-merged-ask-beta",
+            "kind": "refresh",
+            "command": [
+              "/Users/bytedance/.local/bin/trae-cli",
+              "exec",
+              "--json",
+              "--ephemeral",
+              "--sandbox",
+              "read-only",
+              "--skip-git-repo-check",
+              "--cd",
+              "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+              "-o",
+              "/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/rb-host-runner-ynns3zai/generic_host_text.txt",
+              "--model",
+              "Seed-2.1-Turbo",
+              "-c",
+              "model_reasoning_effort=\"medium\""
+            ],
+            "prompt_sha256": "df0dc9f7df66772dc33a640bc79be8534b61160db024ed75e850af2b5e4dd6e0",
+            "started_at": "2026-10-15T12:13:57.356207+00:00",
+            "answer_sha256": "a43678ccc001cad88021e88730a024843a91de3745e2b38492be01d063189e28",
+            "returncode": 0,
+            "elapsed_seconds": 56.067
+          },
+          "directory": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/calls/6d025f5b9a7f4250b51cb7fee1839712"
+        },
+        {
+          "record": {
+            "id": "d2fdd2c8c1d14817a16168eab4dc9e83",
+            "phase": "13-merged-ask-dirty",
+            "kind": "route",
+            "command": [
+              "/Users/bytedance/.local/bin/trae-cli",
+              "exec",
+              "--json",
+              "--ephemeral",
+              "--sandbox",
+              "read-only",
+              "--skip-git-repo-check",
+              "--cd",
+              "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+              "-o",
+              "/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/rb-host-runner-a4m6isd_/generic_host_text.txt",
+              "--model",
+              "Seed-2.1-Turbo",
+              "-c",
+              "model_reasoning_effort=\"medium\""
+            ],
+            "prompt_sha256": "7729f59518e6fd82421321be9c136d9058f70ba8c945b37dddd16946c8bb1f87",
+            "started_at": "2026-10-15T12:16:53.688213+00:00",
+            "answer_sha256": "ceef330ed6c5017e9c762c1185da4c556eea176b61da5200152c52b4818826fe",
+            "returncode": 0,
+            "elapsed_seconds": 77.833
+          },
+          "directory": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/calls/d2fdd2c8c1d14817a16168eab4dc9e83"
+        },
+        {
+          "record": {
+            "id": "02afc863ba7043aaabff8f48b441b0f2",
+            "phase": "13-merged-ask-dirty",
+            "kind": "ask",
+            "command": [
+              "/Users/bytedance/.local/bin/trae-cli",
+              "exec",
+              "--json",
+              "--ephemeral",
+              "--sandbox",
+              "read-only",
+              "--skip-git-repo-check",
+              "--cd",
+              "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/project",
+              "-o",
+              "/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/rb-host-runner-1bab7phi/generic_host_answer.json",
+              "--model",
+              "Seed-2.1-Turbo",
+              "-c",
+              "model_reasoning_effort=\"medium\"",
+              "--output-schema",
+              "/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/rb-host-runner-1bab7phi/generic_host_answer.schema.json"
+            ],
+            "prompt_sha256": "4091abc2876dcbdc85d830cf77b96457ad9cf21302ab94e10c46175ac5834cdb",
+            "started_at": "2026-10-15T12:18:11.670805+00:00",
+            "source_hashes_before": {
+              "checkout/coupon.py": "f4463bb898b3d2f1a387bab94b10f7d34063d9cc2a7cc867af9c8bb5bbe885d1",
+              "checkout/pricing.py": "7e851f36d9aa038b3e92e1b400181089746d4b47a991e308e976e1b40c27647f",
+              "checkout/loyalty.py": "0f3f1d70d94c1cbca05926abc8a6dda0d998872b15f20f595ed4b597fdb9940c"
+            },
+            "answer_sha256": "f951e225493f241fe8dd6deb0291019e971b98b1f3ac31c539f14d89d1f8c00d",
+            "returncode": 0,
+            "elapsed_seconds": 27.856,
+            "source_hashes_after": {
+              "checkout/coupon.py": "f4463bb898b3d2f1a387bab94b10f7d34063d9cc2a7cc867af9c8bb5bbe885d1",
+              "checkout/pricing.py": "7e851f36d9aa038b3e92e1b400181089746d4b47a991e308e976e1b40c27647f",
+              "checkout/loyalty.py": "0f3f1d70d94c1cbca05926abc8a6dda0d998872b15f20f595ed4b597fdb9940c"
+            }
+          },
+          "directory": "/private/var/folders/7p/1_3wwc956wn5zs7qyw0xzln80000gn/T/repobrain-trae-versions-7449db183b/calls/02afc863ba7043aaabff8f48b441b0f2"
+        }
+      ]
+    },
+    "real_trae_calls": 4,
+    "script_support": "Capture and audit classify the upstream host knowledge router separately from generation and final answering.",
+    "source_sha256": {
+      "scripts/validate_commit_knowledge_trae.py": "521be71e9180dcb1579d1438d4b1d0289255605175a9fb160267f6aedd219b64",
+      "engine/repobrain_engine/hub/__init__.py": "fd6ebdda30aa02867d7bd7963ee24cd2f396152b419c28d88d84de0210b9efe3",
+      "engine/repobrain_engine/hub/__main__.py": "1f1bfc82a8cf8fd8370544a91cfd99344a939a7d4ffe97db5338094c98beb623",
+      "engine/repobrain_engine/hub/_constants.py": "87df351b32572ab66614eff5b8a531973b7d84c3ef9b6fb8e8eeffbfcfc80f6b",
+      "engine/repobrain_engine/hub/_merkle.py": "6ec94078757007f51d08eda3bc5490477ea0e289621c46639bdd9d2f1c7fa593",
+      "engine/repobrain_engine/hub/_providers.py": "196984c05c30f8bfb25cb6cc58bb0aa3450883fac9dafc658c2ddda9f8cc61ec",
+      "engine/repobrain_engine/hub/_utils.py": "1a34abc696858beb03cf1661170af41c25842f6da095f55bd93659eee74a27b4",
+      "engine/repobrain_engine/hub/agents.py": "8c4fe871a1617ac651deab49807e68324fb2bfc12f722b676cd117fb7227f5e3",
+      "engine/repobrain_engine/hub/ask_pipeline.py": "27041f349ae022728c369fc20e63bd39ffc743f90e4e53d26c0221dd52c8c985",
+      "engine/repobrain_engine/hub/ask_tools.py": "cf1cd2c9557fb9ec498692458f102248f88967f613cc2c0741f8e18f15ab6fb2",
+      "engine/repobrain_engine/hub/contracts.py": "f222ef50d6c2ba4c5b3500173efb5cdc265667dfa33f5106f1587c1329957435",
+      "engine/repobrain_engine/hub/host_runner.py": "f4f70e0ead68999f0771c2b599ecbe83a7dcafd1a4b6235b20a8df628863cf61",
+      "engine/repobrain_engine/hub/impact.py": "4f11dba3012ec9ab879dab6a557abdbfc7fd657ae4d6f57d3bc9a8a146f5742e",
+      "engine/repobrain_engine/hub/incremental.py": "0812ac0dec3d217e185c87f4780f28c97f843b9a43184999702ddd2c4d52c2f4",
+      "engine/repobrain_engine/hub/incremental_artifacts.py": "a09fa0723aaf50ed7526b7ff8ad7c9c6bcf9d251d72dd59ba65f4103b591365c",
+      "engine/repobrain_engine/hub/knowledge_graph.py": "b7ac72b69e0b125753972538b84a64277f2ee90a43c761a8dce1999436f6bab5",
+      "engine/repobrain_engine/hub/mcp_server.py": "ded0987f6a4c39efd180f08ad558350d2601198959957953573a8475b904e3e4",
+      "engine/repobrain_engine/hub/module_grouping.py": "4f5a65ae9d39504868294085c89c580c634fd90625b1db74ebede6c4756a44f4",
+      "engine/repobrain_engine/hub/pipeline.py": "07b082db2ebd729c686ecd4a460a401822237a612ca0219ad9672beb1b699b4c",
+      "engine/repobrain_engine/hub/refresh_lifecycle.py": "6c522ad7c62de55d94fdd8731f07aa6ebae4a296e8f8318eda75e0c74bae2f59",
+      "engine/repobrain_engine/hub/refresh_pipeline.py": "c7d167c303186f643dbdd2e76804ce6b1c2df2465c038eaf6b79ee19d7ff05d0",
+      "engine/repobrain_engine/hub/refresh_result.py": "0d1f623324d7cdf54feaf5719789f92ea81e6470a93178e1c86d74258bbb734f",
+      "engine/repobrain_engine/hub/retrieval_graph.py": "dbb98bc801f0295ceb03ec05433c57fe5790c58853910d0db423011424d4ecf7",
+      "engine/repobrain_engine/hub/scanner.py": "ecbf6db029e06259c297df71027eb7a7ebd4ef32a0ccd74193aea39ca43cd847",
+      "engine/repobrain_engine/hub/semantic_index.py": "462b797f5e9bef816e498e9d0e04e6b9ba99291b851cf064f545e186fbda4c3e",
+      "engine/repobrain_engine/hub/storage.py": "1be1e4e56bc8088a92876efbc34befbcf1c7e01804aa0e8c915683f690c661e2",
+      "engine/repobrain_engine/hub/structure.py": "997c34ac94a02afa890d009b029a0b56db43ba0fdfc4244c25223a0a6f7894a4",
+      "engine/repobrain_engine/hub/versions.py": "6b27b17bb6ca58876c970d9a35743f2fb88e6a44de2301d653d652af00e65404",
+      "engine/repobrain_engine/hub/working_context.py": "ddd18a11c0f9bbab5c61cc7808017c0def881ec9a2cf0a0f4ae8f08199388d80"
+    }
+  }
+}

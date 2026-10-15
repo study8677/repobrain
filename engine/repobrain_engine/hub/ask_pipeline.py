@@ -30,6 +30,9 @@ from repobrain_engine.hub.contracts import (
     WorkerEvidence,
 )
 from repobrain_engine.hub.storage import control_root, knowledge_root, read_current_pointer
+from repobrain_engine.hub.working_context import (
+    collect_working_context, current_working_context, use_working_context,
+)
 
 if TYPE_CHECKING:
     from agents import Agent
@@ -172,6 +175,53 @@ async def _consume_stream_events(
 
 
 async def ask_pipeline(workspace: Path, question: str) -> str:
+    """Pin committed background knowledge while answering against current code."""
+    from repobrain_engine.hub.refresh_lifecycle import generation_config
+    from repobrain_engine.hub.storage import use_knowledge_root
+    from repobrain_engine.hub.versions import (
+        has_generations, is_ancestor, select_ask_generation, workspace_head,
+    )
+
+    workspace = workspace.expanduser().resolve()
+    head_sha = workspace_head(workspace)
+    versioned = has_generations(workspace)
+    if not versioned and head_sha is None:
+        return await _ask_selected_generation(workspace, question)
+    if head_sha is None:
+        raise ValueError("Cannot determine the current Git commit; run `rb-refresh` in a committed repository.")
+    if versioned:
+        pointer = select_ask_generation(workspace, head_sha, generation_config())
+        if pointer is None:
+            raise ValueError(
+                f"No complete compatible knowledge for current commit {head_sha[:12]}. "
+                "Run `rb-refresh` / 当前提交及祖先没有可用知识库，请先运行 rb-refresh。"
+            )
+        root = control_root(workspace) / "generations" / pointer["generation"]
+        knowledge_head = str(pointer["head_sha"])
+    else:
+        root = control_root(workspace)
+        artifacts = ("map.md", "agents", "conventions.md", "module_registry.json", "knowledge_graph.json")
+        if not any((root / name).exists() for name in artifacts):
+            return await _ask_selected_generation(workspace, question)
+        try:
+            last_sha = (root / ".last_refresh_sha").read_text(encoding="utf-8").strip()
+        except OSError:
+            last_sha = ""
+        if not is_ancestor(workspace, last_sha, head_sha):
+            raise ValueError("Legacy knowledge is not on current history; run `rb-refresh` / 旧知识库不在当前分支历史上，请先刷新。")
+        knowledge_head = last_sha
+    context = collect_working_context(workspace, knowledge_head, head_sha)
+    with use_knowledge_root(root), use_working_context(context):
+        answer = await _ask_selected_generation(workspace, question)
+    if workspace_head(workspace) != head_sha:
+        raise ValueError("Git HEAD changed during the answer; ask again / 回答期间切换了代码版本，请重新提问。")
+    latest = collect_working_context(workspace, knowledge_head, head_sha)
+    if latest.prompt != context.prompt:
+        answer += "\n\n⚠ 回答期间工作区又有修改，请对照最新源码核对以上结论。"
+    return f"{context.notice}\n{answer}" if context.notice else answer
+
+
+async def _ask_selected_generation(workspace: Path, question: str) -> str:
     """Answer a question about the project.
 
     Args:
@@ -248,6 +298,8 @@ def _should_auto_refresh(workspace: Path, settings) -> str | None:
     mode = str(getattr(settings, "RB_ASK_AUTO_REFRESH", "stale")).strip().lower()
     if mode in {"off", "0", "false", "no", ""}:
         return None
+    if current_working_context().prompt:
+        return None  # The answer already explains source drift; editing need not stop.
 
     if not _structured_artifacts_available(workspace):
         return "no knowledge base found"
@@ -585,7 +637,7 @@ def _build_workspace_health_notices(workspace: Path) -> list[str]:
     """Return staleness/degradation notices for existing knowledge artifacts."""
     notices: list[str] = []
     behind_count = _get_refresh_commit_lag(workspace)
-    if behind_count and behind_count > 0:
+    if behind_count and behind_count > 0 and not current_working_context().notice:
         notices.append(
             "⚠ Knowledge base is "
             f"{behind_count} commit(s) behind HEAD -- consider running "
@@ -603,6 +655,13 @@ def _build_workspace_health_notices(workspace: Path) -> list[str]:
 
 def _get_refresh_commit_lag(workspace: Path) -> int | None:
     """Return commits between last refresh SHA and HEAD, or None on failure."""
+    # An ask may pin a historical generation while current.json still refers
+    # to the last refresh on another branch. Use the selected snapshot first.
+    from repobrain_engine.hub.refresh_lifecycle import read_json_object
+
+    snapshot = read_json_object(knowledge_root(workspace) / "snapshot.json")
+    if snapshot and snapshot.get("head_sha"):
+        return _count_commit_lag(workspace, str(snapshot["head_sha"]))
     pointer = read_current_pointer(workspace)
     if pointer is not None:
         last_sha = str(pointer.get("head_sha", "")).strip()
@@ -686,6 +745,8 @@ async def _ask_with_structured_facts(workspace: Path, question: str) -> str | No
             return answer
 
     # Fall back to legacy JSON facts path
+    if current_working_context().prompt:
+        return None  # Old fact-only verification cannot account for source drift.
     return await _ask_with_legacy_facts(workspace, question)
 
 
@@ -940,6 +1001,8 @@ MODULES: module1, module2
 
 Question: {question}
 
+{current_working_context().prompt}
+
 Module Map:
 {map_content}
 """
@@ -1041,6 +1104,8 @@ NOTE: Use the project context above for project-wide questions about conventions
 tooling, lint/format/type-check, CI, docs, dependencies, supported environments,
 or how modules relate to each other. If the project context already answers the
 question, answer from it even if the per-module knowledge does not."""
+
+    project_section = current_working_context().prompt + project_section
 
     if degraded_modules:
         project_section += (
@@ -1745,7 +1810,8 @@ def _build_ask_context(workspace: Path, question: str = "") -> str:
     Returns:
         Concatenated context string.
     """
-    context_parts: list[str] = []
+    live_context = current_working_context().prompt
+    context_parts: list[str] = [live_context] if live_context else []
     max_chars = int(os.environ.get("RB_ASK_CONTEXT_MAX_CHARS", "30000"))
 
     # Sources ordered by general usefulness (structure > conventions > graph > docs > data > media)
@@ -2081,6 +2147,8 @@ def _extract_blueprints_from_app(workspace: Path) -> list[str]:
 
 def _build_retrieval_semantic_answer(workspace: Path, question: str) -> str | None:
     """Build a semantic answer from retrieval artifacts and code evidence."""
+    if current_working_context().prompt:
+        return None  # Never return cached retrieval as current facts after edits.
     q = question.strip()
     if not q:
         return None
@@ -2159,6 +2227,8 @@ def _build_timeout_fallback_answer(workspace: Path, question: str) -> str:
         "LLM answering timed out. Here are the most relevant knowledge snippets:\n",
         f"**Question:** {question}\n",
     ]
+    if current_working_context().prompt:
+        lines.insert(1, "These are historical knowledge snippets, unverified against current source changes.\n")
 
     # -- Extract relevant sections from conventions.md --
     conventions = rb_dir / "conventions.md"

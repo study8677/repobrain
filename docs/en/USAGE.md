@@ -17,7 +17,11 @@ rb-ask "How does authentication work?"
 rb-refresh --full
 ```
 
-Refresh uses committed Git code and requires a clean working tree. The first build can take several minutes or longer for a large repository. A failed refresh keeps the previously published knowledge base available. `rb-ask` warns when knowledge is behind the current commit; asking never refreshes it.
+Refresh uses committed Git code and requires a clean working tree. Successful knowledge generations are retained locally by commit. After switching back to an indexed commit, `rb-ask` selects its complete, configuration-compatible generation and `rb-refresh` reuses it without model calls. Branches at the same commit can share knowledge.
+
+Ask supports staged, unstaged and untracked edits without regenerating knowledge. It prefers exact-commit knowledge, otherwise the nearest compatible ancestor on the current history, and labels the knowledge commit when source has changed. Answer agents receive working-tree status and a bounded tracked-file diff against that commit. Current source takes precedence; new files and truncated patches require direct inspection, and unverifiable affected claims must be labeled as such.
+
+Ask never refreshes or publishes knowledge. It requests a first refresh only when neither HEAD nor its ancestors have usable knowledge; unrelated sibling knowledge is never substituted. Refresh still requires a clean worktree and failures preserve old versions. Continued edits during an answer trigger a notice; changing HEAD requires asking again. Legacy Git knowledge also needs a commit marker on current history. Non-Git legacy behavior is preserved. Initial builds can take several minutes or longer for large repositories.
 
 `--workspace` means the project directory and defaults to the current directory (`.`). Use an explicit path when running elsewhere:
 

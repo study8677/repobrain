@@ -32,5 +32,9 @@ pipx install "git+https://github.com/study8677/repobrain.git#subdirectory=engine
 Report whether this run builds, resumes, updates, skips, or fails. Full builds
 can take several minutes. Never treat a failed result as a successful refresh.
 
+Completed local generations are selected by Git commit. Switching back to a
+previously indexed commit reuses its compatible knowledge without model calls;
+new commits update from a usable ancestor rather than another branch's tip.
+
 简洁说明此次是构建、续跑、更新、跳过还是失败。完整构建可能需要几分钟，失败时
 不能声称知识库已经更新。

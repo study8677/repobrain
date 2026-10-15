@@ -268,6 +268,17 @@ def _git_commit_lag(workspace: Path) -> str:
     if inside.returncode != 0 or inside.stdout.strip() != "true":
         return "git freshness skipped (not a git repository)"
 
+    control = workspace / ".repobrain"
+    if (control / "current.json").exists() or (control / "generations").is_dir():
+        root = _active_knowledge_root(workspace)
+        if root == control / "unavailable":
+            return "no knowledge matches the current commit; run rb-refresh"
+        snapshot = json.loads((root / "snapshot.json").read_text(encoding="utf-8"))
+        from repobrain_engine.hub.versions import workspace_head
+        if snapshot["head_sha"] != workspace_head(workspace):
+            return f"knowledge from ancestor commit {snapshot['head_sha'][:12]}; run rb-refresh to update knowledge"
+        return "0 commit(s) behind HEAD (knowledge matches current commit)"
+
     sha_path = workspace / ".repobrain" / ".last_refresh_sha"
     try:
         last_sha = sha_path.read_text(encoding="utf-8").strip()
@@ -294,20 +305,24 @@ def _git_commit_lag(workspace: Path) -> str:
 
 
 def _active_knowledge_root(workspace: Path) -> Path:
-    """Resolve a generation pointer without importing the optional engine."""
+    """Resolve exact or ancestor knowledge; legacy flat data needs no engine."""
     control = workspace / ".repobrain"
-    pointer_path = control / "current.json"
-    try:
-        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, TypeError):
-        return control
-    if not isinstance(pointer, dict):
-        return control
-    generation = str(pointer.get("generation", "")).strip()
-    if not generation or Path(generation).name != generation:
-        return control
-    candidate = control / "generations" / generation
-    return candidate if candidate.is_dir() else control
+    if (control / "current.json").exists() or (control / "generations").is_dir():
+        try:
+            from repobrain_engine.config import Settings
+            from repobrain_engine.hub.refresh_lifecycle import generation_config
+            from repobrain_engine.hub.versions import select_ask_generation, workspace_head
+
+            head = workspace_head(workspace)
+            config = generation_config(Settings(_env_file=str(workspace / ".env")))
+            selected = select_ask_generation(workspace, head, config) if head else None
+            if selected is not None:
+                return control / "generations" / selected["generation"]
+            return control / "unavailable"
+        except ImportError:
+            # CLI-only installations cannot validate the engine's versions.
+            return control / "unavailable"
+    return control
 
 
 def _status_health(workspace: Path) -> str:

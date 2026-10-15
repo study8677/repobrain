@@ -7,6 +7,16 @@ Run the RepoBrain CLI for the current workspace:
 
 通过 RepoBrain CLI 询问当前工作区：
 
+The engine prefers knowledge for HEAD, otherwise a compatible ancestor on the
+current history. Uncommitted edits are allowed: use knowledge as background,
+inspect current source for changed behavior, and keep freshness notices. Never
+use unrelated sibling knowledge or automatically start a refresh. If no usable
+knowledge exists on current history, report the `rb-refresh` hint.
+
+允许边改边问。引擎优先读当前提交的知识，没有时读当前分支祖先版本；旧知识作为背景，
+修改处以当前源码为准，保留时效提示。不要借用其他分支独有的知识，也不要自动刷新。
+当前历史上没有可用知识时，再提示先运行 `rb-refresh`。
+
 > $ARGUMENTS
 
 Use Bash:

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import subprocess
 import builtins
+import pytest
 from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -177,3 +178,61 @@ def test_doctor_reports_stale_knowledge(tmp_path: Path, monkeypatch) -> None:
     assert result.exit_code == 0
     assert "⚠ Knowledge base health:" in result.output
     assert "3 commit(s) behind HEAD" in result.output
+
+
+def test_versioned_doctor_follows_checked_out_commit(tmp_path: Path, monkeypatch) -> None:
+    """Doctor uses an older exact generation, not the last-refreshed branch."""
+    pytest.importorskip("repobrain_engine")
+    from repobrain_engine.config import reset_settings
+    from repobrain_engine.hub.incremental import build_workspace_snapshot, save_snapshot
+    from repobrain_engine.hub.refresh_lifecycle import generation_config
+    from repobrain_engine.hub.storage import atomic_write_json, atomic_write_text, create_generation, promote_generation
+    from rb_cli.cli import _active_knowledge_root, _git_commit_lag
+
+    def git(*args):
+        return subprocess.check_output(["git", *args], cwd=tmp_path, text=True).strip()
+
+    git("init", "-q")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test")
+    git("config", "core.hooksPath", str(tmp_path / ".git" / "no-hooks"))
+    monkeypatch.setenv("WORKSPACE_PATH", str(tmp_path))
+    monkeypatch.setenv("RB_REFRESH_SCAN_ONLY", "0")
+    reset_settings()
+
+    def save_version(value):
+        (tmp_path / "app.py").write_text(f"def value(): return {value}\n")
+        git("add", "app.py")
+        git("commit", "-qm", f"修改数值为 {value}")
+        head = git("rev-parse", "HEAD")
+        root = create_generation(tmp_path, f"version-{value}", clone_active=False)
+        snapshot = build_workspace_snapshot(tmp_path, head)
+        save_snapshot(root, snapshot)
+        for group in snapshot["groups"].values():
+            atomic_write_text(root / group["artifact_path"], "# Knowledge\n")
+        atomic_write_text(root / "map.md", "# Map\n")
+        atomic_write_json(root / "status.json", {
+            "refresh_run_id": "test", "overall_status": "success", "head_sha": head,
+            "stages": {"module_docs": "success"},
+        })
+        atomic_write_json(root / "refresh_config.json", generation_config())
+        promote_generation(tmp_path, generation=root.name, head_sha=head,
+                           merkle_root=snapshot["merkle_root"])
+        return head, root
+
+    try:
+        first, root = save_version(1)
+        save_version(2)
+        git("checkout", "-q", "--detach", first)
+        other = tmp_path.parent / "other-project"
+        other.mkdir(exist_ok=True)
+        (other / ".env").write_text("RB_HOST_COMMAND=unrelated-runner\n")
+        monkeypatch.setenv("WORKSPACE_PATH", str(other))
+        reset_settings()
+        assert _active_knowledge_root(tmp_path) == root
+        assert "knowledge matches current commit" in _git_commit_lag(tmp_path)
+        git("commit", "--allow-empty", "-qm", "尚未生成知识的新提交")
+        assert _active_knowledge_root(tmp_path) == root
+        assert "knowledge from ancestor commit" in _git_commit_lag(tmp_path)
+    finally:
+        reset_settings()

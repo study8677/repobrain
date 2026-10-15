@@ -539,11 +539,23 @@ async def _refresh_pipeline_generation_entry(
     head_sha = get_head_sha(workspace)
     config = generation_config()
     active = read_current_pointer(workspace)
-    baseline_generation = str(active["generation"]) if active else None
+    from repobrain_engine.hub.versions import select_refresh_baseline
+
+    selected = active if full else select_refresh_baseline(workspace, head_sha, config)
+    baseline_generation = str(selected["generation"]) if selected else None
     recovery = None if full else find_recovery(
         workspace, target_head=head_sha,
         baseline_generation=baseline_generation, config=config,
     )
+    if not full and recovery is None and active is not None and active["generation"] != baseline_generation:
+        # A forced full build may have started while another branch was the
+        # active version. Its recovery identity still names that old pointer.
+        previous = find_recovery(
+            workspace, target_head=head_sha,
+            baseline_generation=str(active["generation"]), config=config,
+        )
+        if previous is not None and previous[1] == "full":
+            recovery = previous
     if recovery is not None:
         generation_root, mode = recovery
         print(f"Continuing previous {mode} refresh / 继续上次更新", file=sys.stderr)
@@ -551,9 +563,20 @@ async def _refresh_pipeline_generation_entry(
             return await _resume_failed_generation(workspace, generation_root=generation_root, model=None)
     else:
         if not full:
-            pointer, snapshot = load_baseline(workspace, config)
+            pointer, snapshot = (
+                load_baseline(workspace, config, pointer=selected)
+                if selected is not None else (None, None)
+            )
             if pointer is not None and snapshot is not None:
                 if pointer["head_sha"] == head_sha:
+                    ensure_clean_worktree(workspace)
+                    if get_head_sha(workspace) != head_sha:
+                        raise RuntimeError("HEAD changed while selecting knowledge; run `rb-refresh` again.")
+                    if active is None or active["generation"] != pointer["generation"]:
+                        promote_generation(
+                            workspace, generation=pointer["generation"], head_sha=head_sha,
+                            merkle_root=str(snapshot.get("merkle_root", "")),
+                        )
                     print("Knowledge base is already up to date / 知识库已是最新", file=sys.stderr)
                     return RefreshStatus(
                         refresh_run_id=new_generation_id(head_sha), overall_status="success",
@@ -562,7 +585,7 @@ async def _refresh_pipeline_generation_entry(
                     )
                 if not config["scan_only"]:
                     print("Incremental refresh / 增量更新", file=sys.stderr)
-                    return await incremental_refresh(workspace, config=config)
+                    return await incremental_refresh(workspace, config=config, baseline_pointer=pointer)
         print("Full rebuild / 全部重建" if full else "Building knowledge base / 构建完整知识库", file=sys.stderr)
         generation_root = create_generation(workspace, new_generation_id(head_sha), clone_active=False)
         save_recovery(generation_root, mode="full", target_head=head_sha,

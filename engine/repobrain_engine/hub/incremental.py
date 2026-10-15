@@ -577,14 +577,22 @@ async def incremental_refresh(
     *,
     model: object | None = None,
     config: dict[str, object] | None = None,
+    baseline_pointer: dict[str, object] | None = None,
 ) -> RefreshStatus:
     """Run the committed-diff impact loop and atomically promote on success."""
     workspace = workspace.expanduser().resolve()
     ensure_clean_worktree(workspace)
     target_head = get_head_sha(workspace)
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    pointer = read_current_pointer(workspace)
-    baseline = load_active_snapshot(workspace)
+    pointer = baseline_pointer if baseline_pointer is not None else read_current_pointer(workspace)
+    if pointer is not None:
+        name = str(pointer.get("generation", ""))
+        if name in {"", ".", ".."} or Path(name).name != name:
+            raise IncrementalRefreshError("Invalid baseline generation id.")
+    baseline = (
+        _load_snapshot_from_root(workspace / ".repobrain" / "generations" / str(pointer["generation"]))
+        if pointer is not None else None
+    )
     if pointer is None or baseline is None:
         status = _status_for_unresolved(
             run_id=run_id,
@@ -642,7 +650,9 @@ async def incremental_refresh(
         return status
 
     generation = new_generation_id(target_head)
-    generation_root = create_generation(workspace, generation, clone_active=True)
+    generation_root = create_generation(
+        workspace, generation, clone_active=True, source_generation=baseline_generation,
+    )
     status = RefreshStatus(
         refresh_run_id=run_id,
         overall_status="success",

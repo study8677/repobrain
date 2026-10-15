@@ -82,7 +82,7 @@ async def test_changed_commit_selects_incremental(project, full_worker, monkeypa
     subprocess.run(["git", "commit", "-qm", "修改价格"], cwd=project, check=True)
     calls = []
 
-    async def incremental(workspace, *, config):
+    async def incremental(workspace, *, config, baseline_pointer):
         calls.append(workspace)
         return RefreshStatus(refresh_run_id="incremental", overall_status="success", mode="incremental")
 

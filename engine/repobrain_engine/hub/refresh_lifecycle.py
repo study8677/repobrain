@@ -5,9 +5,12 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from repobrain_engine.config import Settings
 
 from repobrain_engine.hub.storage import (
-    active_generation_root,
     atomic_write_json,
     control_root,
     read_current_pointer,
@@ -16,12 +19,12 @@ from repobrain_engine.hub.storage import (
 RECOVERY_SCHEMA_VERSION = 1
 
 
-def generation_config() -> dict[str, object]:
+def generation_config(settings: Settings | None = None) -> dict[str, object]:
     """Fingerprint output-affecting settings without persisting credentials."""
     from repobrain_engine.config import get_settings
     from repobrain_engine.hub.incremental import GROUPING_VERSION
 
-    settings = get_settings()
+    settings = settings if settings is not None else get_settings()
     raw = os.environ.get("RB_REFRESH_SCAN_ONLY")
     scan_only = bool(settings.RB_REFRESH_SCAN_ONLY) if raw is None else raw.lower().strip() in {"1", "true", "yes"}
     backend = "api" if settings.OPENAI_BASE_URL or settings.OPENAI_API_KEY else "host"
@@ -66,22 +69,30 @@ def valid_artifact(path: Path) -> bool:
         return False
 
 
-def load_baseline(workspace: Path, config: dict[str, object]) -> tuple[dict | None, dict | None]:
+def load_baseline(
+    workspace: Path,
+    config: dict[str, object],
+    *,
+    pointer: dict | None = None,
+) -> tuple[dict | None, dict | None]:
     """Distinguish absent/scan-only knowledge from a damaged active generation."""
-    from repobrain_engine.hub.incremental import load_active_snapshot
+    from repobrain_engine.hub.incremental import _load_snapshot_from_root
 
-    pointer = read_current_pointer(workspace)
+    pointer = pointer if pointer is not None else read_current_pointer(workspace)
     pointer_path = control_root(workspace) / "current.json"
     if pointer is None:
         if pointer_path.exists():
             raise RuntimeError("Knowledge baseline is damaged. Run `rb-refresh --full` to rebuild it.")
         return None, None
-    snapshot = load_active_snapshot(workspace)
+    generation = str(pointer.get("generation", ""))
+    if generation in {"", ".", ".."} or Path(generation).name != generation:
+        raise RuntimeError("Knowledge generation is damaged. Run `rb-refresh --full` to rebuild it.")
+    root = control_root(workspace) / "generations" / generation
+    snapshot = _load_snapshot_from_root(root)
     if (snapshot is None or snapshot.get("head_sha") != pointer.get("head_sha")
             or not isinstance(snapshot.get("groups"), dict)
             or not isinstance(snapshot.get("file_to_group"), dict)):
         raise RuntimeError("Knowledge snapshot is damaged. Run `rb-refresh --full` to rebuild it.")
-    root = active_generation_root(workspace)
     from repobrain_engine.hub.contracts import RefreshStatus
 
     status = read_json_object(root / "status.json")
@@ -91,6 +102,8 @@ def load_baseline(workspace: Path, config: dict[str, object]) -> tuple[dict | No
         health = None
     if health is None or health.overall_status != "success":
         raise RuntimeError("Knowledge status is damaged or incomplete. Run `rb-refresh --full` to rebuild it.")
+    if health.head_sha and health.head_sha != pointer.get("head_sha"):
+        raise RuntimeError("Knowledge status does not match its commit. Run `rb-refresh --full` to rebuild it.")
     prior_config = read_json_object(root / "refresh_config.json")
     if (root / "refresh_config.json").exists() and prior_config is None:
         raise RuntimeError("Knowledge configuration record is damaged. Run `rb-refresh --full` to rebuild it.")
@@ -108,8 +121,13 @@ def load_baseline(workspace: Path, config: dict[str, object]) -> tuple[dict | No
         return None, None
     if not config["scan_only"]:
         stages = status.get("stages", {})
-        if isinstance(stages, dict) and stages.get("module_docs") == "skipped" and (
-            snapshot["groups"] or not valid_artifact(root / "map.md")
+        if (
+            health.mode != "incremental"
+            and isinstance(stages, dict)
+            and stages.get("module_docs") == "skipped"
+            and (
+                snapshot["groups"] or not valid_artifact(root / "map.md")
+            )
         ):
             return None, None
         if not valid_artifact(root / "map.md") or any(
