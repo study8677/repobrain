@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
@@ -20,6 +22,21 @@ def _load_contract_module() -> ModuleType:
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_git_output_decodes_utf8_with_a_non_utf8_locale(monkeypatch) -> None:
+    contract = _load_contract_module()
+    run = subprocess.run
+    payload = "description = '仓库检查'"
+    emit_bytes = f"import sys; sys.stdout.buffer.write({payload.encode('utf-8')!r})"
+
+    def run_git(_command, **kwargs):
+        kwargs.setdefault("encoding", "ascii")
+        return run([sys.executable, "-c", emit_bytes], **kwargs)
+
+    monkeypatch.setattr(contract.subprocess, "run", run_git)
+
+    assert contract.tagged_file("v0.3.0", "cli/pyproject.toml") == payload
 
 
 def _configure_release_state(
